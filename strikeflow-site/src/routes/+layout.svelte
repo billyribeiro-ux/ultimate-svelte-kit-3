@@ -10,12 +10,44 @@
 
 <script lang="ts">
 	import '#lib/styles/app.css';
+	import { onNavigate } from '$app/navigation';
 
 	import favicon from '#lib/assets/favicon.svg';
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
+	import { prefersReducedMotion } from '#lib/motion/index.ts';
 
 	let { children } = $props();
+
+	/**
+	 * CROSS-PAGE TRANSITIONS
+	 *
+	 * The View Transitions API lets the browser itself animate between two DOM
+	 * states. It snapshots the outgoing page, swaps in the new one, and cross-fades
+	 * between them — work that would otherwise require keeping both pages mounted
+	 * and manually orchestrating their exit and entrance.
+	 *
+	 * The promise dance below looks odd and is exactly what the API requires:
+	 * `startViewTransition` takes a callback that performs the DOM update, and we
+	 * need to tell SvelteKit "hold the navigation until I say so". Resolving
+	 * `resolve()` inside the callback is what releases it.
+	 *
+	 * The actual animation is defined in CSS, in `motion.css`, under
+	 * `::view-transition-old` and `::view-transition-new`. Keeping it there rather
+	 * than in JavaScript means it costs nothing when unsupported.
+	 */
+	onNavigate((navigation) => {
+		// Not supported in every browser, and correctly skipped for reduced motion.
+		// Returning nothing lets SvelteKit navigate normally.
+		if (!document.startViewTransition || prefersReducedMotion()) return;
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head>

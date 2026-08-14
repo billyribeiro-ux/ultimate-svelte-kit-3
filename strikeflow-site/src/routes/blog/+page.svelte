@@ -10,6 +10,7 @@
 
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/blog');
 
@@ -49,7 +50,7 @@
 
 <section class="section section--tight" aria-label="Articles">
 	<div class="container container--wide">
-		<ul class="posts" role="list">
+		<ul class="posts" role="list" {@attach revealGroup('.posts__item', { scale: true })}>
 			{#each postsByDate as post (post.slug)}
 				{@const author = getPerson(post.authorId)}
 				<li class="posts__item">

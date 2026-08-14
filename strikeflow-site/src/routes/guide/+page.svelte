@@ -8,6 +8,7 @@
 	import { resolve } from '$app/paths';
 
 	import { requestGuide } from './guide.remote.ts';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/guide');
 	const author = getPerson('priya-raman');
@@ -86,7 +87,11 @@
 			</div>
 
 			<!-- ---------- Right: the form ---------- -->
-			<div class="guide-hero__form-wrap">
+			<div
+				class="guide-hero__form-wrap"
+				data-reveal
+				{@attach reveal({ from: 'right', delay: 0.15, scale: true })}
+			>
 				<!--
 					THE FORM.
 
@@ -227,7 +232,7 @@
 <section class="section contents" aria-labelledby="contents-heading">
 	<div class="container container--narrow">
 		<h2 id="contents-heading">What's inside</h2>
-		<ol class="contents__list">
+		<ol class="contents__list" {@attach revealGroup('.contents__item', { staggerAmount: 0.05 })}>
 			{#each chapters as chapter, index (chapter)}
 				<li class="contents__item">
 					<span class="contents__number tabular" aria-hidden="true">

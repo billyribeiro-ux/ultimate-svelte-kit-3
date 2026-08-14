@@ -19,6 +19,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { magnetic } from '#lib/motion/index.ts';
 
 	type Variant = 'primary' | 'secondary' | 'ghost';
 	type Size = 'sm' | 'md' | 'lg';
@@ -43,6 +44,14 @@
 		icon?: Snippet;
 		/** Optional trailing icon, rendered after the label. */
 		iconTrailing?: Snippet;
+		/**
+		 * Lean slightly toward the cursor on approach.
+		 *
+		 * Reserve this for primary calls to action. If every button on the page is
+		 * magnetic the effect stops reading as premium and starts reading as unstable.
+		 * It is automatically inert on touch devices and under reduced motion.
+		 */
+		pull?: boolean;
 	}
 
 	let {
@@ -57,7 +66,8 @@
 		onclick,
 		children,
 		icon,
-		iconTrailing
+		iconTrailing,
+		pull = false
 	}: Props = $props();
 
 	const tag = $derived(href ? 'a' : 'button');
@@ -78,6 +88,7 @@
 	disabled={href ? undefined : disabled}
 	aria-disabled={href && disabled ? 'true' : undefined}
 	tabindex={href && disabled ? -1 : undefined}
+	{@attach pull && !disabled ? magnetic() : undefined}
 >
 	{#if icon}
 		<span class="btn__icon" aria-hidden="true">{@render icon()}</span>
@@ -169,9 +180,15 @@
 	 * to devices with a real pointer.
 	 */
 	@media (hover: hover) {
+		/*
+		 * NOTE: no `transform` here. The magnetic attachment owns this element's
+		 * transform, and a CSS hover transform would be overwritten by GSAP's inline
+		 * style mid-hover — producing a visible fight between the two. Where two
+		 * systems can write the same property, exactly one of them must own it.
+		 */
 		.btn--primary:hover:not(.btn--disabled) {
 			background-color: var(--accent-hover);
-			transform: translateY(-1px);
+			box-shadow: var(--shadow-md);
 		}
 
 		.btn--secondary:hover:not(.btn--disabled) {

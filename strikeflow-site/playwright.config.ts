@@ -16,7 +16,20 @@ export default defineConfig({
 		port: 4173,
 		// Building takes a moment; the default 60s is tight on a cold cache.
 		timeout: 180_000,
-		reuseExistingServer: !process.env.CI
+
+		/*
+		 * Deliberately NOT `reuseExistingServer: !process.env.CI`, which is the
+		 * common default.
+		 *
+		 * Reusing a server you happen to have running is faster, and it means the
+		 * suite can silently test a build from twenty minutes ago. That bit me while
+		 * writing this project: a motion test failed, I spent time diagnosing the
+		 * code, and the code was fine — the server was stale.
+		 *
+		 * A test suite that can pass or fail against the wrong build is worse than a
+		 * slow one, because it makes every result untrustworthy. Always build fresh.
+		 */
+		reuseExistingServer: false
 	},
 
 	use: {

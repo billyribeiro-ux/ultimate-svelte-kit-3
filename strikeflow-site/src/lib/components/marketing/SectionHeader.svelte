@@ -12,6 +12,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { headline, reveal } from '#lib/motion/index.ts';
 
 	interface Props {
 		/** Small uppercase label above the heading. */
@@ -26,22 +27,51 @@
 		id?: string;
 		/** Optional extra content (buttons, badges) below the lede. */
 		children?: Snippet;
+		/**
+		 * Animate the heading on scroll — a masked line-by-line reveal.
+		 *
+		 * Off by default. A page where *every* heading performs is exhausting; the
+		 * effect works because it is used on the two or three that matter.
+		 */
+		animate?: boolean;
 	}
 
-	let { eyebrow, title, lede, level = 2, align = 'start', id, children }: Props = $props();
+	let {
+		eyebrow,
+		title,
+		lede,
+		level = 2,
+		align = 'start',
+		id,
+		children,
+		animate = false
+	}: Props = $props();
 </script>
 
 <div class="section-header section-header--{align}" {id}>
 	{#if eyebrow}
-		<p class="eyebrow">{eyebrow}</p>
+		<p class="eyebrow" data-reveal {@attach animate ? reveal({ distance: 14 }) : undefined}>
+			{eyebrow}
+		</p>
 	{/if}
 
-	<svelte:element this={`h${level}`} class="section-header__title">
+	<!--
+		The attachment is applied conditionally by passing `undefined` when `animate`
+		is false. `{@attach undefined}` is a no-op, which is cleaner than duplicating
+		the whole element inside an {#if}.
+	-->
+	<svelte:element
+		this={`h${level}`}
+		class="section-header__title"
+		{@attach animate ? headline({ onScroll: true, duration: 0.85 }) : undefined}
+	>
 		{title}
 	</svelte:element>
 
 	{#if lede}
-		<p class="lede">{lede}</p>
+		<p class="lede" data-reveal {@attach animate ? reveal({ delay: 0.12 }) : undefined}>
+			{lede}
+		</p>
 	{/if}
 
 	{#if children}

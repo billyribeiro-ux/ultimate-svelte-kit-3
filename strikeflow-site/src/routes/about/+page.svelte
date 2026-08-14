@@ -7,6 +7,7 @@
 	import SectionHeader from '#lib/components/marketing/SectionHeader.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/about');
 
@@ -57,7 +58,7 @@
 
 <section class="section section--tight" aria-label="Company facts">
 	<div class="container container--wide">
-		<StatStrip stats={facts} />
+		<StatStrip stats={facts} animated />
 	</div>
 </section>
 
@@ -95,12 +96,13 @@
 <section class="section principles" aria-labelledby="principles-heading">
 	<div class="container container--wide">
 		<SectionHeader
+			animate
 			id="principles-heading"
 			eyebrow="How we work"
 			title="Three rules we have not broken yet"
 		/>
 
-		<ul class="principles__list" role="list">
+		<ul class="principles__list" role="list" {@attach revealGroup('.principles__item')}>
 			{#each principles as principle (principle.title)}
 				<li class="principles__item">
 					<h3 class="principles__title">{principle.title}</h3>
@@ -122,9 +124,18 @@
 -->
 <section class="section team" aria-labelledby="team-heading">
 	<div class="container container--wide">
-		<SectionHeader id="team-heading" eyebrow="The team" title="Who builds and writes this" />
+		<SectionHeader
+			animate
+			id="team-heading"
+			eyebrow="The team"
+			title="Who builds and writes this"
+		/>
 
-		<ul class="team__list auto-grid" role="list">
+		<ul
+			class="team__list auto-grid"
+			role="list"
+			{@attach revealGroup('.team__item', { scale: true })}
+		>
 			{#each team as person (person.id)}
 				<li class="team__item" id={person.id}>
 					<span class="team__avatar" aria-hidden="true">{person.initials}</span>

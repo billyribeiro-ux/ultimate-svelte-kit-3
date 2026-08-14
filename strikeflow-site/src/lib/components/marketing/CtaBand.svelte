@@ -36,7 +36,7 @@
 			</div>
 
 			<div class="cta__action">
-				<Button href={resolve('/guide')} variant="primary" size="lg" fullWidth>
+				<Button href={resolve('/guide')} variant="primary" size="lg" fullWidth pull>
 					{ctaLabel}
 					{#snippet iconTrailing()}<ArrowRightIcon />{/snippet}
 				</Button>

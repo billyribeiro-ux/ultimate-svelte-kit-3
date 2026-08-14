@@ -10,6 +10,7 @@
 	import SectionHeader from '#lib/components/marketing/SectionHeader.svelte';
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/features');
 
@@ -35,6 +36,7 @@
 <section class="page-hero">
 	<div class="container container--wide">
 		<SectionHeader
+			animate
 			level={2}
 			eyebrow="Platform"
 			title="Everything the tape will tell you, if you can read it fast enough"
@@ -58,7 +60,9 @@
 
 <section class="section" aria-label="Feature details">
 	<div class="container container--wide">
-		<FeatureGrid detailed level={3} />
+		<div {@attach revealGroup('.feature-grid__item', { scale: true })}>
+			<FeatureGrid detailed level={3} />
+		</div>
 	</div>
 </section>
 
@@ -72,7 +76,7 @@
 -->
 <section class="section limits" aria-labelledby="limits-heading">
 	<div class="container">
-		<div class="limits__panel">
+		<div class="limits__panel" data-reveal {@attach reveal()}>
 			<span class="limits__icon" aria-hidden="true">
 				<WarningIcon size={26} weight="duotone" />
 			</span>

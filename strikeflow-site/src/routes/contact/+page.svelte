@@ -4,6 +4,7 @@
 	import Seo from '#lib/seo/Seo.svelte';
 	import { breadcrumbSchema } from '#lib/seo/schema.ts';
 	import { absoluteUrl, site } from '#lib/data/site.ts';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/contact');
 
@@ -61,7 +62,11 @@
 
 <section class="section section--tight" aria-label="Contact channels">
 	<div class="container">
-		<ul class="channels auto-grid" role="list">
+		<ul
+			class="channels auto-grid"
+			role="list"
+			{@attach revealGroup('.channels__item', { scale: true })}
+		>
 			{#each channels as channel (channel.title)}
 				{@const Icon = channel.icon}
 				<li class="channels__item">

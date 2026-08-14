@@ -8,6 +8,8 @@
 -->
 
 <script lang="ts">
+	import { counter } from '#lib/motion/index.ts';
+
 	export interface Stat {
 		readonly value: string;
 		readonly label: string;
@@ -18,16 +20,25 @@
 	interface Props {
 		stats: readonly Stat[];
 		bordered?: boolean;
+		/**
+		 * Count each number up from zero when it scrolls into view.
+		 *
+		 * The final value is always present in the DOM as real text for assistive
+		 * technology — only the visible copy animates. See `motion/counter.ts`.
+		 */
+		animated?: boolean;
 	}
 
-	let { stats, bordered = true }: Props = $props();
+	let { stats, bordered = true, animated = false }: Props = $props();
 </script>
 
 <dl class="stats" class:stats--bordered={bordered}>
 	{#each stats as stat (stat.label)}
 		<div class="stats__item">
 			<dt class="stats__label">{stat.label}</dt>
-			<dd class="stats__value tabular">{stat.value}</dd>
+			<dd class="stats__value tabular" {@attach animated ? counter() : undefined}>
+				{stat.value}
+			</dd>
 			{#if stat.note}
 				<dd class="stats__note">{stat.note}</dd>
 			{/if}

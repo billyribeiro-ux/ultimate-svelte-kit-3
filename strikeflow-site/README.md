@@ -17,17 +17,17 @@ drifts out of date.
 
 ## Stack
 
-| Concern      | Choice                                              |
-| ------------ | --------------------------------------------------- |
-| Framework    | SvelteKit 3 RC (`@sveltejs/kit@next`), Svelte 5      |
-| Language     | TypeScript, `strict` plus `noUncheckedIndexedAccess` |
-| Styling      | Vanilla CSS with custom properties. No Tailwind      |
-| Icons        | `phosphor-svelte`                                    |
-| Charts       | TradingView `lightweight-charts` v5                  |
-| Fonts        | Fontsource — Montserrat (headings), Sofia Sans (body) |
-| Validation   | Valibot (Standard Schema)                            |
-| Adapter      | `@sveltejs/adapter-node`                             |
-| Tests        | Vitest (unit), Playwright (e2e, desktop + mobile)    |
+| Concern    | Choice                                                |
+| ---------- | ----------------------------------------------------- |
+| Framework  | SvelteKit 3 RC (`@sveltejs/kit@next`), Svelte 5       |
+| Language   | TypeScript, `strict` plus `noUncheckedIndexedAccess`  |
+| Styling    | Vanilla CSS with custom properties. No Tailwind       |
+| Icons      | `phosphor-svelte`                                     |
+| Charts     | TradingView `lightweight-charts` v5                   |
+| Fonts      | Fontsource — Montserrat (headings), Sofia Sans (body) |
+| Validation | Valibot (Standard Schema)                             |
+| Adapter    | `@sveltejs/adapter-node`                              |
+| Tests      | Vitest (unit), Playwright (e2e, desktop + mobile)     |
 
 ## Requirements
 
@@ -51,19 +51,19 @@ pnpm run ebook:build
 
 ## Scripts
 
-| Command                 | What it does                                            |
-| ----------------------- | ------------------------------------------------------- |
-| `pnpm run dev`          | Dev server                                              |
-| `pnpm run build`        | Production build                                        |
-| `pnpm run preview`      | Serve the production build locally                      |
-| `pnpm run check`        | `svelte-check` — TypeScript across `.ts` and `.svelte`  |
-| `pnpm run lint`         | Prettier check + ESLint                                 |
-| `pnpm run format`       | Rewrite files with Prettier                             |
-| `pnpm run test:unit`    | Vitest                                                  |
-| `pnpm run test:e2e`     | Playwright, desktop and mobile                          |
-| `pnpm run ebook:build`  | Render the gated PDF from `scripts/ebook-content.js`    |
-| `pnpm run fonts:sync`   | Copy font files out of `node_modules` into `static/`    |
-| `pnpm run fonts:measure`| Recompute metric-matched fallback values (server must be running) |
+| Command                  | What it does                                                      |
+| ------------------------ | ----------------------------------------------------------------- |
+| `pnpm run dev`           | Dev server                                                        |
+| `pnpm run build`         | Production build                                                  |
+| `pnpm run preview`       | Serve the production build locally                                |
+| `pnpm run check`         | `svelte-check` — TypeScript across `.ts` and `.svelte`            |
+| `pnpm run lint`          | Prettier check + ESLint                                           |
+| `pnpm run format`        | Rewrite files with Prettier                                       |
+| `pnpm run test:unit`     | Vitest                                                            |
+| `pnpm run test:e2e`      | Playwright, desktop and mobile                                    |
+| `pnpm run ebook:build`   | Render the gated PDF from `scripts/ebook-content.js`              |
+| `pnpm run fonts:sync`    | Copy font files out of `node_modules` into `static/`              |
+| `pnpm run fonts:measure` | Recompute metric-matched fallback values (server must be running) |
 
 ## Layout
 

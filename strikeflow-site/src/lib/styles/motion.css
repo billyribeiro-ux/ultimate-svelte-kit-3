@@ -1,0 +1,129 @@
+/*
+ * MOTION SUPPORT STYLES
+ * =====================
+ *
+ * The CSS half of the anti-flicker mechanism described in `motion/reveal.ts`.
+ *
+ * THE ONE RULE THIS FILE ENFORCES
+ * -------------------------------
+ * Content is hidden **only** while `motion-pending` is present on <html>, and that
+ * class is added by an inline script in `app.html` that also removes it after 2.5
+ * seconds no matter what.
+ *
+ * So there are exactly three ways the class goes away, and all of them end with the
+ * content visible:
+ *   1. GSAP loads and takes over (the normal path)
+ *   2. The 2.5s failsafe fires (GSAP failed to load)
+ *   3. It was never added (JavaScript disabled, or reduced motion requested)
+ *
+ * If you are ever tempted to write `opacity: 0` on content without a mechanism like
+ * this, don't. A page that is blank for anyone with a slow connection is a worse
+ * outcome than a page with no animation at all.
+ */
+
+/* ---------------------------------------------------------------
+ * The gate
+ * --------------------------------------------------------------- */
+
+/*
+ * `translate3d` rather than `translateY`. The Z component — even at 0 — hints to
+ * the browser that this element should get its own compositor layer, so the
+ * subsequent animation runs on the GPU instead of forcing repaints.
+ */
+.motion-pending [data-reveal] {
+	opacity: 0;
+	transform: translate3d(0, 28px, 0);
+}
+
+.motion-pending [data-reveal='none'] {
+	transform: none;
+}
+
+.motion-pending [data-reveal='left'] {
+	transform: translate3d(28px, 0, 0);
+}
+
+.motion-pending [data-reveal='right'] {
+	transform: translate3d(-28px, 0, 0);
+}
+
+/* Hero parts are choreographed by `motion/hero.ts`, which sets its own start
+   positions. They just need to be invisible until it does. */
+.motion-pending [data-hero] {
+	opacity: 0;
+}
+
+/*
+ * Belt and braces. If the media query somehow evaluates differently to the inline
+ * script's `matchMedia` check, this guarantees a reduced-motion user is never
+ * looking at a hidden element.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.motion-pending [data-reveal],
+	.motion-pending [data-hero] {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* ---------------------------------------------------------------
+ * SplitText line masks
+ * --------------------------------------------------------------- */
+
+/*
+ * SplitText creates the overflow-hidden wrapper; these two rules stop it clipping
+ * the wrong thing.
+ *
+ * `padding-bottom` is the important one. A masked line with no padding clips the
+ * descenders — the tails of g, j, p, q and y — because the wrapper is exactly the
+ * line-height and descenders hang below it. It is a subtle bug that makes the type
+ * look broken without it being obvious why.
+ */
+.split-line {
+	padding-bottom: 0.12em;
+	/* Undoes the padding so the visual line spacing is unchanged. */
+	margin-bottom: -0.12em;
+}
+
+/*
+ * `will-change` is applied while animating and must be removed afterwards — GSAP
+ * handles that for the elements it animates. We deliberately do NOT set
+ * `will-change` here: a permanent hint on every line of every heading exhausts GPU
+ * memory and makes the page slower, which is the classic way this optimisation
+ * backfires on people who apply it globally.
+ */
+
+/* ---------------------------------------------------------------
+ * View transitions
+ * --------------------------------------------------------------- */
+
+/*
+ * The cross-page fade. Driven by `document.startViewTransition` in the root layout.
+ *
+ * Deliberately fast — 220ms. A page transition is dead time in which the user
+ * cannot do anything. Long, elaborate page transitions are the most common way a
+ * "cinematic" site becomes an irritating one.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: vt-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+	}
+
+	::view-transition-new(root) {
+		animation: vt-fade-in 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+	}
+}
+
+@keyframes vt-fade-out {
+	to {
+		opacity: 0;
+		transform: translate3d(0, -6px, 0);
+	}
+}
+
+@keyframes vt-fade-in {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 8px, 0);
+	}
+}

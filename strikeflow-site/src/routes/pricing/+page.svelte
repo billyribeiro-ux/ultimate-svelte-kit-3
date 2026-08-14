@@ -8,6 +8,7 @@
 	import PricingTable from '#lib/components/marketing/PricingTable.svelte';
 	import FaqAccordion from '#lib/components/marketing/FaqAccordion.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	import { reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/pricing');
 </script>
@@ -39,20 +40,23 @@
 
 <section class="section section--tight" aria-label="Plans">
 	<div class="container container--wide">
-		<PricingTable />
+		<div {@attach revealGroup('.pricing__item', { scale: true, staggerAmount: 0.09 })}>
+			<PricingTable />
+		</div>
 	</div>
 </section>
 
 <section class="section faq-section" aria-labelledby="faq-heading">
 	<div class="container">
 		<SectionHeader
+			animate
 			id="faq-heading"
 			align="center"
 			eyebrow="Questions"
 			title="The things people ask before signing up"
 		/>
 
-		<div class="faq-section__body">
+		<div class="faq-section__body" {@attach revealGroup('.faq__item', { staggerAmount: 0.05 })}>
 			<FaqAccordion items={faqs} />
 		</div>
 	</div>

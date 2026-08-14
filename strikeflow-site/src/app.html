@@ -58,6 +58,48 @@
 		-->
 		<meta name="color-scheme" content="dark" />
 
+		<!--
+			THE MOTION GATE
+			===============
+
+			This is the only inline script on the site, and it has to be inline. It must
+			run before the browser paints a single pixel, and an external script — even a
+			tiny one — is a network round-trip during which the page has already drawn.
+
+			It adds `motion-pending` to <html>, which is what `motion.css` keys its
+			"hidden until animated" rules off. That prevents the flash of fully-visible
+			content that you get if you wait for GSAP to load before hiding anything.
+
+			Three safeguards, because hiding content is dangerous:
+
+			  1. If the user prefers reduced motion, the class is never added — so they
+			     see the content immediately AND never download the animation library.
+			  2. A 2.5 second failsafe removes it regardless. If GSAP fails to load —
+			     a blocked request, a chunk that 404s after a bad deploy, an extension
+			     eating it — the content still appears.
+			  3. Any exception at all removes it. This script must never be the reason
+			     a page is blank.
+
+			If you enable a Content Security Policy later, this needs a nonce or hash.
+			SvelteKit can generate that for you via the `csp` config option.
+		-->
+		<script>
+			(function () {
+				var root = document.documentElement;
+				try {
+					var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+					if (!reduced) {
+						root.classList.add('motion-pending');
+						setTimeout(function () {
+							root.classList.remove('motion-pending');
+						}, 2500);
+					}
+				} catch (error) {
+					root.classList.remove('motion-pending');
+				}
+			})();
+		</script>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
