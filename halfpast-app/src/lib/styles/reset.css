@@ -1,0 +1,184 @@
+/*
+ * RESET
+ * =====
+ *
+ * Not a full normalise. Browsers have converged a lot, and most of what a 2010s
+ * reset flattened is now consistent. What is left is a short list of defaults
+ * that were reasonable for documents and are wrong for applications.
+ */
+
+/*
+ * `border-box` on everything.
+ *
+ * The default is `content-box`, where `width: 100%` plus any padding overflows
+ * its parent — the single most common cause of a horizontal scrollbar on a
+ * phone. With `border-box`, width means the width you can see.
+ *
+ * `::before` and `::after` need it separately; they do not inherit it.
+ */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/*
+ * Margins off, then reintroduced deliberately in base.css.
+ *
+ * The browser's defaults are designed for a document with no stylesheet, and
+ * they collapse in ways that make a layout hard to predict.
+ */
+* {
+	margin: 0;
+}
+
+html {
+	/* Anchor links and programmatic scrolling stop below the sticky header. */
+	scroll-padding-top: var(--space-8);
+
+	/*
+	 * DELIBERATELY NOT `scroll-behavior: smooth`.
+	 *
+	 * It looks nice and it breaks things. It hijacks every scroll the page makes
+	 * — including the ones a screen reader, a browser's find-in-page, or an
+	 * automated test performs — and it turns an instant jump into an animation
+	 * those tools then have to wait out. In the previous project in this series
+	 * it deadlocked the end-to-end suite: the test scrolled, saw movement, and
+	 * scrolled again, forever. Smooth scrolling belongs on the individual call
+	 * that wants it, not on the root element.
+	 */
+
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100dvh;
+	/*
+	 * `text-wrap: pretty` asks the browser to avoid short last lines and awkward
+	 * breaks. It costs a little layout time and only applies to a few lines, so
+	 * it is set here rather than on every heading.
+	 */
+	text-wrap: pretty;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Replaced elements are inline by default, which leaves a mysterious few pixels
+ * of gap below them — the space reserved for a text descender on a line that
+ * contains no text.
+ */
+img,
+picture,
+video,
+canvas,
+svg {
+	display: block;
+	max-width: 100%;
+}
+
+img {
+	/* Preserve aspect ratio when only one dimension is constrained. */
+	height: auto;
+}
+
+/*
+ * Form controls do not inherit typography from their parent. They should.
+ */
+input,
+button,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+	letter-spacing: inherit;
+}
+
+button {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+
+/* A textarea that can only grow taller is a textarea that cannot break a layout. */
+textarea {
+	resize: vertical;
+}
+
+/*
+ * Long words — a customer's email address, a URL in a note — must break rather
+ * than push the layout sideways.
+ */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+dd,
+dt {
+	overflow-wrap: break-word;
+}
+
+/* Headings inherit their weight from the design, not from the browser. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-size: inherit;
+	font-weight: inherit;
+}
+
+ul[role='list'],
+ol[role='list'] {
+	list-style: none;
+	padding: 0;
+}
+
+/*
+ * FOCUS
+ * -----
+ *
+ * The default outline is removed only where a replacement is provided, and the
+ * replacement uses `:focus-visible` — which appears for keyboard navigation and
+ * stays away for a mouse click. Removing focus styling outright makes an app
+ * unusable without a mouse, and it is invisible to whoever does it.
+ */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-xs);
+}
+
+/* Anything hidden is hidden, whatever its display rules say. */
+[hidden] {
+	display: none !important;
+}
+
+/*
+ * REDUCED MOTION
+ * --------------
+ *
+ * A global stop, not a suggestion. `0.01ms` rather than `0` because a zero
+ * duration means some browsers never fire `transitionend`, and code waiting for
+ * that event hangs forever.
+ *
+ * `scroll-behavior: auto !important` is here because a component might set
+ * smooth scrolling locally, and someone who asked for less motion means it.
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

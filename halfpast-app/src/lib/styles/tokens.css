@@ -1,0 +1,322 @@
+/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Every colour, size, radius and duration in the app is named here and nowhere
+ * else. A component that writes `#0f766e` instead of `var(--accent)` is a
+ * component that will be wrong in dark mode, and a component that writes `14px`
+ * instead of `var(--text-sm)` is one that will drift from its neighbours.
+ *
+ * Colours are written in `oklch(lightness chroma hue)`. Three reasons this beats
+ * hex here:
+ *
+ *   - The first number IS perceived lightness. `oklch(70% …)` and `oklch(70% …)`
+ *     look equally bright to a human eye whatever their hue, so a palette built
+ *     this way has even contrast by construction instead of by squinting.
+ *   - Changing hue while holding lightness gives a set of colours that belong
+ *     together. In hex you have to nudge all three channels and hope.
+ *   - Dark mode becomes mostly an exercise in flipping the lightness numbers,
+ *     which is a change you can reason about rather than a second palette to
+ *     maintain.
+ */
+
+:root {
+	/* ----------------------------------------------------------- typography */
+
+	/*
+	 * The fallback is named first-class here, not appended as an afterthought.
+	 * The generic families at the end catch machines with neither font.
+	 */
+	--font-display: 'Bricolage Grotesque', 'Bricolage Fallback', system-ui, sans-serif;
+	--font-body: 'Public Sans', 'Public Sans Fallback', system-ui, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+
+	/*
+	 * A fluid type scale. Each step interpolates between a phone size and a
+	 * desktop size using `clamp(min, preferred, max)`, where the middle term is
+	 * viewport-relative.
+	 *
+	 * The `rem` in the preferred term matters for accessibility: a pure `vw`
+	 * value ignores the reader's browser font-size setting entirely, which
+	 * silently breaks zoom for anyone who needs it. Mixing in `rem` keeps the
+	 * text responsive to *both* the viewport and the reader.
+	 *
+	 * Mobile-first: the minimum is the real design, the maximum is the bonus.
+	 */
+	--text-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8rem);
+	--text-sm: clamp(0.875rem, 0.85rem + 0.12vw, 0.925rem);
+	--text-base: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
+	--text-md: clamp(1.125rem, 1.08rem + 0.22vw, 1.25rem);
+	--text-lg: clamp(1.3rem, 1.2rem + 0.5vw, 1.6rem);
+	--text-xl: clamp(1.6rem, 1.4rem + 1vw, 2.25rem);
+	--text-2xl: clamp(2rem, 1.6rem + 2vw, 3.25rem);
+	--text-3xl: clamp(2.5rem, 1.8rem + 3.4vw, 4.5rem);
+
+	--leading-tight: 1.08;
+	--leading-snug: 1.25;
+	--leading-normal: 1.55;
+	--leading-relaxed: 1.7;
+
+	--tracking-tight: -0.02em;
+	--tracking-snug: -0.01em;
+	--tracking-normal: 0;
+	--tracking-wide: 0.06em;
+
+	--weight-regular: 400;
+	--weight-medium: 500;
+	--weight-semibold: 600;
+	--weight-bold: 700;
+
+	/* --------------------------------------------------------------- space */
+
+	/*
+	 * A 4px base, doubling roughly every other step. Not a mathematically pure
+	 * scale — the useful sizes are clustered at the small end because that is
+	 * where interfaces actually live.
+	 */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-7: 3rem;
+	--space-8: 4rem;
+	--space-9: 6rem;
+	--space-10: 8rem;
+
+	/* Page gutters grow with the viewport but never vanish on a small phone. */
+	--gutter: clamp(1rem, 4vw, 2.5rem);
+	--measure: 68ch;
+	--width-content: 76rem;
+	--width-narrow: 42rem;
+
+	/* -------------------------------------------------------------- shape */
+
+	--radius-xs: 0.25rem;
+	--radius-sm: 0.5rem;
+	--radius-md: 0.75rem;
+	--radius-lg: 1rem;
+	--radius-xl: 1.5rem;
+	--radius-pill: 999px;
+
+	--border: 1px;
+	--border-thick: 2px;
+
+	/* --------------------------------------------------------------- time */
+
+	/*
+	 * Durations, chosen from what the motion is for rather than from a scale.
+	 * Under ~100ms a change reads as instant; over ~500ms it reads as waiting.
+	 */
+	--dur-instant: 90ms;
+	--dur-fast: 160ms;
+	--dur-base: 240ms;
+	--dur-slow: 420ms;
+	--dur-slower: 700ms;
+
+	/*
+	 * Easings. The names describe intent, not the curve, because the curve is
+	 * not the point — `--ease-exit` should feel like leaving whatever numbers
+	 * are in it.
+	 */
+	--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+	--ease-enter: cubic-bezier(0.16, 1, 0.3, 1); /* fast start, long settle */
+	--ease-exit: cubic-bezier(0.7, 0, 0.84, 0); /* slow start, quick leave */
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* slight overshoot */
+
+	/* ------------------------------------------------------------- layers */
+
+	--z-base: 0;
+	--z-sticky: 10;
+	--z-header: 20;
+	--z-overlay: 30;
+	--z-modal: 40;
+	--z-toast: 50;
+}
+
+/* ==========================================================================
+ * COLOUR — light theme
+ * ==========================================================================
+ *
+ * Defined on bare `:root` so it is the default with no media query and no
+ * attribute. Everything below only *overrides* these.
+ *
+ * The palette is warm paper and ink with a deep teal accent. It is deliberately
+ * not a dark control-room aesthetic: this app is used at a reception desk in
+ * daylight by somebody who also has a customer standing in front of them.
+ */
+:root {
+	/* Surfaces, from furthest back to nearest front. */
+	--paper: oklch(98.6% 0.006 85);
+	--surface: oklch(100% 0 0);
+	--surface-sunken: oklch(96.4% 0.008 85);
+	--surface-raised: oklch(100% 0 0);
+	--surface-inverse: oklch(24% 0.02 200);
+
+	/* Lines. `--line` for structure, `--line-strong` for emphasis or focus. */
+	--line: oklch(90.5% 0.008 85);
+	--line-strong: oklch(82% 0.012 85);
+
+	/* Text, from loudest to quietest. */
+	--ink: oklch(22% 0.015 230);
+	--ink-muted: oklch(48% 0.014 230);
+	--ink-faint: oklch(63% 0.012 230);
+	--ink-inverse: oklch(98% 0.004 85);
+
+	/* The accent, and the three states it needs. */
+	--accent: oklch(52% 0.11 190);
+	--accent-strong: oklch(44% 0.115 190);
+	--accent-soft: oklch(95.5% 0.028 190);
+	--accent-line: oklch(84% 0.055 190);
+	--on-accent: oklch(99% 0 0);
+
+	/* Semantic colours. Each has a `-soft` background and a `-line` border. */
+	--ok: oklch(52% 0.12 155);
+	--ok-soft: oklch(95.5% 0.035 155);
+	--ok-line: oklch(84% 0.06 155);
+
+	--warn: oklch(58% 0.13 75);
+	--warn-soft: oklch(96% 0.045 75);
+	--warn-line: oklch(86% 0.08 75);
+
+	--danger: oklch(52% 0.16 25);
+	--danger-soft: oklch(96% 0.03 25);
+	--danger-line: oklch(86% 0.06 25);
+
+	/*
+	 * Shadows built from one hue so they read as a single light source. Alpha is
+	 * low and layered rather than one heavy blur — that is what separates a
+	 * shadow that looks like depth from one that looks like a smudge.
+	 */
+	--shadow-color: 220 40% 12%;
+	--shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+	--shadow-md:
+		0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 10px -2px hsl(var(--shadow-color) / 0.07);
+	--shadow-lg:
+		0 1px 3px hsl(var(--shadow-color) / 0.05), 0 12px 28px -6px hsl(var(--shadow-color) / 0.12);
+	--shadow-xl:
+		0 2px 4px hsl(var(--shadow-color) / 0.04), 0 24px 48px -12px hsl(var(--shadow-color) / 0.18);
+
+	/* The focus ring. One definition, used by everything. */
+	--focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+
+	color-scheme: light;
+}
+
+/* ==========================================================================
+ * COLOUR — dark theme
+ * ==========================================================================
+ *
+ * Three states have to work, and only two of them are obvious:
+ *
+ *   1. The visitor chose dark      → `<html data-theme="dark">`
+ *   2. The visitor chose light     → `<html data-theme="light">`
+ *   3. The visitor chose neither   → no attribute; follow the OS
+ *
+ * State 3 is the default and the one people forget. It needs the media query
+ * below. State 1 needs the attribute rule. And the media query must be guarded
+ * with `:not([data-theme='light'])`, or a visitor who explicitly chose light
+ * while their OS is dark gets overruled by their own operating system.
+ *
+ * Dark is not "light with the lightness inverted". Pure white on pure black
+ * vibrates unpleasantly, so the ink stops short of white and the paper stops
+ * short of black; and chroma is raised slightly, because colour reads as more
+ * washed out against a dark ground.
+ */
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--paper: oklch(16.5% 0.012 235);
+		--surface: oklch(20.5% 0.014 235);
+		--surface-sunken: oklch(14% 0.012 235);
+		--surface-raised: oklch(24% 0.015 235);
+		--surface-inverse: oklch(96% 0.005 85);
+
+		--line: oklch(28.5% 0.014 235);
+		--line-strong: oklch(38% 0.018 235);
+
+		--ink: oklch(94% 0.008 235);
+		--ink-muted: oklch(72% 0.012 235);
+		--ink-faint: oklch(56% 0.012 235);
+		--ink-inverse: oklch(18% 0.015 235);
+
+		--accent: oklch(74% 0.115 190);
+		--accent-strong: oklch(82% 0.11 190);
+		--accent-soft: oklch(27% 0.045 190);
+		--accent-line: oklch(38% 0.07 190);
+		--on-accent: oklch(15% 0.02 190);
+
+		--ok: oklch(74% 0.13 155);
+		--ok-soft: oklch(26% 0.05 155);
+		--ok-line: oklch(36% 0.07 155);
+
+		--warn: oklch(80% 0.13 75);
+		--warn-soft: oklch(28% 0.055 75);
+		--warn-line: oklch(40% 0.08 75);
+
+		--danger: oklch(70% 0.16 25);
+		--danger-soft: oklch(27% 0.06 25);
+		--danger-line: oklch(38% 0.09 25);
+
+		/* Shadows do almost nothing on a dark ground, so lean on them harder. */
+		--shadow-color: 220 60% 2%;
+		--shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+		--shadow-md:
+			0 1px 2px hsl(var(--shadow-color) / 0.4), 0 4px 10px -2px hsl(var(--shadow-color) / 0.45);
+		--shadow-lg:
+			0 1px 3px hsl(var(--shadow-color) / 0.4), 0 12px 28px -6px hsl(var(--shadow-color) / 0.55);
+		--shadow-xl:
+			0 2px 4px hsl(var(--shadow-color) / 0.4), 0 24px 48px -12px hsl(var(--shadow-color) / 0.65);
+
+		color-scheme: dark;
+	}
+}
+
+/* The explicit choice. Repeated rather than shared, because a CSS custom
+ * property cannot be aliased without an extra layer of indirection that costs
+ * more clarity than the duplication does. */
+:root[data-theme='dark'] {
+	--paper: oklch(16.5% 0.012 235);
+	--surface: oklch(20.5% 0.014 235);
+	--surface-sunken: oklch(14% 0.012 235);
+	--surface-raised: oklch(24% 0.015 235);
+	--surface-inverse: oklch(96% 0.005 85);
+
+	--line: oklch(28.5% 0.014 235);
+	--line-strong: oklch(38% 0.018 235);
+
+	--ink: oklch(94% 0.008 235);
+	--ink-muted: oklch(72% 0.012 235);
+	--ink-faint: oklch(56% 0.012 235);
+	--ink-inverse: oklch(18% 0.015 235);
+
+	--accent: oklch(74% 0.115 190);
+	--accent-strong: oklch(82% 0.11 190);
+	--accent-soft: oklch(27% 0.045 190);
+	--accent-line: oklch(38% 0.07 190);
+	--on-accent: oklch(15% 0.02 190);
+
+	--ok: oklch(74% 0.13 155);
+	--ok-soft: oklch(26% 0.05 155);
+	--ok-line: oklch(36% 0.07 155);
+
+	--warn: oklch(80% 0.13 75);
+	--warn-soft: oklch(28% 0.055 75);
+	--warn-line: oklch(40% 0.08 75);
+
+	--danger: oklch(70% 0.16 25);
+	--danger-soft: oklch(27% 0.06 25);
+	--danger-line: oklch(38% 0.09 25);
+
+	--shadow-color: 220 60% 2%;
+	--shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+	--shadow-md:
+		0 1px 2px hsl(var(--shadow-color) / 0.4), 0 4px 10px -2px hsl(var(--shadow-color) / 0.45);
+	--shadow-lg:
+		0 1px 3px hsl(var(--shadow-color) / 0.4), 0 12px 28px -6px hsl(var(--shadow-color) / 0.55);
+	--shadow-xl:
+		0 2px 4px hsl(var(--shadow-color) / 0.4), 0 24px 48px -12px hsl(var(--shadow-color) / 0.65);
+
+	color-scheme: dark;
+}

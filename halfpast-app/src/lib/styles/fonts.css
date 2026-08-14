@@ -1,0 +1,96 @@
+/*
+ * FONTS
+ * =====
+ *
+ * Two families, two files, and two fallbacks measured so precisely that you
+ * cannot see the swap happen.
+ *
+ * Bricolage Grotesque carries headings. It is a grotesque with slightly odd,
+ * humane proportions — confident without being corporate, which suits a product
+ * used by one-person studios rather than enterprises.
+ *
+ * Public Sans carries everything else. It was drawn for the US government's
+ * design system, which means it was drawn for forms, tables and small sizes read
+ * quickly — which is exactly what a booking diary is. Its digits are unusually
+ * even, and this app shows a great many digits.
+ *
+ * Both are variable fonts: one file spans every weight from thin to black. Two
+ * requests total, roughly 40kB, for a full typographic range.
+ */
+
+/* --------------------------------------------------------------------------
+ * The real fonts
+ * --------------------------------------------------------------------------
+ *
+ * `font-display: swap` shows the fallback immediately and swaps when the real
+ * font arrives. That trade — a visible swap in exchange for text you can read
+ * during the first 100ms — is only acceptable because the fallbacks below make
+ * the swap cause no reflow. With badly matched fallbacks, `swap` is what makes
+ * the page jump.
+ */
+
+@font-face {
+	font-family: 'Bricolage Grotesque';
+	src: url('/fonts/bricolage-grotesque-latin-wght-normal.woff2') format('woff2-variations');
+	font-weight: 200 800;
+	font-style: normal;
+	font-display: swap;
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Public Sans';
+	src: url('/fonts/public-sans-latin-wght-normal.woff2') format('woff2-variations');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --------------------------------------------------------------------------
+ * The metric-matched fallbacks
+ * --------------------------------------------------------------------------
+ *
+ * These three numbers are the difference between a page that settles and a page
+ * that jumps under someone's thumb.
+ *
+ * `size-adjust` scales the fallback so a line of it is the same width as the
+ * real font. `ascent-override` and `descent-override` force the same line box
+ * height. Together they mean the fallback occupies *exactly* the space the real
+ * font will, so when the swap happens nothing moves — no Cumulative Layout
+ * Shift, no content sliding out from under a tap.
+ *
+ * THESE NUMBERS WERE MEASURED, NOT ESTIMATED. Run `pnpm run fonts:measure` to
+ * reproduce them. They depend on the specific glyph widths of two specific
+ * fonts and cannot be reasoned about from first principles — the previous
+ * project in this series shipped estimated values once and produced a 181-pixel
+ * shift on mobile.
+ *
+ * `local('Arial')` uses a font already on the machine, so the fallback costs
+ * zero bytes. On a system without Arial the browser falls through to the generic
+ * stack in `--font-body`, which is unadjusted but still readable.
+ */
+
+/* Bricolage Grotesque: real ascent 0.93em, real descent 0.27em, at weight 700. */
+@font-face {
+	font-family: 'Bricolage Fallback';
+	src: local('Arial');
+	size-adjust: 103.1%;
+	ascent-override: 90.2%;
+	descent-override: 26.2%;
+	line-gap-override: 0%;
+}
+
+/* Public Sans: real ascent 0.95em, real descent 0.23em, at weight 400. */
+@font-face {
+	font-family: 'Public Sans Fallback';
+	src: local('Arial');
+	size-adjust: 105.4%;
+	ascent-override: 90.1%;
+	descent-override: 21.8%;
+	line-gap-override: 0%;
+}

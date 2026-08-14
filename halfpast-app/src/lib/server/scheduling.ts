@@ -28,6 +28,7 @@ import {
 } from './db/schema.ts';
 import { newBookingReference, newManageToken } from './db/ids.ts';
 import { writeQueue } from './write-queue.ts';
+import { publishDiaryChange } from './diary-events.ts';
 
 /**
  * Scheduling: reading the diary, and writing to it safely.
@@ -324,7 +325,14 @@ export interface CreateBookingInput {
  * That is a politeness, not a guarantee — read the note in `write-queue.ts`.
  */
 export async function createBooking(input: CreateBookingInput): Promise<Booking> {
-	return writeQueue.run(() => createBookingNow(input));
+	const created = await writeQueue.run(() => createBookingNow(input));
+
+	// Only after the transaction has committed. Announcing a change that then
+	// rolls back would send every open booking page to re-read a diary that never
+	// changed — and, worse, briefly show a slot as taken that is still free.
+	publishDiaryChange(created.businessId);
+
+	return created;
 }
 
 async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
@@ -508,7 +516,11 @@ export async function cancelBooking(input: {
 	ignoreNotice?: boolean;
 	now?: number;
 }): Promise<Booking> {
-	return writeQueue.run(() => cancelBookingNow(input));
+	const cancelled = await writeQueue.run(() => cancelBookingNow(input));
+
+	publishDiaryChange(cancelled.businessId);
+
+	return cancelled;
 }
 
 async function cancelBookingNow(input: {

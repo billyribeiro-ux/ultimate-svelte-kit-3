@@ -3,7 +3,72 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="text-scale" content="scale" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+
+		<!--
+			FONT PRELOADS
+			=============
+
+			Without these, the browser must: download the HTML, download the CSS,
+			parse the CSS, discover the @font-face, and only then start the font.
+			Four steps before a glyph. A preload starts the download alongside the
+			CSS instead.
+
+			`crossorigin` is mandatory and is the mistake everybody makes once.
+			Fonts are always fetched in CORS mode, so a preload without it is
+			treated as a *different* request from the one @font-face makes — the
+			file gets downloaded twice, and the console tells you the preload went
+			unused. Same-origin does not exempt you.
+		-->
+		<link
+			rel="preload"
+			href="%sveltekit.assets%/fonts/public-sans-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href="%sveltekit.assets%/fonts/bricolage-grotesque-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+
+		<!--
+			THEME, BEFORE FIRST PAINT
+			=========================
+
+			This runs synchronously in <head>, which is normally something to avoid —
+			it blocks parsing. Here that is exactly what we want.
+
+			The alternative is applying the theme in an effect after hydration, and
+			the result is a white flash before a dark page. Not a subtle one: a
+			full-screen strobe on every navigation, in a product somebody uses at a
+			reception desk all day. Blocking for the microsecond this takes is the
+			cheaper trade by a wide margin.
+
+			The logic: an explicit choice in localStorage wins; otherwise leave the
+			attribute off entirely and let the CSS media query follow the operating
+			system. Writing `data-theme="light"` for a visitor who never chose would
+			pin them to light and ignore their OS switching at sunset.
+
+			try/catch because localStorage throws in Safari's private mode, and a
+			theme preference is not worth breaking the page over.
+		-->
+		<script>
+			(function () {
+				try {
+					var choice = localStorage.getItem('halfpast-theme');
+					if (choice === 'dark' || choice === 'light') {
+						document.documentElement.dataset.theme = choice;
+					}
+				} catch (error) {
+					// No storage available. The media query still works.
+				}
+			})();
+		</script>
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

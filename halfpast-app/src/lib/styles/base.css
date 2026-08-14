@@ -1,0 +1,261 @@
+/*
+ * BASE
+ * ====
+ *
+ * How unstyled HTML looks in this app. Everything here is a plain element
+ * selector, so a component that writes `<h2>` gets the right thing without
+ * reaching for a class.
+ */
+
+body {
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	font-size: var(--text-base);
+	line-height: var(--leading-normal);
+	font-weight: var(--weight-regular);
+
+	/*
+	 * `font-optical-sizing` and `font-synthesis` matter for variable fonts. The
+	 * second one stops the browser inventing a fake bold by smearing the glyphs
+	 * when the real weight axis exists and can just be used.
+	 */
+	font-synthesis: none;
+
+	/* Tabular figures everywhere. This app is mostly times and prices, and
+	 * proportional digits make a column of them visibly ragged. */
+	font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ headings */
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: var(--font-display);
+	line-height: var(--leading-tight);
+	letter-spacing: var(--tracking-tight);
+	font-weight: var(--weight-bold);
+	/* Stop a two-word heading breaking into a lonely single word. */
+	text-wrap: balance;
+}
+
+h1 {
+	font-size: var(--text-2xl);
+}
+h2 {
+	font-size: var(--text-xl);
+}
+h3 {
+	font-size: var(--text-lg);
+	letter-spacing: var(--tracking-snug);
+}
+h4 {
+	font-size: var(--text-md);
+	font-weight: var(--weight-semibold);
+	letter-spacing: var(--tracking-snug);
+}
+
+h5,
+h6 {
+	font-size: var(--text-sm);
+	font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------------------- text */
+
+p {
+	max-width: var(--measure);
+}
+
+a {
+	color: var(--accent-strong);
+	text-decoration: underline;
+	/* Underlines that skip descenders read as typography, not as a link border. */
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.18em;
+	transition: color var(--dur-fast) var(--ease-standard);
+}
+
+a:hover {
+	color: var(--accent);
+}
+
+strong,
+b {
+	font-weight: var(--weight-semibold);
+}
+
+small {
+	font-size: var(--text-sm);
+	color: var(--ink-muted);
+}
+
+code,
+kbd,
+samp,
+pre {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+}
+
+code {
+	background: var(--surface-sunken);
+	border: var(--border) solid var(--line);
+	border-radius: var(--radius-xs);
+	padding: 0.1em 0.35em;
+}
+
+hr {
+	border: none;
+	border-top: var(--border) solid var(--line);
+	margin-block: var(--space-6);
+}
+
+/* --------------------------------------------------------------------- lists */
+
+ul,
+ol {
+	padding-inline-start: var(--space-5);
+}
+
+li + li {
+	margin-block-start: var(--space-2);
+}
+
+/* -------------------------------------------------------------------- tables */
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-variant-numeric: tabular-nums;
+}
+
+th {
+	text-align: start;
+	font-weight: var(--weight-semibold);
+	color: var(--ink-muted);
+	font-size: var(--text-sm);
+}
+
+th,
+td {
+	padding: var(--space-3);
+	border-bottom: var(--border) solid var(--line);
+}
+
+/* -------------------------------------------------------------- form controls */
+
+label {
+	display: block;
+	font-size: var(--text-sm);
+	font-weight: var(--weight-medium);
+	color: var(--ink);
+	margin-block-end: var(--space-2);
+}
+
+input[type='text'],
+input[type='email'],
+input[type='tel'],
+input[type='password'],
+input[type='search'],
+input[type='number'],
+input[type='date'],
+input[type='time'],
+textarea,
+select {
+	width: 100%;
+	padding: var(--space-3) var(--space-4);
+	background: var(--surface);
+	color: var(--ink);
+	border: var(--border) solid var(--line-strong);
+	border-radius: var(--radius-md);
+
+	/*
+	 * 16px minimum on iOS. Below it, Safari zooms the whole page when the field
+	 * receives focus — the layout lurches and does not come back. `--text-base`
+	 * has a 1rem floor precisely so this cannot happen.
+	 */
+	font-size: max(var(--text-base), 1rem);
+
+	transition:
+		border-color var(--dur-fast) var(--ease-standard),
+		box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+input:hover:not(:disabled),
+textarea:hover:not(:disabled),
+select:hover:not(:disabled) {
+	border-color: var(--ink-faint);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+	background: var(--surface-sunken);
+	color: var(--ink-faint);
+	cursor: not-allowed;
+}
+
+/* A field the server rejected. Paired with a visible message, never alone —
+ * colour is not information to somebody who cannot see it. */
+input[aria-invalid='true'],
+textarea[aria-invalid='true'],
+select[aria-invalid='true'] {
+	border-color: var(--danger);
+}
+
+input[aria-invalid='true']:focus-visible,
+textarea[aria-invalid='true']:focus-visible {
+	box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+::placeholder {
+	color: var(--ink-faint);
+	opacity: 1; /* Firefox dims it again otherwise. */
+}
+
+/* Checkboxes and radios keep their native behaviour and take the accent. */
+input[type='checkbox'],
+input[type='radio'] {
+	accent-color: var(--accent);
+	width: 1.15em;
+	height: 1.15em;
+	cursor: pointer;
+}
+
+fieldset {
+	border: none;
+	padding: 0;
+}
+
+legend {
+	padding: 0;
+	font-size: var(--text-sm);
+	font-weight: var(--weight-medium);
+	margin-block-end: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ selection */
+
+::selection {
+	background: var(--accent-soft);
+	color: var(--ink);
+}
+
+/* -------------------------------------------------------------------- scroll */
+
+/* Firefox. Chromium honours `color-scheme` for its own scrollbars. */
+* {
+	scrollbar-color: var(--line-strong) transparent;
+	scrollbar-width: thin;
+}
