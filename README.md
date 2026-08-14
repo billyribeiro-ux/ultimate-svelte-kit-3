@@ -5,7 +5,7 @@ Two things live here:
 | Folder | What it is |
 | --- | --- |
 | [`strikeflow-site/`](./strikeflow-site) | The finished project — a production-grade marketing site for a fictional real-time options flow product, built on SvelteKit 3 and Svelte 5. |
-| [`strikeflow-course/`](./strikeflow-course) | A 27-chapter build-along course that teaches every step of building it. Open `strikeflow-course/dist/index.html`. |
+| [`strikeflow-course/`](./strikeflow-course) | A 37-chapter build-along course that starts from never having written code and teaches every step. Open `strikeflow-course/dist/index.html`. |
 
 ## Quick start
 
@@ -35,4 +35,6 @@ No build step, no server. Each chapter is a real page with prev/next links.
 - Vanilla CSS design system, mobile-first, `min-width` queries only
 - TradingView Lightweight Charts v5 via `{@attach}`, code-split and SSR-safe
 - Gated PDF download with HMAC-signed expiring tokens
-- 29 unit tests, 54 end-to-end tests across desktop and mobile profiles
+- A cinematic GSAP motion system that is impossible to make blank the page, and
+  that reduced-motion users never download
+- 29 unit tests, 70 end-to-end tests across desktop and mobile profiles

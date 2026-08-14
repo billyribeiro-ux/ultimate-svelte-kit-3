@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a website actually is — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Before any code: what happens between typing a web address and seeing a page, and which of the three languages does what.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">01 / 37</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 2.7027027027027026%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-a-website-is.html" aria-current="page"><span class="toc__num">01</span><span>What a website actually is</span></a></li><li><a href="html-basics.html"><span class="toc__num">02</span><span>HTML: the skeleton</span></a></li><li><a href="css-basics.html"><span class="toc__num">03</span><span>CSS: the paint</span></a></li><li><a href="javascript-basics.html"><span class="toc__num">04</span><span>JavaScript: the behaviour</span></a></li><li><a href="terminal-node-packages.html"><span class="toc__num">05</span><span>The terminal, Node and packages</span></a></li><li><a href="vite-build-tools.html"><span class="toc__num">06</span><span>Vite: what a build tool is for</span></a></li><li><a href="what-were-building.html"><span class="toc__num">07</span><span>The project, and how to work through it</span></a></li><li><a href="scaffolding.html"><span class="toc__num">08</span><span>Scaffolding the project</span></a></li><li><a href="whats-new-in-sveltekit-3.html"><span class="toc__num">09</span><span>What's different in SvelteKit 3</span></a></li><li><a href="typescript-strictness.html"><span class="toc__num">10</span><span>TypeScript, tightened</span></a></li><li><a href="fonts.html"><span class="toc__num">11</span><span>Fonts, done properly</span></a></li><li><a href="design-tokens.html"><span class="toc__num">12</span><span>Design tokens</span></a></li><li><a href="reset-base-utilities.html"><span class="toc__num">13</span><span>Reset, base and utilities</span></a></li><li><a href="the-data-layer.html"><span class="toc__num">14</span><span>The data layer</span></a></li><li><a href="environment-variables.html"><span class="toc__num">15</span><span>Environment variables</span></a></li><li><a href="the-seo-component.html"><span class="toc__num">16</span><span>The SEO component</span></a></li><li><a href="structured-data.html"><span class="toc__num">17</span><span>Structured data that actually connects</span></a></li><li><a href="sitemap-robots-llms.html"><span class="toc__num">18</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="ui-primitives.html"><span class="toc__num">19</span><span>UI primitives</span></a></li><li><a href="header-and-drawer.html"><span class="toc__num">20</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="layout-and-shell.html"><span class="toc__num">21</span><span>The layout and the HTML shell</span></a></li><li><a href="the-chart.html"><span class="toc__num">22</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="marketing-components.html"><span class="toc__num">23</span><span>Marketing components</span></a></li><li><a href="the-home-page.html"><span class="toc__num">24</span><span>The home page</span></a></li><li><a href="the-other-pages.html"><span class="toc__num">25</span><span>Features, pricing, about and contact</span></a></li><li><a href="lead-capture-server.html"><span class="toc__num">26</span><span>Lead capture: the server side</span></a></li><li><a href="the-remote-form.html"><span class="toc__num">27</span><span>The remote form</span></a></li><li><a href="the-capture-page.html"><span class="toc__num">28</span><span>The capture page</span></a></li><li><a href="gated-download.html"><span class="toc__num">29</span><span>The gated download</span></a></li><li><a href="blog-and-legal.html"><span class="toc__num">30</span><span>The blog and the legal pages</span></a></li><li><a href="motion-principles.html"><span class="toc__num">31</span><span>What makes motion look expensive</span></a></li><li><a href="motion-without-breaking-the-page.html"><span class="toc__num">32</span><span>Animating without breaking the page</span></a></li><li><a href="the-hero-sequence.html"><span class="toc__num">33</span><span>The hero sequence</span></a></li><li><a href="micro-interactions.html"><span class="toc__num">34</span><span>Micro-interactions and page transitions</span></a></li><li><a href="unit-tests.html"><span class="toc__num">35</span><span>Unit tests with Vitest</span></a></li><li><a href="e2e-tests.html"><span class="toc__num">36</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="ship-it.html"><span class="toc__num">37</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 01</p>
+			<h1>What a website actually is</h1>
+			<p class="lede">Before any code: what happens between typing a web address and seeing a page, and which of the three languages does what.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>You will be able to explain what a browser, a server, HTML, CSS and JavaScript each do — and what we are going to build.</p></aside>
+			<p>This course assumes you have never written a line of code. That is genuinely fine. What it does assume is that you are willing to read carefully, because I am going to explain <strong>why</strong> things are done a certain way, not just what to type.</p>
+<p>Everyone can copy code. The valuable skill — the one that separates a professional from someone who assembles tutorials — is knowing why one approach is correct and another quietly breaks in six months. That is what I am actually teaching.</p>
+<h3 id="what-we-build">What we're building</h3>
+<p><strong>StrikeFlow</strong> — a marketing website for a made-up company that sells real-time options trading data. Marketing pages only: no dashboard, no user accounts. The one thing it does is collect an email address in exchange for a free PDF guide.</p>
+<p>It sounds small. By the end you will have built a design system, a search-engine optimisation layer, a live financial chart, a secure gated download, film-quality animation, and an automated test suite that drives a real browser.</p>
+<h3 id="request">What happens when you visit a page</h3>
+<p>Type an address, press enter, and roughly this happens:</p>
+<ol><li><strong>Your browser</strong> — Chrome, Safari, Firefox — is a program on your machine. It looks up the address and asks a computer somewhere on the internet for a page.</li><li><strong>A server</strong> — just another computer, one that is always on and whose job is to answer requests — sends back a file of text.</li><li>That text is <strong>HTML</strong>. It describes the content and structure of the page: this is a heading, this is a paragraph, this is a link.</li><li>The HTML mentions other files it needs. The browser fetches those too: <strong>CSS</strong> (how it should look) and <strong>JavaScript</strong> (how it should behave).</li><li>The browser reads all of it and paints pixels on your screen.</li></ol>
+<aside class="callout callout--note"><p>A &quot;server&quot; is not a special kind of machine. It is a normal computer running a program that listens for requests and answers them. Your own laptop will be a server later in this course, when you run <code>pnpm run dev</code>.</p></aside>
+<h3 id="three-languages">The three languages, and what each is for</h3>
+<p>Every website is built from three, and they have genuinely different jobs. Keeping them separate is one of the oldest and most useful ideas in web development.</p>
+<ul><li><strong>HTML</strong> — the *content and structure*. What things are. &quot;This is the main heading.&quot; &quot;This is a button.&quot; Think of it as the skeleton.</li><li><strong>CSS</strong> — the *presentation*. What things look like. Colours, sizes, spacing, layout. The skin and clothes.</li><li><strong>JavaScript</strong> — the *behaviour*. What happens when you interact. Click this and a menu opens. The muscles.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why separating them matters</h4>
+	<p>You can redesign a site entirely by changing only CSS, without touching the content. A search engine or a screen reader can understand your page by reading only the HTML, ignoring how it looks. And if the JavaScript fails to load — which happens more often than you would think — a well-built page still shows its content. Mixing the three is how you end up with a site where changing a colour breaks a feature.</p>
+</aside>
+<h3 id="client-server">Client and server</h3>
+<p>You will see these two words constantly, and the distinction matters enormously for security.</p>
+<ul><li><strong>Client-side</strong> means code that runs in the visitor's browser, on their machine. They can read all of it. Right-click, &quot;view source&quot;, and it is there.</li><li><strong>Server-side</strong> means code that runs on your computer before anything is sent. The visitor never sees it — they only see the result.</li></ul>
+<aside class="callout callout--warn"><p>Anything on the client is public. Not &quot;hard to find&quot; — <strong>public</strong>. Passwords, API keys and database credentials must only ever exist on the server. This project has a whole mechanism (chapter 15) that makes the build *fail* if you accidentally use a secret in client code, because &quot;just be careful&quot; is not a security strategy.</p></aside>
+<h3 id="framework">What a framework is, and why we use one</h3>
+<p>You could build this site with nothing but HTML, CSS and JavaScript files. People did for years. It becomes painful quickly: every page repeats the same header and footer, so changing a nav link means editing twelve files and missing one.</p>
+<p>A <strong>framework</strong> is a set of tools and conventions that handle the repetitive parts. We use <strong>SvelteKit</strong>, which is built on <strong>Svelte</strong>.</p>
+<ul><li><strong>Svelte</strong> lets you build *components* — reusable pieces of interface. A button, a card, a header. Write it once, use it everywhere.</li><li><strong>SvelteKit</strong> adds everything around that: pages and URLs, fetching data, handling forms, and turning it all into a real website you can deploy.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why Svelte specifically</h4>
+	<p>Most frameworks ship a runtime — a chunk of the framework itself — to the browser, and do their work while the page is running. Svelte is a *compiler*: it does its work on your machine ahead of time and outputs plain JavaScript. The result is less code sent to your visitor and a faster page. For a marketing site, where speed directly affects both search ranking and how many people bother to stay, that is the whole argument.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can say in one sentence each what HTML, CSS and JavaScript do, and explain why a secret must never appear in client-side code.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<span class="pager__link pager__link--disabled"><span class="pager__dir">← Previous</span><span class="pager__title">You're at the start</span></span>
+			<a class="pager__link pager__link--next" href="html-basics.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">HTML: the skeleton</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

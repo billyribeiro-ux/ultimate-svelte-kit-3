@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vite: what a build tool is for — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Why modern sites need a build step at all, what Vite does in development versus production, and how to read its config.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 37</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 16.216216216216218%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-a-website-is.html"><span class="toc__num">01</span><span>What a website actually is</span></a></li><li><a href="html-basics.html"><span class="toc__num">02</span><span>HTML: the skeleton</span></a></li><li><a href="css-basics.html"><span class="toc__num">03</span><span>CSS: the paint</span></a></li><li><a href="javascript-basics.html"><span class="toc__num">04</span><span>JavaScript: the behaviour</span></a></li><li><a href="terminal-node-packages.html"><span class="toc__num">05</span><span>The terminal, Node and packages</span></a></li><li><a href="vite-build-tools.html" aria-current="page"><span class="toc__num">06</span><span>Vite: what a build tool is for</span></a></li><li><a href="what-were-building.html"><span class="toc__num">07</span><span>The project, and how to work through it</span></a></li><li><a href="scaffolding.html"><span class="toc__num">08</span><span>Scaffolding the project</span></a></li><li><a href="whats-new-in-sveltekit-3.html"><span class="toc__num">09</span><span>What's different in SvelteKit 3</span></a></li><li><a href="typescript-strictness.html"><span class="toc__num">10</span><span>TypeScript, tightened</span></a></li><li><a href="fonts.html"><span class="toc__num">11</span><span>Fonts, done properly</span></a></li><li><a href="design-tokens.html"><span class="toc__num">12</span><span>Design tokens</span></a></li><li><a href="reset-base-utilities.html"><span class="toc__num">13</span><span>Reset, base and utilities</span></a></li><li><a href="the-data-layer.html"><span class="toc__num">14</span><span>The data layer</span></a></li><li><a href="environment-variables.html"><span class="toc__num">15</span><span>Environment variables</span></a></li><li><a href="the-seo-component.html"><span class="toc__num">16</span><span>The SEO component</span></a></li><li><a href="structured-data.html"><span class="toc__num">17</span><span>Structured data that actually connects</span></a></li><li><a href="sitemap-robots-llms.html"><span class="toc__num">18</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="ui-primitives.html"><span class="toc__num">19</span><span>UI primitives</span></a></li><li><a href="header-and-drawer.html"><span class="toc__num">20</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="layout-and-shell.html"><span class="toc__num">21</span><span>The layout and the HTML shell</span></a></li><li><a href="the-chart.html"><span class="toc__num">22</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="marketing-components.html"><span class="toc__num">23</span><span>Marketing components</span></a></li><li><a href="the-home-page.html"><span class="toc__num">24</span><span>The home page</span></a></li><li><a href="the-other-pages.html"><span class="toc__num">25</span><span>Features, pricing, about and contact</span></a></li><li><a href="lead-capture-server.html"><span class="toc__num">26</span><span>Lead capture: the server side</span></a></li><li><a href="the-remote-form.html"><span class="toc__num">27</span><span>The remote form</span></a></li><li><a href="the-capture-page.html"><span class="toc__num">28</span><span>The capture page</span></a></li><li><a href="gated-download.html"><span class="toc__num">29</span><span>The gated download</span></a></li><li><a href="blog-and-legal.html"><span class="toc__num">30</span><span>The blog and the legal pages</span></a></li><li><a href="motion-principles.html"><span class="toc__num">31</span><span>What makes motion look expensive</span></a></li><li><a href="motion-without-breaking-the-page.html"><span class="toc__num">32</span><span>Animating without breaking the page</span></a></li><li><a href="the-hero-sequence.html"><span class="toc__num">33</span><span>The hero sequence</span></a></li><li><a href="micro-interactions.html"><span class="toc__num">34</span><span>Micro-interactions and page transitions</span></a></li><li><a href="unit-tests.html"><span class="toc__num">35</span><span>Unit tests with Vitest</span></a></li><li><a href="e2e-tests.html"><span class="toc__num">36</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="ship-it.html"><span class="toc__num">37</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>Vite: what a build tool is for</h1>
+			<p class="lede">Why modern sites need a build step at all, what Vite does in development versus production, and how to read its config.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>You will understand what happens between saving a file and seeing it in the browser.</p></aside>
+			<p>The code you write is not the code the browser runs. Something sits in between, transforming one into the other. That something is <strong>Vite</strong>, and understanding it removes most of the mystery from modern web development.</p>
+<h3 id="why">Why a build step exists at all</h3>
+<p>Browsers understand HTML, CSS and JavaScript. They do not understand:</p>
+<ul><li><strong>Svelte components</strong> (<code>.svelte</code> files) — these must be compiled into JavaScript.</li><li><strong>TypeScript</strong> (<code>.ts</code>) — the type annotations have to be stripped out.</li><li><strong>Importing CSS from JavaScript</strong> — <code>import &quot;./styles.css&quot;</code> is not a thing a browser does.</li><li><strong>Package imports</strong> — <code>import { gsap } from &quot;gsap&quot;</code> means nothing to a browser; it needs a real file path.</li></ul>
+<p>A build tool resolves all of that. It also does things that are merely *desirable*: bundling many files into few, removing code nobody uses, minifying, and adding a content hash to filenames so browsers cache aggressively but still get updates instantly.</p>
+<h3 id="dev-vs-prod">Vite works completely differently in dev and production</h3>
+<p>This surprises people, and it is the key insight about Vite.</p>
+
+<aside class="callout callout--why">
+	<h4>In development: almost no bundling at all</h4>
+	<p>Older tools rebuilt your entire project on every keystroke — a wait that grew with your codebase. Vite instead serves your files nearly as-is over native browser module support, transforming only the single file you just changed. Start-up is near-instant and stays that way at any project size. This is the reason Vite took over.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>In production: bundled aggressively</h4>
+	<p>Serving hundreds of separate files to a real visitor would mean hundreds of network requests. So <code>vite build</code> bundles, tree-shakes (removes unused code), minifies, and splits the result into chunks that can be cached independently. Different job, different tool path, same config.</p>
+</aside>
+<aside class="callout callout--note"><p>This is why &quot;it works in dev but breaks in the build&quot; happens. The two paths are genuinely different. Always run <code>pnpm run build</code> before you believe something works.</p></aside>
+<h3 id="hmr">Hot Module Replacement</h3>
+<p>Save a file and the browser updates without reloading the page. Crucially, <strong>state is preserved</strong> — a menu you opened stays open, a form you half-filled keeps its text.</p>
+<p>That matters more than it sounds. Without it, testing the fifth step of a form means redoing the first four after every change.</p>
+<h3 id="config">Reading vite.config.ts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+import adapter from '@sveltejs/adapter-node';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
+
+export default defineConfig({
+	plugins: [
+		sveltekit({
+			adapter: adapter(),
+			compilerOptions: {
+				experimental: { async: true }
+			},
+			experimental: {
+				remoteFunctions: true
+			}
+		}),
+		sveltePhosphorOptimize()
+	]
+});</code></pre>
+</figure>
+<ul><li><code>defineConfig</code> is a helper that does nothing at runtime — it exists purely so your editor can autocomplete the options.</li><li><code>plugins</code> is an array of things that transform your code. <strong>Order matters</strong> — they run in sequence.</li><li><code>sveltekit()</code> is the big one: it compiles <code>.svelte</code> files, sets up routing, and handles the server build. In SvelteKit 3, *all* framework configuration lives inside this call.</li></ul>
+<aside class="callout callout--warn"><p>Plugin order is a real source of bugs. <code>sveltePhosphorOptimize()</code> <strong>must</strong> come after <code>sveltekit()</code>, because it parses its input as JavaScript. Put it first and it receives raw <code>.svelte</code> files — markup and all — and dies on the first <code>&lt;h1&gt;</code> with &quot;Unexpected JSX expression&quot;. We hit exactly this while building the project.</p></aside>
+<h3 id="imports">What Vite lets you import</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">non-standard imports Vite makes work</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import '#lib/styles/app.css';        // CSS — injected into the page
+import favicon from '#lib/assets/favicon.svg';  // a URL to the file
+import Button from './Button.svelte';           // a compiled component
+
+// Dynamic import — loaded only when this line runs, and split into
+// its own file so the initial page load never downloads it.
+const { gsap } = await import('gsap');</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>That last one is a performance tool, not just syntax</h4>
+	<p>A normal <code>import</code> at the top of a file means the code is part of your main bundle and every visitor downloads it. <code>await import(...)</code> tells Vite to split it into a separate file fetched only when needed. We use it for GSAP (~90kB) and the charting library (~48kB) — together nearly 140kB that the initial page load never touches.</p>
+</aside>
+<h3 id="commands">The three commands</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run dev      # dev server with hot reloading, on localhost:5173
+pnpm run build    # production build into .svelte-kit/ and build/
+pnpm run preview  # serve the production build locally, on localhost:4173</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>preview</code> is the one people skip and should not. It serves the *real* build, so it is the only way to catch problems that exist only in production — which, as above, is a genuine category.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can explain why a build step is necessary, how dev and production differ, and what <code>await import()</code> buys you.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="terminal-node-packages.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The terminal, Node and packages</span>
+			</a>
+			<a class="pager__link pager__link--next" href="what-were-building.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The project, and how to work through it</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

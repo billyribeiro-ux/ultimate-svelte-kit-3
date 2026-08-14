@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing components — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Section headers, the feature grid, stat strips, CTA bands, an FAQ accordion with no JavaScript, and a pricing table.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 37</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 62.16216216216216%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-a-website-is.html"><span class="toc__num">01</span><span>What a website actually is</span></a></li><li><a href="html-basics.html"><span class="toc__num">02</span><span>HTML: the skeleton</span></a></li><li><a href="css-basics.html"><span class="toc__num">03</span><span>CSS: the paint</span></a></li><li><a href="javascript-basics.html"><span class="toc__num">04</span><span>JavaScript: the behaviour</span></a></li><li><a href="terminal-node-packages.html"><span class="toc__num">05</span><span>The terminal, Node and packages</span></a></li><li><a href="vite-build-tools.html"><span class="toc__num">06</span><span>Vite: what a build tool is for</span></a></li><li><a href="what-were-building.html"><span class="toc__num">07</span><span>The project, and how to work through it</span></a></li><li><a href="scaffolding.html"><span class="toc__num">08</span><span>Scaffolding the project</span></a></li><li><a href="whats-new-in-sveltekit-3.html"><span class="toc__num">09</span><span>What's different in SvelteKit 3</span></a></li><li><a href="typescript-strictness.html"><span class="toc__num">10</span><span>TypeScript, tightened</span></a></li><li><a href="fonts.html"><span class="toc__num">11</span><span>Fonts, done properly</span></a></li><li><a href="design-tokens.html"><span class="toc__num">12</span><span>Design tokens</span></a></li><li><a href="reset-base-utilities.html"><span class="toc__num">13</span><span>Reset, base and utilities</span></a></li><li><a href="the-data-layer.html"><span class="toc__num">14</span><span>The data layer</span></a></li><li><a href="environment-variables.html"><span class="toc__num">15</span><span>Environment variables</span></a></li><li><a href="the-seo-component.html"><span class="toc__num">16</span><span>The SEO component</span></a></li><li><a href="structured-data.html"><span class="toc__num">17</span><span>Structured data that actually connects</span></a></li><li><a href="sitemap-robots-llms.html"><span class="toc__num">18</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="ui-primitives.html"><span class="toc__num">19</span><span>UI primitives</span></a></li><li><a href="header-and-drawer.html"><span class="toc__num">20</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="layout-and-shell.html"><span class="toc__num">21</span><span>The layout and the HTML shell</span></a></li><li><a href="the-chart.html"><span class="toc__num">22</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="marketing-components.html" aria-current="page"><span class="toc__num">23</span><span>Marketing components</span></a></li><li><a href="the-home-page.html"><span class="toc__num">24</span><span>The home page</span></a></li><li><a href="the-other-pages.html"><span class="toc__num">25</span><span>Features, pricing, about and contact</span></a></li><li><a href="lead-capture-server.html"><span class="toc__num">26</span><span>Lead capture: the server side</span></a></li><li><a href="the-remote-form.html"><span class="toc__num">27</span><span>The remote form</span></a></li><li><a href="the-capture-page.html"><span class="toc__num">28</span><span>The capture page</span></a></li><li><a href="gated-download.html"><span class="toc__num">29</span><span>The gated download</span></a></li><li><a href="blog-and-legal.html"><span class="toc__num">30</span><span>The blog and the legal pages</span></a></li><li><a href="motion-principles.html"><span class="toc__num">31</span><span>What makes motion look expensive</span></a></li><li><a href="motion-without-breaking-the-page.html"><span class="toc__num">32</span><span>Animating without breaking the page</span></a></li><li><a href="the-hero-sequence.html"><span class="toc__num">33</span><span>The hero sequence</span></a></li><li><a href="micro-interactions.html"><span class="toc__num">34</span><span>Micro-interactions and page transitions</span></a></li><li><a href="unit-tests.html"><span class="toc__num">35</span><span>Unit tests with Vitest</span></a></li><li><a href="e2e-tests.html"><span class="toc__num">36</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="ship-it.html"><span class="toc__num">37</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>Marketing components</h1>
+			<p class="lede">Section headers, the feature grid, stat strips, CTA bands, an FAQ accordion with no JavaScript, and a pricing table.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Everything the marketing pages need, built once and reused.</p></aside>
+			<h3 id="headings">SectionHeader: levels are structure, not size</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/SectionHeader.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">interface Props {
+	eyebrow?: string;
+	title: string;
+	lede?: string;
+	/** Heading level — defaults to 2, correct for a section inside a page with one h1 */
+	level?: 2 | 3;
+	align?: 'start' | 'center';
+	id?: string;
+	children?: Snippet;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a level prop at all</h4>
+	<p>Heading levels are a document outline, not font sizes. A screen reader user can pull up a list of headings and navigate by it, and jumping from <code>&lt;h1&gt;</code> to <code>&lt;h3&gt;</code> makes that outline read as though content is missing. So: visual size comes from CSS, and the level comes from where the section genuinely sits in the hierarchy. They are separate decisions.</p>
+</aside>
+<h3 id="grid">FeatureGrid, and a Safari quirk</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/FeatureGrid.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;ul class=&quot;feature-grid auto-grid&quot; role=&quot;list&quot;&gt;
+	{#each items as feature (feature.id)}
+		{@const Icon = featureIcons[feature.icon]}
+		&lt;li class=&quot;feature-grid__item&quot;&gt;
+			&lt;Card as=&quot;article&quot;&gt;
+				&lt;span class=&quot;feature-grid__icon&quot; aria-hidden=&quot;true&quot;&gt;
+					&lt;Icon size={26} weight=&quot;duotone&quot; /&gt;
+				&lt;/span&gt;
+				&lt;svelte:element this={`h${level}`} class=&quot;feature-grid__title&quot; id={feature.id}&gt;
+					{feature.title}
+				&lt;/svelte:element&gt;
+				&lt;p&gt;{feature.summary}&lt;/p&gt;
+			&lt;/Card&gt;
+		&lt;/li&gt;
+	{/each}
+&lt;/ul&gt;</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>role=&quot;list&quot;</code> on a <code>&lt;ul&gt;</code> looks redundant — it is not. Safari's VoiceOver <strong>removes list semantics</strong> from any <code>&lt;ul&gt;</code> whose <code>list-style</code> is <code>none</code>. That is deliberate WebKit behaviour. Re-declaring the role restores the &quot;list of 6 items&quot; announcement that tells a user how much is ahead of them.</p></aside>
+<aside class="callout callout--note"><p>The <code>{#each … (feature.id)}</code> bit is a <strong>keyed</strong> each block. Always key your loops with a stable unique id — it lets Svelte surgically move DOM nodes instead of rebuilding them, and it prevents state attaching to the wrong item. Never use the array index as a key.</p></aside>
+<h3 id="stats">StatStrip: a description list</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/StatStrip.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;dl class=&quot;stats&quot;&gt;
+	{#each stats as stat (stat.label)}
+		&lt;div class=&quot;stats__item&quot;&gt;
+			&lt;dt class=&quot;stats__label&quot;&gt;{stat.label}&lt;/dt&gt;
+			&lt;dd class=&quot;stats__value tabular&quot;&gt;{stat.value}&lt;/dd&gt;
+		&lt;/div&gt;
+	{/each}
+&lt;/dl&gt;</code></pre>
+</figure>
+<p>A number and its label are genuinely a term/definition pair. Marking them up as a <code>&lt;dl&gt;</code> means a screen reader announces &quot;median latency, 240 milliseconds&quot; rather than two orphaned strings that happen to sit near each other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the ordering trick</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* The label sits ABOVE the number visually, but &lt;dt&gt; must precede &lt;dd&gt;
+   in the DOM. `order` does the visual swap without breaking the pairing. */
+.stats__label { order: 2; }
+.stats__value { order: 1; }</code></pre>
+</figure>
+<h3 id="faq">An accordion with zero JavaScript</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/FaqAccordion.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each items as item (item.id)}
+	&lt;details class=&quot;faq__item&quot; name={group} id={item.id}&gt;
+		&lt;summary class=&quot;faq__summary&quot;&gt;
+			&lt;span class=&quot;faq__question&quot;&gt;{item.question}&lt;/span&gt;
+			&lt;span class=&quot;faq__marker&quot; aria-hidden=&quot;true&quot;&gt;
+				&lt;CaretDownIcon size={18} weight=&quot;bold&quot; /&gt;
+			&lt;/span&gt;
+		&lt;/summary&gt;
+		&lt;div class=&quot;faq__answer&quot;&gt;&lt;p&gt;{item.answer}&lt;/p&gt;&lt;/div&gt;
+	&lt;/details&gt;
+{/each}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why native &lt;details&gt; beats every hand-rolled accordion</h4>
+	<p>You get keyboard operation, the correct role and expanded state announced, working-before-hydration, and — the killer feature — <strong>Ctrl+F &quot;find in page&quot; auto-expands a closed section to reveal a match</strong>. A div-based accordion hides its content from browser search, so a user searching your FAQ finds nothing. They do not report that as a bug. They just leave.</p>
+</aside>
+<aside class="callout callout--note"><p>The <code>name</code> attribute makes the group exclusive — opening one closes the others. That used to require JavaScript and is now a one-word HTML attribute.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">removing the default triangle</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.faq__summary {
+	list-style: none;                      /* Firefox */
+	cursor: pointer;
+	min-height: 3.25rem;
+}
+.faq__summary::-webkit-details-marker { display: none; }  /* older Safari */</code></pre>
+</figure>
+<h3 id="pricing">PricingTable: a real radiogroup</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/PricingTable.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;pricing__toggle&quot; role=&quot;radiogroup&quot; aria-label=&quot;Billing period&quot;&gt;
+	&lt;button
+		type=&quot;button&quot;
+		role=&quot;radio&quot;
+		aria-checked={billing === 'monthly'}
+		class:is-active={billing === 'monthly'}
+		onclick={() =&gt; (billing = 'monthly')}
+	&gt;Monthly&lt;/button&gt;
+
+	&lt;button
+		type=&quot;button&quot;
+		role=&quot;radio&quot;
+		aria-checked={billing === 'annual'}
+		class:is-active={billing === 'annual'}
+		onclick={() =&gt; (billing = 'annual')}
+	&gt;Annual &lt;span class=&quot;pricing__saving&quot;&gt;save {bestSaving}%&lt;/span&gt;&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>role=&quot;radiogroup&quot;</code> plus <code>role=&quot;radio&quot;</code> gives assistive tech the right mental model — &quot;one of two options&quot;, rather than &quot;two unrelated buttons&quot;.</p>
+<aside class="callout callout--note"><p>For excluded features we render them struck through and greyed. A screen reader cannot see grey, so we add a visually-hidden &quot;Not included: &quot; prefix. Colour and styling are never the only carrier of meaning.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>All six marketing components compile. Open the FAQ in a browser, close every item, then Ctrl+F for a word inside one — it should expand.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-chart.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A TradingView chart, wired up properly</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-home-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The home page</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,7 +1,11 @@
 # Building StrikeFlow — a SvelteKit 3 course
 
-A 27-chapter build-along course that takes you from an empty folder to the tested,
-deployable marketing site in `../strikeflow-site`.
+A 37-chapter build-along course that takes you from **never having written code** to
+the tested, deployable marketing site in `../strikeflow-site`.
+
+It starts from absolute zero — what a browser does, what a tag is, what a function is —
+and ends with a cinematic motion system and an automated test suite. Every explanation
+is in plain English, at the depth a principal engineer would actually reason at.
 
 ## Reading it
 
@@ -30,21 +34,27 @@ strikeflow-course/
   build.js            Generates dist/ from content/
   course.css          Styles for the generated pages
   content/
-    index.js          Concatenates the three parts, in order
-    part1.js          Chapters 01–07  — setup and foundations
-    part2.js          Chapters 08–17  — data, SEO, and the visual shell
-    part3.js          Chapters 18–27  — pages, lead capture, tests, shipping
+    index.js          Assembles all parts into the final reading order
+    part0.js          Chapters 01–06  — foundations: the web, HTML, CSS, JS, Node, Vite
+    part1.js          Chapters 07–13  — setup, SvelteKit 3, TypeScript, fonts, tokens
+    part2.js          Chapters 14–23  — data, environment, SEO, UI, charts
+    part3.js          Chapters 24–30, 35–37 — pages, lead capture, content, tests, shipping
+    part4.js          Chapters 31–34  — cinematic motion
   dist/               Generated output (committed, so it works on clone)
 ```
 
 ## Adding or editing a chapter
 
-Chapters are plain data. Each is an object with a `slug`, `title`, optional `summary`
-and `goal`, and an array of content blocks:
+Chapters are plain data. Slugs contain **no numbers** — chapter numbers come from
+position in the array in `content/index.js`, so inserting a chapter anywhere renumbers
+everything automatically and never leaves a stale filename behind.
+
+Each chapter is an object with a `slug`, `title`, optional `summary` and `goal`, and an
+array of content blocks:
 
 ```js
 {
-	slug: '28-something-new',
+	slug: 'something-new',
 	title: 'Something new',
 	summary: 'One line for the index page and the meta description.',
 	goal: 'What the reader will have by the end.',

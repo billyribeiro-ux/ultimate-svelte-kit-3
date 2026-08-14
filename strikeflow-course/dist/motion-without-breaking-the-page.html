@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animating without breaking the page — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="The hardest problem in web animation is not the animation — it is making sure your content is never hidden when the animation does not run.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 37</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 86.48648648648648%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-a-website-is.html"><span class="toc__num">01</span><span>What a website actually is</span></a></li><li><a href="html-basics.html"><span class="toc__num">02</span><span>HTML: the skeleton</span></a></li><li><a href="css-basics.html"><span class="toc__num">03</span><span>CSS: the paint</span></a></li><li><a href="javascript-basics.html"><span class="toc__num">04</span><span>JavaScript: the behaviour</span></a></li><li><a href="terminal-node-packages.html"><span class="toc__num">05</span><span>The terminal, Node and packages</span></a></li><li><a href="vite-build-tools.html"><span class="toc__num">06</span><span>Vite: what a build tool is for</span></a></li><li><a href="what-were-building.html"><span class="toc__num">07</span><span>The project, and how to work through it</span></a></li><li><a href="scaffolding.html"><span class="toc__num">08</span><span>Scaffolding the project</span></a></li><li><a href="whats-new-in-sveltekit-3.html"><span class="toc__num">09</span><span>What's different in SvelteKit 3</span></a></li><li><a href="typescript-strictness.html"><span class="toc__num">10</span><span>TypeScript, tightened</span></a></li><li><a href="fonts.html"><span class="toc__num">11</span><span>Fonts, done properly</span></a></li><li><a href="design-tokens.html"><span class="toc__num">12</span><span>Design tokens</span></a></li><li><a href="reset-base-utilities.html"><span class="toc__num">13</span><span>Reset, base and utilities</span></a></li><li><a href="the-data-layer.html"><span class="toc__num">14</span><span>The data layer</span></a></li><li><a href="environment-variables.html"><span class="toc__num">15</span><span>Environment variables</span></a></li><li><a href="the-seo-component.html"><span class="toc__num">16</span><span>The SEO component</span></a></li><li><a href="structured-data.html"><span class="toc__num">17</span><span>Structured data that actually connects</span></a></li><li><a href="sitemap-robots-llms.html"><span class="toc__num">18</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="ui-primitives.html"><span class="toc__num">19</span><span>UI primitives</span></a></li><li><a href="header-and-drawer.html"><span class="toc__num">20</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="layout-and-shell.html"><span class="toc__num">21</span><span>The layout and the HTML shell</span></a></li><li><a href="the-chart.html"><span class="toc__num">22</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="marketing-components.html"><span class="toc__num">23</span><span>Marketing components</span></a></li><li><a href="the-home-page.html"><span class="toc__num">24</span><span>The home page</span></a></li><li><a href="the-other-pages.html"><span class="toc__num">25</span><span>Features, pricing, about and contact</span></a></li><li><a href="lead-capture-server.html"><span class="toc__num">26</span><span>Lead capture: the server side</span></a></li><li><a href="the-remote-form.html"><span class="toc__num">27</span><span>The remote form</span></a></li><li><a href="the-capture-page.html"><span class="toc__num">28</span><span>The capture page</span></a></li><li><a href="gated-download.html"><span class="toc__num">29</span><span>The gated download</span></a></li><li><a href="blog-and-legal.html"><span class="toc__num">30</span><span>The blog and the legal pages</span></a></li><li><a href="motion-principles.html"><span class="toc__num">31</span><span>What makes motion look expensive</span></a></li><li><a href="motion-without-breaking-the-page.html" aria-current="page"><span class="toc__num">32</span><span>Animating without breaking the page</span></a></li><li><a href="the-hero-sequence.html"><span class="toc__num">33</span><span>The hero sequence</span></a></li><li><a href="micro-interactions.html"><span class="toc__num">34</span><span>Micro-interactions and page transitions</span></a></li><li><a href="unit-tests.html"><span class="toc__num">35</span><span>Unit tests with Vitest</span></a></li><li><a href="e2e-tests.html"><span class="toc__num">36</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="ship-it.html"><span class="toc__num">37</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>Animating without breaking the page</h1>
+			<p class="lede">The hardest problem in web animation is not the animation — it is making sure your content is never hidden when the animation does not run.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A motion system that is impossible to make blank the page, and that reduced-motion users never pay for.</p></aside>
+			
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add gsap</code></pre>
+</figure>
+<aside class="callout callout--note"><p>GSAP became fully free in 2024, including every plugin — ScrollTrigger, SplitText, MorphSVG, the lot. Older tutorials describe a paid &quot;Club GreenSock&quot; tier for these. That is out of date.</p></aside>
+<h3 id="problem">The problem nobody warns you about</h3>
+<p>A scroll reveal works by starting an element invisible and fading it in. Simple enough — until you ask *when* it becomes invisible.</p>
+<p>GSAP is a large library, loaded asynchronously. There is a window — 200ms on a good connection, several seconds on a bad one — where your page has rendered but the animation library has not arrived. Two obvious approaches both fail badly:</p>
+<ul><li><strong>Hide it in CSS, reveal with JavaScript.</strong> If the JavaScript never arrives — blocked request, failed chunk after a bad deploy, browser extension — the content is gone <strong>forever</strong>. A blank page. This is the worst bug in the category and it is shockingly common.</li><li><strong>Hide it in JavaScript once GSAP loads.</strong> The element renders visible, then jumps to hidden, then animates in. A visible flicker on every single page load.</li></ul>
+<h3 id="solution">The solution: three mechanisms, one effect</h3>
+<p>An inline script in the HTML shell, running before the browser paints anything:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;script&gt;
+	(function () {
+		var root = document.documentElement;
+		try {
+			var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			if (!reduced) {
+				root.classList.add('motion-pending');
+				setTimeout(function () {
+					root.classList.remove('motion-pending');
+				}, 2500);
+			}
+		} catch (error) {
+			root.classList.remove('motion-pending');
+		}
+	})();
+&lt;/script&gt;</code></pre>
+</figure>
+<p>Then CSS that hides content <strong>only</strong> while that class is present:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/motion.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.motion-pending [data-reveal] {
+	opacity: 0;
+	transform: translate3d(0, 28px, 0);
+}
+
+.motion-pending [data-hero] {
+	opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.motion-pending [data-reveal],
+	.motion-pending [data-hero] {
+		opacity: 1;
+		transform: none;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Count the ways the content can appear</h4>
+	<p>There are exactly three, and all of them end visible: (1) GSAP loads and takes over, (2) the 2.5 second failsafe fires because GSAP never loaded, (3) the class was never added at all — JavaScript disabled, or reduced motion requested. There is no fourth path. That is what makes it safe to hide content at all.</p>
+</aside>
+<aside class="callout callout--warn"><p>The script must be <strong>inline</strong>, in the <code>&lt;head&gt;</code>. An external file — however tiny — is a network round-trip, during which the browser has already painted, and you get the flicker you were trying to avoid. This is the one inline script in the whole project, and it earns its place.</p></aside>
+<h3 id="ordering">The ordering that removes the flicker</h3>
+<p>When GSAP does arrive, the order of two lines matters enormously:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/reveal.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// 1. Apply the hidden state as an INLINE style first
+gsap.set(targets, { opacity: 0, y: 28, force3D: true });
+
+// 2. Only then release the CSS gate
+releaseMotionGate();
+
+// 3. Now animate
+gsap.to(targets, { opacity: 1, y: 0, /* ... */ });</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Swap lines 1 and 2 and you get a one-frame flash of fully-visible content on every page load. The element must never be un-hidden between the CSS gate letting go and the inline style taking over.</p></aside>
+<h3 id="reduced-motion">Reduced motion is not optional</h3>
+<p>Every operating system has a &quot;reduce motion&quot; setting. People turn it on for real reasons — vestibular disorders, where large moving content causes genuine nausea and dizziness, not mild annoyance.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/gsap.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function loadMotion(): Promise&lt;MotionApi | null&gt; {
+	if (!browser || prefersReducedMotion()) {
+		releaseMotionGate();
+		return Promise.resolve(null);   // never even imports GSAP
+	}
+
+	motionPromise ??= (async () =&gt; {
+		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] =
+			await Promise.all([
+				import('gsap'),
+				import('gsap/ScrollTrigger'),
+				import('gsap/SplitText'),
+				import('gsap/CustomEase')
+			]);
+		gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
+		// ...
+	})();
+
+	return motionPromise;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Note where the check happens</h4>
+	<p>It returns <code>null</code> <strong>before</strong> the dynamic imports. So a reduced-motion user does not merely see no animation — they never download the ~90kB animation library at all. Respecting the setting should mean not making that person pay for something they explicitly asked not to see.</p>
+</aside>
+<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget.</p></aside>
+<h3 id="attachment">The reveal, as a Svelte attachment</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/reveal.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
+	return (node) =&gt; {
+		let cancelled = false;
+		let context: { revert: () =&gt; void } | undefined;
+
+		void loadMotion().then((motion) =&gt; {
+			if (!motion || cancelled) return;
+
+			const { gsap } = motion;
+
+			context = gsap.context(() =&gt; {
+				gsap.set(targets, { opacity: 0, y: distance, force3D: true });
+				releaseMotionGate();
+
+				gsap.to(targets, {
+					opacity: 1,
+					y: 0,
+					clearProps: 'transform',
+					scrollTrigger: { trigger: node, start: 'top 85%' }
+				});
+			}, node);
+		});
+
+		return () =&gt; {
+			cancelled = true;
+			context?.revert();
+		};
+	};
+}</code></pre>
+</figure>
+<ul><li><code>cancelled</code> guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.</li><li><code>gsap.context()</code> scopes everything created inside it. One <code>revert()</code> kills every tween and ScrollTrigger — no manual bookkeeping.</li><li><code>clearProps: 'transform'</code> strips the inline transform when the tween finishes. A leftover <code>translate3d(0,0,0)</code> creates a containing block that quietly breaks any <code>position: fixed</code> descendant.</li><li>The returned function is the cleanup. <strong>Skip it and every client-side navigation leaks a ScrollTrigger</strong> that keeps recalculating on every scroll event, forever.</li></ul>
+<aside class="callout callout--note"><p><code>start: 'top 85%'</code> means &quot;begin when the top of the element reaches 85% of the way down the viewport&quot; — just as it comes into view. Wait until it is fully on screen and the user watches a static element suddenly move, which looks broken.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Disable JavaScript in your browser devtools and reload. Every piece of content should be visible. Then enable &quot;reduce motion&quot; in your OS settings and check the network tab — GSAP should not appear.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="motion-principles.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What makes motion look expensive</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-hero-sequence.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The hero sequence</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

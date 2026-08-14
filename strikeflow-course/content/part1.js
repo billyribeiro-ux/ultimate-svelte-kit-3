@@ -5,19 +5,19 @@
 export const part1 = [
 	/* ============================================================ 01 */
 	{
-		slug: '01-what-were-building',
-		title: "What we're building",
+		slug: 'what-were-building',
+		title: 'The project, and how to work through it',
 		summary:
-			'A tour of the finished site, what you need installed, and how to get the most out of this course.',
-		goal: "You'll know exactly what you're building and have the right tools installed.",
+			'A tour of the finished site, the tools you need installed, and how to get the most out of the next thirty chapters.',
+		goal: "You'll have the right tools installed and know how the rest of the course is structured.",
 		blocks: [
 			{
 				type: 'p',
-				text: "We're going to build **StrikeFlow** — a marketing site for a fictional real-time options trading data product. Marketing pages only: no dashboard, no accounts, no product. The one thing it *does* is capture an email address in exchange for a free PDF guide."
+				text: "You now know what HTML, CSS and JavaScript each do, what a package is, and what a build tool is for. That is everything the rest of the course assumes. From here we build."
 			},
 			{
 				type: 'p',
-				text: "That sounds small. It isn't. By the time we're done you'll have written a design system, an SEO engine that emits a cross-referenced structured-data graph, a live-updating TradingView chart, a signed and expiring gated download, and a test suite that runs against a real browser on both a desktop and a phone profile."
+				text: "By the end you will have written a design system, an SEO engine that emits a cross-referenced structured-data graph, a live-updating TradingView chart, a signed and expiring gated download, a cinematic motion system, and a test suite that runs against a real browser on both a desktop and a phone profile."
 			},
 			{ type: 'h3', id: 'pages', text: 'The pages' },
 			{
@@ -43,6 +43,7 @@ export const part1 = [
 					'**Phosphor Icons** via `phosphor-svelte`',
 					'**TradingView Lightweight Charts v5** — the library actual trading products use',
 					'**Fontsource** for self-hosted Montserrat and Sofia Sans',
+					'**GSAP** with ScrollTrigger and SplitText — the animation toolkit used by film-quality sites',
 					'**Valibot** for validation, **adapter-node** for deployment'
 				]
 			},
@@ -51,14 +52,14 @@ export const part1 = [
 				title: 'Why vanilla CSS',
 				text: "Tailwind is a fine tool and I use it elsewhere. But this is a course, and a class like `flex items-center gap-2` teaches you Tailwind, not CSS. Writing the design system by hand means that when something looks wrong, you'll know why — which is a skill that outlives any framework."
 			},
-			{ type: 'h3', id: 'prereqs', text: 'What you need' },
+			{ type: 'h3', id: 'prereqs', text: 'Checking your toolkit' },
 			{
 				type: 'p',
-				text: "You should be comfortable with HTML, CSS and JavaScript, and have seen a component framework before — React, Vue, or Svelte itself. You do **not** need to know Svelte 5 or SvelteKit. I'll explain every Svelte-specific thing as we hit it."
+				text: "You do **not** need to know Svelte or SvelteKit — I explain every framework-specific thing as we hit it. What you do need is Node and pnpm, which we met in chapter 5."
 			},
 			{
 				type: 'p',
-				text: 'On your machine you need **Node 22.17 or newer**. SvelteKit 3 requires it and will refuse to install otherwise. Check with:'
+				text: 'You need **Node 22.17 or newer**. SvelteKit 3 requires it and will refuse to install otherwise. Check with:'
 			},
 			{ type: 'terminal', code: 'node -v\n# should print v22.17.0 or higher' },
 			{
@@ -97,7 +98,7 @@ export const part1 = [
 
 	/* ============================================================ 02 */
 	{
-		slug: '02-scaffolding',
+		slug: 'scaffolding',
 		title: 'Scaffolding the project',
 		summary:
 			'One command creates the project. We go through every flag, then take a tour of what it gave us.',
@@ -183,7 +184,7 @@ export const part1 = [
 
 	/* ============================================================ 03 */
 	{
-		slug: '03-whats-new-in-sveltekit-3',
+		slug: 'whats-new-in-sveltekit-3',
 		title: "What's different in SvelteKit 3",
 		summary:
 			"Five changes that will trip you up if you've used SvelteKit 2, and that every tutorial you find online still gets wrong.",
@@ -266,7 +267,7 @@ import { site } from '#lib/data/site.ts';`
 			{ type: 'h3', id: 'env', text: '3. Environment variables are declared, not implicit' },
 			{
 				type: 'p',
-				text: "In SvelteKit 2 every variable in your environment was importable from `$env/*`. In 3 you declare them in `src/env.ts`, which gets you types, startup validation, and a hard guarantee that a private variable can't reach the browser. We build this in chapter 9."
+				text: "In SvelteKit 2 every variable in your environment was importable from `$env/*`. In 3 you declare them in `src/env.ts`, which gets you types, startup validation, and a hard guarantee that a private variable can't reach the browser. We build this in chapter 15."
 			},
 			{ type: 'h3', id: 'paths', text: '4. $app/paths changed shape' },
 			{
@@ -315,7 +316,7 @@ await refreshAll();`
 
 	/* ============================================================ 04 */
 	{
-		slug: '04-typescript-strictness',
+		slug: 'typescript-strictness',
 		title: 'TypeScript, tightened',
 		summary:
 			'Two extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.',
@@ -394,7 +395,7 @@ await refreshAll();`
 
 	/* ============================================================ 05 */
 	{
-		slug: '05-fonts',
+		slug: 'fonts',
 		title: 'Fonts, done properly',
 		summary:
 			'Getting Montserrat and Sofia Sans on the page is easy. Getting them there without a flash of jumping text is where the engineering is.',
@@ -566,7 +567,7 @@ for (const font of FONTS) {
 			},
 			{
 				type: 'p',
-				text: "In chapter 26 we'll write a script that measures these properly. For now, use the values above — they're the measured ones for these two fonts against Arial."
+				text: "In chapter 36 we'll write a script that measures these properly. For now, use the values above — they're the measured ones for these two fonts against Arial."
 			},
 			{
 				type: 'checkpoint',
@@ -577,7 +578,7 @@ for (const font of FONTS) {
 
 	/* ============================================================ 06 */
 	{
-		slug: '06-design-tokens',
+		slug: 'design-tokens',
 		title: 'Design tokens',
 		summary:
 			'One file that owns every colour, size and duration in the project — and the breakpoint scale we build everything on.',
@@ -765,7 +766,7 @@ for (const font of FONTS) {
 
 	/* ============================================================ 07 */
 	{
-		slug: '07-reset-base-utilities',
+		slug: 'reset-base-utilities',
 		title: 'Reset, base and utilities',
 		summary:
 			'Flatten the browser defaults, restyle raw HTML, and add the small handful of layout helpers we will actually reuse.',
@@ -834,7 +835,7 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 			},
 			{
 				type: 'warn',
-				text: "**Do not add `scroll-behavior: smooth` to `html`.** It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 26 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: `element.scrollIntoView({ behavior: 'smooth' })`."
+				text: "**Do not add `scroll-behavior: smooth` to `html`.** It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 36 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: `element.scrollIntoView({ behavior: 'smooth' })`."
 			},
 			{
 				type: 'p',
@@ -997,7 +998,7 @@ p, li { max-width: 70ch; }`
 			},
 			{
 				type: 'checkpoint',
-				text: "Five files in `src/lib/styles/`. Nothing renders differently yet — we haven't imported `app.css` anywhere. That happens in chapter 15."
+				text: "Five files in `src/lib/styles/`. Nothing renders differently yet — we haven't imported `app.css` anywhere. That happens in chapter 21."
 			}
 		]
 	}

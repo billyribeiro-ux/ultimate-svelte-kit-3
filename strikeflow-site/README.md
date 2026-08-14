@@ -25,6 +25,7 @@ drifts out of date.
 | Icons      | `phosphor-svelte`                                     |
 | Charts     | TradingView `lightweight-charts` v5                   |
 | Fonts      | Fontsource — Montserrat (headings), Sofia Sans (body) |
+| Motion     | GSAP 3.15 — ScrollTrigger, SplitText, CustomEase      |
 | Validation | Valibot (Standard Schema)                             |
 | Adapter    | `@sveltejs/adapter-node`                              |
 | Tests      | Vitest (unit), Playwright (e2e, desktop + mobile)     |
@@ -79,6 +80,7 @@ src/
       charts/                Lightweight Charts wrapper
       blog/                  Post body renderer
     data/                    Single source of truth: site, nav, features, pricing, FAQ, team, posts
+    motion/                  Motion language, lazy GSAP loader, reveal/hero/counter/magnetic
     seo/                     Seo.svelte, JSON-LD builders, sitemap route manifest
     server/                  Lead store, HMAC token signing, rate limiting (server-only)
     styles/                  fonts / tokens / reset / base / utilities
@@ -108,6 +110,11 @@ private/ebook/               The gated PDF. Deliberately NOT in static/
   restoration.
 - **Do not guess the font fallback metrics.** Run `pnpm run fonts:measure`.
   Estimated values previously caused a 181px layout shift on mobile.
+- **Do not use `ScrollTrigger.normalizeScroll(true)`.** It reimplements scrolling in
+  JavaScript and deadlocks anything that scrolls then measures — the same root cause
+  as the `scroll-behavior: smooth` bug above. See `src/lib/motion/gsap.ts`.
+- **Never hide content behind an animation without a failsafe.** The motion gate in
+  `src/app.html` has three independent paths that all end with content visible.
 
 ## Disclaimer
 

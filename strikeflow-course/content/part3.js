@@ -5,7 +5,7 @@
 export const part3 = [
 	/* ============================================================ 18 */
 	{
-		slug: '18-the-home-page',
+		slug: 'the-home-page',
 		title: 'The home page',
 		summary:
 			'Assembling the components into a page — and writing a headline that works for both humans and search engines.',
@@ -91,7 +91,7 @@ export const part3 = [
 			},
 			{
 				type: 'note',
-				text: 'The `{#snippet iconTrailing()}…{/snippet}` block inside `<Button>` is how you pass markup to a component in Svelte 5. It matches the `iconTrailing?: Snippet` prop we declared in chapter 13.'
+				text: 'The `{#snippet iconTrailing()}…{/snippet}` block inside `<Button>` is how you pass markup to a component in Svelte 5. It matches the `iconTrailing?: Snippet` prop we declared in chapter 19.'
 			},
 			{ type: 'h3', id: 'hero-css', text: 'Mobile-first hero layout' },
 			{
@@ -142,7 +142,7 @@ export const part3 = [
 
 	/* ============================================================ 19 */
 	{
-		slug: '19-the-other-pages',
+		slug: 'the-other-pages',
 		title: 'Features, pricing, about and contact',
 		summary:
 			'Four more pages, built from the same components — plus the section that makes a financial site trustworthy.',
@@ -273,7 +273,7 @@ export const part3 = [
 
 	/* ============================================================ 20 */
 	{
-		slug: '20-lead-capture-server',
+		slug: 'lead-capture-server',
 		title: 'Lead capture: the server side',
 		summary:
 			'Storage behind an interface, HMAC-signed expiring tokens, and rate limiting — the three pieces before we touch the form.',
@@ -441,14 +441,14 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 			},
 			{
 				type: 'checkpoint',
-				text: 'Three files in `src/lib/server/`. `pnpm run check` passes. We test all of this properly in chapter 25.'
+				text: 'Three files in `src/lib/server/`. `pnpm run check` passes. We test all of this properly in chapter 35.'
 			}
 		]
 	},
 
 	/* ============================================================ 21 */
 	{
-		slug: '21-the-remote-form',
+		slug: 'the-remote-form',
 		title: 'The remote form',
 		summary:
 			"SvelteKit 3's `form()` — a server function you import into a component, that works with JavaScript disabled.",
@@ -589,7 +589,7 @@ const guideSchema = v.object({
 
 	/* ============================================================ 22 */
 	{
-		slug: '22-the-capture-page',
+		slug: 'the-capture-page',
 		title: 'The capture page',
 		summary:
 			'Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly — and the one page that cannot be prerendered.',
@@ -730,7 +730,7 @@ const guideSchema = v.object({
 
 	/* ============================================================ 23 */
 	{
-		slug: '23-gated-download',
+		slug: 'gated-download',
 		title: 'The gated download',
 		summary:
 			'Validate the token on the server, serve the PDF from outside `static/`, and generate the PDF itself with headless Chromium.',
@@ -888,7 +888,7 @@ p           { orphans: 2; widows: 2; } /* never leave one line alone */`
 
 	/* ============================================================ 24 */
 	{
-		slug: '24-blog-and-legal',
+		slug: 'blog-and-legal',
 		title: 'The blog and the legal pages',
 		summary:
 			'Dynamic routes with `entries()`, article structured data, a nested layout, and why a trading site needs a risk disclosure.',
@@ -964,7 +964,7 @@ export const load: PageLoad = ({ params }) => {
 			{
 				type: 'why',
 				title: 'seoTitle: the h1 and the title tag should differ',
-				text: 'Our headline — "How to read an options sweep (and what most scanners get wrong)" — is 63 characters, and with " | StrikeFlow" appended that is 76. Google truncates around 60, so the results page would show it cut mid-word. So we write the `<h1>` for the reader and a shorter `seoTitle` for the results page. An e2e test in chapter 26 enforces the limit.'
+				text: 'Our headline — "How to read an options sweep (and what most scanners get wrong)" — is 63 characters, and with " | StrikeFlow" appended that is 76. Google truncates around 60, so the results page would show it cut mid-word. So we write the `<h1>` for the reader and a shorter `seoTitle` for the results page. An e2e test in chapter 36 enforces the limit.'
 			},
 			{ type: 'h3', id: 'stretched', text: 'The stretched link' },
 			{
@@ -1028,22 +1028,141 @@ export const load: PageLoad = ({ params }) => {
 
 	/* ============================================================ 25 */
 	{
-		slug: '25-unit-tests',
-		title: 'Unit tests',
+		slug: 'unit-tests',
+		title: 'Unit tests with Vitest',
 		summary:
-			'Testing the security-critical code — and writing the one test that would catch a forged token.',
-		goal: 'Fast, meaningful tests for the logic that matters most.',
+			'What a test actually is, why Vitest and Vite are the same tool, and how to test the code where being wrong is expensive.',
+		goal: 'Fast, meaningful tests for the logic that matters most — starting from never having written one.',
 		blocks: [
+			{ type: 'h3', id: 'what-is-a-test', text: 'What a test actually is' },
 			{
 				type: 'p',
-				text: 'Our Vitest setup has two projects: **server** (plain Node, fast) and **client** (a real Chromium). Files ending `.spec.ts` run in Node; `.svelte.spec.ts` run in the browser.'
+				text: 'A test is a small program that runs your real code and checks the answer. That is all. There is no magic in it, and if you have ever written a `console.log` to check whether a function works, you have already done the hard conceptual part — a test just makes that check permanent and automatic.'
+			},
+			{
+				type: 'code',
+				lang: 'ts',
+				file: 'the entire idea',
+				code: `import { describe, it, expect } from 'vitest';
+import { addTax } from './tax.ts';
+
+describe('addTax', () => {
+	it('adds 20 percent', () => {
+		expect(addTax(100)).toBe(120);
+	});
+});`
+			},
+			{
+				type: 'ul',
+				items: [
+					'`describe` groups related tests. Purely organisational — it makes failures readable.',
+					'`it` is one test. Read it as a sentence: *it* adds 20 percent. If the name does not read as a sentence, the test is probably doing too much.',
+					'`expect(...)` takes the actual value; `.toBe(...)` says what it should be. If they differ, the test fails and prints both.'
+				]
 			},
 			{
 				type: 'why',
-				title: 'Why a real browser for component tests',
-				text: 'jsdom quietly lies about layout, focus behaviour and a number of DOM APIs — which are exactly the things a component test should verify. The extra couple of seconds buys you tests that fail when the thing actually breaks.'
+				title: 'Why bother, honestly',
+				text: 'Not to prove the code works today — you can check that by hand. Tests exist for the change you make in four months, when you have forgotten how any of this fits together. They are the mechanism that lets you edit code confidently instead of nervously. That is the entire return on investment, and it only pays out over time.'
 			},
-			{ type: 'h3', id: 'tokens-test', text: 'The test that matters most' },
+			{ type: 'h3', id: 'vitest-is-vite', text: 'Vitest is Vite' },
+			{
+				type: 'p',
+				text: 'This is the thing worth understanding, and it explains why Vitest needs almost no configuration.'
+			},
+			{
+				type: 'p',
+				text: 'Your test files import your real source files — TypeScript, `.svelte` components, `#lib` paths, CSS imports. None of that is something Node can run directly. Something must transform it first. That something is **Vite**, which you already have.'
+			},
+			{
+				type: 'code',
+				file: 'vite.config.ts',
+				lang: 'ts',
+				code: `import { defineConfig } from 'vitest/config';   // <- note: vitest/config
+
+export default defineConfig({
+	plugins: [ sveltekit({ /* ... */ }) ],
+
+	test: {
+		expect: { requireAssertions: true },
+		projects: [ /* ... */ ]
+	}
+});`
+			},
+			{
+				type: 'why',
+				title: 'One config, one transform pipeline',
+				text: 'The `test` block lives in the *same file* as your build config, and Vitest reuses the exact same plugins. So your tests see your code transformed identically to how the browser will see it. Older test runners needed a separate config that duplicated all of this — and drifted, producing the notorious "passes in tests, breaks in the build" failure. Sharing one pipeline removes that entire category of problem.'
+			},
+			{
+				type: 'note',
+				text: '`requireAssertions: true` fails any test that runs without asserting anything. It sounds pedantic and it catches a genuinely common mistake: an async test that forgets `await`, finishes early, asserts nothing, and reports a confident green tick forever.'
+			},
+			{ type: 'h3', id: 'projects', text: 'Two projects: Node and browser' },
+			{
+				type: 'code',
+				file: 'vite.config.ts',
+				lang: 'ts',
+				code: `test: {
+	projects: [
+		{
+			// Component tests — a REAL Chromium, not a DOM emulator
+			extends: './vite.config.ts',
+			test: {
+				name: 'client',
+				browser: {
+					enabled: true,
+					provider: playwright(),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
+				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				exclude: ['src/lib/server/**']
+			}
+		},
+		{
+			// Pure logic — plain Node, no browser, very fast
+			extends: './vite.config.ts',
+			test: {
+				name: 'server',
+				environment: 'node',
+				include: ['src/**/*.{test,spec}.{js,ts}'],
+				exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+			}
+		}
+	]
+}`
+			},
+			{
+				type: 'ul',
+				items: [
+					'Files named `something.spec.ts` run in **Node** — fast, for pure logic.',
+					'Files named `Something.svelte.spec.ts` run in a **real browser** — slower, for components.'
+				]
+			},
+			{
+				type: 'why',
+				title: 'Why a real browser and not jsdom',
+				text: 'jsdom is a JavaScript reimplementation of the DOM, and it is a very good one — but it quietly lies about layout, focus behaviour and a number of APIs, which are exactly the things a component test should be checking. The extra couple of seconds buys you tests that fail when the thing actually breaks, rather than tests that pass because the emulator agreed with your bug.'
+			},
+			{ type: 'h3', id: 'what-to-test', text: 'What to test — and what not to' },
+			{
+				type: 'p',
+				text: 'Beginners are usually told to test everything, which produces a suite so slow and brittle that the team deletes it. Test where being wrong is expensive:'
+			},
+			{
+				type: 'ul',
+				items: [
+					'**Security-critical code.** Our token signing. If it breaks, anyone can forge a download link.',
+					'**Anything with edge cases.** Expiry boundaries, empty arrays, zero, negative numbers.',
+					'**Invariants other code depends on.** Our chart data must have strictly increasing timestamps, because the charting library silently misbehaves otherwise.',
+					'**Bugs you have already fixed.** Write the test that would have caught it, so it cannot come back.'
+				]
+			},
+			{
+				type: 'warn',
+				text: 'Do not test that a framework works. A test asserting that Svelte renders a prop is testing Svelte, not your code, and it will break when Svelte changes something irrelevant. Test *your* logic.'
+			},
+			{ type: 'h3', id: 'tokens-test', text: 'The test that matters most here' },
 			{
 				type: 'code',
 				file: 'src/lib/server/tokens.spec.ts',
@@ -1063,9 +1182,13 @@ export const load: PageLoad = ({ params }) => {
 			},
 			{
 				type: 'p',
-				text: 'If that test ever fails, anyone can mint themselves a download link or change whose email is attributed to a download. It is eight lines and it guards the entire gate.'
+				text: 'Eight lines. If that test ever fails, anyone can mint themselves a download link or change whose email is attributed to a download. That is the shape of a test worth writing.'
 			},
-			{ type: 'h3', id: 'time', text: 'Testing time-dependent code' },
+			{ type: 'h3', id: 'time', text: 'Testing code that depends on time' },
+			{
+				type: 'p',
+				text: 'Our tokens expire after 24 hours. You cannot wait 24 hours, so you lie to the code about what time it is:'
+			},
 			{
 				type: 'code',
 				file: 'src/lib/server/tokens.spec.ts',
@@ -1085,13 +1208,13 @@ export const load: PageLoad = ({ params }) => {
 			},
 			{
 				type: 'note',
-				text: 'Always test **both** sides of a boundary. We have this test and a matching one at 23 hours 59 minutes that asserts the token is still valid. A test that only checks the failure case passes just as happily if your token expires immediately.'
+				text: 'Always test **both sides** of a boundary. We have this test and a matching one at 23 hours 59 minutes asserting the token is still valid. A test that only checks the failure case passes just as happily if your token expires instantly.'
 			},
 			{
 				type: 'warn',
-				text: 'Remember `vi.useRealTimers()` in an `afterEach`. Fake timers leak into subsequent tests and produce failures that make no sense in the file you are looking at.'
+				text: 'Call `vi.useRealTimers()` in an `afterEach`. Fake timers leak into later tests and cause failures that make no sense in the file you are looking at — one of the more infuriating debugging experiences available.'
 			},
-			{ type: 'h3', id: 'determinism', text: 'Testing the invariant, not the values' },
+			{ type: 'h3', id: 'invariants', text: 'Test properties, not values' },
 			{
 				type: 'code',
 				file: 'src/lib/utils/market-data.spec.ts',
@@ -1122,8 +1245,8 @@ it('never produces a non-positive price', () => {
 			},
 			{
 				type: 'why',
-				title: 'What these actually protect',
-				text: 'The first guards the property the whole design rests on — determinism, without which SSR and hydration disagree. The second guards an invariant Lightweight Charts depends on: it silently misbehaves on out-of-order data. The third checks a random walk cannot wander below zero across several seeds. None of them assert specific numbers, so they survive a change to the generation algorithm.'
+				title: 'None of these assert a specific number',
+				text: 'They assert *properties*: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting `price[3] === 428.91` would fail on every harmless tweak, and a test that cries wolf gets deleted.'
 			},
 			{ type: 'h3', id: 'wrong-test', text: 'When the test is wrong' },
 			{
@@ -1132,19 +1255,28 @@ it('never produces a non-positive price', () => {
 			},
 			{
 				type: 'note',
-				text: 'The code was right and my expectation was wrong. That is a normal and useful outcome: the test taught me something about an API I thought I knew. Fix the expectation, and leave a comment saying why the surprising output is correct — otherwise the next person "fixes" it back.'
+				text: 'The code was right; my expectation was wrong. That is a normal and useful outcome — the test taught me something about an API I thought I knew. Fix the expectation, and leave a comment explaining why the surprising output is correct, or the next person will "fix" it back.'
 			},
-			{ type: 'terminal', code: 'pnpm run test:unit' },
+			{ type: 'h3', id: 'running', text: 'Running them' },
+			{
+				type: 'terminal',
+				code: `pnpm run test:unit            # watch mode — reruns on save
+pnpm run test:unit -- --run   # once, then exit (what CI uses)
+pnpm exec vitest run --project=server   # just the fast Node ones`
+			},
+			{
+				type: 'note',
+				text: 'Watch mode is the point. Vitest reruns only the tests affected by the file you just saved, usually in well under a second. Leave it running in a second terminal and you get a continuous answer to "did I just break something?"'
+			},
 			{
 				type: 'checkpoint',
-				text: 'All unit tests pass. You have tests for token signing, expiry, tampering, rate limiting and the data generator.'
+				text: 'All unit tests pass. You have tests for token signing, expiry, tampering, rate limiting and the data generator — and you can explain why Vitest needs no build configuration of its own.'
 			}
 		]
 	},
 
-	/* ============================================================ 26 */
 	{
-		slug: '26-e2e-tests',
+		slug: 'e2e-tests',
 		title: 'End-to-end tests, and the two bugs they found',
 		summary:
 			'Testing SEO metadata, the no-JavaScript path, and the gated download — plus a true story about how these tests caught two real defects.',
@@ -1261,7 +1393,7 @@ it('never produces a non-positive price', () => {
 			},
 			{
 				type: 'p',
-				text: 'Measuring it, the checkbox was jumping **181 pixels** shortly after page load — on mobile only. The cause: the font-fallback metrics from chapter 5. I had estimated them. Sofia Sans is 96.7% of Arial\'s width; I had guessed 92%. When the real font loaded, every line of body copy re-flowed, and on mobile — where the copy sits above the form — that shoved the whole form down the page.'
+				text: 'Measuring it, the checkbox was jumping **181 pixels** shortly after page load — on mobile only. The cause: the font-fallback metrics from chapter 11. I had estimated them. Sofia Sans is 96.7% of Arial\'s width; I had guessed 92%. When the real font loaded, every line of body copy re-flowed, and on mobile — where the copy sits above the form — that shoved the whole form down the page.'
 			},
 			{
 				type: 'why',
@@ -1321,7 +1453,7 @@ const descentOverride = realDescent / sizeAdjust;`
 
 	/* ============================================================ 27 */
 	{
-		slug: '27-ship-it',
+		slug: 'ship-it',
 		title: 'Ship it',
 		summary:
 			'The full verification pipeline, deployment with adapter-node, and a pre-launch checklist worth actually running.',

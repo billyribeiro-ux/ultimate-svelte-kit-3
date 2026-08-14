@@ -5,7 +5,7 @@
 export const part2 = [
 	/* ============================================================ 08 */
 	{
-		slug: '08-the-data-layer',
+		slug: 'the-data-layer',
 		title: 'The data layer',
 		summary:
 			'Typed constants that every page and every piece of structured data reads from. One source of truth, no drift.',
@@ -138,7 +138,7 @@ export const features: readonly Feature[] = [
 			},
 			{
 				type: 'note',
-				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.'
+				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.'
 			},
 			{
 				type: 'p',
@@ -172,7 +172,7 @@ export const features: readonly Feature[] = [
 
 	/* ============================================================ 09 */
 	{
-		slug: '09-environment-variables',
+		slug: 'environment-variables',
 		title: 'Environment variables',
 		summary:
 			'SvelteKit 3 replaced implicit `$env/*` imports with declared, validated, type-safe variables. This is a genuine upgrade.',
@@ -279,7 +279,7 @@ EBOOK_TOKEN_SECRET=""`
 
 	/* ============================================================ 10 */
 	{
-		slug: '10-the-seo-component',
+		slug: 'the-seo-component',
 		title: 'The SEO component',
 		summary:
 			'One component that owns everything inside <head> a search engine or social crawler reads — with required props, so you cannot forget one.',
@@ -367,7 +367,7 @@ EBOOK_TOKEN_SECRET=""`
 			},
 			{
 				type: 'warn',
-				text: 'Keep the whole thing under about **60 characters**. Beyond that Google truncates, and a title cut mid-word looks broken in the one place it is meant to persuade someone to click. Our blog headlines are longer than that on purpose, so they get a separate shorter `seoTitle` — see chapter 24.'
+				text: 'Keep the whole thing under about **60 characters**. Beyond that Google truncates, and a title cut mid-word looks broken in the one place it is meant to persuade someone to click. Our blog headlines are longer than that on purpose, so they get a separate shorter `seoTitle` — see chapter 30.'
 			},
 			{ type: 'h3', id: 'robots', text: 'The robots directive' },
 			{
@@ -449,7 +449,7 @@ EBOOK_TOKEN_SECRET=""`
 
 	/* ============================================================ 11 */
 	{
-		slug: '11-structured-data',
+		slug: 'structured-data',
 		title: 'Structured data that actually connects',
 		summary:
 			'Most tutorials give you four disconnected JSON-LD blocks. We build one @graph where every node references the others by @id.',
@@ -625,7 +625,7 @@ export function serializeJsonLd(graph: Record<string, unknown>): string {
 
 	/* ============================================================ 12 */
 	{
-		slug: '12-sitemap-robots-llms',
+		slug: 'sitemap-robots-llms',
 		title: 'sitemap.xml, robots.txt and llms.txt',
 		summary:
 			'Three generated files, and a clear explanation of what each one actually controls — including the distinction almost everyone gets wrong.',
@@ -717,7 +717,7 @@ export const GET: RequestHandler = () => {
 			},
 			{
 				type: 'warn',
-				text: 'The namespace must be **exactly** `http://www.sitemaps.org/schemas/sitemap/0.9`. Get one character wrong and the file parses as generic XML, and every crawler rejects it as "not a sitemap". I typo\'d this while writing the project; the e2e test in chapter 26 is there because of it.'
+				text: 'The namespace must be **exactly** `http://www.sitemaps.org/schemas/sitemap/0.9`. Get one character wrong and the file parses as generic XML, and every crawler rejects it as "not a sitemap". I typo\'d this while writing the project; the e2e test in chapter 36 is there because of it.'
 			},
 			{
 				type: 'ul',
@@ -784,7 +784,7 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 
 	/* ============================================================ 13 */
 	{
-		slug: '13-ui-primitives',
+		slug: 'ui-primitives',
 		title: 'UI primitives',
 		summary:
 			'Button, Card, Badge and Logo — and the single most important accessibility rule in front-end work.',
@@ -947,7 +947,7 @@ export default defineConfig({
 
 	/* ============================================================ 14 */
 	{
-		slug: '14-header-and-drawer',
+		slug: 'header-and-drawer',
 		title: 'The header and a mobile drawer that is not broken',
 		summary:
 			'A sticky header, and a slide-in navigation drawer built on <dialog> — which gives us focus trapping, Escape and inertness for free.',
@@ -1127,7 +1127,7 @@ export default defineConfig({
 
 	/* ============================================================ 15 */
 	{
-		slug: '15-layout-and-shell',
+		slug: 'layout-and-shell',
 		title: 'The layout and the HTML shell',
 		summary:
 			'Wire up the global stylesheet, add the skip link and main landmark, and put the single most valuable performance tag in the document head.',
@@ -1265,7 +1265,7 @@ export const trailingSlash = 'never';`
 
 	/* ============================================================ 16 */
 	{
-		slug: '16-the-chart',
+		slug: 'the-chart',
 		title: 'A TradingView chart, wired up properly',
 		summary:
 			'Lightweight Charts v5 in a Svelte component — using {@attach}, a dynamic import, and deterministic data so hydration never disagrees with the server.',
@@ -1420,7 +1420,7 @@ export function mulberry32(seed: number): () => number {
 
 	/* ============================================================ 17 */
 	{
-		slug: '17-marketing-components',
+		slug: 'marketing-components',
 		title: 'Marketing components',
 		summary:
 			'Section headers, the feature grid, stat strips, CTA bands, an FAQ accordion with no JavaScript, and a pricing table.',

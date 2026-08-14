@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TypeScript, tightened — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Two extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 37</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 27.027027027027028%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-a-website-is.html"><span class="toc__num">01</span><span>What a website actually is</span></a></li><li><a href="html-basics.html"><span class="toc__num">02</span><span>HTML: the skeleton</span></a></li><li><a href="css-basics.html"><span class="toc__num">03</span><span>CSS: the paint</span></a></li><li><a href="javascript-basics.html"><span class="toc__num">04</span><span>JavaScript: the behaviour</span></a></li><li><a href="terminal-node-packages.html"><span class="toc__num">05</span><span>The terminal, Node and packages</span></a></li><li><a href="vite-build-tools.html"><span class="toc__num">06</span><span>Vite: what a build tool is for</span></a></li><li><a href="what-were-building.html"><span class="toc__num">07</span><span>The project, and how to work through it</span></a></li><li><a href="scaffolding.html"><span class="toc__num">08</span><span>Scaffolding the project</span></a></li><li><a href="whats-new-in-sveltekit-3.html"><span class="toc__num">09</span><span>What's different in SvelteKit 3</span></a></li><li><a href="typescript-strictness.html" aria-current="page"><span class="toc__num">10</span><span>TypeScript, tightened</span></a></li><li><a href="fonts.html"><span class="toc__num">11</span><span>Fonts, done properly</span></a></li><li><a href="design-tokens.html"><span class="toc__num">12</span><span>Design tokens</span></a></li><li><a href="reset-base-utilities.html"><span class="toc__num">13</span><span>Reset, base and utilities</span></a></li><li><a href="the-data-layer.html"><span class="toc__num">14</span><span>The data layer</span></a></li><li><a href="environment-variables.html"><span class="toc__num">15</span><span>Environment variables</span></a></li><li><a href="the-seo-component.html"><span class="toc__num">16</span><span>The SEO component</span></a></li><li><a href="structured-data.html"><span class="toc__num">17</span><span>Structured data that actually connects</span></a></li><li><a href="sitemap-robots-llms.html"><span class="toc__num">18</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="ui-primitives.html"><span class="toc__num">19</span><span>UI primitives</span></a></li><li><a href="header-and-drawer.html"><span class="toc__num">20</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="layout-and-shell.html"><span class="toc__num">21</span><span>The layout and the HTML shell</span></a></li><li><a href="the-chart.html"><span class="toc__num">22</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="marketing-components.html"><span class="toc__num">23</span><span>Marketing components</span></a></li><li><a href="the-home-page.html"><span class="toc__num">24</span><span>The home page</span></a></li><li><a href="the-other-pages.html"><span class="toc__num">25</span><span>Features, pricing, about and contact</span></a></li><li><a href="lead-capture-server.html"><span class="toc__num">26</span><span>Lead capture: the server side</span></a></li><li><a href="the-remote-form.html"><span class="toc__num">27</span><span>The remote form</span></a></li><li><a href="the-capture-page.html"><span class="toc__num">28</span><span>The capture page</span></a></li><li><a href="gated-download.html"><span class="toc__num">29</span><span>The gated download</span></a></li><li><a href="blog-and-legal.html"><span class="toc__num">30</span><span>The blog and the legal pages</span></a></li><li><a href="motion-principles.html"><span class="toc__num">31</span><span>What makes motion look expensive</span></a></li><li><a href="motion-without-breaking-the-page.html"><span class="toc__num">32</span><span>Animating without breaking the page</span></a></li><li><a href="the-hero-sequence.html"><span class="toc__num">33</span><span>The hero sequence</span></a></li><li><a href="micro-interactions.html"><span class="toc__num">34</span><span>Micro-interactions and page transitions</span></a></li><li><a href="unit-tests.html"><span class="toc__num">35</span><span>Unit tests with Vitest</span></a></li><li><a href="e2e-tests.html"><span class="toc__num">36</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="ship-it.html"><span class="toc__num">37</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>TypeScript, tightened</h1>
+			<p class="lede">Two extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Your <code>tsconfig.json</code> is stricter than the default and <code>pnpm run check</code> passes.</p></aside>
+			<p>Open <code>tsconfig.json</code>. The scaffold gives you something short, because most of the configuration comes from a file SvelteKit generates:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json (generated)</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;sourceMap&quot;: true,
+		&quot;strict&quot;: true
+	}
+}</code></pre>
+</figure>
+<p><code>strict: true</code> is doing a lot of work — it turns on <code>strictNullChecks</code>, <code>noImplicitAny</code> and half a dozen others. We're going to add three more, and one required section.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;sourceMap&quot;: true,
+		&quot;strict&quot;: true,
+		&quot;noUncheckedIndexedAccess&quot;: true,
+		&quot;noImplicitOverride&quot;: true,
+		&quot;noFallthroughCasesInSwitch&quot;: true,
+		&quot;noImplicitReturns&quot;: true
+	},
+	&quot;include&quot;: [
+		&quot;src/**/*.ts&quot;,
+		&quot;src/**/*.js&quot;,
+		&quot;src/**/*.svelte&quot;,
+		&quot;scripts/**/*.js&quot;,
+		&quot;*.config.ts&quot;,
+		&quot;*.config.js&quot;
+	],
+	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;src/service-worker&quot;]
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>noUncheckedIndexedAccess is the one that matters</h4>
+	<p>Without it, TypeScript claims <code>array[0]</code> is definitely a <code>T</code>. It is not — the array might be empty. With the flag on, you get <code>T | undefined</code> and have to deal with it. It is mildly irritating for about a day and then it starts catching real &quot;cannot read properties of undefined&quot; crashes before they ship.</p>
+</aside>
+<p>The <code>include</code> and <code>exclude</code> arrays are not optional in SvelteKit 3. The generated config no longer guesses them. Leave them out and <code>svelte-check</code> will happily type-check your <strong>minified production build</strong> in <code>build/</code> and report a couple of thousand meaningless errors — which is a genuinely bewildering first experience.</p>
+<h3 id="check">Checking your work</h3>
+<p>TypeScript on its own does not understand <code>.svelte</code> files. <code>svelte-check</code> does — it type-checks your components, your markup expressions and your props:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run check</code></pre>
+</figure>
+<p>Run this constantly. It is the fastest feedback loop in the project, and unlike the dev server it checks files you are not currently looking at.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>pnpm run check</code> prints <code>0 errors</code>. If it reports thousands, you have not added the <code>exclude</code> array.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="whats-new-in-sveltekit-3.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What's different in SvelteKit 3</span>
+			</a>
+			<a class="pager__link pager__link--next" href="fonts.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Fonts, done properly</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
