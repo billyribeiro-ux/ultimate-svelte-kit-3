@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The home page — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Assembling the components into a page — and writing a headline that works for both humans and search engines.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 66.66666666666666%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html" aria-current="page"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>The home page</h1>
+			<p class="lede">Assembling the components into a page — and writing a headline that works for both humans and search engines.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A complete, responsive home page with correct SEO and structured data.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	import { ArrowRightIcon, LightningIcon, ShieldCheckIcon } from 'phosphor-svelte';
+
+	import Seo from '#lib/seo/Seo.svelte';
+	import { softwareApplicationSchema } from '#lib/seo/schema.ts';
+	import { site } from '#lib/data/site.ts';
+
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import FlowChart from '#lib/components/charts/FlowChart.svelte';
+	import SectionHeader from '#lib/components/marketing/SectionHeader.svelte';
+	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
+	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
+	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+
+	const stats = [
+		{ value: '&lt;250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
+		{ value: '16', label: 'Exchanges consolidated', note: 'Full OPRA feed' },
+		{ value: '1.4M', label: 'Prints per session', note: 'Peak, classified in real time' },
+		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
+	];
+&lt;/script&gt;
+
+&lt;Seo
+	title=&quot;Real-time options flow, decoded&quot;
+	description={site.description}
+	schema={[softwareApplicationSchema()]}
+/&gt;</code></pre>
+</figure>
+<h3 id="hero">The hero</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;hero&quot;&gt;
+	&lt;div class=&quot;container container--wide&quot;&gt;
+		&lt;div class=&quot;hero__grid&quot;&gt;
+			&lt;div class=&quot;hero__copy&quot;&gt;
+				&lt;Badge tone=&quot;brand&quot;&gt;Live options flow&lt;/Badge&gt;
+
+				&lt;h1 class=&quot;hero__title&quot;&gt;Read institutional options flow as it prints&lt;/h1&gt;
+
+				&lt;p class=&quot;hero__lede&quot;&gt;
+					StrikeFlow streams the entire US options tape — sweeps, blocks, dark pool prints
+					and dealer gamma — in under 250 milliseconds. Stop reconstructing what happened
+					an hour ago.
+				&lt;/p&gt;
+
+				&lt;div class=&quot;hero__actions&quot;&gt;
+					&lt;Button href={resolve('/guide')} size=&quot;lg&quot;&gt;
+						Get the free guide
+						{#snippet iconTrailing()}&lt;ArrowRightIcon /&gt;{/snippet}
+					&lt;/Button&gt;
+					&lt;Button href={resolve('/features')} variant=&quot;secondary&quot; size=&quot;lg&quot;&gt;
+						See how it works
+					&lt;/Button&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+
+			&lt;div class=&quot;hero__chart&quot;&gt;
+				&lt;FlowChart height={320} symbol=&quot;SPY&quot; /&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
+
+		&lt;div class=&quot;hero__stats&quot;&gt;&lt;StatStrip {stats} /&gt;&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>About that headline</h4>
+	<p>&quot;Read institutional options flow as it prints&quot; states what the product does, in the language a buyer would use. It tells both a human and a search engine what this page is about. Something like &quot;Trade smarter&quot; tells neither — and the <code>&lt;h1&gt;</code> is the single strongest on-page signal of a page's subject.</p>
+</aside>
+<aside class="callout callout--note"><p>The <code>{#snippet iconTrailing()}…{/snippet}</code> block inside <code>&lt;Button&gt;</code> is how you pass markup to a component in Svelte 5. It matches the <code>iconTrailing?: Snippet</code> prop we declared in chapter 13.</p></aside>
+<h3 id="hero-css">Mobile-first hero layout</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.hero {
+	/* Extra top padding clears the sticky header, which overlaps the page */
+	padding-block: calc(var(--header-height) + var(--space-8)) var(--section-y);
+
+	/* A brand glow, in pure CSS — no image request to delay LCP */
+	background:
+		radial-gradient(80% 60% at 50% -10%,
+			color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 70%),
+		var(--bg-root);
+}
+
+/* Base: stacked, buttons full-width */
+.hero__grid   { display: flex; flex-direction: column; gap: var(--space-10); }
+.hero__actions { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
+
+/* From 30em there is room for side-by-side buttons */
+@media (min-width: 30em) {
+	.hero__actions { flex-direction: row; flex-wrap: wrap; width: auto; }
+}
+
+/* From 64em, copy and chart sit alongside each other */
+@media (min-width: 64em) {
+	.hero__grid  { flex-direction: row; align-items: center; gap: var(--space-16); }
+	.hero__copy  { flex: 1 1 46%; }
+	.hero__chart { flex: 1 1 54%; min-width: 0; }
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>min-width: 0</code> on the chart column is not optional. Flex items default to <code>min-width: auto</code>, which means they refuse to shrink below their content size. A chart canvas will happily blow out of its column without it. This is the single most common flexbox overflow bug.</p></aside>
+<aside class="callout callout--note"><p>Notice the background gradient is CSS, not an image. A hero background image is often the Largest Contentful Paint element — and a gradient renders instantly with no network request at all.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>The home page renders on desktop and on a 375px-wide phone viewport with no horizontal scrolling. View source and confirm the <code>&lt;h1&gt;</code>, <code>&lt;title&gt;</code>, canonical and JSON-LD are all present.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="17-marketing-components.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Marketing components</span>
+			</a>
+			<a class="pager__link pager__link--next" href="19-the-other-pages.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Features, pricing, about and contact</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

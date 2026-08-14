@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset, base and utilities — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Flatten the browser defaults, restyle raw HTML, and add the small handful of layout helpers we will actually reuse.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 25.925925925925924%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html" aria-current="page"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>Reset, base and utilities</h1>
+			<p class="lede">Flatten the browser defaults, restyle raw HTML, and add the small handful of layout helpers we will actually reuse.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A page written in plain semantic HTML already looks right, before any component exists.</p></aside>
+			<h3 id="reset">The reset</h3>
+<p>Every rule here exists because it prevents a specific bug. Create <code>src/lib/styles/reset.css</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/reset.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+
+html {
+	scroll-padding-top: calc(var(--header-height) + var(--space-4));
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100svh;
+	line-height: var(--lh-relaxed);
+	-webkit-font-smoothing: antialiased;
+}
+
+img, picture, video, canvas, svg {
+	display: block;
+	max-width: 100%;
+}
+
+input, button, textarea, select {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+p, h1, h2, h3, h4, h5, h6, li { overflow-wrap: break-word; }
+
+ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
+
+:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: var(--radius-sm);
+}</code></pre>
+</figure>
+<ul><li><code>box-sizing: border-box</code> — when you say <code>width: 300px</code>, you mean 300px. Padding and border included.</li><li><code>display: block</code> on media — kills the mysterious 4px gap under images (it is space for a text descender).</li><li><code>font: inherit</code> on form controls — they do not inherit typography by default. They should.</li><li><code>:focus-visible</code> rather than <code>:focus</code> — mouse users get no ring on click, keyboard users always do.</li></ul>
+<aside class="callout callout--warn"><p><strong>Do not add <code>scroll-behavior: smooth</code> to <code>html</code>.</strong> It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 26 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: <code>element.scrollIntoView({ behavior: 'smooth' })</code>.</p></aside>
+<p>Finally, respect the operating system &quot;reduce motion&quot; setting. For people with vestibular disorders, large transitions can cause genuine nausea:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/reset.css (continued)</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}</code></pre>
+</figure>
+<h3 id="base">Base element styles</h3>
+<p><code>src/lib/styles/base.css</code> restyles raw HTML, so semantic markup looks right without classes.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/base.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">html {
+	background-color: var(--bg-root);
+	color-scheme: dark;
+}
+
+body {
+	background-color: var(--bg-root);
+	color: var(--text-secondary);
+	font-family: var(--font-body);
+	font-size: var(--fs-base);
+	font-synthesis-weight: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-family: var(--font-heading);
+	color: var(--text-primary);
+	font-weight: var(--weight-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--tracking-snug);
+	text-wrap: balance;
+}
+
+h1 { font-size: var(--fs-3xl); font-weight: var(--weight-black); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-xl); }
+
+p { text-wrap: pretty; }
+
+/* ~70 characters — the range typographers consider most readable */
+p, li { max-width: 70ch; }</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why style elements rather than classes</h4>
+	<p>Search engines and screen readers read your semantic structure, not your class names. If <code>&lt;h2&gt;</code> only looks like a heading once you add <code>class=&quot;heading-2&quot;</code>, someone will eventually reach for a <code>&lt;div&gt;</code> instead, and your document outline rots. Make the correct markup also be the easy markup.</p>
+</aside>
+<aside class="callout callout--note"><p><code>text-wrap: balance</code> on headings stops a heading ending in one orphaned word. <code>text-wrap: pretty</code> does the same, more cheaply, for paragraphs. Two lines of CSS that make typography look professionally set.</p></aside>
+<h3 id="utilities">Utilities</h3>
+<p>About a dozen classes in <code>src/lib/styles/utilities.css</code>. A utility earns its place if it appears in three or more unrelated components; everything else lives in the component.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/utilities.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.container {
+	width: 100%;
+	max-width: var(--container-max);
+	margin-inline: auto;
+	padding-inline: var(--gutter);
+}
+
+.section { padding-block: var(--section-y); }
+
+/* The owl selector: space BETWEEN children, no trailing margin */
+.stack &gt; * + * { margin-block-start: var(--stack-space, var(--space-4)); }
+
+/* Responsive columns with no media queries at all */
+.auto-grid {
+	display: grid;
+	gap: var(--grid-gap, var(--space-6));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min, 17rem)), 1fr));
+}
+
+.cluster {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--cluster-gap, var(--space-3));
+	align-items: center;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>auto-grid deserves a moment</h4>
+	<p><code>auto-fit</code> plus <code>minmax()</code> lets the grid work out how many columns fit. One on a phone, four on a desktop, no breakpoints. It responds to the *container*, not the viewport — so it still behaves if you drop it into a narrow sidebar. The <code>min(100%, ...)</code> guards the one failure case: without it, a minimum wider than the screen overflows.</p>
+</aside>
+<h3 id="a11y-utils">Two accessibility helpers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/utilities.css (continued)</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* Hidden visually, still announced by screen readers */
+.visually-hidden:not(:focus):not(:active) {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* The first focusable thing on the page */
+.skip-link {
+	position: absolute;
+	top: var(--space-2);
+	left: var(--space-2);
+	z-index: var(--z-skip-link);
+	padding: var(--space-3) var(--space-5);
+	background-color: var(--accent);
+	color: var(--accent-contrast);
+	border-radius: var(--radius-md);
+	text-decoration: none;
+	transform: translateY(-200%);
+	transition: transform var(--dur-base) var(--ease-out);
+}
+
+.skip-link:focus { transform: translateY(0); }</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Never use <code>display: none</code> or <code>visibility: hidden</code> to hide something you still want announced. Both remove the element from the accessibility tree entirely, which defeats the whole purpose. The clip-based recipe above is the accepted way.</p></aside>
+<h3 id="entry">One stylesheet to import them all</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/app.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">@import './fonts.css';
+@import './tokens.css';
+@import './reset.css';
+@import './base.css';
+@import './utilities.css';</code></pre>
+</figure>
+<p>The order matters: fonts first so the browser starts fetching, then tokens (variables must exist before anything references them), then reset, base and utilities last so they can win on specificity. Vite inlines these at build time, so the browser gets one stylesheet rather than five round-trips.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Five files in <code>src/lib/styles/</code>. Nothing renders differently yet — we haven't imported <code>app.css</code> anywhere. That happens in chapter 15.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="06-design-tokens.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Design tokens</span>
+			</a>
+			<a class="pager__link pager__link--next" href="08-the-data-layer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The data layer</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

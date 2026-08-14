@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ship it — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="The full verification pipeline, deployment with adapter-node, and a pre-launch checklist worth actually running.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html" aria-current="page"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>Ship it</h1>
+			<p class="lede">The full verification pipeline, deployment with adapter-node, and a pre-launch checklist worth actually running.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A verified build you can deploy with confidence.</p></aside>
+			<h3 id="verify">The full check</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run check      # svelte-check — TypeScript across .ts and .svelte
+pnpm run lint       # Prettier + ESLint
+pnpm run test:unit  # Vitest
+pnpm exec playwright test
+pnpm run build</code></pre>
+</figure>
+<p>All five should be clean. On the finished project that is 0 type errors, 0 lint errors, 29 unit tests and 54 end-to-end tests across two device profiles.</p>
+<aside class="callout callout--note"><p>Run exactly these five in CI, in this order. Cheapest and fastest first, so a typo fails in seconds rather than after a four-minute browser run.</p></aside>
+<h3 id="deploy">Deploying</h3>
+<p><code>adapter-node</code> produces a plain Node server in <code>build/</code>:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run build
+node build/index.js</code></pre>
+</figure>
+<p>That runs anywhere Node runs — a VPS, a container, Fly, Railway, Render. If you would rather deploy to a specific platform, swap the adapter in <code>vite.config.ts</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import adapter from '@sveltejs/adapter-vercel';     // or -cloudflare, -netlify, -static
+
+export default defineConfig({
+	plugins: [sveltekit({ adapter: adapter() })]
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>You cannot use <code>adapter-static</code> for this project as built. Two pages are server-rendered on purpose (<code>/guide</code> and <code>/guide/thank-you</code>) and the download endpoint runs per request. If you need a fully static build, replace the remote form with a third-party form service and drop the gated download.</p></aside>
+<h3 id="env-prod">Environment, before anything else</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">production .env</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-bash">PUBLIC_SITE_URL=&quot;https://strikeflow.io&quot;
+LEADS_DIR=&quot;/var/lib/strikeflow/leads&quot;
+EBOOK_TOKEN_SECRET=&quot;&lt;64 hex characters&gt;&quot;</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>node -e &quot;console.log(crypto.randomBytes(32).toString('hex'))&quot;</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>PUBLIC_SITE_URL</code> is <code>static: true</code>, which means it is <strong>baked in at build time</strong>. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build.</p></aside>
+<h3 id="checklist">Pre-launch checklist</h3>
+<ol><li><code>PUBLIC_SITE_URL</code> is the real domain and was set <strong>before</strong> the build.</li><li><code>EBOOK_TOKEN_SECRET</code> is set — otherwise download links die on every restart.</li><li><code>curl https://yourdomain.com/robots.txt</code> returns the real domain in the <code>Sitemap:</code> line.</li><li><code>curl https://yourdomain.com/sitemap.xml</code> lists real URLs, and each returns 200.</li><li>View source on the home page: exactly one <code>&lt;title&gt;</code>, one canonical, one <code>&lt;h1&gt;</code>.</li><li>Paste a page into the <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">Rich Results Test</a> and confirm the graph parses.</li><li>Paste a URL into Slack or LinkedIn and check the share card renders with the right image.</li><li>Run Lighthouse on mobile. Watch CLS especially — it should be 0.</li><li>Tab through the home page. The skip link appears first, focus is always visible, nothing is unreachable.</li><li>Turn off JavaScript and submit the signup form.</li><li>Submit an expired token to <code>/guide/download</code> and confirm a 403.</li><li>Submit the form six times in a minute and confirm the rate limit fires.</li><li>Verify Search Console ownership and submit the sitemap.</li></ol>
+<h3 id="leads">One thing to change before real traffic</h3>
+<aside class="callout callout--warn"><p>The file-backed <code>LeadStore</code> is a teaching implementation. Concurrent appends from multiple processes can interleave, and there is no backup. Before real signups, write a second <code>LeadStore</code> implementation that posts to your email provider or a database. Because everything upstream depends on the <strong>interface</strong>, that is one line changed in <code>leads.ts</code>.</p></aside>
+<h3 id="done">What you've built</h3>
+<p>A production-grade marketing site, and — more usefully — a set of habits that transfer:</p>
+<ul><li>Data separated from presentation, so structured data and visible content cannot drift</li><li>A design system where nothing invents its own values</li><li>Mobile-first CSS with one direction of media query</li><li>Accessibility built in from the element up, not bolted on</li><li>Security handled properly where it matters — timing-safe comparison, server-only modules, escaped serialisation</li><li>Progressive enhancement, verified by a test rather than assumed</li><li>Honesty as a design principle: about what the data can show, about what a library does, and about your own bugs</li></ul>
+<aside class="callout callout--note"><p>That last one is worth keeping. Twice in this project a test told me something I did not want to hear, and both times the right move was to believe the test. The instinct to adjust the test until it passes is the single most expensive habit in software.</p></aside>
+<p>Now go build something with it.</p>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="26-e2e-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">End-to-end tests, and the two bugs they found</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

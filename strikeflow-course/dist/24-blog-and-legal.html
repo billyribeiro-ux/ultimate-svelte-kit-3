@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The blog and the legal pages — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Dynamic routes with `entries()`, article structured data, a nested layout, and why a trading site needs a risk disclosure.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 88.88888888888889%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html" aria-current="page"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>The blog and the legal pages</h1>
+			<p class="lede">Dynamic routes with <code>entries()</code>, article structured data, a nested layout, and why a trading site needs a risk disclosure.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Content pages complete, with full Article and Person schema.</p></aside>
+			<h3 id="dynamic">A dynamic route</h3>
+<p><code>src/routes/blog/[slug]/+page.svelte</code> handles <code>/blog/anything</code>. The <code>[slug]</code> folder name becomes <code>params.slug</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/blog/[slug]/+page.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
+import type { PageLoad, EntryGenerator } from './$types';
+import { getPost, posts } from '#lib/data/posts.ts';
+import { getPerson } from '#lib/data/team.ts';
+
+export const entries: EntryGenerator = () =&gt; {
+	return posts.map((post) =&gt; ({ slug: post.slug }));
+};
+
+export const load: PageLoad = ({ params }) =&gt; {
+	const post = getPost(params.slug);
+	if (!post) error(404, `No article found at /blog/${params.slug}`);
+
+	const author = getPerson(post.authorId);
+	if (!author) error(500, `Post &quot;${post.slug}&quot; references unknown author`);
+
+	return { post, author };
+};</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why declare entries() when the crawler would find them anyway</h4>
+	<p>SvelteKit finds most pages by crawling links, and it would discover all three of these from <code>/blog</code>. But that makes prerendering depend on your <strong>navigation</strong>. Move posts behind a &quot;load more&quot; button and they silently stop being built, with no error. <code>entries()</code> states the truth directly: these slugs exist and must be rendered, regardless of what links to them.</p>
+</aside>
+<aside class="callout callout--warn"><p>Return a <strong>404</strong> for a missing post, not a redirect to <code>/blog</code>. A missing article genuinely is not found, and bouncing a crawler to an index page with a 302 creates a *soft 404* — one of the more common ways sites confuse Google about which of their URLs are real.</p></aside>
+<aside class="callout callout--note"><p>An unresolvable author is a <strong>500</strong>, not a 404. It is a data bug, not a user error, and failing loudly at build time is exactly what we want — an article with no byline is an E-E-A-T problem we would rather never ship.</p></aside>
+<h3 id="article-schema">The full article schema</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/blog/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Seo
+	title={post.seoTitle ?? post.title}
+	description={post.description}
+	type=&quot;article&quot;
+	article={{
+		published: post.published,
+		modified: post.updated,
+		authorName: author.name,
+		tags: post.tags
+	}}
+	schema={[
+		articleSchema(post, author, pageUrl),
+		personSchema(author),
+		breadcrumbSchema(pageUrl, [
+			{ name: 'Home', path: '/' },
+			{ name: 'Insights', path: '/blog' },
+			{ name: post.title, path: `/blog/${post.slug}` }
+		])
+	]}
+/&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>seoTitle: the h1 and the title tag should differ</h4>
+	<p>Our headline — &quot;How to read an options sweep (and what most scanners get wrong)&quot; — is 63 characters, and with &quot; | StrikeFlow&quot; appended that is 76. Google truncates around 60, so the results page would show it cut mid-word. So we write the <code>&lt;h1&gt;</code> for the reader and a shorter <code>seoTitle</code> for the results page. An e2e test in chapter 26 enforces the limit.</p>
+</aside>
+<h3 id="stretched">The stretched link</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/blog/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.post-card { position: relative; }
+
+.post-card__title a::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+}</code></pre>
+</figure>
+<p>The whole card becomes clickable while the only real link is the heading. You avoid nesting the card inside an <code>&lt;a&gt;</code> (invalid — a link cannot contain a heading plus block content) and avoid an <code>onclick</code> on the container (not keyboard accessible). The link text stays the article title, so it reads correctly when a screen reader lists all links on the page.</p>
+<aside class="callout callout--warn"><p><code>position: relative</code> on the card is load-bearing. Without it the overlay escapes to the nearest positioned ancestor and covers the entire page — every click anywhere goes to that one article.</p></aside>
+<h3 id="nested-layout">A nested layout</h3>
+<p><code>src/routes/legal/+layout.svelte</code> wraps only the routes under <code>/legal</code>, inheriting the root layout above it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/legal/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.legal :global(h2) {
+	font-size: var(--fs-xl);
+	margin-block: var(--space-10) var(--space-4);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why :global here</h4>
+	<p>Svelte scopes styles by adding a hash class to elements it can see in <strong>this</strong> component's markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. <code>.legal :global(h2)</code> reads as: scope the <code>.legal</code> part, but let the <code>h2</code> part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for <code>!important</code>.</p>
+</aside>
+<h3 id="ymyl">Why a trading site needs these pages</h3>
+<p>Three legal pages: risk disclosure, privacy, terms. For a financial site these are not boilerplate — they are trust signals a quality rater is explicitly told to look for, and the risk disclosure in particular is genuinely important.</p>
+<p>The footer carries a condensed version of the risk disclosure on <strong>every page</strong>, stating plainly that we are a data provider, not a broker-dealer or adviser, and that nothing here is investment advice. That is both the right thing to do and a strong E-E-A-T signal.</p>
+<aside class="callout callout--warn"><p>The legal copy in this project is realistic sample text for a teaching exercise. It is <strong>not legal advice</strong> and has not been reviewed by a lawyer. Your obligations depend on your jurisdiction and your actual business. Have counsel review before you publish anything like it.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>All three blog posts render at their own URLs with Article, Person and BreadcrumbList in the JSON-LD. <code>pnpm run build</code> prerenders them.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="23-gated-download.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The gated download</span>
+			</a>
+			<a class="pager__link pager__link--next" href="25-unit-tests.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Unit tests</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What's different in SvelteKit 3 — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Five changes that will trip you up if you've used SvelteKit 2, and that every tutorial you find online still gets wrong.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">03 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 11.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html" aria-current="page"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 03</p>
+			<h1>What's different in SvelteKit 3</h1>
+			<p class="lede">Five changes that will trip you up if you've used SvelteKit 2, and that every tutorial you find online still gets wrong.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>You'll recognise SvelteKit 3 code on sight and know why each change was made.</p></aside>
+			<p>Before we write anything, let's get the version differences out of the way. If you search for SvelteKit help over the next few hours, almost every result will describe version 2. Here is what changed, so you can translate on the fly.</p>
+<h3 id="config">1. Configuration lives in vite.config.ts</h3>
+<p>There is no <code>svelte.config.js</code>. Open <code>vite.config.ts</code> and you will find everything inside the <code>sveltekit()</code> plugin call:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+import adapter from '@sveltejs/adapter-node';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default defineConfig({
+	plugins: [
+		sveltekit({
+			adapter: adapter(),
+			compilerOptions: {
+				experimental: { async: true }
+			},
+			experimental: {
+				remoteFunctions: true
+			}
+		})
+	]
+});</code></pre>
+</figure>
+<p>Everything that used to live under <code>kit.*</code> is now a top-level option on the plugin.</p>
+<h3 id="lib">2. $lib became #lib — and extensions are mandatory</h3>
+<p>This is the change that will bite you most often. SvelteKit 2 gave you a <code>$lib</code> alias. SvelteKit 3 uses <strong>Node subpath imports</strong> instead, declared in <code>package.json</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;imports&quot;: {
+		&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
+		&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
+	}
+}</code></pre>
+</figure>
+<p>And because subpath imports are a real Node feature rather than a bundler alias, they follow Node rules — which means <strong>you must write the file extension</strong>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the difference</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// SvelteKit 2
+import { site } from '$lib/data/site';
+
+// SvelteKit 3 — note the #, and the .ts
+import { site } from '#lib/data/site.ts';</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Forgetting the extension gives you a module-not-found error that looks like the file is missing. It isn't. Check for the extension first — it's the answer nine times out of ten.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why bother changing this?</h4>
+	<p><code>$lib</code> was a bundler invention: only tools that knew about SvelteKit could resolve it. <code>#lib</code> is a standard Node feature, so Node itself, your test runner, your editor and any other tool all understand it without special support. Fewer moving parts.</p>
+</aside>
+<h3 id="env">3. Environment variables are declared, not implicit</h3>
+<p>In SvelteKit 2 every variable in your environment was importable from <code>$env/*</code>. In 3 you declare them in <code>src/env.ts</code>, which gets you types, startup validation, and a hard guarantee that a private variable can't reach the browser. We build this in chapter 9.</p>
+<h3 id="paths">4. $app/paths changed shape</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the difference</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// SvelteKit 2
+import { base, assets, resolveRoute } from '$app/paths';
+const url = base + resolveRoute('/blog/[slug]', { slug });
+const img = assets + '/logo.png';
+
+// SvelteKit 3 — base, assets and resolveRoute are gone
+import { resolve, asset } from '$app/paths';
+const url = resolve('/blog/[slug]', { slug });
+const img = asset('logo.png');   // note: no leading slash</code></pre>
+</figure>
+<h3 id="nav">5. Navigation consolidated into goto()</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the difference</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// SvelteKit 2
+import { pushState, replaceState, invalidateAll } from '$app/navigation';
+pushState('/foo', state);
+await invalidateAll();
+
+// SvelteKit 3
+import { goto, refreshAll } from '$app/navigation';
+await goto('/foo', { shallow: true, state });
+await refreshAll();</code></pre>
+</figure>
+<p>Also: <code>error(404, { message: 'Not found' })</code> became <code>error(404, 'Not found')</code>, with any extra properties in a third argument. And <code>page.url</code> is now read-only — clone it if you need to change a search param.</p>
+<aside class="callout callout--note"><p>You don't need to memorise this. Come back to it when something you copied from a blog post doesn't compile.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can explain, in one sentence each, why config moved and why <code>$lib</code> became <code>#lib</code>.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="02-scaffolding.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Scaffolding the project</span>
+			</a>
+			<a class="pager__link pager__link--next" href="04-typescript-strictness.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">TypeScript, tightened</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI primitives — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Button, Card, Badge and Logo — and the single most important accessibility rule in front-end work.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 48.148148148148145%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html" aria-current="page"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>UI primitives</h1>
+			<p class="lede">Button, Card, Badge and Logo — and the single most important accessibility rule in front-end work.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A small set of reusable components, each doing one thing properly.</p></aside>
+			
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add phosphor-svelte</code></pre>
+</figure>
+<h3 id="button">Button: link or button?</h3>
+
+<aside class="callout callout--why">
+	<h4>The rule worth memorising</h4>
+	<p>Navigates somewhere? Use <code>&lt;a href&gt;</code>. Performs an action? Use <code>&lt;button&gt;</code>. A <code>&lt;div onclick&gt;</code> is not focusable, not keyboard operable, not announced as interactive, and not openable in a new tab. Those are not edge cases — they are how a meaningful share of people use the web.</p>
+</aside>
+<p>Rather than write two nearly identical components, we pick the element at runtime with <code>&lt;svelte:element&gt;</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ui/Button.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { Snippet } from 'svelte';
+
+	interface Props {
+		variant?: 'primary' | 'secondary' | 'ghost';
+		size?: 'sm' | 'md' | 'lg';
+		/** Provide this and you get an &lt;a&gt;. Omit it and you get a &lt;button&gt;. */
+		href?: string;
+		external?: boolean;
+		fullWidth?: boolean;
+		disabled?: boolean;
+		type?: 'button' | 'submit' | 'reset';
+		onclick?: (event: MouseEvent) =&gt; void;
+		children: Snippet;
+		icon?: Snippet;
+		iconTrailing?: Snippet;
+	}
+
+	let {
+		variant = 'primary', size = 'md', href, external = false,
+		fullWidth = false, disabled = false, type = 'button',
+		onclick, children, icon, iconTrailing
+	}: Props = $props();
+
+	const tag = $derived(href ? 'a' : 'button');
+&lt;/script&gt;
+
+&lt;svelte:element
+	this={tag}
+	class=&quot;btn btn--{variant} btn--{size}&quot;
+	class:btn--full={fullWidth}
+	{href}
+	{onclick}
+	target={external ? '_blank' : undefined}
+	rel={external ? 'noopener noreferrer' : undefined}
+	type={href ? undefined : type}
+	disabled={href ? undefined : disabled}
+&gt;
+	{#if icon}&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render icon()}&lt;/span&gt;{/if}
+	&lt;span class=&quot;btn__label&quot;&gt;{@render children()}&lt;/span&gt;
+	{#if iconTrailing}&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render iconTrailing()}&lt;/span&gt;{/if}
+&lt;/svelte:element&gt;</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>Snippet</code> is the Svelte 5 replacement for slots. A snippet prop is a chunk of markup the parent passes in, rendered with <code>{@render …}</code>. Unlike slots, snippets are ordinary values: typed, passable, and usable in <code>{#if}</code>.</p></aside>
+<h3 id="touch">Two CSS details that matter on phones</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ui/Button.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.btn {
+	/* 44px minimum touch target — Apple's and Google's guidelines,
+	   and WCAG 2.2 Success Criterion 2.5.8 */
+	min-height: 2.75rem;
+
+	/* Stops a double-tap zooming on iOS, and kills the 300ms tap delay */
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Hover styles ONLY on devices with a real pointer */
+@media (hover: hover) {
+	.btn--primary:hover:not(.btn--disabled) {
+		background-color: var(--accent-hover);
+		transform: translateY(-1px);
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why hover styles need a media query</h4>
+	<p>On a touchscreen there is no hover — but browsers fake one on tap, and it <strong>sticks</strong> until you tap elsewhere. So a phone user taps your button and it stays lit up afterwards, looking broken. <code>@media (hover: hover)</code> means those styles only apply to devices with a real pointer. Almost nobody does this, and it is one line.</p>
+</aside>
+<h3 id="icons">The icon registry</h3>
+<p>Our data files store icons as strings. Here is the bridge from string to component:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ui/icons.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import {
+	PulseIcon, CrosshairIcon, FunctionIcon,
+	EyeIcon, BellRingingIcon, RewindIcon
+} from 'phosphor-svelte';
+import type { Component } from 'svelte';
+import type { IconName } from '#lib/data/features.ts';
+
+export const featureIcons: Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt; = {
+	PulseIcon, CrosshairIcon, FunctionIcon,
+	EyeIcon, BellRingingIcon, RewindIcon
+} as Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt;;</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Typing it as a full <code>Record&lt;IconName, …&gt;</code> is the point: add a name to the <code>IconName</code> union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production.</p></aside>
+<p>In Svelte 5 you render a component held in a variable by just using it as a tag. <code>&lt;svelte:component this={Icon} /&gt;</code> is legacy:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">usage</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{@const Icon = featureIcons[feature.icon]}
+&lt;Icon size={26} weight=&quot;duotone&quot; /&gt;</code></pre>
+</figure>
+<h3 id="phosphor-vite">One important build setting</h3>
+<p><code>import { PulseIcon } from 'phosphor-svelte'</code> reads nicely but resolves a barrel file re-exporting roughly nine thousand components. Production builds tree-shake it, but the dev server has to crawl every one — which turns a cold start into a coffee break. Phosphor ships a Vite plugin that rewrites those imports into deep ones:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
+
+export default defineConfig({
+	plugins: [
+		sveltekit({ /* … */ }),
+		sveltePhosphorOptimize()   // MUST come AFTER sveltekit()
+	]
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The ordering matters and the failure is loud. Vite runs <code>transform</code> hooks in array order, and this plugin parses its input as JavaScript. Put it <strong>before</strong> <code>sveltekit()</code> and it receives raw <code>.svelte</code> source — markup and all — and dies on the first <code>&lt;h1&gt;</code> with *&quot;Unexpected JSX expression&quot;*. I lost ten minutes to this.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Button, Card, Badge, Logo and the icon registry all compile, and the dev server still starts quickly.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="12-sitemap-robots-llms.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">sitemap.xml, robots.txt and llms.txt</span>
+			</a>
+			<a class="pager__link pager__link--next" href="14-header-and-drawer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The header and a mobile drawer that is not broken</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

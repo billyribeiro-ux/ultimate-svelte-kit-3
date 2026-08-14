@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The layout and the HTML shell — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Wire up the global stylesheet, add the skip link and main landmark, and put the single most valuable performance tag in the document head.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">15 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 55.55555555555556%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html" aria-current="page"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 15</p>
+			<h1>The layout and the HTML shell</h1>
+			<p class="lede">Wire up the global stylesheet, add the skip link and main landmark, and put the single most valuable performance tag in the document head.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>The site finally looks like something, and loads fast.</p></aside>
+			<h3 id="layout">The root layout</h3>
+<p><code>src/routes/+layout.svelte</code> wraps every page. Three jobs, and nothing else — layouts that accumulate logic become the hardest file in the codebase to reason about.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import '#lib/styles/app.css';
+
+	import favicon from '#lib/assets/favicon.svg';
+	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
+	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
+
+	let { children } = $props();
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;link rel=&quot;icon&quot; href={favicon} /&gt;
+&lt;/svelte:head&gt;
+
+&lt;a class=&quot;skip-link&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
+
+&lt;div class=&quot;app-shell&quot;&gt;
+	&lt;SiteHeader /&gt;
+	&lt;main id=&quot;main&quot; tabindex=&quot;-1&quot;&gt;
+		{@render children()}
+	&lt;/main&gt;
+	&lt;SiteFooter /&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.</p>
+
+<aside class="callout callout--why">
+	<h4>The skip link and tabindex=&quot;-1&quot;</h4>
+	<p>A keyboard user landing on your page would otherwise have to tab through the entire header on <strong>every single page</strong> before reaching content. The skip link lets them jump. <code>tabindex=&quot;-1&quot;</code> on <code>&lt;main&gt;</code> makes it programmatically focusable, so the link actually moves focus rather than just scrolling — without it some browsers scroll the page but leave focus stranded in the header. This is WCAG 2.4.1, Level A.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.app-shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100svh;
+}
+
+main { flex: 1; }
+main:focus { outline: none; }</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>100svh, not 100vh</h4>
+	<p>On mobile, <code>vh</code> is measured against the viewport with browser chrome <strong>hidden</strong>. So a <code>100vh</code> element is taller than what you can actually see, and the page scrolls by the height of the address bar for no reason. <code>svh</code> — small viewport height — measures the visible area. This one unit fixes the single most common mobile layout bug.</p>
+</aside>
+<h3 id="prerender">Prerender the whole site</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const prerender = true;
+export const trailingSlash = 'never';</code></pre>
+</figure>
+<p>Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site. At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start.</p>
+<aside class="callout callout--note"><p><code>trailingSlash: 'never'</code> matters more than it looks. <code>/about</code> and <code>/about/</code> are <strong>different URLs</strong> to a search engine. If both resolve, you have split your ranking signals in two. Pick one and be consistent; SvelteKit redirects the other form for you.</p></aside>
+<aside class="callout callout--note"><p>A useful side effect of prerendering: the crawler follows every internal link and reports any that 404. Combined with <code>handleHttpError: 'fail'</code> in <code>vite.config.ts</code>, it becomes impossible to ship a dead internal link.</p></aside>
+<h3 id="shell">The HTML shell, and the preload</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+	&lt;head&gt;
+		&lt;meta charset=&quot;utf-8&quot; /&gt;
+		&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot; /&gt;
+
+		&lt;link rel=&quot;preload&quot; href=&quot;/fonts/montserrat-latin-wght-normal.woff2&quot;
+		      as=&quot;font&quot; type=&quot;font/woff2&quot; crossorigin /&gt;
+		&lt;link rel=&quot;preload&quot; href=&quot;/fonts/sofia-sans-latin-wght-normal.woff2&quot;
+		      as=&quot;font&quot; type=&quot;font/woff2&quot; crossorigin /&gt;
+
+		&lt;meta name=&quot;theme-color&quot; content=&quot;#05070c&quot; /&gt;
+		&lt;meta name=&quot;color-scheme&quot; content=&quot;dark&quot; /&gt;
+
+		%sveltekit.head%
+	&lt;/head&gt;
+	&lt;body data-sveltekit-preload-data=&quot;hover&quot;&gt;
+		&lt;div style=&quot;display: contents&quot;&gt;%sveltekit.body%&lt;/div&gt;
+	&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Those two preload lines are the highest-leverage change in the project</h4>
+	<p>Without them the browser must: fetch HTML → fetch CSS → parse CSS → discover the @font-face → fetch the font. That is a serial chain with the font last. <code>rel=&quot;preload&quot;</code> starts the font fetch the moment the head is read, in parallel with the CSS. On a 4G connection this typically pulls first paint of real text forward by hundreds of milliseconds.</p>
+</aside>
+<aside class="callout callout--warn"><p><code>crossorigin</code> is <strong>required</strong> even for same-origin fonts. Font requests are always made in CORS mode; omit it and the browser downloads the file <strong>twice</strong> — once for the preload, once for the real request. Your preload then makes the page slower, which is a genuinely nasty bug to notice.</p></aside>
+<aside class="callout callout--note"><p>Only preload what is critical. Preloading everything makes every resource high priority, which is the same as making none of them high priority.</p></aside>
+<p><code>data-sveltekit-preload-data=&quot;hover&quot;</code> on <code>&lt;body&gt;</code> makes SvelteKit start loading a route's code and data when the pointer enters a link — roughly 200ms before the click lands. On touch devices it falls back to <code>touchstart</code>. Navigation then feels instant.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>The site is dark, uses Montserrat and Sofia Sans, has a working header and footer, and <code>pnpm run build</code> prerenders your pages.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="14-header-and-drawer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The header and a mobile drawer that is not broken</span>
+			</a>
+			<a class="pager__link pager__link--next" href="16-the-chart.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A TradingView chart, wired up properly</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

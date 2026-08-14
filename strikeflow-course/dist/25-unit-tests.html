@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit tests — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Testing the security-critical code — and writing the one test that would catch a forged token.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 92.5925925925926%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html" aria-current="page"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>Unit tests</h1>
+			<p class="lede">Testing the security-critical code — and writing the one test that would catch a forged token.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Fast, meaningful tests for the logic that matters most.</p></aside>
+			<p>Our Vitest setup has two projects: <strong>server</strong> (plain Node, fast) and <strong>client</strong> (a real Chromium). Files ending <code>.spec.ts</code> run in Node; <code>.svelte.spec.ts</code> run in the browser.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a real browser for component tests</h4>
+	<p>jsdom quietly lies about layout, focus behaviour and a number of DOM APIs — which are exactly the things a component test should verify. The extra couple of seconds buys you tests that fail when the thing actually breaks.</p>
+</aside>
+<h3 id="tokens-test">The test that matters most</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tokens.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('rejects a tampered payload', () =&gt; {
+	const token = createDownloadToken('reader@example.com');
+	const [, signature] = token.split('.');
+
+	// Re-encode a payload claiming a different email, keeping the old signature
+	const forgedPayload = Buffer.from(
+		JSON.stringify({ email: 'attacker@example.com', exp: Date.now() + 100_000 })
+	).toString('base64url');
+
+	const result = verifyDownloadToken(`${forgedPayload}.${signature}`);
+	expect(result).toEqual({ valid: false, reason: 'bad-signature' });
+});</code></pre>
+</figure>
+<p>If that test ever fails, anyone can mint themselves a download link or change whose email is attributed to a download. It is eight lines and it guards the entire gate.</p>
+<h3 id="time">Testing time-dependent code</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tokens.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('rejects an expired token', () =&gt; {
+	vi.useFakeTimers();
+	vi.setSystemTime(new Date('2026-08-14T12:00:00Z'));
+
+	const token = createDownloadToken('reader@example.com');
+	expect(verifyDownloadToken(token).valid).toBe(true);
+
+	// Tokens last 24 hours. Step 25 hours forward.
+	vi.setSystemTime(new Date('2026-08-15T13:00:00Z'));
+
+	expect(verifyDownloadToken(token)).toEqual({ valid: false, reason: 'expired' });
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Always test <strong>both</strong> sides of a boundary. We have this test and a matching one at 23 hours 59 minutes that asserts the token is still valid. A test that only checks the failure case passes just as happily if your token expires immediately.</p></aside>
+<aside class="callout callout--warn"><p>Remember <code>vi.useRealTimers()</code> in an <code>afterEach</code>. Fake timers leak into subsequent tests and produce failures that make no sense in the file you are looking at.</p></aside>
+<h3 id="determinism">Testing the invariant, not the values</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/utils/market-data.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('produces the same sequence for the same seed', () =&gt; {
+	const a = mulberry32(42);
+	const b = mulberry32(42);
+
+	expect(Array.from({ length: 20 }, () =&gt; a()))
+		.toEqual(Array.from({ length: 20 }, () =&gt; b()));
+});
+
+it('produces strictly increasing, evenly spaced timestamps', () =&gt; {
+	const { price } = generateSeries({ bars: 30, interval: 300 });
+
+	for (let i = 1; i &lt; price.length; i += 1) {
+		expect(price[i]!.time - price[i - 1]!.time).toBe(300);
+	}
+});
+
+it('never produces a non-positive price', () =&gt; {
+	for (const seed of [1, 500, 12345, 987654]) {
+		for (const point of generateSeries({ seed, bars: 400 }).price) {
+			expect(point.value).toBeGreaterThan(0);
+		}
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>What these actually protect</h4>
+	<p>The first guards the property the whole design rests on — determinism, without which SSR and hydration disagree. The second guards an invariant Lightweight Charts depends on: it silently misbehaves on out-of-order data. The third checks a random walk cannot wander below zero across several seeds. None of them assert specific numbers, so they survive a change to the generation algorithm.</p>
+</aside>
+<h3 id="wrong-test">When the test is wrong</h3>
+<p>While writing this project I asserted <code>formatCompactUsd(5_600)</code> returns <code>&quot;$5.6K&quot;</code>. It returns <code>&quot;$5.60K&quot;</code> — <code>Intl</code> compact <strong>currency</strong> formatting keeps the currency's minimum fraction digits, unlike plain compact number formatting.</p>
+<aside class="callout callout--note"><p>The code was right and my expectation was wrong. That is a normal and useful outcome: the test taught me something about an API I thought I knew. Fix the expectation, and leave a comment saying why the surprising output is correct — otherwise the next person &quot;fixes&quot; it back.</p></aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run test:unit</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>All unit tests pass. You have tests for token signing, expiry, tampering, rate limiting and the data generator.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="24-blog-and-legal.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The blog and the legal pages</span>
+			</a>
+			<a class="pager__link pager__link--next" href="26-e2e-tests.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">End-to-end tests, and the two bugs they found</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

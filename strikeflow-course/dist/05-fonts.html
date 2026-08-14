@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fonts, done properly — Building StrikeFlow with SvelteKit 3</title>
+<meta name="description" content="Getting Montserrat and Sofia Sans on the page is easy. Getting them there without a flash of jumping text is where the engineering is.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building StrikeFlow</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 27</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 18.51851851851852%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="01-what-were-building.html"><span class="toc__num">01</span><span>What we're building</span></a></li><li><a href="02-scaffolding.html"><span class="toc__num">02</span><span>Scaffolding the project</span></a></li><li><a href="03-whats-new-in-sveltekit-3.html"><span class="toc__num">03</span><span>What's different in SvelteKit 3</span></a></li><li><a href="04-typescript-strictness.html"><span class="toc__num">04</span><span>TypeScript, tightened</span></a></li><li><a href="05-fonts.html" aria-current="page"><span class="toc__num">05</span><span>Fonts, done properly</span></a></li><li><a href="06-design-tokens.html"><span class="toc__num">06</span><span>Design tokens</span></a></li><li><a href="07-reset-base-utilities.html"><span class="toc__num">07</span><span>Reset, base and utilities</span></a></li><li><a href="08-the-data-layer.html"><span class="toc__num">08</span><span>The data layer</span></a></li><li><a href="09-environment-variables.html"><span class="toc__num">09</span><span>Environment variables</span></a></li><li><a href="10-the-seo-component.html"><span class="toc__num">10</span><span>The SEO component</span></a></li><li><a href="11-structured-data.html"><span class="toc__num">11</span><span>Structured data that actually connects</span></a></li><li><a href="12-sitemap-robots-llms.html"><span class="toc__num">12</span><span>sitemap.xml, robots.txt and llms.txt</span></a></li><li><a href="13-ui-primitives.html"><span class="toc__num">13</span><span>UI primitives</span></a></li><li><a href="14-header-and-drawer.html"><span class="toc__num">14</span><span>The header and a mobile drawer that is not broken</span></a></li><li><a href="15-layout-and-shell.html"><span class="toc__num">15</span><span>The layout and the HTML shell</span></a></li><li><a href="16-the-chart.html"><span class="toc__num">16</span><span>A TradingView chart, wired up properly</span></a></li><li><a href="17-marketing-components.html"><span class="toc__num">17</span><span>Marketing components</span></a></li><li><a href="18-the-home-page.html"><span class="toc__num">18</span><span>The home page</span></a></li><li><a href="19-the-other-pages.html"><span class="toc__num">19</span><span>Features, pricing, about and contact</span></a></li><li><a href="20-lead-capture-server.html"><span class="toc__num">20</span><span>Lead capture: the server side</span></a></li><li><a href="21-the-remote-form.html"><span class="toc__num">21</span><span>The remote form</span></a></li><li><a href="22-the-capture-page.html"><span class="toc__num">22</span><span>The capture page</span></a></li><li><a href="23-gated-download.html"><span class="toc__num">23</span><span>The gated download</span></a></li><li><a href="24-blog-and-legal.html"><span class="toc__num">24</span><span>The blog and the legal pages</span></a></li><li><a href="25-unit-tests.html"><span class="toc__num">25</span><span>Unit tests</span></a></li><li><a href="26-e2e-tests.html"><span class="toc__num">26</span><span>End-to-end tests, and the two bugs they found</span></a></li><li><a href="27-ship-it.html"><span class="toc__num">27</span><span>Ship it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>Fonts, done properly</h1>
+			<p class="lede">Getting Montserrat and Sofia Sans on the page is easy. Getting them there without a flash of jumping text is where the engineering is.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Both fonts load, are preloaded, and produce <strong>zero</strong> layout shift when they swap in.</p></aside>
+			<p>Let's get rid of Times New Roman. We want <strong>Montserrat</strong> for headings and <strong>Sofia Sans</strong> for body text. We'll use <a href="https://fontsource.org/" target="_blank" rel="noopener">Fontsource</a>, which packages Google Fonts (and more) as npm modules you self-host.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add @fontsource-variable/montserrat @fontsource-variable/sofia-sans</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why self-host instead of using Google Fonts CDN?</h4>
+	<p>Privacy (no third party sees your visitors), reliability (one fewer domain that can be slow or blocked), and speed — a cross-origin font needs a DNS lookup, a TCP connection and a TLS handshake before the first byte. Self-hosted, it rides the connection you already have.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>And why the &quot;variable&quot; packages?</h4>
+	<p>A variable font contains every weight from 100 to 900 in a single file, as a continuous axis. The alternative is one file per weight. If you use regular, semibold and bold, that is three downloads versus one — and the single variable file is usually smaller than the three static ones combined.</p>
+</aside>
+<h3 id="naive">The easy way, and why we are not doing it</h3>
+<p>The documented approach is one import line:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the simple version</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">@import '@fontsource-variable/montserrat';</code></pre>
+</figure>
+<p>That works. It also declares <code>@font-face</code> for every subset the package ships — Cyrillic, Greek, Vietnamese, Latin — and, more importantly, gives you a hashed file path you cannot write a <code>&lt;link rel=&quot;preload&quot;&gt;</code> for. We want that preload, so we take ownership of the two files we actually use.</p>
+<h3 id="sync">Copying the files we need</h3>
+<p>Create <code>scripts/sync-fonts.js</code>. It copies exactly two files out of <code>node_modules</code> and into <code>static/fonts</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/sync-fonts.js</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-js">import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const outDir = join(root, 'static', 'fonts');
+
+const FONTS = [
+	{
+		from: '@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2',
+		to: 'montserrat-latin-wght-normal.woff2'
+	},
+	{
+		from: '@fontsource-variable/sofia-sans/files/sofia-sans-latin-wght-normal.woff2',
+		to: 'sofia-sans-latin-wght-normal.woff2'
+	}
+];
+
+mkdirSync(outDir, { recursive: true });
+
+for (const font of FONTS) {
+	const source = join(root, 'node_modules', font.from);
+	if (!existsSync(source)) {
+		console.error(`[sync-fonts] missing: ${font.from}`);
+		process.exit(1);
+	}
+	copyFileSync(source, join(outDir, font.to));
+	console.log(`[sync-fonts] ${font.to}`);
+}</code></pre>
+</figure>
+<p>Wire it into <code>package.json</code> so it runs on every install and nobody has to remember it:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;fonts:sync&quot;: &quot;node scripts/sync-fonts.js&quot;,
+	&quot;prepare&quot;: &quot;node scripts/sync-fonts.js &amp;&amp; (svelte-kit sync || echo '')&quot;
+}</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run fonts:sync</code></pre>
+</figure>
+<h3 id="face">Declaring the fonts</h3>
+<p>Create <code>src/lib/styles/fonts.css</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/fonts.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">@font-face {
+	font-family: 'Montserrat Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 100 900;
+	src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+		U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: 'Sofia Sans Variable';
+	font-style: normal;
+	font-display: swap;
+	font-weight: 1 1000;
+	src: url('/fonts/sofia-sans-latin-wght-normal.woff2') format('woff2-variations');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+		U+2212, U+2215, U+FEFF, U+FFFD;
+}</code></pre>
+</figure>
+<p><code>font-display: swap</code> means: show the text immediately in a fallback font, then swap to the real one when it arrives. The alternative leaves the user staring at invisible text.</p>
+<h3 id="shift">The problem with swap</h3>
+<p>Swapping fonts changes how much space the text takes. Every line reflows, and everything below it moves. On a phone, where content is stacked vertically, that shift can be enormous — and if it happens while someone is reaching for a button, the button moves out from under their thumb.</p>
+<p>Google measures this as <strong>Cumulative Layout Shift</strong>, one of the three Core Web Vitals. The fix is to make the fallback font occupy almost exactly the same space as the real one, using three CSS descriptors:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/fonts.css (continued)</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* Montserrat: size-adjust 110.2%, real ascent 0.97em, real descent 0.25em */
+@font-face {
+	font-family: 'Montserrat Fallback';
+	src: local('Arial');
+	size-adjust: 110.2%;
+	ascent-override: 88%;      /* 0.97 / 1.102 */
+	descent-override: 22.7%;   /* 0.25 / 1.102 */
+	line-gap-override: 0%;
+}
+
+/* Sofia Sans: size-adjust 96.7%, real ascent 0.90em, real descent 0.30em */
+@font-face {
+	font-family: 'Sofia Sans Fallback';
+	src: local('Arial');
+	size-adjust: 96.7%;
+	ascent-override: 93.1%;    /* 0.90 / 0.967 */
+	descent-override: 31%;     /* 0.30 / 0.967 */
+	line-gap-override: 0%;
+}</code></pre>
+</figure>
+<p>These <code>@font-face</code> rules download nothing. They re-describe a font the user already has — Arial — so that it lines up with ours. <code>size-adjust</code> scales the glyphs to match our width; the two overrides match our line height.</p>
+<aside class="callout callout--warn"><p><strong>Do not guess these numbers.</strong> I did, the first time I wrote this project. The result was a <strong>181-pixel</strong> jump on mobile when the fonts loaded. It was eventually caught by an end-to-end test complaining that an element &quot;was not stable&quot; — a wonderfully indirect way to be told you have a Core Web Vitals problem.</p></aside>
+<p>In chapter 26 we'll write a script that measures these properly. For now, use the values above — they're the measured ones for these two fonts against Arial.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>static/fonts/</code> contains two <code>.woff2</code> files and <code>src/lib/styles/fonts.css</code> declares four <code>@font-face</code> rules — two real, two metric-matched fallbacks.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="04-typescript-strictness.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">TypeScript, tightened</span>
+			</a>
+			<a class="pager__link pager__link--next" href="06-design-tokens.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Design tokens</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
