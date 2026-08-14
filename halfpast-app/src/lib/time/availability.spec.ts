@@ -263,9 +263,7 @@ describe('availableSlots — the mornings clocks move', () => {
 		// Same clock reading, different moments, one hour apart.
 		expect(oneAmSlots[1]!.start - oneAmSlots[0]!.start).toBe(60 * 60 * 1000);
 		// And they are distinguishable to a customer.
-		const labelled = oneAmSlots.map((slot) =>
-			formatTime(slot.start, LONDON, { withZone: true })
-		);
+		const labelled = oneAmSlots.map((slot) => formatTime(slot.start, LONDON, { withZone: true }));
 		expect(new Set(labelled).size).toBe(2);
 	});
 

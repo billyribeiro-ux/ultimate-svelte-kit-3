@@ -1,11 +1,4 @@
-import {
-	isFree,
-	mergeIntervals,
-	slotsIn,
-	MINUTE_MS,
-	type Interval,
-	isWholeSlots
-} from './grid.ts';
+import { isFree, mergeIntervals, slotsIn, MINUTE_MS, type Interval, isWholeSlots } from './grid.ts';
 import {
 	datesBetween,
 	instantToIsoDate,
