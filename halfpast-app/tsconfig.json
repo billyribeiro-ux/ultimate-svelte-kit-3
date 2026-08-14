@@ -1,0 +1,45 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`. In a booking app this
+		// matters more than usual: half the code is "find the slot at this index"
+		// and the honest answer is often "there isn't one".
+		"noUncheckedIndexedAccess": true,
+
+		// An overriding method must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through to the next must be deliberate.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every path through a value-returning function must return.
+		"noImplicitReturns": true,
+
+		// Unused locals and parameters are errors, not warnings. Dead code in a
+		// scheduling engine is usually a half-finished branch someone forgot.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"e2e/**/*.ts",
+		"scripts/**/*.js",
+		"*.config.ts",
+		"*.config.js"
+	],
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle"]
+}
