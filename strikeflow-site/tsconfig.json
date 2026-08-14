@@ -1,0 +1,40 @@
+{
+	// SvelteKit generates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It already sets module resolution, the DOM libs, and the
+	// generated route types — so we only add what's specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// The big one. Turns on strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// Reading `array[0]` gives you `T | undefined` rather than `T`.
+		// Annoying for about a day, then it starts catching real crashes —
+		// because `array[0]` genuinely can be undefined and pretending otherwise
+		// is how you get "cannot read properties of undefined" in production.
+		"noUncheckedIndexedAccess": true,
+
+		// A subclass method that overrides a parent must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through to the next one must be deliberate.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every code path in a function that returns a value must return a value.
+		"noImplicitReturns": true
+	},
+
+	// SvelteKit 3 requires these to be explicit — the generated config no longer
+	// guesses. Without them, `svelte-check` happily type-checks your minified
+	// production output in `build/` and reports thousands of meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"scripts/**/*.js",
+		"*.config.ts",
+		"*.config.js"
+	],
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "src/service-worker"]
+}

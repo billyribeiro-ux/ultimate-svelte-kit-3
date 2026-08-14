@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+		<!--
+			FONT PRELOADS
+			=============
+
+			These two lines are the highest-leverage performance change in the whole project.
+
+			Without them the browser must: fetch HTML → fetch CSS → parse CSS → discover
+			the @font-face → fetch the font. That's a serial chain, and the font is the
+			last link. Text renders in the fallback and then visibly swaps, late.
+
+			`rel="preload"` tells the browser to start fetching the font the moment it
+			reads the <head>, in parallel with the CSS. On a 4G connection this typically
+			pulls first paint of real text forward by hundreds of milliseconds.
+
+			Three details that are easy to get wrong:
+			  - `as="font"` sets the correct request priority and Accept header.
+			  - `type="font/woff2"` lets a browser skip a format it can't use.
+			  - `crossorigin` is REQUIRED even for same-origin fonts. Font requests are
+			    always made in CORS mode; omit it and the browser downloads the file
+			    twice — once for the preload, once for the real request. The preload
+			    then makes things slower, which is a genuinely nasty bug to spot.
+
+			We preload only the two Latin variable files we actually use. Preloading
+			everything is the classic mistake: it makes every resource high priority,
+			which is the same as making none of them high priority.
+		-->
+		<link
+			rel="preload"
+			href="/fonts/montserrat-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href="/fonts/sofia-sans-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+
+		<!--
+			Sets the browser UI colour on mobile before any JavaScript runs, so the
+			address bar doesn't flash white on a dark page.
+		-->
+		<meta name="theme-color" content="#05070c" />
+
+		<!--
+			`color-scheme` tells the browser to render native widgets — scrollbars,
+			form controls, the address bar — in dark mode. Without it you get a dark
+			page with jarring light scrollbars.
+		-->
+		<meta name="color-scheme" content="dark" />
+
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<!--
+			`data-sveltekit-preload-data="hover"` on <body> makes SvelteKit start
+			loading a route's code and data when the pointer enters a link — roughly
+			200ms before the click lands. Navigation then feels instant.
+
+			On touch devices there's no hover, so it falls back to firing on touchstart,
+			which still buys the ~100ms before touchend.
+		-->
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

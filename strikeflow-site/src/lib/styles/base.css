@@ -1,0 +1,202 @@
+/*
+ * BASE ELEMENT STYLES
+ * ===================
+ *
+ * Sensible defaults for raw HTML, so that a page written with plain semantic
+ * markup already looks right before a single component is involved.
+ *
+ * This matters more than it sounds. Search engines and screen readers both read
+ * the semantic structure, not your CSS classes. If `<h2>` only looks like a heading
+ * once you add `class="heading-2"`, people will eventually reach for a `<div>`,
+ * and the document outline rots.
+ */
+
+html {
+	background-color: var(--bg-root);
+	color-scheme: dark;
+}
+
+body {
+	background-color: var(--bg-root);
+	color: var(--text-secondary);
+	font-family: var(--font-body);
+	font-size: var(--fs-base);
+	font-weight: var(--weight-regular);
+	font-synthesis-weight: none;
+}
+
+/* ---------------------------------------------------------------
+ * HEADINGS — Montserrat, tight and confident.
+ * --------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-heading);
+	color: var(--text-primary);
+	font-weight: var(--weight-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--tracking-snug);
+	text-wrap: balance; /* stops a heading ending in one orphaned word */
+}
+
+h1 {
+	font-size: var(--fs-3xl);
+	font-weight: var(--weight-black);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+}
+
+h2 {
+	font-size: var(--fs-2xl);
+	font-weight: var(--weight-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+}
+
+h3 {
+	font-size: var(--fs-xl);
+}
+
+h4 {
+	font-size: var(--fs-lg);
+	font-weight: var(--weight-semibold);
+}
+
+h5,
+h6 {
+	font-size: var(--fs-md);
+	font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------------
+ * PROSE
+ * --------------------------------------------------------------- */
+p {
+	text-wrap: pretty; /* avoids single-word last lines */
+}
+
+/* `ch` units measure character width, so this caps a paragraph at roughly
+   70 characters — the range typographers consider most readable. */
+p,
+li {
+	max-width: 70ch;
+}
+
+strong,
+b {
+	font-weight: var(--weight-semibold);
+	color: var(--text-primary);
+}
+
+small {
+	font-size: var(--fs-sm);
+}
+
+code,
+kbd,
+samp,
+pre {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+}
+
+code {
+	background-color: var(--surface-raised);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	padding: 0.1em 0.36em;
+	color: var(--brand-300);
+}
+
+hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin-block: var(--space-8);
+}
+
+blockquote {
+	border-left: 3px solid var(--accent);
+	padding-left: var(--space-4);
+	color: var(--text-primary);
+	font-size: var(--fs-md);
+}
+
+/* ---------------------------------------------------------------
+ * LINKS
+ * --------------------------------------------------------------- */
+a {
+	color: var(--text-brand);
+	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+	text-decoration-thickness: 1px;
+	transition: color var(--dur-fast) var(--ease-out);
+}
+
+a:hover {
+	color: var(--brand-300);
+	text-decoration-color: currentColor;
+}
+
+/* ---------------------------------------------------------------
+ * LISTS (only the plain, in-prose kind — component lists opt out
+ * with role="list")
+ * --------------------------------------------------------------- */
+ul:not([role='list']),
+ol:not([role='list']) {
+	padding-left: var(--space-5);
+}
+
+ul:not([role='list']) li,
+ol:not([role='list']) li {
+	margin-block: var(--space-2);
+}
+
+ul:not([role='list']) li::marker {
+	color: var(--accent);
+}
+
+/* ---------------------------------------------------------------
+ * TABLES
+ * --------------------------------------------------------------- */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+	text-align: left;
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--border);
+}
+
+th {
+	font-family: var(--font-heading);
+	font-size: var(--fs-sm);
+	font-weight: var(--weight-semibold);
+	color: var(--text-primary);
+	text-transform: uppercase;
+	letter-spacing: var(--tracking-caps);
+}
+
+/* ---------------------------------------------------------------
+ * SELECTION
+ * --------------------------------------------------------------- */
+::selection {
+	background-color: color-mix(in srgb, var(--brand-500) 40%, transparent);
+	color: var(--text-primary);
+}
+
+/* ---------------------------------------------------------------
+ * SCROLLBAR — subtle, so it doesn't fight the dark UI.
+ * --------------------------------------------------------------- */
+@supports (scrollbar-color: auto) {
+	html {
+		scrollbar-color: var(--ink-500) transparent;
+		scrollbar-width: thin;
+	}
+}

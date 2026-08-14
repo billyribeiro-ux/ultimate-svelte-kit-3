@@ -1,0 +1,145 @@
+/*
+ * RESET
+ * =====
+ *
+ * SvelteKit ships a tiny reset already, but it only normalises the worst offenders.
+ * This is a deliberate, opinionated reset — every rule below exists because it
+ * prevents a specific real bug.
+ */
+
+/* `border-box` means "when I say width: 300px, I mean 300px" — padding and border
+   are included rather than added on top. This is what everyone assumes the box model
+   does, and it isn't the default only for historical reasons. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/* Browsers apply margins to headings, paragraphs and lists that vary between
+   engines. We zero everything and re-apply margin intentionally in base.css. */
+* {
+	margin: 0;
+}
+
+html {
+	/*
+	 * NOTE: there is deliberately no `scroll-behavior: smooth` here.
+	 *
+	 * It is a popular one-liner and it causes real problems when applied globally:
+	 *
+	 *   - It breaks scroll restoration. Going "back" animates a long scroll to your
+	 *     previous position instead of restoring it instantly.
+	 *   - It fights programmatic scrolling. Anything that calls scrollIntoView() has
+	 *     to wait out an animation it did not ask for, with no reliable event to tell
+	 *     it when the animation finished.
+	 *   - It makes automated tests hang. This project's end-to-end suite deadlocked
+	 *     on it: Playwright scrolled an element into view, saw it still moving,
+	 *     re-scrolled, and restarted the animation — forever. That is the same
+	 *     failure any real code doing scroll-then-measure would hit.
+	 *
+	 * If you want smooth scrolling for a specific interaction, ask for it at the call
+	 * site — `element.scrollIntoView({ behavior: 'smooth' })` — where you control the
+	 * timing. Do not impose it on every scroll on the page.
+	 */
+
+	/* Sticky headers overlap anchor targets. This tells the browser to stop
+	   scrolling a header's height early so the heading isn't hidden underneath.
+	   Unlike smooth scrolling, this is pure layout and has no timing behaviour. */
+	scroll-padding-top: calc(var(--header-height) + var(--space-4));
+
+	/* Prevent iOS Safari from silently inflating text in landscape. */
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100svh;
+	line-height: var(--lh-relaxed);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+/* Media elements are inline by default, which leaves a mysterious ~4px gap under
+   them (it's the space for a text descender). `block` removes it. `max-width`
+   stops any asset from forcing a horizontal scrollbar on a phone. */
+img,
+picture,
+video,
+canvas,
+svg {
+	display: block;
+	max-width: 100%;
+}
+
+/* Form controls don't inherit typography from the page. They should. */
+input,
+button,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+	letter-spacing: inherit;
+}
+
+button {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	/* iOS renders buttons with its own rounded chrome unless told otherwise. */
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+/* Long unbroken strings (a URL, a stray hash) can blow out a mobile layout.
+   `overflow-wrap` lets the browser break them as a last resort. */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+dd,
+dt {
+	overflow-wrap: break-word;
+}
+
+ul[role='list'],
+ol[role='list'] {
+	list-style: none;
+	padding: 0;
+}
+
+/* Anything focused via keyboard gets our one ring. `:focus-visible` (rather than
+   `:focus`) means mouse users don't see a ring on click, but keyboard users always do. */
+:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+	border-radius: var(--radius-sm);
+}
+
+/* Root stacking context for the app shell. */
+#svelte-app {
+	isolation: isolate;
+}
+
+/*
+ * Respect the OS-level "reduce motion" setting.
+ *
+ * This is an accessibility requirement, not a nicety: for people with vestibular
+ * disorders, parallax and large transitions can cause genuine nausea. We don't
+ * remove animation entirely (that can break things that rely on transitionend) —
+ * we collapse it to effectively instant.
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
