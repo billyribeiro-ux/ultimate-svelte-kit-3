@@ -55,6 +55,7 @@ export type ApiErrorCode =
 	| 'not_found'
 	| 'invalid_request'
 	| 'rate_limited'
+	| 'unavailable'
 	| 'internal';
 
 const STATUS_FOR: Record<ApiErrorCode, number> = {
@@ -63,8 +64,24 @@ const STATUS_FOR: Record<ApiErrorCode, number> = {
 	not_found: 404,
 	invalid_request: 400,
 	rate_limited: 429,
+	unavailable: 503,
 	internal: 500
 };
+
+/**
+ * The reverse map, for translating a thrown `error(status, …)` into a code.
+ *
+ * Derived from `STATUS_FOR` rather than written out, so the two cannot drift.
+ * Adding a code adds its translation automatically, which is the point — the
+ * version with a hand-written `if` chain dropped 503 the day it was introduced
+ * and turned "the venue is paused" into "something went wrong at our end".
+ */
+const CODE_FOR: ReadonlyMap<number, ApiErrorCode> = new Map(
+	(Object.entries(STATUS_FOR) as Array<[ApiErrorCode, number]>).map(([code, status]) => [
+		status,
+		code
+	])
+);
 
 /**
  * A thrown API failure.
@@ -298,6 +315,29 @@ export function apiErrorFrom(thrown: unknown): ApiError {
 	if (reason === 'not_found') return new ApiError('not_found', 'Not found.');
 	if (reason !== undefined) {
 		return new ApiError('forbidden', thrown instanceof Error ? thrown.message : 'Forbidden.');
+	}
+
+	throw thrown;
+}
+
+/**
+ * Translate a SvelteKit `error(status, message)` into an API error.
+ *
+ * `HttpError` is `{ status, body: { message } }` and — the part that catches
+ * everybody — does **not** extend `Error`, so `instanceof Error` is false for
+ * every deliberate error the server threw.
+ *
+ * Anything with a status we do not publish is re-thrown, which sends it to the
+ * handler's unknown branch: logged with a request id, and answered with a
+ * sentence that reveals nothing. Guessing a code for an unexpected status would
+ * publish a status we never documented.
+ */
+export function fromHttpError(thrown: unknown, fallback: string): never {
+	const http = thrown as { status?: number; body?: { message?: string } };
+	const code = http.status === undefined ? undefined : CODE_FOR.get(http.status);
+
+	if (code !== undefined && code !== 'internal') {
+		throw new ApiError(code, http.body?.message ?? fallback);
 	}
 
 	throw thrown;

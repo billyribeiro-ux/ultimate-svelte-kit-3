@@ -47,7 +47,7 @@ import {
 	pageFrom,
 	type Cursor
 } from '@sequent/store';
-import { ApiError, apiErrorFrom, handler, jsonBody } from '#lib/server/api.ts';
+import { ApiError, apiErrorFrom, fromHttpError, handler, jsonBody } from '#lib/server/api.ts';
 import { db } from '#lib/server/db.ts';
 import { submit } from '#lib/server/gateway.ts';
 
@@ -166,23 +166,17 @@ export const POST = handler(async ({ viewer }, { request }) => {
 	 * Restating the shape in this file would create a second definition of what
 	 * an order is, and the two would disagree within a month.
 	 */
-	const seq = await submit(viewer, { ...body, kind: 'place_order' }).catch((thrown: unknown) => {
-		// `submit` throws SvelteKit's `error()`, whose shape is `{ status, body }`
-		// and which is *not* an `Error`. Translated here so the client gets JSON.
-		const http = thrown as { status?: number; body?: { message?: string } };
-
-		if (http.status === 400) {
-			throw new ApiError('invalid_request', http.body?.message ?? 'Invalid order.');
-		}
-		if (http.status === 403 || http.status === 404) {
-			throw new ApiError(
-				http.status === 404 ? 'not_found' : 'forbidden',
-				http.body?.message ?? 'Not allowed.'
-			);
-		}
-
-		throw thrown;
-	});
+	const seq = await submit(viewer, { ...body, kind: 'place_order' }).catch((thrown: unknown) =>
+		/*
+		 * `submit` throws SvelteKit's `error()`, whose shape is `{ status, body }`
+		 * and which is *not* an `Error`. Translated generically rather than by an
+		 * `if` chain: the chain handled 400/403/404 and dropped 503, so the day the
+		 * venue gained a pause flag, "we are not accepting orders" became
+		 * "something went wrong at our end" — a retryable condition reported as a
+		 * bug.
+		 */
+		fromHttpError(thrown, 'That order was refused.')
+	);
 
 	return Response.json(
 		{

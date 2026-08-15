@@ -4,6 +4,8 @@
 		addWebhook,
 		createKey,
 		getApiKeys,
+		getBilling,
+		getOps,
 		getQueue,
 		getVenue,
 		getWebhooks,
@@ -11,6 +13,7 @@
 		removeWebhook,
 		retryDead,
 		revokeKey,
+		setFeatureFlag,
 		setPhase
 	} from './admin.remote.ts';
 
@@ -21,6 +24,7 @@
 			canManageKeys: boolean;
 			canRunVenue: boolean;
 			canSeeQueue: boolean;
+			canSeeLedger: boolean;
 			firmId: string;
 		};
 	} = $props();
@@ -43,6 +47,8 @@
 	const keys = $derived(data.canManageKeys ? await getApiKeys() : null);
 	const hooks = $derived(data.canManageKeys ? await getWebhooks() : null);
 	const queue = $derived(data.canSeeQueue ? await getQueue() : null);
+	const billing = $derived(data.canSeeLedger ? await getBilling() : null);
+	const ops = $derived(data.canSeeQueue ? await getOps() : null);
 	const venue = $derived(data.canRunVenue ? await getVenue() : null);
 
 	const PHASES = ['closed', 'pre_open', 'auction', 'continuous', 'halted'] as const;
@@ -58,6 +64,16 @@
 			busy = false;
 		}
 	}
+
+	/**
+	 * Scaled integer units to a readable amount.
+	 *
+	 * Divided only here, at the very edge, for display. Every amount that travels
+	 * or is stored stays an integer — the moment a float touches money it starts
+	 * losing pennies in ways that take an auditor to find.
+	 */
+	const money = (units: number) =>
+		`£${(units / 10_000).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 	function messageFrom(thrown: unknown): string {
 		if (typeof thrown === 'object' && thrown !== null) {
@@ -108,6 +124,25 @@
 			// the venue's dramatic gesture.
 			sweep(phase === 'continuous' || phase === 'auction' ? 'open' : 'halt');
 		});
+	}
+
+	/**
+	 * Flip a flag, with a reason.
+	 *
+	 * The reason is prompted for rather than optional, because "why is
+	 * `deliver_webhooks` off" is the question somebody has six weeks later and a
+	 * blank field cannot answer it. A prompt is crude; a mandatory field that
+	 * people fill with "." is worse.
+	 */
+	async function toggleFlag(name: string, enabled: boolean) {
+		const reason = globalThis.prompt(
+			`Why are you turning ${name} ${enabled ? 'on' : 'off'}?`,
+			enabled ? 'resolved' : 'incident'
+		);
+
+		if (!reason) return;
+
+		await run(async () => void (await setFeatureFlag({ name, enabled, reason })));
 	}
 
 	async function copy(text: string) {
@@ -215,6 +250,88 @@
 
 				<button type="submit">List it</button>
 			</form>
+		</section>
+	{/if}
+
+	<!-- ------------------------------------------------------------------ -->
+	{#if data.canSeeLedger && billing}
+		<section class="card stack" use:reveal={{ delay: 0.07 }}>
+			<header class="row">
+				<h2>Billing</h2>
+				<span class="badge">{billing.plan.name}</span>
+			</header>
+
+			<div class="stats">
+				<div class="stat">
+					<span class="mono big">{billing.usage.seats}</span>
+					<span class="small faint">seats · {billing.plan.includedSeats} included</span>
+				</div>
+				<div class="stat">
+					<span class="mono big">{billing.usage.orders.toLocaleString('en-GB')}</span>
+					<span class="small faint">
+						orders · {billing.plan.includedOrders.toLocaleString('en-GB')} included
+					</span>
+				</div>
+				<div class="stat">
+					<span class="mono big">{billing.usage.trades.toLocaleString('en-GB')}</span>
+					<span class="small faint">trades</span>
+				</div>
+				<div class="stat">
+					<span class="mono big">{money(billing.preview.total)}</span>
+					<span class="small faint">this month so far</span>
+				</div>
+			</div>
+
+			<p class="small muted">
+				A preview, built by the same function that builds the invoice — so what you see
+				mid-month is what you will be charged, rather than an estimate from a second
+				implementation that drifts. Trading fees are settled per trade through the ledger
+				and appear at zero here so they are not billed twice.
+			</p>
+
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<div class="scroller" tabindex="0" role="region" aria-label="This month's charges">
+				<table>
+					<thead>
+						<tr>
+							<th scope="col" class="pin">Item</th>
+							<th scope="col">Quantity</th>
+							<th scope="col">Unit</th>
+							<th scope="col">Amount</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each billing.preview.lines as line, index (line.description + index)}
+							<tr>
+								<td class="small pin">{line.description}</td>
+								<td class="mono small">{line.quantity.toLocaleString('en-GB')}</td>
+								<td class="mono small">{line.unitAmount === 0 ? '—' : money(line.unitAmount)}</td>
+								<td class="mono">{money(line.amount)}</td>
+							</tr>
+						{/each}
+						<tr class="total-row">
+							<td class="pin"><strong>Total</strong></td>
+							<td></td>
+							<td></td>
+							<td class="mono"><strong>{money(billing.preview.total)}</strong></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			{#if billing.invoices.length}
+				<h3>Issued invoices</h3>
+				<ul role="list" class="invoices">
+					{#each billing.invoices as issued (issued.invoiceId)}
+						<li class="row">
+							<span class="mono small">{new Date(issued.periodStart).toISOString().slice(0, 7)}</span>
+							<span class="mono">{money(issued.total)}</span>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="small muted">Nothing issued yet — the first invoice closes at month end.</p>
+			{/if}
 		</section>
 	{/if}
 
@@ -416,6 +533,99 @@
 				{/if}
 			</section>
 		{/if}
+	{/if}
+
+	<!-- ------------------------------------------------------------------ -->
+	{#if data.canSeeQueue && ops}
+		<section class="card stack" use:reveal={{ delay: 0.15 }}>
+			<header class="row">
+				<h2>Health</h2>
+				<span class="badge level" data-level={ops.verdict.level}>{ops.verdict.level}</span>
+			</header>
+
+			<p class="small" class:down={ops.verdict.level !== 'ok'}>{ops.verdict.summary}</p>
+
+			<div class="stats">
+				<div class="stat" class:bad={ops.health.engineLag > 500}>
+					<span class="mono big">{ops.health.engineLag}</span>
+					<span class="small faint">engine lag</span>
+				</div>
+				<div class="stat" class:bad={ops.health.projectorLag > 1000}>
+					<span class="mono big">{ops.health.projectorLag}</span>
+					<span class="small faint">projector lag</span>
+				</div>
+				<div class="stat" class:bad={ops.health.outboxAgeMs > 120_000}>
+					<span class="mono big">{Math.round(ops.health.outboxAgeMs / 1000)}s</span>
+					<span class="small faint">oldest queued</span>
+				</div>
+				<div class="stat" class:bad={ops.health.trialBalance !== 0}>
+					<span class="mono big">{ops.health.trialBalance}</span>
+					<span class="small faint">trial balance</span>
+				</div>
+			</div>
+
+			<p class="small muted">
+				Lag, not throughput. A venue processing ten thousand commands a second while
+				falling two thousand behind is not healthy, and a throughput graph makes it look
+				magnificent. The trial balance is zero by construction — anything else means
+				something wrote to the ledger outside the one function that may.
+			</p>
+
+			{#if data.canRunVenue}
+				<h3>Feature flags</h3>
+				<p class="small muted">
+					A flag may change what the venue <em>offers</em>. It may never change what the
+					engine <em>decides</em> — a flag inside the engine would mean replaying the log
+					produced different history depending on when you ran it.
+				</p>
+
+				<ul role="list" class="flags">
+					{#each ops.flags as flag (flag.name)}
+						<li class="flag stack">
+							<div class="row">
+								<code class="mono small">{flag.name}</code>
+								<button
+									type="button"
+									class:danger={flag.enabled}
+									disabled={busy}
+									onclick={() => void toggleFlag(flag.name, !flag.enabled)}
+								>
+									{flag.enabled ? 'Turn off' : 'Turn on'}
+								</button>
+							</div>
+							<span class="small faint">{flag.description}</span>
+							{#if !flag.isDefault}
+								<span class="small faint">
+									{flag.enabled ? 'on' : 'off'} — {flag.reason}
+								</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+
+				{#if ops.flagHistory.length}
+					<h3>Recent flag changes</h3>
+					<ul role="list" class="dead">
+						{#each ops.flagHistory as change, index (change.name + change.changedAt + index)}
+							<li class="stack tight">
+								<span class="small mono">
+									{change.name} → {change.enabled ? 'on' : 'off'}
+								</span>
+								<span class="small faint">{change.reason}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				<h3>Schema</h3>
+				<p class="small muted">
+					At migration <strong class="mono">{ops.migrations.current}</strong>,
+					{ops.migrations.pending.length} pending. Changes are forward-only: the recovery
+					path for a bad migration is a new migration, because a rollback that drops a
+					column destroys the data written since the deploy.
+				</p>
+			{/if}
+		</section>
 	{/if}
 
 	<!-- ------------------------------------------------------------------ -->
@@ -627,6 +837,38 @@
 	.stat.bad .big { color: var(--ask); }
 
 	.revoked { opacity: 0.5; }
+
+	.total-row td { border-block-start: 2px solid var(--line); border-block-end: none; }
+
+	.flags {
+		list-style: none;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.flag {
+		border-inline-start: 2px solid var(--line);
+		padding-inline-start: var(--space-3);
+		gap: var(--space-1);
+	}
+
+	.flag .row { justify-content: space-between; }
+
+	.level[data-level='ok'] { color: var(--bid); border-color: var(--bid); }
+	.level[data-level='degraded'] { color: var(--warn); border-color: var(--warn); }
+	.level[data-level='down'] { color: var(--ask); border-color: var(--ask); }
+
+	.invoices {
+		list-style: none;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+
+	.invoices li { justify-content: space-between; }
 
 	.badge.stopped, .down { color: var(--ask); }
 	.badge.stopped { border-color: var(--ask); }

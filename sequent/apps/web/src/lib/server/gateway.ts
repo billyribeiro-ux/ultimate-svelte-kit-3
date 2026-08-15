@@ -17,7 +17,15 @@ import {
 	parseCommand,
 	type Command
 } from '@sequent/protocol';
-import { assertCan, NotAllowed, Sequencer, type Action, type Viewer } from '@sequent/store';
+import {
+	assertCan,
+	Flags,
+	NotAllowed,
+	Sequencer,
+	type Action,
+	type FlagName,
+	type Viewer
+} from '@sequent/store';
 import { db } from './db.ts';
 
 /**
@@ -30,6 +38,30 @@ import { db } from './db.ts';
  */
 const sequencer = new Sequencer(db);
 await sequencer.start();
+
+/**
+ * The flags this process reads.
+ *
+ * One instance, so the five-second cache is shared across every request rather
+ * than being per-call — which would make it no cache at all.
+ */
+const flags = new Flags(db);
+
+/**
+ * Which flag, if any, can stop each kind of command.
+ *
+ * Only order flow is stoppable. `set_phase` and `set_kill_switch` deliberately
+ * have no flag: they are the controls somebody reaches for *during* the
+ * incident that made them turn `accept_orders` off, and a flag that could
+ * disable the kill switch is a footgun with a very long barrel.
+ */
+const FLAG_FOR: Partial<Record<Command['kind'], FlagName>> = {
+	place_order: 'accept_orders',
+	replace_order: 'accept_orders'
+	// Note: `cancel_order` and `cancel_all` are absent on purpose. Pausing the
+	// venue must never trap somebody's resting orders — the whole point of a
+	// pause is to let people get out.
+};
 
 /** Which permission each command kind needs. */
 const ACTION_FOR: Record<Command['kind'], Action> = {
@@ -94,6 +126,22 @@ export async function submit(
 	} catch (thrown) {
 		if (thrown instanceof NotAllowed) error(thrown.status as 403, thrown.message);
 		throw thrown;
+	}
+
+	/*
+	 * The flag check goes **after** authorisation and before the append.
+	 *
+	 * After, because "the venue is paused" is not something to tell somebody who
+	 * was not allowed to send this anyway — that would leak which commands exist
+	 * to whoever is probing. Before the append, because a paused venue must not
+	 * put the command in the log at all: a log entry is a promise the engine will
+	 * apply it, and pausing means not making that promise.
+	 */
+	const flag = FLAG_FOR[authorised.kind];
+	if (flag && !(await flags.enabled(flag))) {
+		// 503, not 403. The caller did nothing wrong and should retry later, which
+		// is exactly what 503 means and 403 does not.
+		error(503, 'The venue is not accepting new orders at the moment. Cancels still work.');
 	}
 
 	await sequencer.assertSoleWriter();

@@ -449,4 +449,47 @@ CREATE TABLE IF NOT EXISTS email_sent (
 
 CREATE INDEX IF NOT EXISTS email_sent_recipient_idx ON email_sent (recipient, at DESC);
 
+/* ========================================================================== */
+/* Billing                                                                     */
+/* ========================================================================== */
+
+-- An issued invoice never changes.
+--
+-- Same rule as the ledger and the log, and the same reason: "what did we bill
+-- them in March" must have an answer, and an updated row cannot give one. A
+-- correction is a credit note.
+--
+-- The lines are JSON rather than a child table. They are written once, read
+-- whole, and never queried across — so a table would buy a join and cost the
+-- guarantee that an invoice is one row that either exists or does not.
+CREATE TABLE IF NOT EXISTS invoice (
+	invoice_id TEXT PRIMARY KEY,
+	firm_id TEXT NOT NULL REFERENCES firm (firm_id),
+	plan_id TEXT NOT NULL,
+	period_start INTEGER NOT NULL,
+	period_end INTEGER NOT NULL,
+	-- Scaled integer units, exactly like every price and fee in the venue, so a
+	-- trading fee can be compared with an invoice line without a conversion.
+	total INTEGER NOT NULL,
+	lines TEXT NOT NULL,
+	issued_at INTEGER NOT NULL,
+	-- Simulated. A real venue would carry a provider reference here.
+	paid_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS invoice_firm_idx ON invoice (firm_id, period_start DESC);
+
+CREATE TRIGGER IF NOT EXISTS invoice_is_immutable
+BEFORE UPDATE OF total, lines, period_start, period_end ON invoice
+BEGIN
+	SELECT RAISE(ABORT, 'an issued invoice cannot be changed; raise a credit note');
+END;
+
+-- Note: \`firm.billable_from\` is added by migration 1 rather than here.
+--
+-- This file is written entirely in CREATE TABLE IF NOT EXISTS so it can be run
+-- against any database safely. \`ALTER TABLE\` has no such guard: it would
+-- succeed once and then fail every subsequent start with "duplicate column
+-- name". Changes to an existing shape belong in \`migrate.ts\`.
+
 `;

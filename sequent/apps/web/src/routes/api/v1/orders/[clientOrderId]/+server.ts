@@ -13,7 +13,7 @@
 
 import { formatPrice, type Price } from '@sequent/protocol';
 import { assertCan, NotAllowed } from '@sequent/store';
-import { ApiError, apiErrorFrom, handler } from '#lib/server/api.ts';
+import { ApiError, apiErrorFrom, fromHttpError, handler } from '#lib/server/api.ts';
 import { db } from '#lib/server/db.ts';
 import { submit } from '#lib/server/gateway.ts';
 
@@ -137,14 +137,7 @@ export const DELETE = handler(
 		const seq = await submit(viewer, {
 			kind: 'cancel_order',
 			clientOrderId
-		}).catch((thrown: unknown) => {
-			const http = thrown as { status?: number; body?: { message?: string } };
-			if (http.status === 403) throw new ApiError('forbidden', http.body?.message ?? 'Not allowed.');
-			if (http.status === 400) {
-				throw new ApiError('invalid_request', http.body?.message ?? 'Invalid cancel.');
-			}
-			throw thrown;
-		});
+		}).catch((thrown: unknown) => fromHttpError(thrown, 'That cancel was refused.'));
 
 		return Response.json(
 			{ data: { seq, clientOrderId, status: 'cancel_accepted' } },

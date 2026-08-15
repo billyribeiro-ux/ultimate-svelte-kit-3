@@ -9,6 +9,7 @@
  */
 
 import { createClient, type Client } from '@libsql/client';
+import { migrate as runMigrations } from './migrate.ts';
 import { SCHEMA } from './schema.ts';
 
 export interface StoreOptions {
@@ -44,9 +45,13 @@ export async function openStore({ url, authToken, migrate = true }: StoreOptions
 	await client.execute('PRAGMA synchronous = FULL');
 
 	if (migrate) {
+		// The base schema first — it is idempotent, so this is a no-op on an
+		// existing venue — then the numbered changes on top.
 		for (const statement of splitStatements(SCHEMA)) {
 			await client.execute(statement);
 		}
+
+		await runMigrations(client);
 	}
 
 	return client;

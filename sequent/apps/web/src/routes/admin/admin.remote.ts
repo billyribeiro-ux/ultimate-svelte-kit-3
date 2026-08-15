@@ -19,19 +19,32 @@ import { command, form, getRequestEvent, query } from '$app/server';
 import { asInstrumentId, price } from '@sequent/protocol';
 import {
 	assertCan,
+	buildInvoice,
+	canCreateKey,
+	cappedRate,
 	createApiKey,
 	createEndpoint,
 	deadLetters,
 	deleteEndpoint,
+	flagHistory,
+	health,
 	InvalidEndpointUrl,
+	invoicesFor,
 	listApiKeys,
+	listFlags,
 	listEndpoints,
+	migrationStatus,
 	NotAllowed,
+	planFor,
 	revive,
 	revokeApiKey,
+	setFlag,
 	stats,
 	tailEvents,
+	UnknownFlag,
 	UnknownWebhookEvent,
+	usageFor,
+	verdict,
 	WEBHOOK_EVENTS,
 	type Viewer
 } from '@sequent/store';
@@ -56,6 +69,91 @@ function requireCan(viewer: Viewer, action: Parameters<typeof assertCan>[1]): vo
 		throw thrown;
 	}
 }
+
+/** The firm's plan id, from the row rather than from anything the client sent. */
+async function planIdFor(firmId: string): Promise<string> {
+	const result = await db.execute({
+		sql: 'SELECT plan FROM firm WHERE firm_id = ?',
+		args: [firmId]
+	});
+
+	return String(result.rows[0]?.['plan'] ?? 'starter');
+}
+
+/* -------------------------------------------------------------------------- */
+/* Billing                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The firm's plan, what it has used this month, and its invoices.
+ *
+ * The usage figures are computed from the log on every request rather than read
+ * from a counter, which is the same property that makes the invoice
+ * reproducible: ask twice, get the same answer, however many times a projector
+ * has replayed a batch in between.
+ */
+export const getBilling = query(async () => {
+	const viewer = requireViewer();
+	requireCan(viewer, 'view_ledger');
+
+	const plan = planFor(await planIdFor(viewer.firmId));
+
+	/*
+	 * The period is the calendar month containing "now", in UTC.
+	 *
+	 * UTC rather than the firm's local time, and it matters: a venue with
+	 * members in Tokyo and Chicago has no single "start of the month", and
+	 * picking one firm's midnight means somebody's invoice period silently
+	 * shifts when the clocks change. One timezone for billing, stated plainly,
+	 * beats a local one that is right for whoever chose it.
+	 */
+	const now = Date.now();
+	const today = new Date(now);
+	const periodStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1);
+	const periodEnd = Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1);
+
+	const usage = await usageFor(db, viewer.firmId, periodStart, now);
+
+	const firm = await db.execute({
+		sql: 'SELECT created_at, billable_from FROM firm WHERE firm_id = ?',
+		args: [viewer.firmId]
+	});
+
+	const activeFrom = Number(firm.rows[0]?.['billable_from'] ?? firm.rows[0]?.['created_at'] ?? now);
+
+	/*
+	 * A preview, not an invoice. Built by the same pure function that builds the
+	 * real one, so what a firm sees mid-month is what they will be charged —
+	 * rather than an estimate computed by a second implementation that drifts.
+	 */
+	const preview = buildInvoice({
+		invoiceId: `preview-${viewer.firmId}-${periodStart}`,
+		firmId: viewer.firmId,
+		plan,
+		usage,
+		periodStart,
+		periodEnd,
+		activeFrom,
+		issuedAt: now
+	});
+
+	return {
+		plan: {
+			id: plan.id,
+			name: plan.name,
+			seatPrice: plan.seatPrice,
+			includedSeats: plan.includedSeats,
+			includedOrders: plan.includedOrders,
+			maxApiKeys: plan.maxApiKeys,
+			maxRatePerSecond: plan.maxRatePerSecond
+		},
+		usage,
+		preview,
+		periodStart,
+		periodEnd,
+		invoices: await invoicesFor(db, viewer.firmId)
+	};
+});
 
 /* -------------------------------------------------------------------------- */
 /* API keys                                                                    */
@@ -125,11 +223,25 @@ export const createKey = command(
 			if (owned.rows.length === 0) error(404, 'No such trading account.');
 		}
 
+		/*
+		 * The plan's limits, checked at creation and never retroactively.
+		 *
+		 * A firm that downgrades keeps the keys it already has — revoking them
+		 * would mean a plan change silently breaks a trading system in production
+		 * — but it cannot make another until it is back under the ceiling.
+		 */
+		const plan = planFor(await planIdFor(viewer.firmId));
+		const allowed = await canCreateKey(db, viewer.firmId, plan);
+		if (!allowed.allowed) error(403, allowed.reason ?? 'Your plan does not allow another key.');
+
 		const key = await createApiKey(db, {
 			firmId: viewer.firmId,
 			label: input.label,
 			scopes: input.scopes,
-			ratePerSecond: input.ratePerSecond,
+			// Clamped rather than refused. A firm asking for 500 on a plan that
+			// allows 50 has made a reasonable request we decline to fill in full,
+			// and giving them 50 beats an error about a number they cannot see.
+			ratePerSecond: cappedRate(input.ratePerSecond, plan),
 			...(input.accountId ? { accountId: input.accountId } : {})
 		});
 
@@ -285,6 +397,58 @@ export const retryDead = command(v.object({ outboxIds: v.array(v.number()) }), a
 
 	return { revived: count };
 });
+
+/* -------------------------------------------------------------------------- */
+/* Ops: flags, health, migrations                                              */
+/* -------------------------------------------------------------------------- */
+
+export const getOps = query(async () => {
+	const viewer = requireViewer();
+	requireCan(viewer, 'view_audit_log');
+
+	const status = await health(db);
+
+	return {
+		health: status,
+		verdict: verdict(status),
+		flags: await listFlags(db),
+		flagHistory: await flagHistory(db, 10),
+		migrations: await migrationStatus(db)
+	};
+});
+
+/**
+ * Flip a flag.
+ *
+ * Restricted to `venue_operator`, not `firm_admin`. These flags are venue-wide
+ * — turning `accept_orders` off stops *everybody* trading — so the permission
+ * has to be the one that means "administers the venue" rather than "administers
+ * a firm". A member being able to pause the market would be quite a bug.
+ */
+export const setFeatureFlag = command(
+	v.object({
+		name: v.string(),
+		enabled: v.boolean(),
+		reason: v.pipe(v.string(), v.trim(), v.minLength(3), v.maxLength(200))
+	}),
+	async (input) => {
+		const viewer = requireViewer();
+		requireCan(viewer, 'set_phase');
+
+		try {
+			await setFlag(db, input.name, input.enabled, {
+				by: viewer.userId,
+				reason: input.reason
+			});
+		} catch (thrown) {
+			if (thrown instanceof UnknownFlag) error(400, thrown.message);
+			throw thrown;
+		}
+
+		await getOps().refresh();
+		return { name: input.name, enabled: input.enabled };
+	}
+);
 
 /* -------------------------------------------------------------------------- */
 /* The venue's own controls                                                    */

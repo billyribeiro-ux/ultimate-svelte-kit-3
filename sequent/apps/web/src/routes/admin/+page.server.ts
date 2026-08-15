@@ -24,12 +24,15 @@ export const load: PageServerLoad = ({ locals, url }) => {
 	const canManageKeys = can(locals.viewer, 'manage_api_keys', target).allowed;
 	const canRunVenue = can(locals.viewer, 'set_phase', target).allowed;
 	const canSeeQueue = can(locals.viewer, 'view_audit_log', target).allowed;
+	// Billing is money, so it is gated on the ledger permission — the same one
+	// the risk console uses, held by risk managers, firm admins and auditors.
+	const canSeeLedger = can(locals.viewer, 'view_ledger', target).allowed;
 
 	// Nothing to show is a 403, not an empty page. An empty admin screen reads as
 	// a bug; a refusal reads as a rule.
-	if (!canManageKeys && !canRunVenue && !canSeeQueue) {
+	if (!canManageKeys && !canRunVenue && !canSeeQueue && !canSeeLedger) {
 		error(403, 'Your role does not allow that.');
 	}
 
-	return { canManageKeys, canRunVenue, canSeeQueue, firmId: locals.viewer.firmId };
+	return { canManageKeys, canRunVenue, canSeeQueue, canSeeLedger, firmId: locals.viewer.firmId };
 };
