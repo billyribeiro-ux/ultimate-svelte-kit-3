@@ -99,4 +99,5 @@ for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => stopAll(0))
 console.log(`Sequent — database ${DATABASE_URL}, origin ${PUBLIC_ORIGIN}\n`);
 
 start('engine', 'node', ['src/main.ts'], 'apps/engine');
+start('worker', 'node', ['src/main.ts'], 'apps/worker');
 start('web', 'pnpm', ['exec', 'vite', 'dev'], 'apps/web');

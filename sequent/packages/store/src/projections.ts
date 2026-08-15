@@ -28,6 +28,8 @@ import type { Client, InValue, Transaction } from '@libsql/client';
 import type { Amount, Event } from '@sequent/protocol';
 import { checkpointIn, readCheckpoint, readEvents, type EventRecord } from './log.ts';
 import { ensureAccount, postTransaction, type Posting } from './ledger.ts';
+import { notificationsFor } from './notify.ts';
+import { enqueue } from './outbox.ts';
 
 export const PROJECTOR_CONSUMER = 'projections';
 
@@ -363,13 +365,44 @@ async function postTrade(
  * This is the only function that knows the checkpoint rule, which is the point:
  * an individual projector cannot get it wrong because it never sees it.
  */
-export async function applyBatch(client: Client, batch: readonly EventRecord[]): Promise<void> {
+export interface ApplyOptions {
+	/**
+	 * Whether to enqueue outbox messages. On during normal operation, **off**
+	 * during a rebuild — see `rebuild`.
+	 */
+	readonly notify?: boolean;
+}
+
+export async function applyBatch(
+	client: Client,
+	batch: readonly EventRecord[],
+	options: ApplyOptions = {}
+): Promise<void> {
 	if (batch.length === 0) return;
 
+	const { notify = true } = options;
 	const tx = await client.transaction('write');
 
 	try {
-		for (const record of batch) await project(tx, record);
+		for (const record of batch) {
+			await project(tx, record);
+
+			/*
+			 * Notifications are enqueued **in this transaction**, next to the rows
+			 * they describe.
+			 *
+			 * That is the whole transactional-outbox pattern in two lines. The
+			 * alternative — projecting, committing, then posting a webhook — has no
+			 * correct ordering: commit first and a crash loses the notification
+			 * forever; send first and a rollback tells a firm about a trade that did
+			 * not happen. Here there is one commit, and it contains both or neither.
+			 */
+			if (notify) {
+				for (const message of notificationsFor(record)) {
+					await enqueue(tx, message, record.at);
+				}
+			}
+		}
 
 		const last = batch[batch.length - 1]!;
 		await checkpointIn(tx, PROJECTOR_CONSUMER, last.seq, last.at);
@@ -381,7 +414,11 @@ export async function applyBatch(client: Client, batch: readonly EventRecord[]):
 }
 
 /** Catch the projections up to the end of the event log. */
-export async function catchUp(client: Client, batchSize = 500): Promise<number> {
+export async function catchUp(
+	client: Client,
+	batchSize = 500,
+	options: ApplyOptions = {}
+): Promise<number> {
 	let cursor = await readCheckpoint(client, PROJECTOR_CONSUMER);
 	let applied = 0;
 
@@ -389,7 +426,7 @@ export async function catchUp(client: Client, batchSize = 500): Promise<number> 
 		const batch = await readEvents(client, cursor, batchSize);
 		if (batch.length === 0) break;
 
-		await applyBatch(client, batch);
+		await applyBatch(client, batch, options);
 		cursor = batch[batch.length - 1]!.seq;
 		applied += batch.length;
 	}
@@ -403,6 +440,20 @@ export async function catchUp(client: Client, batchSize = 500): Promise<number> 
  * The operation that proves they are caches. It is also the migration strategy:
  * changing the shape of a read model is a truncate and a replay rather than an
  * `ALTER TABLE` and a backfill script that has to be right first time.
+ *
+ * ## `notify: false`, and why it is the most important argument here
+ *
+ * A rebuild replays every event the venue has ever recorded. Without this flag
+ * it would also re-enqueue every notification — and every member would be told,
+ * again, about six months of trades, in one burst, because somebody changed the
+ * shape of a read model.
+ *
+ * The outbox's idempotency keys would absorb it *only* while the original rows
+ * are still there, and `prune` deletes delivered ones. So the protection cannot
+ * come from the constraint; it has to be this argument.
+ *
+ * The general rule: replay is for **internal** state. Anything that leaves the
+ * building must be suppressed during it.
  */
 export async function rebuild(client: Client): Promise<number> {
 	const tx = await client.transaction('write');
@@ -421,5 +472,5 @@ export async function rebuild(client: Client): Promise<number> {
 		throw error;
 	}
 
-	return catchUp(client);
+	return catchUp(client, 500, { notify: false });
 }

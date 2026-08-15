@@ -25,7 +25,7 @@
  */
 
 import type { Client, InValue, Transaction } from '@libsql/client';
-import type { Command, Event } from '@sequent/protocol';
+import { parseCommand, type Command, type Event } from '@sequent/protocol';
 
 /* -------------------------------------------------------------------------- */
 /* Rows                                                                        */
@@ -113,14 +113,45 @@ export class Sequencer {
 	async append(body: Command, receivedAt: number, version: number): Promise<CommandRecord> {
 		const seq = this.nextSeq;
 
+		/*
+		 * Validated here, even though the gateway already did.
+		 *
+		 * The duplication is deliberate, and the reason is the append-only trigger:
+		 * a malformed command written to this table can never be corrected or
+		 * removed. It sits there being replayed by every recovery, forever, and the
+		 * engine has to cope with it on every single one.
+		 *
+		 * That asymmetry — cheap to check, impossible to undo — is what makes a
+		 * second parse worth its cost at the boundary of a durable log. It also
+		 * covers the writers that are not the gateway: the seed, an admin script,
+		 * a migration. A drill script that sent `firmId` where the schema wanted
+		 * `targetFirmId` is exactly how this got added: it wrote happily, and the
+		 * engine then produced an event with an `undefined` field that a downstream
+		 * worker retried six times before anybody noticed.
+		 *
+		 * TypeScript did not catch it because the script cast, and a cast is a
+		 * promise the compiler has no way to check.
+		 */
+		let validated: Command;
+		try {
+			validated = parseCommand(body);
+		} catch (thrown) {
+			throw new Error(
+				`Refusing to append a malformed command to the log: ${
+					thrown instanceof Error ? thrown.message : String(thrown)
+				}`,
+				{ cause: thrown }
+			);
+		}
+
 		await this.#client.execute({
 			sql: `INSERT INTO command_log (seq, received_at, version, kind, firm_id, body)
 			      VALUES (?, ?, ?, ?, ?, ?)`,
-			args: [seq, receivedAt, version, body.kind, body.firmId, JSON.stringify(body)]
+			args: [seq, receivedAt, version, validated.kind, validated.firmId, JSON.stringify(validated)]
 		});
 
 		this.#next = seq + 1;
-		return { seq, receivedAt, version, body };
+		return { seq, receivedAt, version, body: validated };
 	}
 
 	/**

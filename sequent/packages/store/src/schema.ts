@@ -340,4 +340,113 @@ CREATE TABLE IF NOT EXISTS api_key (
 
 CREATE INDEX IF NOT EXISTS api_key_firm_idx ON api_key (firm_id);
 
+/* ========================================================================== */
+/* The outbox — how a side effect becomes atomic with the fact it reports      */
+/* ========================================================================== */
+
+-- Writing to the database and then calling somebody's webhook is two writes
+-- with no ordering that is correct: commit first and a crash loses the
+-- notification forever, send first and a rollback notifies about a trade that
+-- did not happen. So the *intent to send* is written in the same transaction as
+-- the fact, and a separate process does the sending.
+CREATE TABLE IF NOT EXISTS outbox (
+	outbox_id INTEGER PRIMARY KEY AUTOINCREMENT,
+	kind TEXT NOT NULL,
+	-- The event sequence that caused this. For ordering, and for answering
+	-- "why was this sent" six weeks later.
+	seq INTEGER NOT NULL,
+	firm_id TEXT,
+	-- Unique, so a projector replaying the same event does not enqueue twice.
+	-- Projectors are re-run after every crash; without this, every restart
+	-- re-notifies every firm about the last batch.
+	idempotency_key TEXT NOT NULL UNIQUE,
+	payload TEXT NOT NULL,
+	created_at INTEGER NOT NULL,
+	-- When this may next be attempted. Backoff is a value here, not a sleep.
+	available_at INTEGER NOT NULL,
+	attempts INTEGER NOT NULL DEFAULT 0,
+	-- A lease, not a lock: if the worker dies the lease expires and the next
+	-- worker picks the message up. Nothing has to detect the crash.
+	leased_until INTEGER,
+	leased_by TEXT,
+	delivered_at INTEGER,
+	failed_at INTEGER,
+	last_error TEXT
+) STRICT;
+
+-- The index claim runs on. Ordered to match the WHERE clause: the two null
+-- checks narrow hardest, then the time comparison.
+CREATE INDEX IF NOT EXISTS outbox_ready_idx
+	ON outbox (delivered_at, failed_at, available_at, outbox_id);
+
+CREATE INDEX IF NOT EXISTS outbox_dead_idx ON outbox (failed_at)
+	WHERE failed_at IS NOT NULL;
+
+/* ========================================================================== */
+/* Webhooks                                                                    */
+/* ========================================================================== */
+
+-- Note secret is stored in clear, unlike api_key.secret_hash.
+--
+-- Not an oversight, and worth understanding: an API key is only ever
+-- *verified*, so a one-way hash is enough. A webhook secret must be *used* to
+-- compute a signature on every delivery, so the original bytes are required. A
+-- hashed signing key cannot sign.
+--
+-- The consequence is that this table is more sensitive than api_key: a dump
+-- of it lets somebody forge our webhooks to our members. In production these
+-- belong behind a KMS.
+CREATE TABLE IF NOT EXISTS webhook_endpoint (
+	endpoint_id TEXT PRIMARY KEY,
+	firm_id TEXT NOT NULL REFERENCES firm (firm_id),
+	url TEXT NOT NULL,
+	secret TEXT NOT NULL,
+	-- Space-separated event names, matched with LIKE on ' ' || events || ' '.
+	events TEXT NOT NULL,
+	is_active INTEGER NOT NULL DEFAULT 1,
+	-- An endpoint that fails this many times running has been decommissioned
+	-- and nobody told us. It gets switched off so it stops burning throughput
+	-- that firms who *are* listening are waiting for.
+	consecutive_failures INTEGER NOT NULL DEFAULT 0,
+	last_success_at INTEGER,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS webhook_endpoint_firm_idx ON webhook_endpoint (firm_id, is_active);
+
+-- Every attempt, kept. When a member says "we never got the fill", this is the
+-- table that answers, and an aggregate counter could not.
+CREATE TABLE IF NOT EXISTS webhook_delivery (
+	delivery_id TEXT PRIMARY KEY,
+	endpoint_id TEXT NOT NULL REFERENCES webhook_endpoint (endpoint_id),
+	outbox_id INTEGER NOT NULL,
+	event TEXT NOT NULL,
+	status TEXT NOT NULL,
+	status_code INTEGER,
+	duration_ms INTEGER NOT NULL,
+	error TEXT,
+	at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS webhook_delivery_endpoint_idx ON webhook_delivery (endpoint_id, at DESC);
+
+/* ========================================================================== */
+/* Email — the same outbox, a different sink                                   */
+/* ========================================================================== */
+
+-- Not a queue. The outbox is the queue; this is the record of what was sent,
+-- so a support conversation about "did the daily statement go out" has an
+-- answer that does not involve reading the mail provider's dashboard.
+CREATE TABLE IF NOT EXISTS email_sent (
+	email_id TEXT PRIMARY KEY,
+	outbox_id INTEGER NOT NULL,
+	firm_id TEXT,
+	recipient TEXT NOT NULL,
+	subject TEXT NOT NULL,
+	template TEXT NOT NULL,
+	at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS email_sent_recipient_idx ON email_sent (recipient, at DESC);
+
 `;

@@ -12,13 +12,13 @@ distributed systems is to build one whose bugs cost money.
 ```sh
 pnpm install
 pnpm seed     # two member firms, six people, two instruments, an opening auction
-pnpm dev      # the engine process and the web process, together
+pnpm dev      # the engine, the worker and the web process, together
 ```
 
 Then <http://localhost:5173/sign-in>. Everybody's password is printed by the
 seed, along with an API key.
 
-`pnpm dev` runs **two processes**, and that is the point rather than an
+`pnpm dev` runs **three processes**, and that is the point rather than an
 inconvenience — see below.
 
 ## The shape of it
@@ -37,7 +37,12 @@ inconvenience — see below.
                   │ tape, orders │ events │ apps/engine  │  ← single threaded,
                   │ positions,   │        │  pure rules  │     deterministic
                   │ the ledger   │        └──────────────┘
-                  └──────────────┘
+                  └──────┬───────┘
+                         │ same transaction
+                         ▼
+                    ┌─────────┐      ┌──────────────┐
+                    │ outbox  │─────▶│ apps/worker  │──▶ signed webhooks,
+                    └─────────┘      └──────────────┘    email
 ```
 
 **Commands** are requests: *place this order*. They can be refused.
@@ -62,20 +67,44 @@ test that does exactly that and asserts the result is identical.
 | `packages/core` | The matching engine, auctions and risk. Pure functions, no I/O. |
 | `packages/store` | The log, projections, the ledger, tenancy, authorisation. |
 | `apps/engine` | The process that turns commands into events, and recovers. |
+| `apps/worker` | Drains the outbox: signed webhooks, and email. |
 | `apps/web` | SvelteKit 3: terminal, risk console, and the public API. |
 
-## Why two processes
+## Why three processes
 
 One process would work today and would hide the thing worth learning: the
-engine and the web tier fail independently, deploy independently, and are
-correct independently. Stop the engine and the venue stops matching but keeps
-accepting orders — they queue in the log and are applied when it comes back.
-That is not an accident of the design; it is the design.
+engine, the worker and the web tier fail independently, deploy independently,
+and are correct independently. Stop the engine and the venue stops matching but
+keeps accepting orders — they queue in the log and are applied when it comes
+back. Stop the worker and firms hear about their trades late, and nothing else
+changes. That is not an accident of the design; it is the design.
 
 It also forces an honest answer to a question a single process lets you dodge:
 **what happens when a process dies mid-write?** The answer is in
 `apps/engine/src/recover.ts`, and it is tested by deleting the snapshot,
 corrupting the snapshot, and killing the engine at every point in a session.
+
+## The outbox
+
+Telling somebody else's server that a trade happened is two writes — the
+database, and their HTTP endpoint — and there is **no ordering of those two
+that is correct**. Commit first and a crash loses the notification forever, with
+nothing recording that a send was owed. Send first and a rollback tells a firm
+about a trade that did not happen.
+
+Both work in development, where the process does not die and the commit does
+not fail.
+
+So the *intent to send* is written into the same transaction as the fact, and
+`apps/worker` reads it afterwards. That buys **at-least-once** delivery — not
+exactly-once, which nothing buys over a network — so every webhook carries a
+stable delivery id and receivers de-duplicate on it.
+
+Webhooks are signed with HMAC-SHA256 over `timestamp.body`. The timestamp is
+inside the signed material so a captured delivery cannot be replayed, and
+`assertDeliverable` refuses URLs pointing at private addresses, because a
+webhook URL is an address a user chooses and our server then fetches — which is
+SSRF by construction.
 
 ## Money
 
@@ -88,8 +117,8 @@ a way that takes an auditor to find.
 ## The tests
 
 ```sh
-pnpm test        # 195 tests
-pnpm check       # types, across all five packages
+pnpm test        # 289 tests
+pnpm check       # types, across all six packages
 pnpm verify      # both, plus a production build
 ```
 

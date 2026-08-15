@@ -143,6 +143,58 @@ describe('the sequencer', () => {
 	});
 });
 
+describe('the sequencer refuses malformed commands', () => {
+	/*
+	 * The log is append-only and enforced by a trigger, so a bad row can never be
+	 * corrected or deleted. It sits there being replayed by every recovery,
+	 * forever. That asymmetry — cheap to check, impossible to undo — is why the
+	 * command is parsed again here even though the gateway already parsed it.
+	 *
+	 * This is not hypothetical. A drill script sent `firmId` where the schema
+	 * wanted `targetFirmId`; it wrote happily, the engine produced an event with
+	 * an `undefined` field, and a worker three layers downstream retried it six
+	 * times reporting "undefined cannot be passed as argument to the database".
+	 */
+
+	it('rejects a command missing a required field', async () => {
+		const sequencer = new Sequencer(client);
+		await sequencer.start();
+
+		// Exactly the drill script's mistake: the kill switch names its target as
+		// `targetFirmId`, not `firmId`.
+		const wrong = {
+			kind: 'set_kill_switch',
+			firmId: asFirmId('firm-a'),
+			actorId: asUserId('u1'),
+			engaged: true,
+			reason: 'drill'
+		} as unknown as Command;
+
+		await expect(sequencer.append(wrong, 1_000, 1)).rejects.toThrow(/malformed command/);
+	});
+
+	it('leaves the log untouched when it refuses', async () => {
+		const sequencer = new Sequencer(client);
+		await sequencer.start();
+
+		await sequencer.append(order(1), 1_000, 1);
+		await expect(
+			sequencer.append({ kind: 'nonsense' } as unknown as Command, 1_001, 1)
+		).rejects.toThrow();
+
+		// And the sequence number is not burnt: the next good command takes 2.
+		expect((await sequencer.append(order(2), 1_002, 1)).seq).toBe(2);
+		await expect(assertNoGaps(client)).resolves.toBeUndefined();
+	});
+
+	it('still accepts a valid command', async () => {
+		const sequencer = new Sequencer(client);
+		await sequencer.start();
+
+		await expect(sequencer.append(order(1), 1_000, 1)).resolves.toMatchObject({ seq: 1 });
+	});
+});
+
 describe('the log is append-only', () => {
 	it('refuses an update', async () => {
 		const sequencer = new Sequencer(client);

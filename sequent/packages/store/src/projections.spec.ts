@@ -349,3 +349,82 @@ async function snapshotOfReadModels() {
 
 	return out;
 }
+
+/* -------------------------------------------------------------------------- */
+/* The outbox rides along with the projection                                  */
+/* -------------------------------------------------------------------------- */
+
+describe('notifications are written with the facts they describe', () => {
+	it('enqueues an outbox message in the same transaction as the trade', async () => {
+		await emit([trade({ at: 455_000, qty: 100 })]);
+		await catchUp(client);
+
+		const trades = await client.execute('SELECT COUNT(*) c FROM trade');
+		const outbox = await client.execute("SELECT COUNT(*) c FROM outbox WHERE kind = 'webhook'");
+
+		/*
+		 * One trade, two notifications — one per side. The point of the assertion
+		 * is not the arithmetic; it is that both landed in the same commit as the
+		 * row they describe.
+		 */
+		expect(Number(trades.rows[0]!['c'])).toBe(1);
+		expect(Number(outbox.rows[0]!['c'])).toBe(2);
+	});
+
+	it('addresses each notification to the firm on that side', async () => {
+		await emit([trade({ at: 455_000, qty: 100 })]);
+		await catchUp(client);
+
+		const rows = await client.execute('SELECT firm_id FROM outbox ORDER BY firm_id');
+
+		expect(rows.rows.map((row) => String(row['firm_id']))).toEqual(['firm-a', 'firm-b']);
+	});
+
+	it('does not enqueue twice when the projector re-runs', async () => {
+		await emit([trade({ at: 455_000, qty: 100 })]);
+		await catchUp(client);
+
+		/*
+		 * Rewind the checkpoint and project the same events again — exactly what a
+		 * crash between applying a batch and committing its checkpoint would
+		 * produce.
+		 *
+		 * Without the idempotency key, every restart would re-notify every firm
+		 * about the last batch of trades.
+		 */
+		await client.execute({
+			sql: 'UPDATE consumer_checkpoint SET last_seq = 0 WHERE consumer = ?',
+			args: ['projections']
+		});
+		await catchUp(client);
+
+		const outbox = await client.execute('SELECT COUNT(*) c FROM outbox');
+		expect(Number(outbox.rows[0]!['c'])).toBe(2);
+	});
+
+	it('does not re-notify when the read models are rebuilt', async () => {
+		await emit([trade({ at: 455_000, qty: 100 })]);
+		await catchUp(client);
+
+		// Simulate a prune: the delivered rows are gone, so the idempotency keys
+		// can no longer absorb a duplicate. Only `notify: false` can.
+		await client.execute('DELETE FROM outbox');
+
+		await rebuild(client);
+
+		/*
+		 * Zero. A rebuild replays every event the venue has ever recorded, and
+		 * without suppression it would tell every member about six months of
+		 * trades in one burst because somebody changed the shape of a read model.
+		 *
+		 * The rule: replay is for internal state. Anything that leaves the
+		 * building is suppressed during it.
+		 */
+		const outbox = await client.execute('SELECT COUNT(*) c FROM outbox');
+		expect(Number(outbox.rows[0]!['c'])).toBe(0);
+
+		// And the read models really were rebuilt.
+		const trades = await client.execute('SELECT COUNT(*) c FROM trade');
+		expect(Number(trades.rows[0]!['c'])).toBe(1);
+	});
+});
