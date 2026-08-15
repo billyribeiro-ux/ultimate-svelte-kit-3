@@ -1,0 +1,33 @@
+{
+	"name": "sequent",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=24.19.0"
+	},
+	"packageManager": "pnpm@10.33.0",
+	"scripts": {
+		"build": "pnpm -r --filter=./packages/* build && pnpm --filter=@sequent/web build",
+		"check": "pnpm -r check",
+		"lint": "prettier --check . && eslint .",
+		"format": "prettier --write .",
+		"test:unit": "vitest",
+		"test:e2e": "pnpm --filter=@sequent/web test:e2e",
+		"verify": "pnpm run check && pnpm run lint && pnpm run test:unit -- --run && pnpm run build && pnpm run test:e2e",
+		"db:generate": "pnpm --filter=@sequent/store db:generate",
+		"db:migrate": "pnpm --filter=@sequent/store db:migrate",
+		"db:seed": "pnpm --filter=@sequent/store db:seed",
+		"dev": "node scripts/dev.js"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^24.10.1",
+		"eslint": "^10.1.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^16.5.0",
+		"prettier": "^3.6.2",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.67.0",
+		"vitest": "^4.1.10"
+	}
+}

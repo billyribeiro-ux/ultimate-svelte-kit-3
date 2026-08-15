@@ -1,0 +1,40 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"target": "es2024",
+		"lib": ["es2024"],
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+
+		/*
+		 * Strict, and then some.
+		 *
+		 * `strict` alone still lets two things through that matter here.
+		 * `noUncheckedIndexedAccess` makes `book.levels[i]` a `Level | undefined`,
+		 * which is the truth — and in a matching engine, an off-by-one that reads
+		 * past the end of a price ladder is exactly the bug you want the compiler
+		 * to find rather than the market.
+		 * `exactOptionalPropertyTypes` stops `{ price?: number }` from silently
+		 * accepting `{ price: undefined }`, which is how a market order ends up
+		 * indistinguishable from a limit order with a missing price.
+		 */
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"noPropertyAccessFromIndexSignature": true,
+
+		/* Node 24 runs TypeScript directly, so we type-check and never emit. */
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true
+	}
+}

@@ -1,0 +1,17 @@
+# The workspace.
+#
+# Three runnable processes under `apps/`, and the code they share under
+# `packages/`. The split is not tidiness — it is enforcement.
+#
+# `packages/core` has no dependency on `packages/store`, and it cannot acquire
+# one without somebody editing a package.json and being asked why. That is the
+# whole point: the matching engine must not be able to reach a database, a
+# clock, or a network, and the surest way to guarantee that is to put it
+# somewhere those things do not exist.
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Keep the lockfile honest about what each package actually uses, rather than
+# letting a transitive dependency satisfy an undeclared import.
+linkWorkspacePackages: true
