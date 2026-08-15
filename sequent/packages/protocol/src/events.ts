@@ -190,8 +190,14 @@ export interface Traded {
 	 * rebate, so this single field decides who pays whom. It is also what makes
 	 * the tape readable: a run of trades at the ask is buying pressure, and you
 	 * cannot see that from price alone.
+	 *
+	 * In a call auction there is no aggressor — both sides rested, and both are
+	 * charged the maker rate. Modelling that as an absent field rather than
+	 * inventing a side is the honest option: a consumer that assumes every trade
+	 * has an aggressor should fail loudly on the open rather than quietly
+	 * attributing the whole auction to whichever side we picked.
 	 */
-	readonly aggressor: Side;
+	readonly aggressor?: Side;
 
 	readonly buyerFee: Amount;
 	readonly sellerFee: Amount;

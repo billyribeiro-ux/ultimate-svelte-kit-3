@@ -261,8 +261,20 @@ export interface MatchResult {
 	readonly remaining: Quantity;
 	/** Resting orders cancelled by self-trade prevention. */
 	readonly pulled: Pulled[];
-	/** True when self-trade prevention says the incoming order must be refused. */
-	readonly aggressorRefused: boolean;
+	/**
+	 * True when self-trade prevention stopped the incoming order early.
+	 *
+	 * It means "cancel whatever is left", not "pretend this never happened". Any
+	 * fills already in `fills` were taken from *other* firms before the walk
+	 * reached the order that triggered prevention, and those are real: the book
+	 * has been decremented and the counterparties have traded. A venue cannot
+	 * un-take a fill.
+	 *
+	 * The caller decides what that means. No fills at all → the order is rejected
+	 * outright. Some fills → the order is accepted, the trades stand, and the
+	 * remainder is cancelled with a self-trade-prevention reason.
+	 */
+	readonly aggressorCancelled: boolean;
 }
 
 export interface MatchRequest {
@@ -354,15 +366,23 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 
 			if (resting.firmId === request.firmId) {
 				switch (request.selfTradePrevention) {
+					/*
+					 * Both of these stop the walk and hand back what has already
+					 * happened. Returning `fills: []` here — which is what the first
+					 * version did — was a genuine bug and a nasty one: the resting
+					 * orders had already been decremented and removed, so the venue
+					 * would have consumed liquidity without reporting a trade for it.
+					 * The book and the participants' records would have disagreed
+					 * from that moment on, silently, forever.
+					 *
+					 * Property-based testing found it in about four seconds.
+					 */
 					case 'cancel_aggressing':
-						// The book is untouched and the incoming order is refused
-						// outright — including any fills it had already taken from
-						// other firms, which is why this returns rather than breaks.
 						return {
-							fills: [],
-							remaining: request.quantity as Quantity,
+							fills,
+							remaining: remaining as Quantity,
 							pulled: settlePulls(),
-							aggressorRefused: true
+							aggressorCancelled: true
 						};
 
 					case 'cancel_resting':
@@ -373,10 +393,10 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 					case 'cancel_both':
 						toPull.push(resting);
 						return {
-							fills: [],
-							remaining: request.quantity as Quantity,
+							fills,
+							remaining: remaining as Quantity,
 							pulled: settlePulls(),
-							aggressorRefused: true
+							aggressorCancelled: true
 						};
 				}
 			}
@@ -412,7 +432,7 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 		fills,
 		remaining: remaining as Quantity,
 		pulled: settlePulls(),
-		aggressorRefused: false
+		aggressorCancelled: false
 	};
 }
 

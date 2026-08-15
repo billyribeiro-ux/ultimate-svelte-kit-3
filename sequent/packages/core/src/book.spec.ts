@@ -290,7 +290,7 @@ describe('self-trade prevention', () => {
 			selfTradePrevention: 'cancel_aggressing'
 		});
 
-		expect(result.aggressorRefused).toBe(true);
+		expect(result.aggressorCancelled).toBe(true);
 		expect(result.fills).toHaveLength(0);
 		expect(own.remaining).toBe(5);
 	});
@@ -307,7 +307,7 @@ describe('self-trade prevention', () => {
 			selfTradePrevention: 'cancel_both'
 		});
 
-		expect(result.aggressorRefused).toBe(true);
+		expect(result.aggressorCancelled).toBe(true);
 		expect(result.pulled.map((p) => p.order.orderId)).toEqual([own.orderId]);
 		expect(book.asks).toHaveLength(0);
 	});
@@ -324,7 +324,7 @@ describe('self-trade prevention', () => {
 		});
 
 		expect(result.fills).toHaveLength(1);
-		expect(result.aggressorRefused).toBe(false);
+		expect(result.aggressorCancelled).toBe(false);
 	});
 });
 
