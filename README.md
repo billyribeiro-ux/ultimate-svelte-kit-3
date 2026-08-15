@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Two complete projects, each with its own build-along course.
+Three complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -8,9 +8,11 @@ Two complete projects, each with its own build-along course.
 | [`strikeflow-course/`](./strikeflow-course) | Its 37-chapter course, starting from never having written a line of code. Open `strikeflow-course/dist/index.html`. |
 | [`halfpast-app/`](./halfpast-app) | **Project 2** — Halfpast, a real-time appointment booking platform. Live availability, honest time zones, and a database that refuses to double-book. |
 | [`halfpast-course/`](./halfpast-course) | Its 35-chapter course, for somebody who has finished project 1. Open `halfpast-course/dist/index.html`. |
+| [`sequent/`](./sequent) | **Project 3** — Sequent, a stock exchange. A matching engine, an opening auction, central clearing, a double-entry ledger, and an event log the whole venue can be rebuilt from. |
+| [`sequent-course/`](./sequent-course) | Its 42-chapter course, for somebody who has finished project 2. Open `sequent-course/dist/index.html`. |
 
 Requires **Node 24.19.0** (the current LTS line, "Krypton") and **pnpm 10+**.
-Both projects pin it in `.nvmrc` and `engines`.
+All three pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -21,6 +23,10 @@ cd strikeflow-site && pnpm install && cp .env.example .env && pnpm run dev
 # Project 2 — the booking platform
 cd halfpast-app && pnpm install && cp .env.example .env
 pnpm run db:migrate && pnpm run db:seed && pnpm run dev
+
+# Project 3 — the exchange. Three processes, one command.
+cd sequent && pnpm install && cp .env.example .env
+pnpm run seed && pnpm run dev
 ```
 
 The seed prints the demo studio's booking page, both sign-ins and a customer
@@ -31,11 +37,12 @@ manage link.
 ```bash
 open strikeflow-course/dist/index.html
 open halfpast-course/dist/index.html
+open sequent-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
 you can bookmark where you are and Ctrl+F the chapter you are actually reading.
-Rebuild either with `node build.js` in its folder.
+Rebuild any of them with `node build.js` in its folder.
 
 ## Project 1 — StrikeFlow
 
@@ -50,7 +57,7 @@ A marketing site, taken seriously.
 - Gated PDF download with HMAC-signed expiring tokens
 - A cinematic GSAP motion system that cannot blank the page, and that
   reduced-motion visitors never download
-- 29 unit tests, 70 end-to-end tests across desktop and mobile profiles
+- 30 unit tests, 70 end-to-end tests across desktop and mobile profiles
 
 ## Project 2 — Halfpast
 
@@ -82,4 +89,36 @@ is a sentence about a wall clock rather than a moment in time.
 ```bash
 cd halfpast-app
 pnpm run verify   # check, lint, unit, build, e2e
+```
+
+## Project 3 — Sequent
+
+An exchange. Orders match by price and time, the opening auction clears
+everything at one price, every trade posts to a ledger that balances by
+construction, and the entire venue can be replayed from its log and arrive at
+exactly the same state.
+
+- **The engine is a pure function.** `(state, command) → events`, with no clock,
+  no database and no randomness. That is what makes replay meaningful, fuzzing
+  possible, and "what happened in March" a question with an answer.
+- **Event sourced for real.** An append-only log, a single-writer sequencer,
+  checkpointed consumers, and snapshots that are strictly an optimisation —
+  delete every projection and `rebuild()` puts them back.
+- **Double-entry clearing.** Every trade produces postings that sum to zero, so
+  the trial balance is zero by construction and a non-zero one means somebody
+  wrote to the ledger outside the one function that may.
+- **Three processes**: `web` accepts commands and decides nothing, `engine` is
+  the only writer of events, `worker` drains a transactional outbox. Any of them
+  can be killed mid-batch without losing or duplicating work.
+- **A public API** with API keys, scopes, token-bucket rate limits, cursor
+  pagination and one fixed error shape — plus signed webhooks and an SSRF check
+  that survives IPv6 normalisation.
+- **Mobile first**, on a screen designed for six monitors: no horizontal scroll
+  at 390px, dense tables that side-scroll with a pinned column, and a motion
+  system whose defining feature is how little of it there is.
+- 374 unit, property-based, fault-injection and load tests across 21 files.
+
+```bash
+cd sequent
+pnpm run verify   # check, test, build
 ```
