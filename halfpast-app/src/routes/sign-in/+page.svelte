@@ -20,7 +20,13 @@
 	<p class="text-muted">For studio owners and staff. Customers do not need an account.</p>
 
 	<form {...signIn} class="stack">
-		<input type="hidden" name="redirectTo" value={redirectTo} />
+		<!--
+			Built by the form's own field accessor, not hand-written. SvelteKit has to
+			own the name and value to construct the submitted data, so anything it did
+			not create throws "Form contained a field that wasn't created with
+			form.fields.as(...)" the moment the form is submitted.
+		-->
+		<input {...signIn.fields.redirectTo.as('hidden', redirectTo)} />
 
 		{#if signIn.fields.allIssues()?.length}
 			<Alert tone="error" title="We could not sign you in">

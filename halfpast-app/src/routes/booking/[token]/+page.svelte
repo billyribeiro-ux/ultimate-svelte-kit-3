@@ -19,6 +19,7 @@
 		sameWallClock
 	} from '#lib/time/index.ts';
 	import { cancelOwnBooking, getManagedBooking } from './manage.remote.ts';
+	import { messageFrom } from '#lib/errors.ts';
 
 	let { data }: { data: { token: string } } = $props();
 
@@ -70,7 +71,7 @@
 			 */
 			await cancelOwnBooking({ token: data.token, reason: '' });
 		} catch (thrown) {
-			cancelError = thrown instanceof Error ? thrown.message : 'We could not cancel that.';
+			cancelError = messageFrom(thrown, 'We could not cancel that.');
 		} finally {
 			cancelling = false;
 		}

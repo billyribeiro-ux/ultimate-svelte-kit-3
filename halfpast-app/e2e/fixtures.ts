@@ -4,21 +4,20 @@ import { expect, test as base, type Page } from '@playwright/test';
 /**
  * Shared fixtures and helpers for the end-to-end suite.
  *
- * The important one empties the diary before every test.
+ * The important one re-seeds the studio before every test.
  *
  * Without it the tests are order-dependent in a way that is genuinely nasty to
- * debug. Each test books an appointment, which permanently removes a slot, so
- * "the first free time on Thursday" means something different by the fifth test
- * than it did in the first. The suite passes, then fails, then passes again as
- * tests are added or reordered, and every failure looks like an application bug
- * rather than the harness eating its own tail.
- *
- * It empties the *diary*, not the database. Deleting the studio out from under a
- * running server breaks any live query still streaming to a page that has only
- * just closed — an intermittent 500 in whichever test runs next, pointing
- * nowhere near the cause. Bookings are all the tests create, so bookings are all
- * that needs clearing.
+ * debug. Each one books an appointment or edits a price, so "the first free time
+ * on Thursday" means something different by the fifth test than it did in the
+ * first. The suite passes, then fails, then passes again as tests are added or
+ * reordered, and every failure looks like an application bug rather than the
+ * harness eating its own tail.
  */
+
+/** The two seeded accounts, and their shared demo password. */
+export const OWNER = { email: 'ada@willowlane.test', password: 'halfpast-demo-2026' };
+export const STAFF = { email: 'ben@willowlane.test', password: 'halfpast-demo-2026' };
+
 export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>({
 	/**
 	 * Surface browser-side errors in the test output.
@@ -60,7 +59,20 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 	emptyDiary: [
 		// eslint-disable-next-line no-empty-pattern -- Playwright requires the destructure
 		async ({}, use) => {
-			execFileSync('node', ['scripts/reset-diary.ts'], {
+			/*
+			 * A full re-seed, not just a diary wipe.
+			 *
+			 * The dashboard tests change prices, hide services and rewrite shifts, so
+			 * "empty the bookings" is no longer enough to make a test independent —
+			 * the studio itself has to go back to its known shape.
+			 *
+			 * The seed keeps the same business row rather than dropping and
+			 * recreating it, so a live query still streaming to a page the previous
+			 * test has only just closed never finds its business missing. That
+			 * mattered: deleting it produced an intermittent 500 in whichever test
+			 * happened to run next, pointing nowhere near the cause.
+			 */
+			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
 				env: { ...process.env, DATABASE_URL: 'file:e2e.db' }
 			});
@@ -69,6 +81,26 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 		{ auto: true }
 	]
 });
+
+/**
+ * Sign in through the real form, the way a person would.
+ *
+ * The wait at the end is load-bearing. `click()` resolves the moment the button
+ * has been pressed, not when the request it fired has come back with a session
+ * cookie — so a test that pressed Sign in and immediately navigated to a
+ * protected page was racing its own login, and lost about half the time. The
+ * symptom was a page full of missing elements with no error anywhere, because
+ * the app had correctly bounced an anonymous visitor back to sign in.
+ *
+ * Waiting for the URL to leave `/sign-in` is the honest signal: the server has
+ * answered, the cookie is set, and the redirect has happened.
+ */
+export async function signIn(page: Page, who: { email: string; password: string }): Promise<void> {
+	await page.getByLabel('Email').fill(who.email);
+	await page.getByLabel('Password').fill(who.password);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.waitForURL((url) => !url.pathname.startsWith('/sign-in'));
+}
 
 export { expect };
 

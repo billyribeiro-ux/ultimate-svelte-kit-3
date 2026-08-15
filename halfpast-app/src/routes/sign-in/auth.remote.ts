@@ -17,23 +17,43 @@ import { auth } from '#lib/server/auth.ts';
  *   - the whole thing type-checks against the component that uses it.
  */
 
+/** The default landing place, used whenever we cannot trust what we were given. */
+const HOME = '/manage';
+
+/**
+ * A redirect target we are willing to follow.
+ *
+ * One leading slash, and only one. `/manage/willow-lane` is ours;
+ * `https://evil.example` obviously is not; and `//evil.example` is the one that
+ * catches people out — a protocol-relative URL, which starts with a slash and
+ * still leaves your site. No whitespace, and a length cap so nobody can stuff a
+ * novel into the query string.
+ */
+const SAFE_REDIRECT = /^\/(?!\/)[^\s]{0,512}$/;
+
 const signInSchema = v.object({
 	email: v.pipe(v.string(), v.trim(), v.email('Enter the email address you signed up with')),
 	password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
 	/**
 	 * Where to go afterwards.
 	 *
-	 * Constrained to a root-relative path, and that check is not decoration. An
-	 * unchecked redirect target is an open redirect: a link to
+	 * An unchecked redirect target is an open redirect: a link to
 	 * `/sign-in?redirectTo=https://evil.example` sends somebody who has just
 	 * typed their password to a site of the attacker's choosing, from a URL that
-	 * genuinely begins with your domain. Requiring a leading `/` and forbidding a
-	 * second one — `//evil.example` is a protocol-relative URL and goes
-	 * off-site — closes it.
+	 * genuinely begins with your domain.
+	 *
+	 * We *sanitise* rather than reject. Rejecting is equally safe but worse to
+	 * be on the end of: the value lives in a hidden field the person cannot see
+	 * or correct, so a crafted link would leave them staring at "invalid
+	 * redirect" with no way to sign in at all. Quietly falling back to the
+	 * dashboard is safe and still lets them in.
 	 */
 	redirectTo: v.optional(
-		v.pipe(v.string(), v.regex(/^\/(?!\/)[^\s]*$/, 'Invalid redirect'), v.maxLength(512)),
-		'/manage'
+		v.pipe(
+			v.string(),
+			v.transform((value) => (SAFE_REDIRECT.test(value) ? value : HOME))
+		),
+		HOME
 	)
 });
 

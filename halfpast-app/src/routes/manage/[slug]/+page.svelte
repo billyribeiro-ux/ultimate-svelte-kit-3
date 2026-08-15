@@ -21,10 +21,11 @@
 		todayIn,
 		type IsoDate
 	} from '#lib/time/index.ts';
-	import { signOut } from '../../sign-in/auth.remote.ts';
 	import { cancelAppointment, getDiary } from './diary.remote.ts';
+	import type { PageData } from './$types';
+	import { messageFrom } from '#lib/errors.ts';
 
-	let { data }: { data: { slug: string; businessName: string; timeZone: string } } = $props();
+	let { data }: { data: PageData } = $props();
 
 	/*
 	 * `day` starts as null and means "today", rather than being initialised to
@@ -39,7 +40,7 @@
 	let cancelling = $state<string | null>(null);
 	let lastError = $state<string | null>(null);
 
-	const today = $derived(todayIn(data.timeZone));
+	const today = $derived(todayIn(data.business.timeZone));
 	const activeDay = $derived(day ?? today);
 	const isToday = $derived(activeDay === today);
 
@@ -71,7 +72,7 @@
 			 */
 			await cancelAppointment({ slug: data.slug, bookingId, reason: '' });
 		} catch (thrown) {
-			lastError = thrown instanceof Error ? thrown.message : 'Could not cancel that appointment.';
+			lastError = messageFrom(thrown, 'Could not cancel that appointment.');
 		} finally {
 			cancelling = null;
 		}
@@ -79,23 +80,17 @@
 </script>
 
 <svelte:head>
-	<title>{data.businessName} — diary</title>
+	<title>{data.business.name} — diary</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="container page">
 	<header class="head" {@attach reveal({ y: 10, duration: 0.4 })}>
-		<div>
-			<p class="eyebrow">{data.businessName}</p>
-			<h1>{isToday ? 'Today' : formatIsoDate(activeDay)}</h1>
-		</div>
+		<h1>{isToday ? 'Today' : formatIsoDate(activeDay)}</h1>
 
-		<div class="head-actions">
-			{#if diaryQuery.connected}
-				<span class="live"><BroadcastIcon weight="fill" aria-hidden="true" /> Live</span>
-			{/if}
-			<Button variant="ghost" size="sm" onclick={() => void signOut()}>Sign out</Button>
-		</div>
+		{#if diaryQuery.connected}
+			<span class="live"><BroadcastIcon weight="fill" aria-hidden="true" /> Live</span>
+		{/if}
 	</header>
 
 	<nav class="daybar" aria-label="Choose a day">
@@ -209,7 +204,7 @@
 
 	.head {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-4);
 		flex-wrap: wrap;
@@ -218,12 +213,6 @@
 	h1 {
 		font-size: var(--text-xl);
 		margin-block-start: var(--space-1);
-	}
-
-	.head-actions {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
 	}
 
 	.live {
