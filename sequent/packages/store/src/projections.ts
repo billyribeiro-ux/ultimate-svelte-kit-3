@@ -158,6 +158,33 @@ async function project(tx: Transaction, record: EventRecord): Promise<void> {
 				at: record.at
 			});
 
+			/*
+			 * Mark both sides as filled.
+			 *
+			 * This was missing, and the symptom was excellent: the depth ladder
+			 * showed a **crossed** book. An order that fills completely produces
+			 * trades and no cancellation, so the projection left it `working` with
+			 * `filled = 0` forever — and the ladder, which is derived from working
+			 * orders, kept showing liquidity that had already been consumed.
+			 *
+			 * The engine was right the whole time. Only the read model was lying,
+			 * which is precisely the failure mode projections have: nothing throws,
+			 * the numbers are just wrong in a way that looks like a matching bug.
+			 *
+			 * The increments are safe because the whole block sits behind the
+			 * already-projected guard above, so it runs at most once per trade.
+			 */
+			for (const orderId of [event.buyOrderId, event.sellOrderId]) {
+				await tx.execute({
+					sql: `UPDATE order_record
+						SET filled = filled + ?,
+							status = CASE WHEN filled + ? >= quantity THEN 'filled' ELSE status END,
+							updated_at = ?
+						WHERE order_id = ?`,
+					args: [event.quantity, event.quantity, record.at, orderId]
+				});
+			}
+
 			await postTrade(tx, record, event);
 			break;
 		}

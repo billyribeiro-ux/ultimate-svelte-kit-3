@@ -66,8 +66,23 @@ export interface EventRecord {
  */
 export class Sequencer {
 	#next: number | undefined;
+	readonly #client: Client;
 
-	constructor(private readonly client: Client) {}
+	/*
+	 * Written out rather than declared as a constructor parameter property.
+	 *
+	 * Node executes TypeScript in strip-only mode — it deletes the types and runs
+	 * what is left — so any syntax that requires code to be *generated* is
+	 * refused outright. `constructor(private readonly client: Client) {}` is the
+	 * commonest one: it looks like a type annotation and is actually an
+	 * instruction to emit an assignment.
+	 *
+	 * The same rule rules out enums, namespaces and decorators. Three extra lines
+	 * buys running the source directly with no build step at all.
+	 */
+	constructor(client: Client) {
+		this.#client = client;
+	}
 
 	/**
 	 * Read the high-water mark once, at startup.
@@ -78,7 +93,7 @@ export class Sequencer {
 	 * so `assertSoleWriter` below checks it rather than trusting it.
 	 */
 	async start(): Promise<void> {
-		const result = await this.client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
+		const result = await this.#client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
 		this.#next = Number(result.rows[0]?.['high'] ?? 0) + 1;
 	}
 
@@ -98,7 +113,7 @@ export class Sequencer {
 	async append(body: Command, receivedAt: number, version: number): Promise<CommandRecord> {
 		const seq = this.nextSeq;
 
-		await this.client.execute({
+		await this.#client.execute({
 			sql: `INSERT INTO command_log (seq, received_at, version, kind, firm_id, body)
 			      VALUES (?, ?, ?, ?, ?, ?)`,
 			args: [seq, receivedAt, version, body.kind, body.firmId, JSON.stringify(body)]
@@ -120,7 +135,7 @@ export class Sequencer {
 	 * Cheap to check, catastrophic to miss, so it is checked on every batch.
 	 */
 	async assertSoleWriter(): Promise<void> {
-		const result = await this.client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
+		const result = await this.#client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
 		const high = Number(result.rows[0]?.['high'] ?? 0);
 
 		if (high !== this.nextSeq - 1) {

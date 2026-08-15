@@ -1,0 +1,37 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on
+	// every `svelte-kit sync`. It sets module resolution, the DOM libs and the
+	// generated route types, so we only add what is specific to this app.
+	"extends": "$app/tsconfig",
+
+	/*
+	 * SvelteKit 3's generated base config deliberately does *not* set `include`
+	 * or `exclude`. Without them TypeScript falls back to "every file under this
+	 * folder", which means `svelte-check` walks into `build/` and type-checks the
+	 * minified adapter output — thousands of "implicitly has an 'any' type"
+	 * errors in code no human wrote.
+	 *
+	 * So we say exactly which files are ours. `.svelte-kit/types` has to be in
+	 * the list because that is where Kit writes the generated route types that
+	 * `./$types` resolves to.
+	 */
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"scripts/**/*.ts",
+		"vite.config.ts",
+		".svelte-kit/types/**/*.ts"
+	],
+	"exclude": ["build", "node_modules", ".svelte-kit/output", ".svelte-kit/adapter-node"],
+
+	"compilerOptions": {
+		"strict": true,
+		// `array[0]` is `T | undefined`. On a trading screen half the code is
+		// "the best bid", and the honest answer is often "there isn't one".
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"sourceMap": true
+	}
+}

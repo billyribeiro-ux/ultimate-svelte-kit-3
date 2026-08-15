@@ -9,11 +9,7 @@
  */
 
 import { createClient, type Client } from '@libsql/client';
-import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const here = dirname(fileURLToPath(import.meta.url));
+import { SCHEMA } from './schema.ts';
 
 export interface StoreOptions {
 	readonly url: string;
@@ -48,8 +44,7 @@ export async function openStore({ url, authToken, migrate = true }: StoreOptions
 	await client.execute('PRAGMA synchronous = FULL');
 
 	if (migrate) {
-		const schema = await readFile(join(here, 'schema.sql'), 'utf8');
-		for (const statement of splitStatements(schema)) {
+		for (const statement of splitStatements(SCHEMA)) {
 			await client.execute(statement);
 		}
 	}

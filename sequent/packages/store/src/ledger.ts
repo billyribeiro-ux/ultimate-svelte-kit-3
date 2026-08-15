@@ -121,16 +121,19 @@ export interface Posting {
 }
 
 export class UnbalancedTransaction extends Error {
-	constructor(
-		readonly transactionId: string,
-		readonly total: number,
-		readonly postings: readonly Posting[]
-	) {
+	readonly transactionId: string;
+	readonly total: number;
+	readonly postings: readonly Posting[];
+
+	constructor(transactionId: string, total: number, postings: readonly Posting[]) {
 		super(
 			`Ledger transaction ${transactionId} does not balance: postings sum to ${total}, not 0. ` +
 				postings.map((p) => `${p.accountId}=${p.amount}`).join(' ')
 		);
 		this.name = 'UnbalancedTransaction';
+		this.transactionId = transactionId;
+		this.total = total;
+		this.postings = postings;
 	}
 }
 

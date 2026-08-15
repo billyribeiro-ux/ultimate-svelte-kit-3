@@ -264,9 +264,12 @@ export function messageFor(reason: DenialReason): string {
 
 /** Throwing form, for the places where a boolean would be easy to ignore. */
 export class NotAllowed extends Error {
-	constructor(readonly reason: DenialReason) {
+	readonly reason: DenialReason;
+
+	constructor(reason: DenialReason) {
 		super(messageFor(reason));
 		this.name = 'NotAllowed';
+		this.reason = reason;
 	}
 
 	get status(): number {
