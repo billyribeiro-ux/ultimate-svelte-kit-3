@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pre-trade risk — Building Sequent</title>
+<meta name="description" content="Nine checks in a deliberate order, a fat-finger collar, and a kill switch that stops a firm dead.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 21.428571428571427%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html" aria-current="page"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>Pre-trade risk</h1>
+			<p class="lede">Nine checks in a deliberate order, a fat-finger collar, and a kill switch that stops a firm dead.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the layer that refuses orders, and understand why the order of the checks is itself a design decision.</p></aside>
+			<p>Before an order touches the book it passes nine checks. They run in a specific order, and the order matters.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/risk.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every pre-trade check, in order.
+ *
+ * The sequence is a design decision, not an accident:
+ *
+ *   1. Does the instrument exist?      — cheapest, and everything else assumes it
+ *   2. Is it trading?                  — phase check
+ *   3. Is the firm stopped?            — the kill switch beats everything below
+ *   4. Is the price on a tick?         — pure arithmetic, no state
+ *   5. Is the quantity a whole lot?    — same
+ *   6. Is the quantity within limits?  — per-account, one lookup
+ *   7. Is the price within the collar? — needs the reference price
+ *   8. Is the notional within limits?  — needs price × quantity
+ *   9. Would the position breach?      — needs the current position AND working orders
+ *
+ * Cheap and certain first, expensive and stateful last. A malformed order is
+ * refused by arithmetic before it costs a single lookup, and the kill switch
+ * sits above every business rule because &quot;stop&quot; must mean stop.
+ */
+export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | undefined {</code></pre>
+</figure>
+<h3 id="ticks">Ticks and lots</h3>
+<p>A <strong>tick</strong> is the smallest price increment an instrument trades in. If the tick is 25 scaled units (a quarter of a penny), then £45.5025 is a valid price and £45.5030 is not.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/risk.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	if (command.price !== undefined &amp;&amp; !isOnTick(command.price, instrument.tickSize)) {
+		return {
+			reason: 'price_off_tick',
+			detail: `${formatPrice(command.price)} is not a multiple of the ${instrument.tickSize} tick`
+		};
+	}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why ticks exist at all</h4>
+	<p>Without them, somebody can always outbid you by one ten-thousandth of a penny. Price-time priority stops meaning anything, because nobody ever has to wait in a queue — they just improve by a rounding error. Ticks force the queue to be real.</p>
+</aside>
+<h3 id="collar">The fat-finger collar</h3>
+<p>Somebody types 4550 when they meant 45.50. Without a check, that order sweeps the entire book and prints a trade at a hundred times the market. It has happened, repeatedly, at real venues, and it is why every exchange has a <strong>collar</strong>: a band around the reference price outside which orders are simply refused.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/risk.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * The collar is anchored on the **last trade** if there has been one, and on
+	 * the listing reference price if not.
+	 *
+	 * Using the last trade means the band follows a genuinely moving market
+	 * rather than a stale number set at listing — an instrument that has run 30%
+	 * over a week should not have every order refused because the anchor is a
+	 * week old.
+	 */
+	const anchor = instrument.lastTradePrice ?? instrument.referencePrice;
+	const band = Math.floor((anchor * instrument.collarBasisPoints) / 10_000);
+
+	if (command.price !== undefined &amp;&amp; Math.abs(command.price - anchor) &gt; band) {
+		return {
+			reason: 'price_outside_collar',
+			detail: `${formatPrice(command.price)} is more than ${
+				instrument.collarBasisPoints / 100
+			}% from ${formatPrice(anchor)}`
+		};
+	}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>A collar refuses *good* orders too — a genuine 20% move gets blocked until an operator widens the band or the reference catches up. That is the trade every venue makes: a few refused orders in a fast market, against one catastrophic fill. Nobody has ever regretted the collar.</p></aside>
+<h3 id="working-exposure">Position limits, including what is still working</h3>
+<p>A position limit says &quot;this account may not be more than 50,000 shares long&quot;. The naive check compares the current position against the limit. It is wrong, and the way it is wrong is instructive.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/risk.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * The check includes orders that are still **working**, not just the
+	 * position.
+	 *
+	 * An account at zero with 49,000 shares of resting bids is one fill away from
+	 * 49,000 long. Checking only the position would let it rest another 49,000,
+	 * and if both fill it is 98,000 long against a 50,000 limit — with every
+	 * individual order having passed the check.
+	 *
+	 * This is the shape of nearly every limit bug: the limit is checked against
+	 * what has happened rather than against what has been *promised*.
+	 */
+	const position = state.positions.get(positionKey(command.accountId, command.instrumentId)) ?? 0;
+	const working = workingExposure(state, command.accountId, command.instrumentId, command.side);
+	const after = position + working + signedQuantity;
+
+	if (Math.abs(after) &gt; limits.maxPosition) {
+		return {
+			reason: 'position_limit',
+			detail: `Would take the position to ${after}, past the ${limits.maxPosition} limit`
+		};
+	}</code></pre>
+</figure>
+<h3 id="kill">The kill switch</h3>
+<p>A risk manager watching a firm behave badly needs one button that stops it dead. Not &quot;reject new orders&quot; — that leaves the existing ones working and the exposure growing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/apply.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function setKillSwitch(state: EngineState, command: SetKillSwitch, seq: number): Event[] {
+	const events: Event[] = [];
+
+	if (command.engaged) {
+		state.killed.add(command.targetFirmId);
+
+		// Pull everything the firm has resting. All of it, atomically, before the
+		// event that says the switch was engaged.
+		for (const order of ordersOf(state, command.targetFirmId)) {
+			remove(state.books.get(order.instrumentId)!, order);
+			events.push({ kind: 'order_cancelled', reason: 'kill_switch', /* ... */ });
+		}
+	} else {
+		state.killed.delete(command.targetFirmId);
+	}
+
+	/*
+	 * The change is reported **after** the cancellations it caused, so a consumer
+	 * reading the stream in order sees the orders go and then learns why.
+	 *
+	 * The other order would have consumers seeing &quot;trading stopped&quot; followed by
+	 * a burst of cancellations they cannot attribute to it.
+	 */
+	events.push({ kind: 'kill_switch_changed', /* ... */, ordersCancelled: events.length });
+
+	return events;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why there is no window</h4>
+	<p>Because this happens inside <code>apply</code>, which processes one command at a time in a total order, there is no instant at which some of the firm's orders are cancelled and others are not. The next command the engine reads sees a firm with no resting orders and a stop in place. A version that cancelled orders with separate commands would leave exactly that window, and it is the window an algorithm going wrong would trade through.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the nine checks are in that order</li><li>You can explain what a tick is for beyond tidiness</li><li>You can explain why a position limit must count working orders</li><li>You understand why the kill switch has no window</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="apply-as-a-pure-function.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">`apply` as a pure function</span>
+			</a>
+			<a class="pager__link pager__link--next" href="self-trade-prevention.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Self-trade prevention</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

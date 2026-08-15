@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live screens, and the stale phase — Building Sequent</title>
+<meta name="description" content="The bug where a refresh returned the old answer — and why the fix was to stop refreshing.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">37 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 88.09523809523809%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html" aria-current="page"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 37</p>
+			<h1>Live screens, and the stale phase</h1>
+			<p class="lede">The bug where a refresh returned the old answer — and why the fix was to stop refreshing.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand when refresh() is enough and when only a live query will do.</p></aside>
+			<p>The venue console has a button that opens an instrument for trading. An operator presses it, and the phase badge on screen should change from <code>auction</code> to <code>continuous</code>.</p>
+<p>It did not. It stayed on <code>auction</code> until you reloaded the page.</p>
+<h3 id="the-code">The code that looked right</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const setPhase = command(schema, async (input) =&gt; {
+	const viewer = requireViewer();
+	await submit(viewer, { kind: 'change_phase', ...input });
+
+	// Tell the console to re-read.
+	void getVenue().refresh();
+});</code></pre>
+</figure>
+<p>That is the pattern from Part 4, and it is correct everywhere else in this app. Here it produced a screen that showed the wrong thing while reporting success.</p>
+<h3 id="why">Why it could not work</h3>
+<p>Look at what <code>submit</code> actually does. It appends a <strong>command</strong> to the log and returns the sequence number. That is all. The command has not been applied yet — the engine is a separate process, and it will pick the command up on its next poll, run it through the matching engine, and append the resulting <code>phase_changed</code> <strong>event</strong>.</p>
+<p>So <code>refresh()</code> fires immediately, the query re-reads the projections, and the projections faithfully report the phase as it was — because it still is. The refresh worked perfectly. It was asking a question whose answer had not changed yet.</p>
+
+<aside class="callout callout--why">
+	<h4>The gap is the architecture, not a bug in it</h4>
+	<p>Every command in this system is asynchronous by design. That is what buys deterministic replay, a single ordering, and a venue that can be rebuilt from its log. The cost is that &quot;I sent it&quot; and &quot;it happened&quot; are two different moments, and any UI that conflates them will eventually show somebody a lie. You cannot patch this with a <code>setTimeout</code> — you have to build the screen around it.</p>
+</aside>
+<h3 id="the-fix">The fix: stop asking, start listening</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/admin/admin.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The venue's instruments and their phases, streamed.
+ *
+ * A plain `query` plus `refresh()` cannot work here: `submit` appends a
+ * *command*, and the phase does not change until the engine applies it and
+ * writes the resulting event. A refresh fired straight after the command
+ * re-reads the old value and reports success.
+ *
+ * Tailing the log means the console updates when the phase *actually* changes,
+ * which is both correct and — usefully — honest: an operator watching the badge
+ * is watching the engine, not their own click.
+ */
+export const getVenue = query.live(v.object({}), async function* () {
+	requireOperator();
+	const { request } = getRequestEvent();
+
+	yield await venueSnapshot();
+
+	for await (const batch of tailEvents(db, await currentSeq(), { signal: request.signal })) {
+		if (batch.some((record) =&gt; record.kind === 'phase_changed')) {
+			yield await venueSnapshot();
+		}
+	}
+});</code></pre>
+</figure>
+<p>The command no longer refreshes anything. It appends and returns. The badge changes when the engine says so, which may be forty milliseconds later or, if the engine is down, not at all — and &quot;not at all&quot; is information the operator badly needs.</p>
+<h3 id="when-which">When refresh is enough</h3>
+<p>The rule that came out of this:</p>
+<ul><li><strong><code>refresh()</code></strong> when the command's effect is complete by the time it returns. Creating an API key, adding a webhook endpoint, setting a feature flag — these write directly to a table, so the next read sees them.</li><li><strong><code>query.live</code></strong> when the command goes through the log. Placing an order, cancelling, changing a phase, hitting the kill switch — the effect arrives later, from another process.</li></ul>
+<p>The test is not &quot;does this change often?&quot; — it is <strong>&quot;who writes the value I am about to read, and have they finished?&quot;</strong></p>
+<aside class="callout callout--note"><p>Note that the order blotter *does* use <code>refresh()</code>, and correctly: <code>order_record</code> gets an <code>accepted</code> row from the gateway path, so there is something true to show immediately. The blotter shows &quot;working&quot; and then transitions when the engine's events land — two stages, both honest, neither pretending.</p></aside>
+<h3 id="the-test-trap">The test that could never pass</h3>
+<p>One more trap, from testing this page in a browser:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Hangs forever. Every time.
+await page.goto('/terminal');
+await page.waitForLoadState('networkidle');</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>networkidle</code> waits for 500ms with no network activity. A page with a <code>query.live</code> connection has an <strong>open, deliberately long-lived request</strong> for as long as the page exists. The condition is never satisfied, and the failure is a timeout with no explanation.</p></aside>
+<p>Wait for the thing you actually care about instead — a selector, a row count, a piece of text. Which is better practice anyway: <code>networkidle</code> is a proxy for &quot;the page is ready&quot;, and proxies are exactly what break when the architecture changes underneath them.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why <code>refresh()</code> returned a stale phase without failing</li><li>You can state the rule for choosing between <code>refresh()</code> and <code>query.live</code></li><li>You can explain why the blotter's refresh is correct and the console's was not</li><li>You know why <code>networkidle</code> never fires on a page with a live query</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-depth-ladder.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The depth ladder</span>
+			</a>
+			<a class="pager__link pager__link--next" href="migrations-without-a-framework.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Migrations without a framework</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

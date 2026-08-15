@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Sequent — a SvelteKit 3 course</title>
+<meta name="description" content="Build a stock exchange with SvelteKit 3 — a matching engine, an opening auction, central clearing, a double-entry ledger, and an event log the whole venue can be rebuilt from.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body class="is-home">
+
+<main class="home">
+	<p class="eyebrow">A build-along course</p>
+	<h1>Building Sequent</h1>
+	<p class="home__lede">An exchange. Orders match by price and time, the opening auction clears
+		everything at one price, every trade posts to a ledger that balances by
+		construction, and the entire venue can be replayed from its log and arrive
+		at exactly the same state. Built from an empty folder, with every bug found
+		along the way written down.</p>
+
+	<div class="home__meta">
+		<span>42 chapters</span>
+		<span>SvelteKit 3 RC</span><span>Event sourcing</span><span>Node 24 LTS</span><span>Three processes</span>
+	</div>
+
+	<a class="home__start" href="what-we-are-building.html">Start chapter 01 →</a>
+
+	<h2 class="home__heading">Everything we'll cover</h2>
+	<ol class="cards">
+		<li>
+			<a class="card" href="what-we-are-building.html">
+				<span class="card__num">01</span>
+				<span class="card__body">
+					<span class="card__title">What we are building</span>
+					<span class="card__summary">A stock exchange: an order book, an opening auction, pre-trade risk, central clearing and a double-entry ledger — with an event log the whole thing can be rebuilt from.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-four-hard-parts.html">
+				<span class="card__num">02</span>
+				<span class="card__body">
+					<span class="card__title">The four hard parts</span>
+					<span class="card__summary">Ordering, money, reconstructability and blast radius. Each one dictates a design decision we make before writing any code.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-workspace.html">
+				<span class="card__num">03</span>
+				<span class="card__body">
+					<span class="card__title">The workspace</span>
+					<span class="card__summary">Six packages, and a dependency rule that makes the most important property of the engine impossible to break by accident.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="money-as-integers.html">
+				<span class="card__num">04</span>
+				<span class="card__body">
+					<span class="card__title">Money, as integers</span>
+					<span class="card__summary">Scaled integers, branded types, and a `parsePrice` that never multiplies by 10,000.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="ids-that-explain-themselves.html">
+				<span class="card__num">05</span>
+				<span class="card__body">
+					<span class="card__title">Ids that explain themselves</span>
+					<span class="card__summary">Deterministic identifiers derived from the sequence number, and why a UUID would make replay impossible.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-vocabulary.html">
+				<span class="card__num">06</span>
+				<span class="card__body">
+					<span class="card__title">The vocabulary: commands and events</span>
+					<span class="card__summary">Two discriminated unions, validated with valibot, versioned from the first line.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-order-book.html">
+				<span class="card__num">07</span>
+				<span class="card__body">
+					<span class="card__title">The order book</span>
+					<span class="card__summary">Price-time priority, a binary search, and why the depth bar is a `scaleX` rather than a width.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="apply-as-a-pure-function.html">
+				<span class="card__num">08</span>
+				<span class="card__body">
+					<span class="card__title">`apply` as a pure function</span>
+					<span class="card__summary">One function, `(state, command) → events`, with no clock, no database and no randomness. Everything else in the venue is a consequence of it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="pre-trade-risk.html">
+				<span class="card__num">09</span>
+				<span class="card__body">
+					<span class="card__title">Pre-trade risk</span>
+					<span class="card__summary">Nine checks in a deliberate order, a fat-finger collar, and a kill switch that stops a firm dead.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="self-trade-prevention.html">
+				<span class="card__num">10</span>
+				<span class="card__body">
+					<span class="card__title">Self-trade prevention</span>
+					<span class="card__summary">Stopping a firm trading with itself — and the bug where the fix threw away fills it had already applied.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-opening-auction.html">
+				<span class="card__num">11</span>
+				<span class="card__body">
+					<span class="card__title">The opening auction</span>
+					<span class="card__summary">Finding the one price that trades the most, four tie-breaks deep — and the bug where multi-trade auctions dropped fills.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-table-as-a-log.html">
+				<span class="card__num">12</span>
+				<span class="card__body">
+					<span class="card__title">A table as a log</span>
+					<span class="card__summary">Two append-only tables, enforced by triggers, and why SQLite is a defensible choice for the spine of an exchange.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-sequencer.html">
+				<span class="card__num">13</span>
+				<span class="card__body">
+					<span class="card__title">The sequencer</span>
+					<span class="card__summary">One writer, a cached high-water mark, and a check that catches the botched deploy where two engines are running.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="checkpoints.html">
+				<span class="card__num">14</span>
+				<span class="card__body">
+					<span class="card__title">Checkpoints, and the transaction that makes them safe</span>
+					<span class="card__summary">How a consumer remembers where it got to, and the one rule that makes a crash survivable.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="snapshots-and-recovery.html">
+				<span class="card__num">15</span>
+				<span class="card__body">
+					<span class="card__title">Snapshots, and the promise they must not break</span>
+					<span class="card__summary">Making restart fast without letting the venue depend on a cache — and the fault-injection test that caught it depending on one.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-engine-process.html">
+				<span class="card__num">16</span>
+				<span class="card__body">
+					<span class="card__title">The engine process</span>
+					<span class="card__summary">The loop, one transaction per command, graceful shutdown — and the file-descriptor leak that killed it after ten thousand orders.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="projections-are-caches.html">
+				<span class="card__num">17</span>
+				<span class="card__body">
+					<span class="card__title">Projections are caches</span>
+					<span class="card__summary">Turning events into queryable tables, and the discipline that lets you delete all of them.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="double-entry.html">
+				<span class="card__num">18</span>
+				<span class="card__body">
+					<span class="card__title">Double entry, and the constraint that makes it work</span>
+					<span class="card__summary">Every transaction sums to zero, signed amounts instead of two columns, and corrections that are entries rather than edits.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="multi-tenancy.html">
+				<span class="card__num">19</span>
+				<span class="card__body">
+					<span class="card__title">Multi-tenancy and authorisation</span>
+					<span class="card__summary">Five roles, thirteen actions, and a pure function small enough to enumerate every input of.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="keys-and-secrets.html">
+				<span class="card__num">20</span>
+				<span class="card__body">
+					<span class="card__title">Keys, secrets, and what may be stored in clear</span>
+					<span class="card__summary">scrypt, timing-safe comparison, two-part keys — and the one secret that must not be hashed.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-gateway.html">
+				<span class="card__num">21</span>
+				<span class="card__body">
+					<span class="card__title">The gateway</span>
+					<span class="card__summary">The only way a command reaches the log — and the one line that stops a client trading as somebody else.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-kit-3-app-from-nothing.html">
+				<span class="card__num">22</span>
+				<span class="card__body">
+					<span class="card__title">A Kit 3 app from nothing</span>
+					<span class="card__summary">No svelte.config.js, no $lib, and a tsconfig that has to say which files are yours.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="environment-variables-declared.html">
+				<span class="card__num">23</span>
+				<span class="card__body">
+					<span class="card__title">Environment variables, declared</span>
+					<span class="card__summary">src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="remote-functions.html">
+				<span class="card__num">24</span>
+				<span class="card__body">
+					<span class="card__title">Remote functions</span>
+					<span class="card__summary">query, command, form and query.live — and why every argument needs a schema even though the caller is your own page.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="sessions-and-cookies.html">
+				<span class="card__num">25</span>
+				<span class="card__body">
+					<span class="card__title">Sessions and cookies</span>
+					<span class="card__summary">Signing in without a library, and the two details that stop it leaking information.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-csrf-check-we-wrote-ourselves.html">
+				<span class="card__num">26</span>
+				<span class="card__body">
+					<span class="card__title">The CSRF check we wrote ourselves</span>
+					<span class="card__summary">Kit 3 blocked a legitimate DELETE and allowed a cross-origin JSON POST. Here is the bug, and the replacement.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="async-svelte-and-the-getter-trap.html">
+				<span class="card__num">27</span>
+				<span class="card__body">
+					<span class="card__title">Async Svelte, and the getter trap</span>
+					<span class="card__summary">await inside $derived is wonderful, and it has one ordering rule that will cost you an afternoon if you do not know it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-public-api-worth-using.html">
+				<span class="card__num">28</span>
+				<span class="card__body">
+					<span class="card__title">A public API worth using</span>
+					<span class="card__summary">One error shape, a request id on every response, and the four bugs that curl found in an afternoon.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="api-keys.html">
+				<span class="card__num">29</span>
+				<span class="card__body">
+					<span class="card__title">API keys</span>
+					<span class="card__summary">Two-part keys, shown once, and why the prefix is not decoration.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="rate-limits-and-pagination.html">
+				<span class="card__num">30</span>
+				<span class="card__body">
+					<span class="card__title">Rate limits and pagination</span>
+					<span class="card__summary">A token bucket with no timers, and cursors that do not silently drop rows when the tape moves.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-transactional-outbox.html">
+				<span class="card__num">31</span>
+				<span class="card__body">
+					<span class="card__title">The transactional outbox</span>
+					<span class="card__summary">The dual-write problem, which has exactly one solution, and the worker that drains it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="webhooks-that-cannot-be-forged.html">
+				<span class="card__num">32</span>
+				<span class="card__body">
+					<span class="card__title">Webhooks that cannot be forged</span>
+					<span class="card__summary">HMAC signatures with a timestamp, and the SSRF check that let the cloud metadata service through.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="mobile-first-for-real.html">
+				<span class="card__num">33</span>
+				<span class="card__body">
+					<span class="card__title">Mobile first, for real</span>
+					<span class="card__summary">Designing a trading terminal for a 390px phone first — and the flex default that gives half the web a horizontal scrollbar.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="tables-that-are-measurements.html">
+				<span class="card__num">34</span>
+				<span class="card__body">
+					<span class="card__title">Tables that are measurements</span>
+					<span class="card__summary">Why restacking a table into cards destroys it, and the sticky-position overflow bug that took a browser to find.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="motion-that-means-something.html">
+				<span class="card__num">35</span>
+				<span class="card__body">
+					<span class="card__title">Motion that means something</span>
+					<span class="card__summary">A motion system whose defining feature is how little of it there is — and the reveal that made the app unusable for 800ms.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-depth-ladder.html">
+				<span class="card__num">36</span>
+				<span class="card__body">
+					<span class="card__title">The depth ladder</span>
+					<span class="card__summary">The one component with a real performance problem — and why the obvious optimisation solves the wrong half of it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="live-screens-and-the-stale-phase.html">
+				<span class="card__num">37</span>
+				<span class="card__body">
+					<span class="card__title">Live screens, and the stale phase</span>
+					<span class="card__summary">The bug where a refresh returned the old answer — and why the fix was to stop refreshing.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="migrations-without-a-framework.html">
+				<span class="card__num">38</span>
+				<span class="card__body">
+					<span class="card__title">Migrations without a framework</span>
+					<span class="card__summary">Sixty lines that apply a change once and record it — and the three rules that make a rolling deploy survivable.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="feature-flags-and-the-pause.html">
+				<span class="card__num">39</span>
+				<span class="card__body">
+					<span class="card__title">Feature flags, and the pause</span>
+					<span class="card__summary">A flag may change what the venue offers. It may never change what the engine decides.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="billing-from-the-log.html">
+				<span class="card__num">40</span>
+				<span class="card__body">
+					<span class="card__title">Billing from the log</span>
+					<span class="card__summary">No payment provider — because everything that goes wrong with billing goes wrong before the charge.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="tests-that-find-real-bugs.html">
+				<span class="card__num">41</span>
+				<span class="card__body">
+					<span class="card__title">Tests that find real bugs</span>
+					<span class="card__summary">Property-based, fault injection, load — and an honest account of which kinds actually caught something.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="running-it.html">
+				<span class="card__num">42</span>
+				<span class="card__body">
+					<span class="card__title">Running it</span>
+					<span class="card__summary">Four numbers worth watching at 3am, a health check that knows the difference between slow and broken, and where to go next.</span>
+				</span>
+			</a>
+		</li></ol>
+
+	<footer class="home__footer">
+		<p>Every chapter shows the real code from the finished project in
+		<code>sequent</code>. Type it out rather than pasting where you can — the
+		errors you make and fix are the part that sticks. Roughly a dozen chapters
+		end with a bug that was genuinely in this codebase, and how it was found.</p>
+	</footer>
+</main>
+
+</body>
+</html>

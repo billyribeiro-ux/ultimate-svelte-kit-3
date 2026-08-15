@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The transactional outbox — Building Sequent</title>
+<meta name="description" content="The dual-write problem, which has exactly one solution, and the worker that drains it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 73.80952380952381%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html" aria-current="page"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>The transactional outbox</h1>
+			<p class="lede">The dual-write problem, which has exactly one solution, and the worker that drains it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Tell firms what happened without ever losing a message or inventing one.</p></aside>
+			<h3 id="dual-write">The problem that has no other solution</h3>
+<p>A trade happens. Two things must follow: the projections update, and the firm's webhook fires. The obvious code is:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await database.commit();
+await fetch(theirWebhook, { /* … */ });</code></pre>
+</figure>
+<p>There is no ordering of those two lines that is correct.</p>
+<ul><li><strong>Commit first, then send.</strong> The process dies in between. The trade happened and nobody was told, forever. There is no retry, because nothing recorded that a send was owed.</li><li><strong>Send first, then commit.</strong> The commit fails — a constraint, a full disk, a rollback further up. You have told a firm about a trade that did not happen, and you cannot un-tell them.</li></ul>
+<aside class="callout callout--warn"><p>The trap is that both work perfectly in development, where the process does not die and the commit does not fail. This is a bug you find in production, at 3am, once.</p></aside>
+<h3 id="the-outbox">What the outbox does</h3>
+<p>Write the <strong>intent to send</strong> into the same database, in the <strong>same transaction</strong> as the fact. Now there is exactly one commit, and it either contains both or neither. A separate process reads the outbox afterwards and does the sending.</p>
+<p>The dual write has not been eliminated. It has been *moved somewhere it can be retried*, because the row is still there until delivery succeeds.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/outbox.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Add a message to the outbox, inside a transaction the caller owns.
+ *
+ * Taking an `Executor` rather than a `Client` is the entire design, expressed
+ * in the type. A function that opened its own transaction could not be atomic
+ * with the caller's work, and this signature makes it impossible to use wrongly:
+ * there is no way to call it outside a transaction.
+ *
+ * `ON CONFLICT DO NOTHING` on the idempotency key means a projector replaying
+ * the same event does not enqueue a second copy. Projectors are idempotent by
+ * design and are re-run after any crash, so without this every restart would
+ * re-notify every firm about the last batch of trades.
+ */
+export async function enqueue(tx: Executor, message: OutboxMessage, now: number): Promise&lt;void&gt; {
+	await tx.execute({
+		sql: `INSERT INTO outbox (kind, seq, firm_id, idempotency_key, payload, created_at, available_at)
+		      VALUES (?, ?, ?, ?, ?, ?, ?)
+		      ON CONFLICT (idempotency_key) DO NOTHING`,
+		args: [ /* … */ ]
+	});
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>At-least-once, and nothing sells you more</h4>
+	<p>This buys <strong>at-least-once</strong> delivery. It does not buy exactly-once, and nothing does: in the moment after a receiver processes a webhook and before its 200 reaches us, the network can drop the response, and we will send again. So every delivery carries a stable id and receivers are told to de-duplicate on it. Anybody promising exactly-once delivery over a network is either wrong or quietly means &quot;at-least-once plus idempotent receivers&quot;, which is this.</p>
+</aside>
+<h3 id="leases">Claiming work with a lease</h3>
+<p>A worker that <code>SELECT</code>s a row and then crashes holding a lock blocks the queue until somebody notices. A <strong>lease</strong> is a lock with an expiry written into the row.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/outbox.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const result = await client.execute({
+	sql: `UPDATE outbox
+	      SET leased_until = ?, leased_by = ?, attempts = attempts + 1
+	      WHERE outbox_id IN (
+	          SELECT outbox_id FROM outbox
+	          WHERE delivered_at IS NULL
+	            AND failed_at IS NULL
+	            AND available_at &lt;= ?
+	            AND (leased_until IS NULL OR leased_until &lt;= ?)
+	          ORDER BY available_at, outbox_id
+	          LIMIT ?
+	      )
+	      RETURNING outbox_id, kind, seq, firm_id, idempotency_key, payload, attempts, created_at`,
+	args: [now + leaseMs, worker, now, now, limit]
+});</code></pre>
+</figure>
+<p>Claim it until <code>now + leaseMs</code>. If the worker dies, the lease runs out and the next worker picks the message up. <strong>Nothing has to detect the crash</strong> — no heartbeat, no health check, no &quot;reap dead workers&quot; job. The recovery is the absence of an update.</p>
+<aside class="callout callout--note"><p>The <code>UPDATE … RETURNING</code> is not a style choice. Selecting candidates and then updating them is two statements, and between them another worker can claim the same rows. One statement means the database's own row locking decides who wins, which is the only place that decision can be made without a race.</p></aside>
+<p>The cost of leases: one that expires while the worker is *still alive* — a long GC pause, a slow receiver — produces a duplicate delivery. Which is fine, because the contract was at-least-once from the start. Choosing the lease length is choosing how often that happens.</p>
+<h3 id="jitter">Backoff, and the line people leave out</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/outbox.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function backoffMs(attempts: number, random: () =&gt; number = Math.random): number {
+	const ceiling = Math.min(60 * 60_000, 1000 * 2 ** Math.min(attempts, 12));
+	return Math.floor(random() * ceiling);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Jitter is the whole thing</h4>
+	<p>Without it, a receiver that goes down for a minute causes every one of its pending messages to fail at once, back off by exactly the same amount, and retry at exactly the same instant. The receiver comes back up, is hit by the entire backlog in one burst, falls over again, and the cycle repeats — a thundering herd that the retry logic <strong>created</strong> rather than survived. Full jitter (a random point in <code>[0, backoff]</code>) spreads the same messages across the whole window. It is one line and it is the difference between a retry policy and an outage amplifier.</p>
+</aside>
+<p>And giving up is a real state, not an infinite retry with a long delay:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/outbox.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">if (message.attempts &gt;= maxAttempts) {
+	await client.execute({
+		sql: `UPDATE outbox SET failed_at = ?, leased_until = NULL, last_error = ?
+		      WHERE outbox_id = ?`,
+		args: [now, reason, message.outboxId]
+	});
+	return { retrying: false, nextAttemptAt: null };
+}</code></pre>
+</figure>
+<p>A message that has failed eight times is not going to succeed on the ninth — the URL is wrong, or the receiver was decommissioned. A queue that retries it forever spends its budget on a firm that is not listening while the firms that are wait behind it. <code>failed_at</code> is set, the row stays, and <code>last_error</code> says why. Deleting it would destroy the only evidence.</p>
+<h3 id="the-bug">The disposition that lied</h3>
+<p>The worker's delivery function originally returned <code>{ retry: boolean }</code>. A malformed payload — one the worker could not even build a request from — returned <code>retry: false</code>, meaning &quot;do not try again&quot;.</p>
+<p>The worker read <code>retry: false</code> and called <code>succeed()</code>. The message was marked <strong>delivered</strong>. Nothing had been delivered. The queue was clean, the metrics were green, and a firm never heard about a trade.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/worker/src/deliver.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Disposition {
+	readonly ok: boolean;
+	/** Try again later. */
+	readonly retry?: boolean;
+	/** Give up now — this will never succeed. Distinct from `ok`. */
+	readonly permanent?: boolean;
+	readonly reason?: string;
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Two booleans are not enough for three outcomes. &quot;It worked&quot;, &quot;it failed and might work later&quot; and &quot;it failed and never will&quot; are genuinely three states, and collapsing the last two into <code>!retry</code> made the queue report success for a message it had thrown away.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can state the dual-write problem and why neither ordering is correct</li><li>You can explain why <code>enqueue</code> takes a transaction and not a client</li><li>You can explain how a lease recovers from a crashed worker with no detection</li><li>You can explain what jitter prevents, and why &quot;give up&quot; is a state rather than a long delay</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="rate-limits-and-pagination.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Rate limits and pagination</span>
+			</a>
+			<a class="pager__link pager__link--next" href="webhooks-that-cannot-be-forged.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Webhooks that cannot be forged</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

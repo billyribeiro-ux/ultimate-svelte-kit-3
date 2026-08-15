@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The CSRF check we wrote ourselves — Building Sequent</title>
+<meta name="description" content="Kit 3 blocked a legitimate DELETE and allowed a cross-origin JSON POST. Here is the bug, and the replacement.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 61.904761904761905%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html" aria-current="page"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>The CSRF check we wrote ourselves</h1>
+			<p class="lede">Kit 3 blocked a legitimate DELETE and allowed a cross-origin JSON POST. Here is the bug, and the replacement.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand CSRF properly, and write a check that is both stricter and looser than the default — in the right directions.</p></aside>
+			<p>This chapter exists because of a bug report from a <code>curl</code> session, and it is the best kind: the framework was not wrong, it was solving a slightly different problem than the one we had.</p>
+<h3 id="what-csrf-is">What the attack actually is</h3>
+<p>A browser attaches your cookies to a request for our domain <strong>whoever asked for it</strong>. So a page on <code>evil.example</code> can contain this:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">html</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;form action=&quot;https://sequent.exchange/api/v1/orders&quot; method=&quot;POST&quot;&gt;
+	&lt;input type=&quot;hidden&quot; name=&quot;instrumentId&quot; value=&quot;ACME&quot;&gt;
+	&lt;input type=&quot;hidden&quot; name=&quot;side&quot; value=&quot;sell&quot;&gt;
+	&lt;input type=&quot;hidden&quot; name=&quot;quantity&quot; value=&quot;1000000&quot;&gt;
+&lt;/form&gt;
+&lt;script&gt;document.forms[0].submit()&lt;/script&gt;</code></pre>
+</figure>
+<p>You visit that page while signed in to the venue. The browser sends the request with your session cookie attached, the venue sees a valid session, and you have just sold a million shares. You clicked nothing on our site. That is cross-site request forgery.</p>
+<p>What stops it is the <code>Origin</code> header. The browser sets it to the site the request came *from*, and page JavaScript cannot change it. Same origin — fine. Different origin — refuse.</p>
+<h3 id="the-bug">The bug</h3>
+<p>While testing the public API by hand, this happened:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ curl -X DELETE http://localhost:5173/api/v1/orders/ORD-1 \
+    -H &quot;Authorization: Bearer sq_live_9f2a…&quot;
+
+Cross-site POST form submissions are forbidden</code></pre>
+</figure>
+<p>A body-less <code>DELETE</code>, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission.</p>
+<p>Kit's rule is: block a non-GET request when its <code>Content-Type</code> is form-like <strong>or absent</strong> and the <code>Origin</code> does not match. A <code>DELETE</code> with no body sends no content type. There is nothing an API client can do about this — you cannot ask people to set a content type on a request that has no content.</p>
+<p>And there is a second half. A cross-origin <code>POST</code> carrying <code>Content-Type: application/json</code> is *allowed*, because browsers cannot send one without a CORS preflight that our server would decline. That is true today. It also means our safety depends on a browser behaviour rather than on something we check.</p>
+
+<aside class="callout callout--why">
+	<h4>Two problems, one root cause</h4>
+	<p>Kit's check keys on <strong>content type</strong>, because it is defending against HTML forms, which can only send three content types. Our problem is not &quot;is this a form?&quot; — it is &quot;is this request authenticated by a cookie?&quot;. CSRF is a cookie attack, start to finish. Key on the credential and both problems disappear at once.</p>
+</aside>
+<h3 id="the-replacement">The replacement</h3>
+<p>Turn Kit's check off, and write the one we actually mean.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">sveltekit({
+	// Kit's own cross-site check is turned off, and replaced by a stricter one
+	// in `hooks.server.ts`. Read that before deciding this is reckless.
+	csrf: { trustedOrigins: ['*'] },
+	// …
+})</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>trustedOrigins: ['*']</code> on its own is a serious vulnerability. It is only acceptable here because the hook below runs on every request and is strictly stronger. If you copy the config line without the hook, you have removed your CSRF protection and added nothing.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+const handleCsrf: Handle = async ({ event, resolve }) =&gt; {
+	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
+
+	const authorization = event.request.headers.get('authorization');
+	if (authorization?.startsWith('Bearer ')) return resolve(event);
+
+	const origin = event.request.headers.get('origin');
+
+	/*
+	 * A missing `Origin` on a non-GET is refused rather than trusted.
+	 *
+	 * Every browser has sent `Origin` on cross-origin form submissions for
+	 * years, so &quot;no origin&quot; here means a non-browser client — which should be
+	 * using a token, not a cookie. Trusting the absence is the mistake that
+	 * turns this check into decoration, because it is the one thing an attacker
+	 * can arrange.
+	 */
+	if (origin !== PUBLIC_ORIGIN) {
+		return new Response('Cross-site request refused.', {
+			status: 403,
+			headers: { 'content-type': 'text/plain' }
+		});
+	}
+
+	return resolve(event);
+};</code></pre>
+</figure>
+<p>The rule in one sentence: <strong>any state-changing request authenticated by a cookie must carry a matching Origin.</strong></p>
+<ul><li><code>GET</code>, <code>HEAD</code> and <code>OPTIONS</code> pass — they must not change anything, and if one of yours does, that is the bug.</li><li>A <code>Bearer</code> token passes with no origin check. There is no way for <code>evil.example</code> to make your browser attach a token it does not have, so a token-authenticated request cannot be forged this way. That fixes the <code>DELETE</code>.</li><li>Everything else must match <code>PUBLIC_ORIGIN</code> exactly — including a cross-origin JSON POST, which Kit would have let through. That closes the second half.</li></ul>
+<aside class="callout callout--note"><p>The exemption for Bearer tokens is not a convenience. It is a statement about which credential the attack applies to. CSRF works *only* because credentials travel automatically; cookies do, <code>Authorization</code> headers do not.</p></aside>
+<p>And the ordering, once more, because it is easy to get backwards:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);</code></pre>
+</figure>
+<p>Refuse the forged request *before* the database round trip that resolves who it claims to be. A rejected request should cost as close to nothing as possible, because rejected requests are the ones that arrive in volume.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain CSRF to somebody without using the word &quot;token&quot;</li><li>You can explain why a body-less DELETE tripped Kit's content-type rule</li><li>You can explain why exempting Bearer tokens is safe and exempting a missing Origin is not</li><li>You know why <code>trustedOrigins: ['*']</code> is only acceptable alongside the hook</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="sessions-and-cookies.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Sessions and cookies</span>
+			</a>
+			<a class="pager__link pager__link--next" href="async-svelte-and-the-getter-trap.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Async Svelte, and the getter trap</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote functions — Building Sequent</title>
+<meta name="description" content="query, command, form and query.live — and why every argument needs a schema even though the caller is your own page.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 57.14285714285714%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html" aria-current="page"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>Remote functions</h1>
+			<p class="lede">query, command, form and query.live — and why every argument needs a schema even though the caller is your own page.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Replace load functions and form actions with typed server functions you can call from anywhere.</p></aside>
+			<p>A <code>.remote.ts</code> file exports functions that run on the server. A component imports them and calls them like ordinary async functions. SvelteKit generates the endpoint, the fetch, the serialisation and the types.</p>
+<p>This replaces <code>+page.server.ts</code> load functions and form actions for most work, and the difference is not syntax. A load function is tied to a route: it runs when that URL loads, and nowhere else. A remote function is tied to *nothing* — any component on any page can call it, and so can another remote function.</p>
+<h3 id="query">query — reading</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/market.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { query } from '$app/server';
+
+export const getMyOrders = query(async () =&gt; {
+	const viewer = requireViewer();
+	requireCan(viewer, 'view_orders');
+
+	const result = await db.execute({
+		sql: `SELECT order_id, client_order_id, instrument_id, side, price, quantity,
+		             filled, time_in_force, status, cancel_reason, updated_at
+		      FROM order_record WHERE firm_id = ? ORDER BY seq DESC LIMIT 100`,
+		args: [viewer.firmId]
+	});
+
+	return result.rows.map((row) =&gt; ({ /* … */ }));
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { getMyOrders } from './market.remote.ts';
+
+	const orders = $derived(await getMyOrders());
+&lt;/script&gt;
+
+{#each orders as order (order.orderId)}
+	&lt;tr&gt;…&lt;/tr&gt;
+{/each}</code></pre>
+</figure>
+<p>That is the whole thing. <code>await</code> inside <code>$derived</code> is the <code>experimental.async</code> flag from the last chapter, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls <code>.refresh()</code> on it.</p>
+<h3 id="schemas">Every argument gets a schema</h3>
+<p>A remote function that takes arguments takes a valibot schema first. This is not optional and it is not a style preference.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/market.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const symbol = v.pipe(v.string(), v.regex(/^[A-Z][A-Z0-9.]{0,15}$/, 'Not an instrument symbol'));
+const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1e15));</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The caller is not your page</h4>
+	<p>It is tempting to think &quot;the only thing that calls this is my own component, which always sends a valid symbol&quot;. The generated endpoint is a <strong>public HTTP route</strong>. Anybody can <code>curl</code> it with anything, and on a trading venue somebody eventually will, four hundred times a second, with a symbol containing a SQL fragment. The schema is the boundary, and it is the same boundary as the protocol codecs and the environment variables — the pattern of this entire codebase is *validate once, at the edge*.</p>
+</aside>
+<aside class="callout callout--note"><p>SvelteKit enforces the discipline for you: inside a remote function, <code>event.url</code> and <code>event.params</code> <strong>throw</strong> if you read them. A remote function is not a route, so it has no URL to read, and the framework refuses to let you pretend otherwise. Everything that varies must arrive as a validated argument.</p></aside>
+<h3 id="command">command — writing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/market.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const placeOrder = command(
+	v.object({
+		accountId: v.pipe(v.string(), v.minLength(1)),
+		instrumentId: symbol,
+		clientOrderId: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
+		side: v.picklist(['buy', 'sell']),
+		orderType: v.picklist(['limit', 'market']),
+		price: v.optional(positiveInteger),
+		quantity: positiveInteger,
+		timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'])
+	}),
+	async (input) =&gt; {
+		const viewer = requireViewer();
+
+		const seq = await submit(viewer, {
+			kind: 'place_order',
+			selfTradePrevention: 'cancel_both',
+			...input,
+			instrumentId: asInstrumentId(input.instrumentId)
+		});
+
+		// Refresh the participant's own order list in the same response, so the
+		// ticket does not have to fire a second request to show what it just sent.
+		void getMyOrders().refresh();
+
+		return { seq };
+	}
+);</code></pre>
+</figure>
+<p>The <code>.refresh()</code> call is the part worth stealing. A command can tell a query it is stale, and Kit sends the fresh data back <strong>in the same HTTP response as the command's result</strong>. One round trip places the order and updates the blotter. Without it you need a second request, and the gap between them is the window where the screen shows an order the person just placed as not existing.</p>
+<p><code>void</code> in front is deliberate: we are not awaiting it, because we do not want the command's response held up by a refresh, and an un-awaited promise without <code>void</code> is the kind of thing a linter should complain about.</p>
+<h3 id="form">form — progressive enhancement</h3>
+<p><code>form()</code> is <code>command()</code> for things that should work with JavaScript switched off. It takes the same schema, and it returns an object you spread onto a <code>&lt;form&gt;</code> element.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/sign-in/auth.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const signOut = form(v.object({}), async () =&gt; {
+	const event = getRequestEvent();
+	const sessionId = event.cookies.get('sequent_session');
+
+	if (sessionId) {
+		await db.execute({ sql: 'DELETE FROM session WHERE session_id = ?', args: [sessionId] });
+		event.cookies.delete('sequent_session', { path: '/' });
+	}
+
+	redirect(303, '/sign-in');
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;form {...signOut}&gt;
+	&lt;button type=&quot;submit&quot;&gt;Sign out&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>With JavaScript, that posts in the background and updates in place. Without it, the browser does a normal form submission and the <code>redirect(303, …)</code> sends you to the sign-in page. Same code, both worlds. Signing in and signing out are the two things that must never depend on a bundle having loaded, which is why they are forms and not commands.</p>
+<h3 id="live">query.live — streaming</h3>
+<p>The last kind takes an <strong>async generator</strong>, and everything it yields is pushed to every browser subscribed with the same arguments.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/market.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const watchMarket = query.live(
+	v.object({ instrumentId: symbol, depth: v.optional(positiveInteger, 10) }),
+	async function* (args) {
+		requireViewer();
+		const { request } = getRequestEvent();
+
+		// 1. Yield the current answer immediately, so the page has something to draw.
+		yield await snapshotOf(args.instrumentId, args.depth);
+
+		// 2. Wait for a reason to look again.
+		for await (const batch of tailEvents(db, await currentSeq(), {
+			signal: request.signal,
+			idleMs: 40
+		})) {
+			const relevant = batch.some((record) =&gt; {
+				const body = record.body;
+				return body.instrumentId === args.instrumentId;
+			});
+
+			// 3. Yield the new answer.
+			if (relevant) yield await snapshotOf(args.instrumentId, args.depth);
+		}
+	}
+);</code></pre>
+</figure>
+<p>Three steps, always the same three: yield now, wait, yield again. The interesting decisions are in the waiting.</p>
+
+<aside class="callout callout--why">
+	<h4>Coalescing is not an optimisation</h4>
+	<p>A busy instrument produces hundreds of events a second. Yield once per event and you push hundreds of renders a second at a browser that can paint sixty — the queue grows, the tab heats up, and the ladder falls <strong>behind</strong> the market it exists to show. So <code>tailEvents</code> drains every event waiting and hands back one batch, and the loop yields one snapshot. Under load that is one render per batch; when quiet the batch is one event long and it is one render per event. The rate adapts to the market instead of to a timer, which is what a <code>setInterval</code> would give you and is worse in both directions — too slow when quiet, still too fast when busy.</p>
+</aside>
+<aside class="callout callout--warn"><p><code>request.signal</code> is what makes this safe to leave running. When the tab closes, the signal aborts, <code>tailEvents</code> returns, and the generator's cleanup runs. Without it, every abandoned terminal leaves a database poller behind forever, and the venue slowly dies of people closing laptops.</p></aside>
+<aside class="callout callout--note"><p>Use <code>query.live</code> for the one thing that genuinely moves under somebody's eyes. On this page it is the book and the tape. The instrument list is a plain <code>query</code>, because instruments change when the venue lists something, which is roughly never during one session. Reserving the live machinery for what earns it is the difference between a streaming connection that pays for itself and one that is on because it was easy to switch on.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write a <code>query</code>, a <code>command</code>, a <code>form</code> and a <code>query.live</code></li><li>You can explain why every argument needs a schema even for your own page</li><li>You can explain what <code>.refresh()</code> inside a command saves you</li><li>You can explain why the live generator coalesces, and what <code>request.signal</code> prevents</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="environment-variables-declared.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Environment variables, declared</span>
+			</a>
+			<a class="pager__link pager__link--next" href="sessions-and-cookies.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Sessions and cookies</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rate limits and pagination — Building Sequent</title>
+<meta name="description" content="A token bucket with no timers, and cursors that do not silently drop rows when the tape moves.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">30 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 71.42857142857143%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html" aria-current="page"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 30</p>
+			<h1>Rate limits and pagination</h1>
+			<p class="lede">A token bucket with no timers, and cursors that do not silently drop rows when the tape moves.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Protect the venue from one client, and page through a moving list correctly.</p></aside>
+			<h3 id="the-simpler-thing">The simpler thing, and its hole</h3>
+<p>The obvious limiter is a counter per minute: allow sixty, reset on the minute. Three lines, and you can drive a lorry through it.</p>
+<p>A client sends sixty requests at 11:00:59 and sixty more at 11:01:00. Two counters, both within limit, <strong>one hundred and twenty requests in one second</strong>. The venue sees exactly the burst the limit existed to prevent, and the &quot;requests per minute&quot; graph says everything is fine.</p>
+<h3 id="token-bucket">The token bucket</h3>
+<p>A bucket holds tokens. Each request costs one. Tokens refill at a steady rate, and the bucket has a ceiling. That gives you two knobs that mean genuinely different things:</p>
+<ul><li><strong>Refill rate</strong> — the sustained throughput you are willing to serve.</li><li><strong>Capacity</strong> — how much burst you tolerate from a client that has been quiet.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why burst tolerance is not generosity</h4>
+	<p>A market maker who sits still for a minute and then cancels forty orders because the market moved is doing something entirely reasonable, and a flat counter punishes them for it. The capacity knob lets you say &quot;sustained twenty a second, but I will forgive a hundred at once from somebody who has been idle&quot; — which is a sentence about how markets actually behave.</p>
+</aside>
+<h3 id="no-timers">No timers</h3>
+<p>The bucket does not refill on a schedule. It works out how much time has passed since it was last touched and adds that much, at the moment somebody asks.</p>
+<p>Ten thousand idle keys cost ten thousand small objects and zero scheduled work. With a timer per key they would cost ten thousand wakeups a second to do nothing at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/ratelimit.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Spend a token if there is one.
+ *
+ * Note that a refused request does **not** consume a token. A limiter that
+ * charges for rejections punishes a client that is already backing off, and
+ * pushes a misbehaving one into a state it can never leave — every retry
+ * resets the clock, so the retries never stop.
+ */
+take(key: string, config: BucketConfig, now: number, cost = 1): Verdict {
+	const bucket = this.#refill(key, config, now);
+
+	if (bucket.tokens &lt; cost) {
+		const short = cost - bucket.tokens;
+		return {
+			allowed: false,
+			remaining: Math.floor(bucket.tokens),
+			// Rounded **up**: telling a client to wait 0 seconds when it needs 0.4
+			// produces a retry that fails again immediately.
+			retryAfter: Math.max(1, Math.ceil(short / config.ratePerSecond)),
+			resetAt: this.#fullAt(bucket, config, now)
+		};
+	}
+
+	bucket.tokens -= cost;
+	return { allowed: true, remaining: Math.floor(bucket.tokens), retryAfter: 0, resetAt: this.#fullAt(bucket, config, now) };
+}</code></pre>
+</figure>
+<p><code>now</code> is a parameter. The tests drive time by passing numbers rather than by sleeping — a rate-limit suite built on <code>setTimeout</code> is slow, flaky on a loaded CI box, and cannot check the interesting cases at all.</p>
+<h3 id="ordering">Authenticate first, then limit</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/lib/server/api.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const resolved = await viewerFromApiKey(db, presented, now);
+if (!resolved) throw new ApiError('unauthenticated', 'That API key is not usable.');
+
+const config = bucketFor(resolved.ratePerSecond);
+const verdict = limiter.take(`key:${resolved.keyId}`, config, now, cost);</code></pre>
+</figure>
+<p>The bucket is keyed on the <strong>credential</strong>, which means it can only be keyed on something we have already verified. Limit first and unauthenticated traffic all shares one bucket — one broken client then locks every other client out, which is a denial of service the limiter itself provides.</p>
+<aside class="callout callout--note"><p>The cost of that ordering is that a flood of *invalid* credentials is not limited here. That belongs at the edge, in front of the app, where it can be dropped without a database round trip. Saying so is better than pretending one limiter solves both problems.</p></aside>
+<aside class="callout callout--warn"><p>This limiter is in-memory and therefore per-process. Two web servers behind a load balancer give a client two buckets. That is a deliberate limit, not an oversight — a shared limiter needs Redis or similar in the request path — but you must know it is true before you rely on the number.</p></aside>
+<h3 id="cursors">Cursors, not offsets</h3>
+<p><code>LIMIT 50 OFFSET 100</code> is correct only if the list does not change between requests. The trade tape changes several times a second.</p>
+<p>Twenty new trades arrive while a client is on page two, everything shifts down twenty rows, and page three re-serves twenty rows the client already has — or, going the other way, skips twenty it will never see. A reconciliation built on that is quietly wrong, and nothing errors.</p>
+<p>A cursor encodes <strong>where you actually were</strong>: the sequence number and id of the last row you saw. The next page is &quot;everything after that&quot;, which is stable no matter what arrives in between.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/api/v1/trades/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">let cursor: Cursor | undefined;
+const presented = url.searchParams.get('cursor');
+
+if (presented) {
+	try {
+		cursor = decodeCursor(presented);
+	} catch (thrown) {
+		// A bad cursor is the client's mistake, and saying so beats silently
+		// serving page one — which is how a client ends up in an infinite loop
+		// re-reading the same fifty rows and never noticing.
+		if (thrown instanceof InvalidCursor) {
+			throw new ApiError('invalid_request', 'That cursor is not valid.');
+		}
+		throw thrown;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Refuse a bad cursor loudly</h4>
+	<p>The tempting behaviour is to treat an unparseable cursor as &quot;start from the beginning&quot;. It never errors, so it looks robust. What it actually does is put a client that corrupted its cursor into an infinite loop, re-reading page one forever and reporting no problem. Silently doing something reasonable is the most expensive kind of forgiveness.</p>
+</aside>
+<h3 id="scoping">Filter in SQL, not in JavaScript</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/api/v1/trades/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The `WHERE` clause names `buy_firm_id` and `sell_firm_id` explicitly. It
+ * would be shorter to fetch the tape and filter in JavaScript, and that is the
+ * version that leaks: the `LIMIT` applies before the filter, so a firm with one
+ * trade on a busy venue gets an empty page and a cursor, over and over, until
+ * they give up. Worse, any future maintainer who removes the filter by accident
+ * ships every firm's trades to everybody, and no test that only ever has one
+ * firm in it will notice.
+ */</code></pre>
+</figure>
+<p>Note also what this endpoint does <strong>not</strong> return: the counterparty. In a centrally cleared market the counterparty is the clearing house, and telling Northgate they just bought from Lowfield hands them information they would pay for and are not entitled to.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain the boundary problem with a per-minute counter</li><li>You can explain what refill rate and capacity each control</li><li>You can explain why a refused request does not consume a token</li><li>You can explain why offset pagination is wrong on a moving list, and why a bad cursor errors</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="api-keys.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">API keys</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-transactional-outbox.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The transactional outbox</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

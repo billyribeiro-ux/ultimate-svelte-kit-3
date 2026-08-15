@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkpoints, and the transaction that makes them safe — Building Sequent</title>
+<meta name="description" content="How a consumer remembers where it got to, and the one rule that makes a crash survivable.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 33.33333333333333%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html" aria-current="page"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>Checkpoints, and the transaction that makes them safe</h1>
+			<p class="lede">How a consumer remembers where it got to, and the one rule that makes a crash survivable.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand the checkpoint rule well enough to spot its violation anywhere.</p></aside>
+			<p>The engine reads commands and writes events. If it crashes, it needs to know where it got to. That is a <strong>checkpoint</strong>: a number saying &quot;I have processed everything up to here&quot;.</p>
+<p>It sounds trivial. It is the single easiest thing in this project to get subtly wrong, and both wrong answers are silent.</p>
+<h3 id="two-failures">The two ways to get it wrong</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">wrong: checkpoint first</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await saveCheckpoint(seq);
+await writeEvents(events);   // ← crash here</code></pre>
+</figure>
+<p>The checkpoint says command 8,134 is done. Its events were never written. On restart the engine starts at 8,135, and <strong>command 8,134 has silently disappeared</strong> — an order somebody placed produced no events and no outcome. Nobody will ever look for it, because nothing recorded that it was missing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">wrong: checkpoint last</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await writeEvents(events);
+await saveCheckpoint(seq);   // ← crash here</code></pre>
+</figure>
+<p>The events are written; the checkpoint is not. On restart the engine replays 8,134 and writes its events <strong>again</strong> — a second copy of every trade it caused. Positions double. The ledger balances, because both copies balance, which is the worst kind of wrong: internally consistent and completely false.</p>
+<h3 id="the-rule">The rule</h3>
+
+<aside class="callout callout--why">
+	<h4>The checkpoint moves in the same transaction as the work</h4>
+	<p>Not before. Not after. <strong>In</strong>. Either both land or neither does, and there is no third outcome for a crash to find.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/log.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function appendEvents(
+	client: Client,
+	consumer: string,
+	causedBy: number,
+	at: number,
+	version: number,
+	events: readonly Event[]
+): Promise&lt;void&gt; {
+	await withTransaction(client, async (tx) =&gt; {
+		for (const body of events) {
+			await tx.execute({
+				sql: `INSERT INTO event_log (caused_by, at, version, kind, instrument_id, body)
+				      VALUES (?, ?, ?, ?, ?, ?)`,
+				args: [causedBy, at, version, body.kind, instrumentOf(body), JSON.stringify(body)]
+			});
+		}
+
+		// Inside. Always inside.
+		await checkpointIn(tx, consumer, causedBy, at);
+	});
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Notice that <code>appendEvents</code> is the <strong>only</strong> function that knows this rule. An individual projector cannot get it wrong, because it never sees the checkpoint. Putting a rule in exactly one place is how you stop it being violated by the fourteenth person to add a consumer.</p></aside>
+<h3 id="idempotent">And every consumer is idempotent anyway</h3>
+<p>The transaction makes duplicates impossible for the *engine*. Downstream consumers get a second guarantee, because they will be re-run: a crash between reading a batch and committing it means the batch arrives again.</p>
+<p>So every write a projector makes is idempotent:</p>
+<ul><li><code>INSERT ... ON CONFLICT DO NOTHING</code>, never a bare insert</li><li><code>SET filled = quantity - remaining</code> computed from the event, never <code>filled = filled + n</code></li></ul>
+<p>That second one is the important discipline. An accumulating update is correct exactly once and wrong on every replay — and replay is not an exceptional path here, it is the normal recovery path.</p>
+<h3 id="gaps">Detecting a gap</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/log.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Are there holes in the sequence?
+ *
+ * There should never be — the sequencer assigns consecutively and nothing may
+ * delete. But &quot;should never be&quot; is a claim, and this is how you check it.
+ *
+ * A gap means either a command vanished or a second writer was running. Both
+ * are catastrophic and both are invisible until somebody counts.
+ */
+export async function assertNoGaps(client: Client): Promise&lt;void&gt; {
+	const result = await client.execute(`
+		SELECT MIN(seq) AS lowest, MAX(seq) AS highest, COUNT(*) AS total FROM command_log
+	`);
+
+	const row = result.rows[0];
+	if (!row || Number(row['total']) === 0) return;
+
+	const expected = Number(row['highest']) - Number(row['lowest']) + 1;
+
+	if (Number(row['total']) !== expected) {
+		throw new Error(
+			`The command log has gaps: ${row['total']} rows spanning ${row['lowest']}–${row['highest']}.`
+		);
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can describe both ways of getting a checkpoint wrong, and what each looks like afterwards</li><li>You can state the rule in one sentence</li><li>You can explain why <code>filled = filled + n</code> is dangerous and <code>filled = quantity - remaining</code> is not</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-sequencer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The sequencer</span>
+			</a>
+			<a class="pager__link pager__link--next" href="snapshots-and-recovery.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Snapshots, and the promise they must not break</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

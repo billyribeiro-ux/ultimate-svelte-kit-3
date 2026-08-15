@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-tenancy and authorisation — Building Sequent</title>
+<meta name="description" content="Five roles, thirteen actions, and a pure function small enough to enumerate every input of.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">19 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 45.23809523809524%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html" aria-current="page"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 19</p>
+			<h1>Multi-tenancy and authorisation</h1>
+			<p class="lede">Five roles, thirteen actions, and a pure function small enough to enumerate every input of.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the permission model, and understand why the order of the checks is a security decision.</p></aside>
+			<p>Two firms trade on this venue. Neither may see the other's orders, positions, keys or people. That is the <strong>tenant boundary</strong>, and getting it wrong is the failure that ends companies.</p>
+
+<aside class="callout callout--why">
+	<h4>Why authorisation is a pure function here</h4>
+	<p>A permission bug does not throw. It does not show up in a log. It looks exactly like the feature working, right up until somebody notices that a trader at one firm can cancel another firm's orders. The only defence is a decision function small enough to enumerate every input of, and a test that does.</p>
+</aside>
+<h3 id="roles">Five roles, and the two interesting ones</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/authz.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const ROLES = ['trader', 'risk_manager', 'firm_admin', 'auditor', 'venue_operator'] as const;</code></pre>
+</figure>
+<ul><li><code>trader</code> — sends orders, for the accounts they are assigned to</li><li><code>risk_manager</code> — sets limits and pulls the kill switch. <strong>Cannot trade.</strong></li><li><code>firm_admin</code> — manages the firm's people, accounts and keys</li><li><code>auditor</code> — reads everything at their firm and changes nothing</li><li><code>venue_operator</code> — lists instruments, moves phases, halts trading</li></ul>
+<p><code>auditor</code> is the role that breaks naive permission systems. It is not &quot;a trader with fewer permissions&quot; — it can see <strong>more</strong> than a trader (every account, not just its own) while being able to do strictly less. A system built on ranked permission levels cannot express that, and the usual result is an auditor given trader rights &quot;temporarily&quot;.</p>
+<p><code>risk_manager</code> is the other one: it can stop trading entirely and cannot place a single order. <strong>Power and privilege are different axes.</strong></p>
+<h3 id="table">A table, not a chain of ifs</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/authz.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What each role may do at all, before any scoping.
+ *
+ * A table rather than a chain of `if`s, because a table can be read in one
+ * glance and reviewed by somebody who is not a programmer — which, for
+ * authorisation, is a feature. The compliance officer who has to sign this off
+ * should be able to check it.
+ */
+const ALLOWED: Readonly&lt;Record&lt;Role, readonly Action[]&gt;&gt; = {
+	trader: ['place_order', 'cancel_order', 'view_orders', 'view_positions'],
+
+	risk_manager: ['cancel_firm_orders', 'view_orders', 'view_positions', 'view_ledger',
+	               'set_risk_limits', 'engage_kill_switch'],
+
+	firm_admin: ['view_orders', 'view_positions', 'view_ledger', 'manage_users',
+	             'manage_api_keys', 'cancel_firm_orders'],
+
+	// Reads everything, writes nothing. Note it can see the ledger and the audit
+	// log, which a trader cannot — more visibility, less power.
+	auditor: ['view_orders', 'view_positions', 'view_ledger', 'view_audit_log'],
+
+	venue_operator: ['list_instrument', 'set_phase', 'view_audit_log', 'view_orders']
+};</code></pre>
+</figure>
+<h3 id="order">The order of the checks is a security decision</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/authz.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function can(viewer: Viewer, action: Action, target: Target = {}): Decision {
+	/*
+	 * 1. The tenant boundary — FIRST.
+	 *
+	 * A venue operator is above it. Everybody else is confined to their own
+	 * firm, and asking about another one gets the same answer as asking about a
+	 * firm that does not exist.
+	 */
+	if (target.firmId !== undefined &amp;&amp; target.firmId !== viewer.firmId) {
+		if (viewer.role !== 'venue_operator') return deny('not_found');
+	}
+
+	// 2. Does the role permit this action at all?
+	if (!ALLOWED[viewer.role].includes(action)) return deny('forbidden');
+
+	// 3. Account assignment. Belonging to the firm is not the same as being
+	//    allowed to trade on a particular desk.
+	if (target.accountId !== undefined &amp;&amp; needsAssignment(viewer.role)) {
+		if (!viewer.accountIds.includes(target.accountId)) return deny('account_not_assigned');
+	}
+
+	// 4. API key scopes, if this is a key rather than a person. Applied last,
+	//    and only ever narrowing.
+	if (viewer.scopes !== undefined) {
+		if (!viewer.scopes.includes(SCOPE_FOR[action])) return deny('missing_scope');
+	}
+
+	return ALLOW;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the tenant boundary is checked first</h4>
+	<p>So that everything after it can only ever leak information about the viewer's own firm. If the role check came first, an auditor asking about another firm would get &quot;you are not a risk manager&quot; — which confirms the firm exists. Checked first, they get &quot;not found&quot;, which tells them nothing.</p>
+</aside>
+<h3 id="not-found"><code>not_found</code> is a denial</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/authz.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Why something was refused.
+ *
+ * `not_found` is a *denial*, and the distinction from `forbidden` is the whole
+ * point of having both. Telling somebody &quot;that firm exists but is not yours&quot;
+ * leaks the venue's member list one guess at a time. Telling a colleague at
+ * their own firm &quot;you are not a risk manager&quot; protects nothing and merely
+ * confuses them.
+ *
+ * The rule: **across a tenant boundary, deny as `not_found`. Inside one, deny
+ * as `forbidden`.**
+ */
+export type DenialReason =
+	| 'not_found'
+	| 'forbidden'
+	| 'account_not_assigned'
+	| 'missing_scope'
+	| 'inactive';</code></pre>
+</figure>
+<h3 id="exhaustive">Tested exhaustively, and that is not a figure of speech</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/authz.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('has a complete and deliberate matrix', () =&gt; {
+	// Five roles, thirteen actions, sixty-five assertions. Every cell of the
+	// permission table, asserted explicitly — so a change to ALLOWED that
+	// somebody did not mean to make fails here rather than in production.
+	for (const role of ROLES) {
+		for (const action of ACTIONS) {
+			expect(can(viewer(role), action).allowed, `${role} / ${action}`)
+				.toBe(EXPECTED[role].includes(action));
+		}
+	}
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Sixty-five assertions sounds excessive until you consider the alternative: a permission table that nobody has ever checked in full, protecting other people's money. It is possible *because* <code>can</code> is pure — no database, no request, no session lookup.</p></aside>
+<h3 id="bug">Bug found: the risk console let traders in</h3>
+<p>The risk console's load function gated on <code>view_positions</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the wrong version</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const decision = can(locals.viewer, 'view_positions', { firmId: locals.viewer.firmId });
+if (!decision.allowed) error(403, 'Your role does not allow that.');</code></pre>
+</figure>
+<p>Which sounds right — the risk console shows positions. But <strong>every trader has <code>view_positions</code></strong>, because a trader can see their own. So every trader could open the risk console and read the firm's trial balance.</p>
+<p>Found by a browser test that signed in as a trader and asked for <code>/risk</code>. It got 200.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/risk/+page.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Gated on `view_ledger` rather than `view_positions`, and the difference
+ * matters: every trader can see their own positions, so the first version let
+ * traders straight into the risk console. `view_ledger` is held by exactly the
+ * roles this screen is for — risk managers, firm admins and auditors.
+ */
+const decision = can(locals.viewer, 'view_ledger', { firmId: locals.viewer.firmId });
+if (!decision.allowed) error(403, 'Your role does not allow that.');</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The lesson, which generalises</h4>
+	<p>Gate a screen on the permission that <strong>describes</strong> it, not on the first permission that happens to sound related. &quot;This screen shows positions, so gate on view_positions&quot; is a sentence that reads well and protects nothing.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why <code>auditor</code> breaks a ranked-permissions model</li><li>You can explain why the tenant boundary is checked before the role</li><li>You can explain when to deny as <code>not_found</code> and when as <code>forbidden</code></li><li>You can explain why gating on a related-sounding permission is dangerous</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="double-entry.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Double entry, and the constraint that makes it work</span>
+			</a>
+			<a class="pager__link pager__link--next" href="keys-and-secrets.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Keys, secrets, and what may be stored in clear</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

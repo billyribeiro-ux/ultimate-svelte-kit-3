@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Money, as integers — Building Sequent</title>
+<meta name="description" content="Scaled integers, branded types, and a `parsePrice` that never multiplies by 10,000.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">04 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 9.523809523809524%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html" aria-current="page"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 04</p>
+			<h1>Money, as integers</h1>
+			<p class="lede">Scaled integers, branded types, and a <code>parsePrice</code> that never multiplies by 10,000.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the money layer, and understand why the obvious implementation of <code>parsePrice</code> is wrong.</p></aside>
+			<p>The first real code. Every price, quantity and amount in Sequent is an integer, scaled by 10,000.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/protocol/src/money.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The scale.
+ *
+ * £45.505 is 455050. Four decimal places, which is more precision than any
+ * exchange quotes in and enough that a fee of three basis points on a small
+ * trade does not round to nothing.
+ */
+export const SCALE = 10_000;</code></pre>
+</figure>
+<h3 id="branded">Branded types</h3>
+<p>A price and a quantity are both numbers, and passing one where the other belongs is the easiest mistake in this codebase to make and the hardest to see. TypeScript can stop it, with a trick:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/protocol/src/money.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">declare const brand: unique symbol;
+
+/**
+ * A scaled price. Structurally a number; nominally its own type.
+ *
+ * The `brand` property does not exist at runtime — it is erased along with
+ * every other type. What it buys is that `Price` and `Quantity` stop being
+ * interchangeable at compile time, so `notional(quantity, price)` with the
+ * arguments the wrong way round is an error rather than a very wrong number.
+ */
+export type Price = number &amp; { readonly [brand]: 'Price' };
+export type Quantity = number &amp; { readonly [brand]: 'Quantity' };
+export type Amount = number &amp; { readonly [brand]: 'Amount' };
+
+export const price = (value: number): Price =&gt; {
+	if (!Number.isSafeInteger(value)) {
+		throw new TypeError(`A price must be a safe integer in scaled units, got ${value}`);
+	}
+	return value as Price;
+};</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The runtime check matters as much as the type. <code>price(45.505)</code> is a type error *and* throws — because the value that reaches this function at runtime came off a wire, and a type is not a validation.</p></aside>
+<h3 id="notional">Multiplying two scaled numbers</h3>
+<p>Here is a trap. If price is scaled by 10,000 and quantity is a plain count, then <code>price × quantity</code> is scaled by 10,000 — good. But if you ever multiply two *scaled* numbers together you get something scaled by 100,000,000, and if you forget to divide, every number downstream is ten thousand times too big.</p>
+<p>We avoid it by keeping quantity <strong>unscaled</strong> — a quantity of 400 is four hundred shares, not 0.04 — so there is only ever one scaled operand.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/protocol/src/money.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** What a trade is worth: price × quantity, still in scaled units. */
+export const notional = (unitPrice: Price, howMany: Quantity): Amount =&gt;
+	(unitPrice * howMany) as Amount;
+
+/**
+ * A fee in basis points, truncated **toward zero**.
+ *
+ * Truncation rather than rounding, and the direction is deliberate: a fee that
+ * rounds up takes a fraction of a penny more than it should from every trade,
+ * and across a million trades that is real money taken by an arithmetic
+ * decision nobody made on purpose.
+ */
+export const feeOf = (value: Amount, basisPoints: number): Amount =&gt;
+	Math.trunc((value * basisPoints) / 10_000) as Amount;</code></pre>
+</figure>
+<h3 id="parsing">Parsing a price, without ever touching a float</h3>
+<p>Somebody types <code>45.505</code> into the order ticket. We need <code>455050</code>. The obvious implementation is one line:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the wrong way</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Do not do this.
+const scaled = Math.round(Number(text) * SCALE);</code></pre>
+</figure>
+<p>It is wrong, and it is wrong rarely enough to reach production. <code>Number(&quot;45.505&quot;)</code> is not exactly 45.505 — it is the nearest float, which is <code>45.50499999999999545...</code>. Multiply by 10,000 and you get <code>455049.9999...</code>, which rounds to 455050 and happens to be right. Try enough values and some of them are not.</p>
+<p>The fix is to never create the float at all. Split the string:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/protocol/src/money.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Turn &quot;45.505&quot; into 455050, using string arithmetic.
+ *
+ * No `Number(text) * SCALE` anywhere: that would build a float first and
+ * inherit its error. Splitting the string and padding the fractional part
+ * cannot lose precision, because it never leaves the integers.
+ */
+export function parsePrice(text: string): Price {
+	const trimmed = text.trim();
+
+	if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
+		throw new TypeError(`Not a price: ${text}`);
+	}
+
+	const negative = trimmed.startsWith('-');
+	const [whole = '0', fraction = ''] = trimmed.replace('-', '').split('.');
+
+	// Four decimal places, padded or truncated. Truncated rather than rounded,
+	// for the same reason fees truncate: never take more than was typed.
+	const padded = (fraction + '0000').slice(0, 4);
+	const scaled = Number(whole) * SCALE + Number(padded);
+
+	return price(negative ? -scaled : scaled);
+}</code></pre>
+</figure>
+<h3 id="formatting">And back again</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/protocol/src/money.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A scaled integer as something a person reads.
+ *
+ * The division happens **here**, at the very edge, for display only. Every
+ * amount that travels or is stored stays an integer — the moment a float
+ * touches money it starts losing pennies in ways that take an auditor to find.
+ */
+export function formatPrice(value: Price, currency = 'GBP'): string {
+	const symbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
+	const units = Math.abs(value) / SCALE;
+
+	// Up to four decimals, but no trailing zeros: £45.50, not £45.5000.
+	const text = units.toLocaleString('en-GB', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 4
+	});
+
+	return `${value &lt; 0 ? '−' : ''}${symbol}${text}`;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The rule to take away</h4>
+	<p>Divide <strong>once</strong>, at the boundary, for a human to read. Everything inside the system is an integer. If you find yourself dividing in the middle of a calculation, you have introduced a float into the money path and it will cost you a penny eventually.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why quantity is unscaled and price is scaled</li><li>You can explain why <code>Number(text) * SCALE</code> is wrong</li><li>You know where the only division in the money path is allowed to happen</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-workspace.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The workspace</span>
+			</a>
+			<a class="pager__link pager__link--next" href="ids-that-explain-themselves.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Ids that explain themselves</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environment variables, declared — Building Sequent</title>
+<meta name="description" content="src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 54.761904761904766%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html" aria-current="page"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>Environment variables, declared</h1>
+			<p class="lede">src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Declare every variable the app reads, with a valibot schema on each.</p></aside>
+			<p>Kit 2 had four magic modules: <code>$env/static/private</code>, <code>$env/static/public</code>, <code>$env/dynamic/private</code>, <code>$env/dynamic/public</code>. They worked, but they had two problems. Nothing told you which variables an app actually needed until it crashed, and the only thing standing between a secret and the browser bundle was remembering which of four import paths you were typing.</p>
+<p>Kit 3 replaces all four with one file you write.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description: 'libSQL connection string. `file:sequent.db` in development.',
+		schema: required
+	},
+	PUBLIC_ORIGIN: {
+		description: 'Where the app is served from. Used for CSRF checks.',
+		public: true,
+		static: true,
+		schema: v.pipe(
+			required,
+			v.url('Must be an absolute URL'),
+			v.transform((value) =&gt; value.replace(/\/+$/, ''))
+		)
+	}
+});</code></pre>
+</figure>
+<p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;returns undefined&quot; — the import does not typecheck. That single change moves an entire class of production incident to the moment you type the wrong name.</p>
+<h3 id="the-three-flags">The three things you declare</h3>
+<ul><li><strong><code>schema</code></strong> — a valibot schema. It runs at startup, so <code>DATABASE_URL=&quot;&quot;</code> fails immediately with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.</li><li><strong><code>static: true</code></strong> — inlined at build time rather than read from <code>process.env</code> at request time. Faster, and it means the value cannot change under a running process. Use it for things that genuinely do not vary between restarts.</li></ul>
+<p>Note what the <code>PUBLIC_ORIGIN</code> schema does beyond checking: <code>v.transform</code> strips trailing slashes. <code>https://sequent.exchange/</code> and <code>https://sequent.exchange</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalising it once here is better than remembering to normalise it at every use.</p>
+
+<aside class="callout callout--why">
+	<h4>Validate at the edge, once</h4>
+	<p>This is the same principle as the protocol codecs in Part 1. Untyped, unvalidated data gets checked exactly once, at the boundary where it enters, and everything inside works with values whose shape is guaranteed. Environment variables are a boundary. They come from a shell, a <code>.env</code> file, a CI secret store, or a hosting dashboard, and any of those can hand you an empty string.</p>
+</aside>
+<h3 id="importing">Using them</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Server only. Importing this from a component is a build error.
+import { DATABASE_URL } from '$app/env/private';
+
+// Safe anywhere, because we declared it public.
+import { PUBLIC_ORIGIN } from '$app/env/public';</code></pre>
+</figure>
+<p>Two modules instead of four. The static/dynamic distinction moved into the declaration where it belongs, so the import path now encodes only the thing you must not get wrong: whether the browser is allowed to see it.</p>
+<aside class="callout callout--note"><p>Our <code>.env.example</code> is checked in and the real <code>.env</code> is not. <code>defineEnvVars</code> gives you a free bonus here: because every variable has a <code>description</code>, the declaration file *is* the documentation, and it cannot drift from the code the way a README does.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can declare a new environment variable with a schema</li><li>You can explain what <code>public: true</code> and <code>static: true</code> each change</li><li>You know which import path is safe in a component and which is not</li><li>You can explain why the origin is normalised in the schema rather than at the comparison</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-kit-3-app-from-nothing.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A Kit 3 app from nothing</span>
+			</a>
+			<a class="pager__link pager__link--next" href="remote-functions.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Remote functions</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

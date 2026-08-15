@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A table as a log — Building Sequent</title>
+<meta name="description" content="Two append-only tables, enforced by triggers, and why SQLite is a defensible choice for the spine of an exchange.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 28.57142857142857%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html" aria-current="page"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>A table as a log</h1>
+			<p class="lede">Two append-only tables, enforced by triggers, and why SQLite is a defensible choice for the spine of an exchange.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the log, and understand the three properties it actually needs.</p></aside>
+			<p>A real venue's log lives in shared memory or Aeron and is measured in nanoseconds. Ours is a SQLite table. That choice is worth defending rather than apologising for.</p>
+<p>A log needs exactly three properties: it must be <strong>durable</strong>, it must be <strong>totally ordered</strong>, and consumers must be able to <strong>resume from a position</strong>. A <code>STRICT</code> table with an explicit integer primary key in WAL mode has all three — plus one a message broker does not: you can <code>SELECT * FROM command_log WHERE seq = 1834</code> during an incident and read the answer with your eyes.</p>
+<p>What it does not have is throughput. Tens of thousands of appends a second, not tens of millions. For a teaching venue that is four orders of magnitude more than we need, and every idea in this part — sequencing, checkpointing, gap detection, idempotent consumers — transfers unchanged to the fast version.</p>
+<h3 id="schema">The two tables</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-sql">-- Commands, in the order the sequencer accepted them.
+--
+-- `seq` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
+-- because the sequencer owns it. Letting SQLite choose would mean the ordering
+-- authority lived in two places, and the day they disagree is the day replay
+-- stops reproducing history.
+CREATE TABLE IF NOT EXISTS command_log (
+	seq INTEGER PRIMARY KEY,
+
+	-- The venue's clock reading when this arrived. Stamped once, by the
+	-- sequencer, and read by the engine instead of a clock of its own.
+	received_at INTEGER NOT NULL,
+
+	-- Which rules version was in force. Replay dispatches on this rather than on
+	-- whatever the engine happens to have compiled in.
+	version INTEGER NOT NULL,
+
+	kind TEXT NOT NULL,
+	firm_id TEXT NOT NULL,
+
+	-- The command itself, as JSON. Deliberately opaque to SQL: the schema of a
+	-- command is owned by @sequent/protocol, and duplicating it in columns here
+	-- would create a second definition to keep in step.
+	body TEXT NOT NULL
+) STRICT;
+
+-- Events, in the order the engine produced them.
+--
+-- `caused_by` points at the command that produced this event. It is the single
+-- most useful column in the database during an incident.
+CREATE TABLE IF NOT EXISTS event_log (
+	seq INTEGER PRIMARY KEY AUTOINCREMENT,
+	caused_by INTEGER NOT NULL REFERENCES command_log (seq),
+	at INTEGER NOT NULL,
+	version INTEGER NOT NULL,
+	kind TEXT NOT NULL,
+	instrument_id TEXT,
+	body TEXT NOT NULL
+) STRICT;</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>STRICT</code> is SQLite 3.37+. Without it, SQLite will happily store the string <code>&quot;banana&quot;</code> in an <code>INTEGER</code> column, because its type system is advisory by default. With it, that is an error. For a system of record, advisory typing is not enough.</p></aside>
+<h3 id="triggers">Append-only, enforced</h3>
+<p>The log is append-only. Not &quot;we agreed not to update it&quot; — enforced.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-sql">-- SQLite has no way to revoke UPDATE from a connection, so the enforcement is a
+-- trigger that raises. It costs nothing on insert and it turns &quot;somebody
+-- corrected a row during an outage&quot; from a silent rewrite of history into an
+-- error with a stack trace.
+CREATE TRIGGER IF NOT EXISTS command_log_is_append_only
+BEFORE UPDATE ON command_log
+BEGIN
+	SELECT RAISE(ABORT, 'command_log is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS command_log_is_permanent
+BEFORE DELETE ON command_log
+BEGIN
+	SELECT RAISE(ABORT, 'command_log is append-only');
+END;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a trigger rather than a code review rule</h4>
+	<p>At 3am during an incident, somebody will want to &quot;just fix that one row&quot;. They will have a good reason. The trigger means they cannot, and have to fix it the way that leaves a trail — by appending a correction. Every enforcement that lives only in people's heads is an enforcement that fails under pressure, which is exactly when it matters.</p>
+</aside>
+<h3 id="pragmas">The pragmas, and one that must not be in a batch</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/client.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Separate `execute` calls, not a batch.
+ *
+ * `batch` wraps its statements in a transaction, and SQLite refuses to change
+ * journal mode inside one — &quot;cannot change into wal mode from within a
+ * transaction&quot;. Written as a batch this fails, the error is easy to swallow,
+ * and WAL silently never applies. The venue then works perfectly until two
+ * processes read and write at once.
+ */
+await client.execute('PRAGMA journal_mode = WAL');
+await client.execute('PRAGMA busy_timeout = 5000');
+await client.execute('PRAGMA foreign_keys = ON');
+
+/*
+ * `synchronous = FULL` rather than the WAL default of `NORMAL`.
+ *
+ * NORMAL lets the OS decide when to flush, which means a machine that loses
+ * power can lose the last few commits. For a cache that is a fine trade. For
+ * an append-only log that is the system of record for other people's money,
+ * it is not: the whole promise is that an acknowledged order is durable.
+ */
+await client.execute('PRAGMA synchronous = FULL');</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>busy_timeout</code> is a property of the <strong>connection</strong>, not the database. Every process that opens a connection must set it again. A process that forgets is the one that fails under load with <code>SQLITE_BUSY</code> while every other process is fine — which is a maddening thing to debug. That is why every process in Sequent calls one <code>openStore</code> function rather than creating clients itself.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three properties a log needs</li><li>You can explain why <code>seq</code> is not an autoincrement in <code>command_log</code></li><li>You can explain why the WAL pragma cannot go in a batch</li><li>You know why the append-only rule is a trigger</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-opening-auction.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The opening auction</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-sequencer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The sequencer</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

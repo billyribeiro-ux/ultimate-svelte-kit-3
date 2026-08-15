@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The four hard parts — Building Sequent</title>
+<meta name="description" content="Ordering, money, reconstructability and blast radius. Each one dictates a design decision we make before writing any code.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 4.761904761904762%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html" aria-current="page"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>The four hard parts</h1>
+			<p class="lede">Ordering, money, reconstructability and blast radius. Each one dictates a design decision we make before writing any code.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand the four constraints well enough that the architecture in the next chapter feels inevitable rather than arbitrary.</p></aside>
+			<p>Everything in this project follows from four constraints. If you understand them, the architecture stops looking like a set of choices and starts looking like the only thing that could work.</p>
+<h3 id="ordering">1. Order matters absolutely</h3>
+<p>Two traders both want to buy at £45.50. There are only 100 shares available. Who gets them?</p>
+<p>The answer has to be <strong>whoever asked first</strong>, and the venue has to be able to prove it. Not &quot;probably the first one&quot;. Not &quot;whichever thread got the lock&quot;. A definite, defensible, permanent answer.</p>
+<p>That requirement is much stronger than it sounds. It means the venue must impose a <strong>total order</strong> on every request it receives — a single numbered sequence that everybody agrees on. And the cheapest way to get a total order that nobody can argue with is to have exactly one thing assigning the numbers.</p>
+
+<aside class="callout callout--why">
+	<h4>Why one writer, and what it costs</h4>
+	<p>Two processes assigning sequence numbers would have to agree with each other on the order — and every distributed consensus protocol ever written exists because that agreement is expensive. One writer makes it free. The cost is a throughput ceiling: the venue can never accept more orders per second than one process can write. That is a real limit and it is the right trade, because an exchange that could accept two orders simultaneously would have to explain which was first, and &quot;we are not sure&quot; is not an answer a venue can give.</p>
+</aside>
+<h3 id="money">2. Money must not leak</h3>
+<p>Every price and every amount in this project is an <strong>integer</strong>. There is not a single floating-point number anywhere near the money, and the reason fits on one line.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ node -e &quot;console.log(0.1 + 0.2)&quot;
+0.30000000000000004</code></pre>
+</figure>
+<p>Binary floating point cannot represent 0.1 exactly, any more than decimal can represent one third. Add enough of them together and the error becomes visible. A venue that rounds is a venue that loses money, slowly, in a way that takes an auditor to find.</p>
+<p>So we scale. £45.505 is stored as <code>455050</code> — the price in ten-thousandths of a pound. Integers add and subtract exactly, forever, and JavaScript integers are exact up to about nine quadrillion, which is comfortably more money than this venue will ever see.</p>
+<p>The second half of not leaking money is <strong>double-entry bookkeeping</strong>: every transaction is a set of entries that sum to exactly zero. Money is never created or destroyed, only moved. We will build that in Part 4.</p>
+<h3 id="reconstruct">3. What happened must be reconstructable</h3>
+<p>An auditor asks: what did the order book look like at 14:32:07 on the third of March?</p>
+<p>If your system stores *current state* — a table of orders that you <code>UPDATE</code> as things change — that question has no answer. The information is gone. You overwrote it.</p>
+<p>So we store the <strong>log</strong>, not the state. Every command, in order, forever. The current state is what you get by replaying it. That is called <strong>event sourcing</strong>, and it is the single biggest structural decision in this project.</p>
+<ul><li>&quot;What is the book now?&quot; — replay everything</li><li>&quot;What was the book at seq 8,134?&quot; — replay up to 8,134</li><li>&quot;Why did this order get rejected?&quot; — read the command and the event it produced</li><li>&quot;Did we compute this fee correctly in March?&quot; — replay March with the rules that were in force in March</li></ul>
+<p>That last one is why every command in the log records which <strong>version</strong> of the rules was in force when it arrived. Changing how matching works must not rewrite what happened last March.</p>
+<h3 id="blast-radius">4. Being wrong is expensive</h3>
+<p>A permission bug in a booking app shows somebody another salon's diary. A permission bug here lets a trader at one firm cancel a competitor's orders — which is market manipulation, and the sort of thing that ends a company.</p>
+<p>This shapes how we test. Ordinary example-based tests (&quot;given this book and this order, expect this trade&quot;) are necessary and nowhere near sufficient, because they only check the cases you thought of. We will use two other kinds:</p>
+<ul><li><strong>Property-based tests</strong> that generate hundreds of random order sequences and assert things that must *never* be true — the book is never crossed, quantity is conserved. These found three real bugs in this codebase that example tests structurally could not.</li><li><strong>Fault injection</strong> that kills the engine mid-session, corrupts its snapshot and restarts it on every single command, then checks the state fingerprint is identical. This found one.</li></ul>
+<aside class="callout callout--note"><p>Throughout the course, chapters that end with a <strong>Bug found</strong> section are describing something that genuinely went wrong while this project was being built, and how it was caught. Those sections are the most valuable part of the course, because the mistakes are the ones you are about to make.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the venue has exactly one writer, and what that costs</li><li>You can explain why <code>0.1 + 0.2</code> is a reason to use integers for money</li><li>You understand what event sourcing is and which question it exists to answer</li><li>You know the difference between an example test and a property test</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-workspace.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The workspace</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

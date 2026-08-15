@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Double entry, and the constraint that makes it work — Building Sequent</title>
+<meta name="description" content="Every transaction sums to zero, signed amounts instead of two columns, and corrections that are entries rather than edits.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 42.857142857142854%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html" aria-current="page"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>Double entry, and the constraint that makes it work</h1>
+			<p class="lede">Every transaction sums to zero, signed amounts instead of two columns, and corrections that are entries rather than edits.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the ledger, and understand why one rule is worth more than every other correctness measure combined.</p></aside>
+			<p>A trade moves money and stock between two firms and takes a fee for the venue. Getting that wrong loses money. So we use the technique accountants settled on six hundred years ago and have not improved since.</p>
+
+<aside class="callout callout--why">
+	<h4>The rule</h4>
+	<p>Every transaction is a set of postings that <strong>sum to exactly zero</strong>. Money is never created or destroyed, only moved — and the check is enforced in code before the transaction is written, rather than reconciled afterwards.</p>
+</aside>
+<p>That single rule is worth more than every other correctness measure in this project put together. A ledger that balances *by construction* cannot silently lose a penny. A ledger that is *checked nightly* can lose one every day for a month before anybody runs the report.</p>
+<h3 id="signs">Signs, not columns</h3>
+<p>Textbook double entry uses two columns — debit and credit — and a rule about which side increases which kind of account. That is the right notation for a human with a pen and the wrong one for a database.</p>
+<p>Two columns means two places to make an error, and a balance check written as <code>SUM(debit) - SUM(credit)</code> — which is a subtraction somebody will eventually get backwards. One <strong>signed</strong> column makes &quot;does this balance&quot; into <code>SUM(amount) = 0</code>, which is very hard to get wrong.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/ledger.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Posting {
+	readonly accountId: string;
+	/** Positive is a debit, negative is a credit. They must cancel. */
+	readonly amount: Amount;
+}
+
+export async function postTransaction(tx: Executor, input: {
+	transactionId: string;
+	seq: number;
+	at: number;
+	kind: string;
+	postings: readonly Posting[];
+}): Promise&lt;void&gt; {
+	const total = input.postings.reduce((sum, posting) =&gt; sum + posting.amount, 0);
+
+	if (total !== 0) {
+		throw new UnbalancedTransaction(input.transactionId, total, input.postings);
+	}
+
+	// A transaction with no postings balances trivially and means nothing.
+	if (input.postings.length === 0) {
+		throw new Error(`Ledger transaction ${input.transactionId} has no postings`);
+	}
+
+	// ...insert
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Notice what is <strong>not</strong> here: any attempt to fix an imbalance. Rounding the difference into one of the postings would make every transaction balance and quietly move the error into the ledger, where it would compound. Refusing is the feature.</p></aside>
+<h3 id="accounts">Shares are a balance too</h3>
+<p>The part people find surprising: a firm's *stock* is a ledger account, exactly like its cash.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/ledger.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const ACCOUNT_KINDS = [
+	/** A firm's money, per currency. */
+	'firm_cash',
+	/** A firm's holding of one instrument. */
+	'firm_securities',
+	/** What the venue has earned in fees. */
+	'venue_revenue',
+	/**
+	 * The venue's own side of every trade.
+	 *
+	 * Every trade here is cleared *centrally*: the venue stands between the two
+	 * participants rather than leaving them exposed to each other. So a trade is
+	 * two transactions — buyer with the clearing house, seller with the clearing
+	 * house — and this account is the clearing house's own position, which nets
+	 * to zero across any completed trade. If it does not, one leg is missing.
+	 */
+	'venue_clearing'
+] as const;</code></pre>
+</figure>
+<p>Modelling stock as a balance is what makes it <strong>impossible</strong> for a trade to debit somebody's cash and forget to credit their shares — the transaction would not sum to zero, and <code>postTransaction</code> would refuse it.</p>
+<h3 id="trade">What a trade posts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/projections.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const postings: Posting[] = [
+	// The exchange of value itself.
+	{ accountId: buyerCash,   amount: -notional },
+	{ accountId: buyerStock,  amount:  notional },
+	{ accountId: sellerStock, amount: -notional },
+	{ accountId: sellerCash,  amount:  notional },
+
+	// Fees. A negative fee is a rebate, and the sign handles it with no special
+	// case anywhere: the maker is *paid*, and the arithmetic is identical.
+	{ accountId: buyerCash,   amount: -event.buyerFee },
+	{ accountId: sellerCash,  amount: -event.sellerFee },
+	{ accountId: revenue,     amount:  event.buyerFee + event.sellerFee }
+];</code></pre>
+</figure>
+<p>Seven postings, summing to zero. The buyer's cash goes down by the notional and their stock up by it; the seller's the reverse; the fees come out of both and land in the venue's revenue account.</p>
+<h3 id="corrections">Corrections are entries, not edits</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-sql">-- Corrections are reversing entries, never updates. Same rule as the log, and
+-- for the same reason: an accountant's question is &quot;what did you think the
+-- balance was in March&quot;, and an updated row cannot answer it.
+CREATE TRIGGER IF NOT EXISTS ledger_posting_is_permanent
+BEFORE UPDATE ON ledger_posting
+BEGIN
+	SELECT RAISE(ABORT, 'ledger postings are immutable; post a reversing entry');
+END;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/ledger.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Reverse a transaction by posting its mirror image.
+ *
+ * Not a delete and not an update — a new transaction whose postings are the
+ * negatives of the original's. The books end up where they would have been if
+ * the mistake had never happened, and the record still shows that it did.
+ */
+export async function reverseTransaction(/* ... */) {
+	await postTransaction(tx, {
+		kind: 'reversal',
+		reference: `${originalId} ${input.reason}`,
+		postings: original.map((row) =&gt; ({ accountId: row.accountId, amount: -row.amount }))
+	});
+}</code></pre>
+</figure>
+<h3 id="trial-balance">The cheapest audit there is</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/ledger.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The trial balance: every account, and the total across all of them.
+ *
+ * That total must be zero. Not approximately zero, not zero after adjustments —
+ * zero, because every posting ever written was part of a transaction that
+ * summed to zero, and a sum of zeroes is zero.
+ *
+ * Running it is the cheapest possible audit and it should be part of the test
+ * suite rather than a monthly ritual. If it is ever non-zero, something has
+ * written to `ledger_posting` outside `postTransaction` — and finding out
+ * which day that started is much easier than finding out which year.
+ */
+export async function trialBalance(client: Client) { /* ... */ }</code></pre>
+</figure>
+<p>This assertion appears at the end of the load test, the fault-injection tests, and the projection tests. It is the single most valuable line in the suite: <code>expect(total).toBe(0)</code>.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can state the balancing rule and explain why it is enforced before the write</li><li>You can explain why one signed column beats debit and credit columns</li><li>You can explain why a firm's shares are a ledger account</li><li>You can explain why a correction is a new transaction</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="projections-are-caches.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Projections are caches</span>
+			</a>
+			<a class="pager__link pager__link--next" href="multi-tenancy.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Multi-tenancy and authorisation</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

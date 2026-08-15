@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projections are caches — Building Sequent</title>
+<meta name="description" content="Turning events into queryable tables, and the discipline that lets you delete all of them.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sequent</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 42</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 40.476190476190474%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-four-hard-parts.html"><span class="toc__num">02</span><span>The four hard parts</span></a></li><li><a href="the-workspace.html"><span class="toc__num">03</span><span>The workspace</span></a></li><li><a href="money-as-integers.html"><span class="toc__num">04</span><span>Money, as integers</span></a></li><li><a href="ids-that-explain-themselves.html"><span class="toc__num">05</span><span>Ids that explain themselves</span></a></li><li><a href="the-vocabulary.html"><span class="toc__num">06</span><span>The vocabulary: commands and events</span></a></li><li><a href="the-order-book.html"><span class="toc__num">07</span><span>The order book</span></a></li><li><a href="apply-as-a-pure-function.html"><span class="toc__num">08</span><span>`apply` as a pure function</span></a></li><li><a href="pre-trade-risk.html"><span class="toc__num">09</span><span>Pre-trade risk</span></a></li><li><a href="self-trade-prevention.html"><span class="toc__num">10</span><span>Self-trade prevention</span></a></li><li><a href="the-opening-auction.html"><span class="toc__num">11</span><span>The opening auction</span></a></li><li><a href="a-table-as-a-log.html"><span class="toc__num">12</span><span>A table as a log</span></a></li><li><a href="the-sequencer.html"><span class="toc__num">13</span><span>The sequencer</span></a></li><li><a href="checkpoints.html"><span class="toc__num">14</span><span>Checkpoints, and the transaction that makes them safe</span></a></li><li><a href="snapshots-and-recovery.html"><span class="toc__num">15</span><span>Snapshots, and the promise they must not break</span></a></li><li><a href="the-engine-process.html"><span class="toc__num">16</span><span>The engine process</span></a></li><li><a href="projections-are-caches.html" aria-current="page"><span class="toc__num">17</span><span>Projections are caches</span></a></li><li><a href="double-entry.html"><span class="toc__num">18</span><span>Double entry, and the constraint that makes it work</span></a></li><li><a href="multi-tenancy.html"><span class="toc__num">19</span><span>Multi-tenancy and authorisation</span></a></li><li><a href="keys-and-secrets.html"><span class="toc__num">20</span><span>Keys, secrets, and what may be stored in clear</span></a></li><li><a href="the-gateway.html"><span class="toc__num">21</span><span>The gateway</span></a></li><li><a href="a-kit-3-app-from-nothing.html"><span class="toc__num">22</span><span>A Kit 3 app from nothing</span></a></li><li><a href="environment-variables-declared.html"><span class="toc__num">23</span><span>Environment variables, declared</span></a></li><li><a href="remote-functions.html"><span class="toc__num">24</span><span>Remote functions</span></a></li><li><a href="sessions-and-cookies.html"><span class="toc__num">25</span><span>Sessions and cookies</span></a></li><li><a href="the-csrf-check-we-wrote-ourselves.html"><span class="toc__num">26</span><span>The CSRF check we wrote ourselves</span></a></li><li><a href="async-svelte-and-the-getter-trap.html"><span class="toc__num">27</span><span>Async Svelte, and the getter trap</span></a></li><li><a href="a-public-api-worth-using.html"><span class="toc__num">28</span><span>A public API worth using</span></a></li><li><a href="api-keys.html"><span class="toc__num">29</span><span>API keys</span></a></li><li><a href="rate-limits-and-pagination.html"><span class="toc__num">30</span><span>Rate limits and pagination</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">31</span><span>The transactional outbox</span></a></li><li><a href="webhooks-that-cannot-be-forged.html"><span class="toc__num">32</span><span>Webhooks that cannot be forged</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">33</span><span>Mobile first, for real</span></a></li><li><a href="tables-that-are-measurements.html"><span class="toc__num">34</span><span>Tables that are measurements</span></a></li><li><a href="motion-that-means-something.html"><span class="toc__num">35</span><span>Motion that means something</span></a></li><li><a href="the-depth-ladder.html"><span class="toc__num">36</span><span>The depth ladder</span></a></li><li><a href="live-screens-and-the-stale-phase.html"><span class="toc__num">37</span><span>Live screens, and the stale phase</span></a></li><li><a href="migrations-without-a-framework.html"><span class="toc__num">38</span><span>Migrations without a framework</span></a></li><li><a href="feature-flags-and-the-pause.html"><span class="toc__num">39</span><span>Feature flags, and the pause</span></a></li><li><a href="billing-from-the-log.html"><span class="toc__num">40</span><span>Billing from the log</span></a></li><li><a href="tests-that-find-real-bugs.html"><span class="toc__num">41</span><span>Tests that find real bugs</span></a></li><li><a href="running-it.html"><span class="toc__num">42</span><span>Running it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>Projections are caches</h1>
+			<p class="lede">Turning events into queryable tables, and the discipline that lets you delete all of them.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the projector, and understand why &quot;rebuild&quot; is the migration strategy.</p></aside>
+			<p>The event log answers every question and answers none of them quickly. &quot;What is the current book?&quot; means replaying a million events. So we maintain <strong>projections</strong>: ordinary tables, derived from the log, shaped for the queries a screen actually makes.</p>
+<ul><li><code>trade</code> — the tape, every trade in order</li><li><code>order_record</code> — a participant's durable view of their own orders, including finished ones</li><li><code>position</code> — net position per account per instrument, with cost basis</li><li><code>ledger_*</code> — double-entry bookkeeping, which is the next chapter</li></ul>
+
+<aside class="callout callout--why">
+	<h4>The rule that makes them safe</h4>
+	<p>Every one of these is a <strong>cache</strong>. Drop all of them and <code>rebuild()</code> puts them back from the log. Nothing here is the only copy of anything. When a projection disagrees with the log, the log wins — that is not a policy, it is the definition.</p>
+</aside>
+<p>That rule has a very practical payoff: changing the shape of a read model is a <strong>truncate and replay</strong>, not an <code>ALTER TABLE</code> plus a backfill script that has to be right first time. You want a new column on <code>trade</code>? Add it, drop the table, rebuild. Ten seconds and no migration to review.</p>
+<h3 id="idempotent">Every write is idempotent</h3>
+<p>A projector will be fed the same event twice — that is the normal recovery path, not an exceptional one. So every write has to be safe to repeat.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/projections.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">case 'order_cancelled': {
+	/*
+	 * `filled` is set from the event's own numbers rather than incremented.
+	 *
+	 * The event carries what was *remaining*, so the filled quantity is
+	 * `quantity - remaining` — a value the event fully determines. An
+	 * increment would be correct exactly once and wrong on every replay.
+	 */
+	await tx.execute({
+		sql: `UPDATE order_record
+			SET status = CASE WHEN ? = 0 THEN 'filled' ELSE 'cancelled' END,
+				cancel_reason = ?,
+				filled = quantity - ?,
+				updated_at = ?
+			WHERE order_id = ?`,
+		args: [event.remainingQuantity, event.reason, event.remainingQuantity, record.at, event.orderId]
+	});
+	break;
+}</code></pre>
+</figure>
+<h3 id="guard">The one place an increment is unavoidable</h3>
+<p>A trade needs to increment two orders' <code>filled</code>, and there is no &quot;remaining&quot; in the trade event to compute it from. So we guard the whole block behind an idempotency check:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/projections.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">case 'traded': {
+	await tx.execute({
+		sql: 'INSERT INTO trade (...) VALUES (...) ON CONFLICT (trade_id) DO NOTHING',
+		args: [/* ... */]
+	});
+
+	/*
+	 * The trade is the idempotency key for everything downstream of it.
+	 *
+	 * If the ledger already has a transaction under this trade id, this trade has
+	 * already been projected — so the position updates and fill increments below
+	 * must not run again. Without this check a replayed batch would move every
+	 * position twice and the ledger would still balance, which is the worst kind
+	 * of wrong: internally consistent and completely false.
+	 */
+	const alreadySeen = await tx.execute({
+		sql: 'SELECT COUNT(*) AS n FROM ledger_transaction WHERE transaction_id = ?',
+		args: [event.tradeId]
+	});
+	if (Number(alreadySeen.rows[0]?.['n'] ?? 0) &gt; 0) break;
+
+	// Everything below runs at most once per trade.
+	await applyToPosition(tx, { /* buyer */ });
+	await applyToPosition(tx, { /* seller */ });
+	await markFilled(tx, event);
+	await postTrade(tx, record, event);
+	break;
+}</code></pre>
+</figure>
+<h3 id="bug">Bug found: a crossed book on the screen</h3>
+<p>The venue was running. Sign in, look at the terminal, and the depth ladder showed this:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>bid levels: [ '£45.51', '£45.505', '£45.50' ]
+ask levels: [ '£45.49', '£45.505', '£45.51' ]</code></pre>
+</figure>
+<p>A best bid of £45.51 above a best ask of £45.49. A crossed book — the thing an entire property test exists to make impossible.</p>
+<p>The engine was fine. Every invariant held; the property tests were green. The bug was in the <strong>projection</strong>: the <code>traded</code> branch updated positions and posted to the ledger, and never marked the orders as filled. Only <code>order_cancelled</code> set <code>status</code>.</p>
+<p>So an order that filled <strong>completely</strong> — which produces trades and no cancellation — stayed <code>status = &quot;working&quot;, filled = 0</code> forever. And the depth ladder, which is derived from working orders, kept showing liquidity that had already been consumed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/projections.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Mark both sides as filled.
+ *
+ * This was missing, and the symptom was excellent: the depth ladder showed a
+ * **crossed** book. The engine was right the whole time. Only the read model
+ * was lying, which is precisely the failure mode projections have — nothing
+ * throws, the numbers are just wrong in a way that looks like a matching bug.
+ */
+for (const orderId of [event.buyOrderId, event.sellOrderId]) {
+	await tx.execute({
+		sql: `UPDATE order_record
+			SET filled = filled + ?,
+				status = CASE WHEN filled + ? &gt;= quantity THEN 'filled' ELSE status END,
+				updated_at = ?
+			WHERE order_id = ?`,
+		args: [event.quantity, event.quantity, record.at, orderId]
+	});
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>What this teaches about testing</h4>
+	<p>Every test in the project was green. The engine tests passed because the engine was right. The projection tests passed because they checked the things somebody thought to check. What found it was <strong>pointing a browser at the running venue and looking at the screen</strong> — and this class of bug can only be found that way, because the failure is that the read model disagrees with the truth, and every layer is internally consistent.</p>
+</aside>
+<h3 id="rebuild">Rebuild, and the one argument that matters</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/projections.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function rebuild(client: Client): Promise&lt;number&gt; {
+	await withTransaction(client, async (tx) =&gt; {
+		for (const table of ['ledger_posting', 'ledger_transaction', 'ledger_account',
+		                     'position', 'trade', 'order_record']) {
+			await tx.execute(`DELETE FROM ${table}`);
+		}
+		await tx.execute({
+			sql: 'DELETE FROM consumer_checkpoint WHERE consumer = ?',
+			args: [PROJECTOR_CONSUMER]
+		});
+	});
+
+	return catchUp(client, 500, { notify: false });
+	//                            ^^^^^^^^^^^^^^^
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>notify: false</code> is the most important argument in this file. A rebuild replays every event the venue has ever recorded — and without this flag it would also re-enqueue every notification, telling every member firm about six months of trades in one burst because somebody changed the shape of a read model.</p></aside>
+<p>The outbox's idempotency keys would absorb it *only* while the original rows are still there, and <code>prune</code> deletes delivered ones. So the protection cannot come from the constraint; it has to be the argument.</p>
+
+<aside class="callout callout--why">
+	<h4>The general rule</h4>
+	<p>Replay is for <strong>internal</strong> state. Anything that leaves the building must be suppressed during it.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why a projection may be deleted but the log may not</li><li>You can explain why <code>filled = filled + n</code> needs a guard and <code>filled = quantity - remaining</code> does not</li><li>You can explain how a correct engine can produce a crossed ladder</li><li>You know what <code>notify: false</code> protects against</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-engine-process.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The engine process</span>
+			</a>
+			<a class="pager__link pager__link--next" href="double-entry.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Double entry, and the constraint that makes it work</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
