@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { messageFrom } from '#lib/errors.ts';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import '#lib/styles/app.css';
@@ -84,7 +85,7 @@
 					<div class="failure" role="alert">
 						<h1>Something went wrong</h1>
 						<p>
-							{error instanceof Error ? error.message : 'We could not load this page.'}
+							{messageFrom(error, 'We could not load this page.')}
 						</p>
 						<button type="button" onclick={reset}>Try again</button>
 					</div>

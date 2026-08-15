@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The customer’s own page — Building Halfpast</title>
+<meta name="description" content="One link, no account, and a cancel button that respects the studio’s notice period.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 77.14285714285715%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html" aria-current="page"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>The customer’s own page</h1>
+			<p class="lede">One link, no account, and a cancel button that respects the studio’s notice period.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A page reached by a bearer token that updates itself in one round trip when the booking is cancelled.</p></aside>
+			<p>The confirmation email contains one link: <code>/booking/QV8XD0E265QH1SW2VH7NN2ZP67</code>. That link is the customer's entire relationship with the software.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/booking/[token]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:head&gt;
+	&lt;title&gt;Your appointment — {booking.business.name}&lt;/title&gt;
+	&lt;!-- The URL contains a credential. Never index it. --&gt;
+	&lt;meta name=&quot;robots&quot; content=&quot;noindex, nofollow&quot; /&gt;
+&lt;/svelte:head&gt;</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The <code>noindex</code> is not optional. The URL *is* the password. A search engine that indexes it publishes a cancel button for somebody's appointment — a breach delivered by Google, with a stack trace nowhere.</p></aside>
+<h3 id="notice">A rule the customer can see</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/booking/[token]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if canCancel}
+	&lt;Button variant=&quot;ghost&quot; onclick={() =&gt; void cancel()}&gt;Cancel this appointment&lt;/Button&gt;
+{:else}
+	&lt;p class=&quot;text-muted&quot;&gt;
+		Appointments can be cancelled up to {booking.business.cancellationNoticeHours} hours
+		beforehand. Please call the studio on {booking.business.phone}.
+	&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>Two things worth copying here. First, the rule is stated <strong>with</strong> the refusal — &quot;up to 24 hours beforehand&quot; tells them why the button is missing. Second, there is a way forward: the phone number, not a dead end.</p>
+<p>And the server checks the same rule. The hidden button is manners; <code>cancelBooking</code> re-derives the notice window from the database, because a hidden button is not a control.</p>
+<h3 id="single-flight">Cancelling in one round trip</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/booking/[token]/manage.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const cancelOwnBooking = command(
+	v.object({
+		token: tokenSchema,
+		reason: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200)), '')
+	}),
+	async ({ token, reason }) =&gt; {
+		const found = await loadBookingByToken(token);
+		if (!found) error(404, 'We could not find that booking.');
+
+		try {
+			await cancelBooking({ bookingId: found.id, by: 'customer', reason: reason || undefined });
+		} catch (thrown) {
+			if (thrown instanceof BookingError) {
+				// 409 for &quot;too late&quot;: the request was valid, the world moved on.
+				error(thrown.code === 'too_late_to_cancel' ? 409 : 400, thrown.message);
+			}
+			throw thrown;
+		}
+
+		// The refreshed booking rides back with this response — no second request.
+		void getManagedBooking(token).refresh();
+
+		return { cancelled: true };
+	}
+);</code></pre>
+</figure>
+<p>Without the <code>refresh()</code> line: post the cancellation, wait for a response, fire a fresh query, wait again, then re-render — with a stretch in the middle where the page still says &quot;confirmed&quot; and the customer wonders whether the button worked. With it, the response that confirms the cancellation carries the new state of the page.</p>
+<p>The status codes are chosen, not defaulted. <strong>409 Conflict</strong> for &quot;too late to cancel&quot;, because the request was perfectly valid and the world simply moved on; 400 for anything else the domain refuses. A blanket 400 would tell a monitoring dashboard that customers are sending malformed requests, when in fact they are arriving four minutes late.</p>
+<h3 id="freed">And the slot goes back on sale</h3>
+<p>Cancelling deletes the booking's claim rows — <code>onDelete: 'cascade'</code> does it — and publishes a diary change. Every booking page currently open on that day gets the freed time back within a second, without anybody refreshing anything.</p>
+<p>That is worth pausing on, because it is the payoff for all the machinery: three separate design decisions (cascade deletes, the claims table, live queries) combine into a behaviour nobody had to write.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Open the manage link and a booking page for the same day side by side. Cancel in one; watch the time reappear in the other.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-slot-grid.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The slot grid</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-live-diary.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The live diary</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

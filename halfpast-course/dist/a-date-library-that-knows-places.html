@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A date library that knows about places — Building Halfpast</title>
+<meta name="description" content="Installing @internationalized/date, and the four types that map onto the three kinds of time.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 17.142857142857142%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html" aria-current="page"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>A date library that knows about places</h1>
+			<p class="lede">Installing @internationalized/date, and the four types that map onto the three kinds of time.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Convert a wall-clock reading in a named zone to an instant and back, and choose deliberately what happens on the two awkward Sundays.</p></aside>
+			<p>We need a library. There is a native answer coming — <code>Temporal</code> — and it is worth knowing why we are not using it yet.</p>
+<h3 id="temporal">A word about Temporal</h3>
+<p><code>Temporal</code> is the built-in replacement for <code>Date</code> that the language has been growing for years. It has exactly the types we want. As of August 2026 it ships in Chromium-based browsers and Firefox — but <strong>not in Node 24</strong>, which is the runtime our server code runs on.</p>
+<p>Our availability engine runs on the server. A feature that exists in the browser and not on the server is not a feature we can use in shared code, and polyfilling it costs more than the library we are about to install. So: <code>Temporal</code> for a hobby project in a year or two; <code>@internationalized/date</code> today.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add @internationalized/date</code></pre>
+</figure>
+<aside class="callout callout--note"><p>This is the date library behind React Aria and several design systems. It is about 8 kB, has no dependencies, and — importantly — it does not ship its own copy of the world's time zone rules. It asks the runtime, through <code>Intl</code>, which means it is automatically correct when a country changes its mind about daylight saving.</p></aside>
+<h3 id="the-types">The four types</h3>
+<ul><li><code>CalendarDate</code> — a page in the diary. Year, month, day. No time, no zone.</li><li><code>CalendarDateTime</code> — a page plus a clock reading. Still no zone, so still not a moment.</li><li><code>ZonedDateTime</code> — a clock reading in a named place. This one <strong>is</strong> a moment, and it knows its own offset.</li><li><code>Time</code> — a clock reading with no date. We barely use it.</li></ul>
+<p>Compare that list with the three kinds of time from the last chapter. <code>CalendarDate</code> is a calendar date, <code>CalendarDateTime</code> is a wall-clock reading, and <code>ZonedDateTime</code> is an instant with its context attached. The library makes the distinction impossible to blur, because the types are genuinely different and will not compare with each other.</p>
+<h3 id="the-conversion">The one function that matters</h3>
+<p>Here is the core of our whole time layer. Read the signature first, then the body.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/zone.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function wallClockToInstant(
+	day: IsoDate,
+	minuteOfDay: number,
+	zone: TimeZone,
+	disambiguation: Disambiguation = 'compatible'
+): number {
+	const dayOffset = Math.floor(minuteOfDay / MINUTES_PER_DAY);
+	const minute = minuteOfDay - dayOffset * MINUTES_PER_DAY;
+
+	const date = parseDate(day).add({ days: dayOffset });
+	const local = new CalendarDateTime(
+		date.year,
+		date.month,
+		date.day,
+		Math.floor(minute / 60),
+		minute % 60
+	);
+
+	return toZoned(local, zone, disambiguation).toDate().getTime();
+}</code></pre>
+</figure>
+<p>Line by line:</p>
+<ul><li><code>parseDate(day)</code> turns <code>&quot;2026-08-14&quot;</code> into a <code>CalendarDate</code>. It will not accept a time, which is the point.</li><li><code>minuteOfDay</code> is minutes past local midnight. 09:00 is 540. It is allowed to exceed 1440 — see below.</li><li><code>new CalendarDateTime(...)</code> glues the page and the clock reading together. Still not a moment.</li><li><code>toZoned(local, zone, disambiguation)</code> is the conversion. It takes the wall-clock reading, the place, and a policy for the awkward Sundays, and produces a <code>ZonedDateTime</code>.</li><li><code>.toDate().getTime()</code> drops out to a plain number, because that is what the rest of the app speaks.</li></ul>
+<h3 id="past-midnight">Minutes past 1440</h3>
+<p>Why allow <code>minuteOfDay</code> to be bigger than a day? Because a bar open until 2am closes on <strong>Friday</strong>, not on Saturday. Storing that as &quot;Friday, minute 1560&quot; keeps Friday night as one row. The alternative — two rows, Friday 20:00–24:00 and Saturday 00:00–02:00 — means every piece of code downstream has to know how to stitch them back together, and one of them eventually will not.</p>
+<p>The first two lines handle it: <code>Math.floor(1560 / 1440)</code> is 1, so we add a day to the calendar date and take minute 120 of it. The rule stays one row; the maths comes out right.</p>
+<h3 id="disambiguation">The four policies</h3>
+<p>Here is the decision the last chapter promised. <code>toZoned</code> takes a fourth argument saying what to do when the wall-clock reading has no instant or two.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/zone.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type Disambiguation = 'compatible' | 'earlier' | 'later' | 'reject';</code></pre>
+</figure>
+<ul><li><code>compatible</code> — skip forward past a gap; take the first of a repeat. This is what every operating system and every other date library settled on.</li><li><code>earlier</code> / <code>later</code> — pick a side of an ambiguous time deliberately.</li><li><code>reject</code> — throw an error.</li></ul>
+<p>We default to <code>compatible</code>, and the reason is worth stating plainly: opening hours are the machine's problem, not the customer's. If a shift rule says 01:30 and that morning has no 01:30, the shift should start at 02:00 and the customer should never learn that anything unusual happened. Throwing would turn a calendar quirk into a 500 error on somebody's booking page.</p>
+<aside class="callout callout--note"><p><code>reject</code> still has a place: a time a human has just typed into a form and can be asked about. &quot;You have entered 01:30 on 29 March, which does not exist that morning — did you mean 00:30 or 02:30?&quot; is a good question to ask a shop owner and a terrible one to ask a customer.</p></aside>
+<h3 id="weekday">One more trap: which day is day 1?</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/zone.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function weekdayOf(date: IsoDate | CalendarDate): Weekday {
+	const calendar = typeof date === 'string' ? parseDate(date) : date;
+	return getDayOfWeek(calendar, 'en-US') as Weekday;
+}</code></pre>
+</figure>
+<p>That <code>'en-US'</code> is pinned on purpose and must never become the visitor's locale. <code>getDayOfWeek</code> returns a number <strong>relative to whichever day that locale treats as the first of the week</strong> — Sunday in the US, Monday in most of Europe, Saturday in much of the Middle East.</p>
+<aside class="callout callout--warn"><p>Left to the visitor's locale, a rule stored as &quot;weekday 1&quot; would mean Monday for a customer in London and Tuesday for one in Riyadh. The salon's Monday hours would appear on Tuesday for some visitors and nobody would be able to reproduce it. Pinning the locale makes the stored number mean exactly one thing forever.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can explain what <code>toZoned(local, &quot;Europe/London&quot;, &quot;compatible&quot;)</code> does on 29 March 2026 at 01:30, and why our stored weekday numbers use a locale that has nothing to do with the visitor.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="three-kinds-of-time.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Three kinds of time</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-five-minute-grid.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The five-minute grid</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

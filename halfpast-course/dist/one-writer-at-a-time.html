@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One writer at a time — Building Halfpast</title>
+<meta name="description" content="The SQLITE_BUSY error, why the obvious fix deadlocks in Node, and a nine-line queue that does not.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 40%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html" aria-current="page"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>One writer at a time</h1>
+			<p class="lede">The SQLITE_BUSY error, why the obvious fix deadlocks in Node, and a nine-line queue that does not.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Ten simultaneous bookings for the same slot produce exactly one winner and nine polite refusals — no lock errors.</p></aside>
+			<p>Everything works. Then you write the test that fires ten booking requests at the same slot simultaneously, and instead of one winner and nine &quot;just taken&quot; messages, you get one winner, a few refusals, and a handful of these:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>SQLITE_BUSY: database is locked</code></pre>
+</figure>
+<p>SQLite allows exactly one writer at a time across the whole file. Two write transactions in the same process collide, and the second is told to go away.</p>
+<h3 id="the-trap">The obvious fix, and why it is worse</h3>
+<p>Every search result says: raise <code>PRAGMA busy_timeout</code>. A blocked writer then waits instead of failing.</p>
+<aside class="callout callout--warn"><p>In Node this is actively dangerous. The local SQLite driver is <strong>synchronous</strong> underneath its promises. A waiting writer blocks the one and only thread — including the thread the *first* transaction needs in order to finish and release the lock. The two wait for each other until the timeout expires. A deadlock with a stopwatch on it is still a deadlock, and it fails five seconds later instead of instantly, which is worse for everyone.</p></aside>
+<h3 id="the-queue">Queue in JavaScript instead</h3>
+<p>Writers should wait at an <code>await</code>, where the event loop is free to run the work that releases the lock.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/write-queue.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class WriteQueue {
+	/**
+	 * The end of the chain. `catch` is attached immediately so that a rejected
+	 * task does not poison the queue for everyone behind it — the rejection is
+	 * still delivered to that task's own caller, which is where it belongs.
+	 */
+	#tail: Promise&lt;unknown&gt; = Promise.resolve();
+
+	#depth = 0;
+
+	get depth(): number {
+		return this.#depth;
+	}
+
+	async run&lt;T&gt;(task: () =&gt; Promise&lt;T&gt;): Promise&lt;T&gt; {
+		this.#depth += 1;
+
+		const result = this.#tail.then(task, task);
+
+		// The chain must continue whether this task resolved or threw, so the next
+		// waiter runs either way. The swallowed rejection here is not lost: it is
+		// the same promise `result` returns to the caller.
+		this.#tail = result.then(
+			() =&gt; undefined,
+			() =&gt; undefined
+		);
+
+		try {
+			return await result;
+		} finally {
+			this.#depth -= 1;
+		}
+	}
+}
+
+export const writeQueue = new WriteQueue();</code></pre>
+</figure>
+<p>Read <code>this.#tail.then(task, task)</code> — the same function passed as both handlers. That is deliberate: the next task must run whether its predecessor resolved or threw. Passing it only as the success handler builds a queue that stops forever the first time anything fails.</p>
+<p>The double <code>.then(() =&gt; undefined, () =&gt; undefined)</code> on the next line is what keeps a rejection from propagating down the chain and taking out every waiter behind it. The caller still gets the rejection, because <code>result</code> is the promise they are awaiting.</p>
+
+<aside class="callout callout--why">
+	<h4>A promise chain, not a list of waiters</h4>
+	<p>There is no array, no <code>shift()</code>, no timers, and no way to lose a waiter or leak one. The queue *is* the promise chain. Nine lines of logic that need no maintenance is a better shape than forty lines that need care.</p>
+</aside>
+<h3 id="not-the-guarantee">What this is not</h3>
+<aside class="callout callout--warn"><p>The queue is <strong>one process's politeness</strong>. It evaporates the moment the app runs on two instances or moves to a hosted libSQL. It exists so that the normal case is a clean error instead of a lock timeout. The guarantee that two customers cannot take the same slot lives in the primary key on <code>slot_claim</code> and nowhere else.</p></aside>
+<p>Writing that paragraph as a comment at the top of the file is not documentation for its own sake. It is what stops a future maintainer — quite reasonably — deleting a queue that &quot;isn't doing anything&quot; or, worse, trusting it as the safety net.</p>
+<h3 id="the-test">Proving it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/scheduling.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('lets exactly one of ten simultaneous requests win', async () =&gt; {
+	const attempts = Array.from({ length: 10 }, (_, index) =&gt;
+		createBooking({ ...base, customerName: `Racer ${index}` })
+	);
+
+	const results = await Promise.allSettled(attempts);
+
+	const won = results.filter((r) =&gt; r.status === 'fulfilled');
+	const lost = results.filter((r) =&gt; r.status === 'rejected');
+
+	expect(won).toHaveLength(1);
+	expect(lost).toHaveLength(9);
+
+	// Every loser got the right refusal, not a lock error or a stack trace.
+	for (const failure of lost) {
+		expect((failure.reason as BookingError).code).toBe('slot_taken');
+	}
+
+	// And nothing half-written survived: one booking, and claims only for it.
+	const bookings = await db.select().from(booking);
+	const claims = await db.select().from(slotClaim);
+
+	expect(bookings).toHaveLength(1);
+	expect(new Set(claims.map((c) =&gt; c.bookingId))).toEqual(new Set([bookings[0]!.id]));
+});</code></pre>
+</figure>
+<p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Checking that every claim belongs to the surviving booking is what proves the rollback actually rolled back.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>The ten-way race test passes, and passes again on the twentieth run. No <code>SQLITE_BUSY</code> appears anywhere in the output.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="migrations-and-seed-data.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Migrations and seed data</span>
+			</a>
+			<a class="pager__link pager__link--next" href="configuration-without-magic.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Configuration without magic</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

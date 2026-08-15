@@ -866,12 +866,12 @@ it('rolls past midnight when given a minute beyond 1440', () => {
 			},
 			{
 				type: 'terminal',
-				code: `✓ src/lib/time/grid.spec.ts (11 tests) 4ms
-✓ src/lib/time/zone.spec.ts (16 tests) 21ms
-✓ src/lib/time/availability.spec.ts (18 tests) 38ms
+				code: `✓ |server| src/lib/time/grid.spec.ts (20 tests) 12ms
+✓ |server| src/lib/time/zone.spec.ts (29 tests) 42ms
+✓ |server| src/lib/time/availability.spec.ts (23 tests) 57ms
 
 Test Files  3 passed (3)
-     Tests  45 passed (45)`
+     Tests  72 passed (72)`
 			},
 
 			{

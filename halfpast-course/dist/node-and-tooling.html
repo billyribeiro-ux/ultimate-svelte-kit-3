@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Node, pnpm and the floor — Building Halfpast</title>
+<meta name="description" content="Getting the right runtime, and making the project refuse the wrong one.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">03 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 8.571428571428571%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html" aria-current="page"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 03</p>
+			<h1>Node, pnpm and the floor</h1>
+			<p class="lede">Getting the right runtime, and making the project refuse the wrong one.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Node 24 LTS installed, pnpm ready, and an understanding of why the version is pinned rather than suggested.</p></aside>
+			<p>Node has two release lines at any time. <strong>Current</strong> gets the new features; <strong>LTS</strong> — long-term support — gets the bug fixes and is what you run in production. Even-numbered majors become LTS in October of their year.</p>
+<p>This project targets <strong>Node 24.19.0</strong>, codename Krypton, the active LTS line. Check what you have:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>node --version</code></pre>
+</figure>
+<p>If that says anything below 24, install it. The friendliest way is <code>nvm</code>, which lets several versions live side by side:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>nvm install 24.19.0
+nvm use 24.19.0
+node --version   # v24.19.0</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Do not take a version number from a tutorial — including this one — as current. The authoritative list is <code>https://nodejs.org/dist/index.json</code>: every release, with its date and whether it is LTS. It is a plain JSON file and you can read it in a browser.</p></aside>
+<h3 id="engines">Making the project insist</h3>
+<p>A README that says &quot;requires Node 24&quot; is a wish. Two lines make it a rule.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;engines&quot;: {
+		&quot;node&quot;: &quot;&gt;=24.19.0&quot;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.npmrc</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ini">engine-strict=true</code></pre>
+</figure>
+<p>On its own, <code>engines</code> is advisory — npm prints a warning and carries on. <code>engine-strict=true</code> turns the warning into a refusal. Try installing under Node 22 and you get:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment
+This is happening because the package's manifest has an engines.node field.</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why this is worth the friction</h4>
+	<p>Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud failure on day one is cheaper than a quiet one on day twenty-one.</p>
+</aside>
+<p>Add an <code>.nvmrc</code> too, so <code>nvm use</code> in the project folder picks the right one with no arguments:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.nvmrc</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-text">24.19.0</code></pre>
+</figure>
+<h3 id="icu">A version really can change behaviour</h3>
+<p>It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving from 22 to 24.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the same code, two runtimes</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-js">new Intl.NumberFormat('en-US', {
+	style: 'currency',
+	currency: 'USD',
+	notation: 'compact',
+	maximumFractionDigits: 2
+}).format(5600);
+
+// Node 22 (ICU 78.2) → &quot;$5.60K&quot;
+// Node 24 (ICU 78.3) → &quot;$5.6K&quot;</code></pre>
+</figure>
+<p><code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and ICU changes between releases. A test asserting the exact string <code>&quot;$5.60K&quot;</code> is not testing your formatting function — it is testing which Node is installed, and it fails on upgrade for a reason that has nothing to do with your code.</p>
+<aside class="callout callout--note"><p>The lesson, which we apply throughout: when asserting on <code>Intl</code> output, match a *pattern* that captures what your app actually needs — the right symbol, the right suffix, at most two decimals — not a byte-exact string.</p></aside>
+<h3 id="pnpm">pnpm</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>npm install -g pnpm
+pnpm --version   # 10.x</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>node --version</code> reports 24.19.0 or newer, and <code>pnpm --version</code> reports 10 or newer.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="how-the-pieces-fit.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">How the pieces fit</span>
+			</a>
+			<a class="pager__link pager__link--next" href="scaffolding.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Scaffolding the project</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

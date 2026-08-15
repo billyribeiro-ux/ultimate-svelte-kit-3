@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The slot grid — Building Halfpast</title>
+<meta name="description" content="The one component customers actually touch. Radio buttons in disguise, sized for thumbs.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 74.28571428571429%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html" aria-current="page"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>The slot grid</h1>
+			<p class="lede">The one component customers actually touch. Radio buttons in disguise, sized for thumbs.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>An accessible, keyboard-navigable grid of times that animates when the world changes underneath it.</p></aside>
+			<p>It looks like a grid of buttons. It is a radio group, because that is what it *is*: a set of mutually exclusive options, exactly one of which will be chosen.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/booking/SlotGrid.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;grid&quot; bind:this={grid}&gt;
+	{#each slots as slot (slot.start)}
+		{@const value = valueOf(slot)}
+		&lt;label class=&quot;slot&quot; class:selected={selectedValue === value}&gt;
+			&lt;input {...field.as('radio', value)} /&gt;
+			&lt;span&gt;{labelFor(slot)}&lt;/span&gt;
+		&lt;/label&gt;
+	{/each}
+&lt;/div&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why not &lt;button&gt;</h4>
+	<p>Real radios give you arrow-key navigation, a single tab stop for the whole group, correct screen-reader announcements (&quot;Choose a time, 09:00, radio button, 3 of 24&quot;), and form submission with JavaScript off — for free, from the browser, in the version you are not testing on. Rebuilding that on <code>&lt;button&gt;</code> takes a hundred lines and will still be worse.</p>
+</aside>
+<p>The input is visually hidden but never <code>display: none</code> — a hidden-that-way radio is unfocusable and unsubmittable. Clip it instead, and style the <code>&lt;label&gt;</code> from <code>:has(:checked)</code> and <code>:has(:focus-visible)</code>.</p>
+<h3 id="touch">Sized for a thumb</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/booking/SlotGrid.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.grid {
+	display: grid;
+	/*
+	 * `auto-fill`, not `auto-fit`. With `auto-fit` a row containing three slots
+	 * stretches them across the full width, so the same 11:00 button is a
+	 * different size depending on how many neighbours it has — which looks like
+	 * a bug. `auto-fill` keeps the empty tracks, so every slot is the same size
+	 * whether the day is full or nearly empty.
+	 */
+	grid-template-columns: repeat(auto-fill, minmax(min(5.5rem, 100%), 1fr));
+	gap: var(--space-2);
+}
+
+.slot {
+	display: grid;
+	place-items: center;
+	min-height: 2.75rem;       /* 44px — the smallest comfortable tap target */
+	font-variant-numeric: tabular-nums;
+}</code></pre>
+</figure>
+<p><code>auto-fill</code> with <code>minmax</code> is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. 44px is the floor for a tap target, and this grid is the single most-tapped thing in the app. <code>tabular-nums</code> is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.</p>
+<h3 id="flip">When a slot disappears</h3>
+<p>Availability is live. Somebody else books 11:00 and that cell vanishes — and every later time shifts up by one position, <strong>while a finger is on the way down</strong>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/flip.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * FLIP — First, Last, Invert, Play.
+ *
+ *   First   — measure where everything is, right now.
+ *   Last    — let the DOM change. Items appear, disappear, move.
+ *   Invert  — instantly transform each survivor back to where it *was*, so the
+ *             frame looks identical to before the change.
+ *   Play    — animate those transforms away.
+ */</code></pre>
+</figure>
+<p>Nothing animates layout. Layout happens once, in a single frame; what animates is a <code>transform</code>, which the compositor handles without touching the main thread. Animating <code>top</code> and <code>left</code> forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.</p>
+<p>The point is not decoration. Movement that is *visible* is movement the customer can follow; movement that is instant is a button that was there a moment ago and now is not.</p>
+<aside class="callout callout--warn"><p>Our first version left every cell stuck at <code>position: absolute</code>, because the capture was asynchronous — GSAP is loaded on demand — and <code>play()</code> could start before it finished. The fix was to hold a <strong>promise</strong> of the captured state rather than the state itself, so <code>play()</code> awaits whatever <code>capture()</code> began and the two can never cross.</p></aside>
+<h3 id="reduced-motion">And for anyone who asked for less</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/gsap.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function prefersReducedMotion(): boolean {
+	return browser &amp;&amp; window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+export async function loadMotion() {
+	if (!browser || prefersReducedMotion()) return null;
+	// Only now is GSAP downloaded at all.
+	const { gsap } = await import('gsap');
+	const { Flip } = await import('gsap/Flip');
+	gsap.registerPlugin(Flip);
+	return { gsap, Flip };
+}</code></pre>
+</figure>
+<p>Both <code>capture</code> and <code>play</code> become no-ops and the grid updates instantly. For somebody who asked for less motion that is not a degraded experience, it is the correct one — and they never download the animation library at all.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Arrow keys move between times, Tab treats the grid as one stop, and booking a slot in a second window makes it slide out of the first.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-booking-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The booking page</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-customers-own-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The customer’s own page</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

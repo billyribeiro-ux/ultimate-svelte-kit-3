@@ -133,15 +133,16 @@ import { PUBLIC_ORIGIN } from '$app/env/public';   // safe in the browser`
 				lang: 'ts',
 				code: `
 DATABASE_AUTH_TOKEN: {
-	description: 'Only needed for a hosted libSQL database. Empty for a local file.',
-	schema: v.optional(
-		v.pipe(v.string(), v.transform((value) => value.trim() || undefined))
-	)
+	description:
+		'Auth token for a remote libSQL/Turso database. Leave unset when pointing at a local file.',
+	// Returning \`undefined\` from a schema function is how you declare
+	// "this one is genuinely allowed to be missing".
+	schema: (value) => (value ? value.trim() : undefined)
 },`
 			},
 			{
 				type: 'p',
-				text: 'A schema may return something that is not a string, and **the imported type follows it**. This one produces `string | undefined`, which is the only honest type for a variable that is genuinely optional — and it collapses an empty string to `undefined` so `authToken: \'\'` never reaches the driver.'
+				text: 'The schema does not have to be a valibot pipe — a plain function works, and whatever it returns is what the import gives you. A schema may return something that is not a string, and **the imported type follows it**. This one produces `string | undefined`, which is the only honest type for a variable that is genuinely optional, and it collapses an empty string to `undefined` so `authToken: \'\'` never reaches the driver.'
 			},
 
 			{ type: 'h3', id: 'validate-with-runtime', text: 'Validate against the runtime, not a regex' },
@@ -208,26 +209,40 @@ const timeZone = v.pipe(
 				file: 'src/lib/server/auth.ts',
 				lang: 'ts',
 				code: `
+import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { BETTER_AUTH_SECRET } from '$app/env/private';
 import { db } from './db/index.ts';
-import * as schema from './db/auth.schema.ts';
 
 export const auth = betterAuth({
+	baseURL: ORIGIN,
 	secret: BETTER_AUTH_SECRET,
-	database: drizzleAdapter(db, { provider: 'sqlite', schema }),
-	emailAndPassword: { enabled: true },
+
+	database: drizzleAdapter(db, { provider: 'sqlite' }),
+
+	emailAndPassword: {
+		enabled: true,
+		// The default is 8. Length is the only password rule that reliably helps;
+		// the ones about symbols mostly teach people to append "!1".
+		minPasswordLength: 12,
+		maxPasswordLength: 256
+	},
+
 	session: {
-		// Long enough that a receptionist is not signed out mid-shift.
-		expiresIn: 60 * 60 * 24 * 30,
+		expiresIn: 60 * 60 * 24 * 30, // thirty days
+		// Slide the expiry forward at most once a day, so an active user is not
+		// logged out mid-week but we are not writing a session row on every request.
 		updateAge: 60 * 60 * 24
 	}
 });`
 			},
 			{
 				type: 'p',
-				text: '`better-auth/minimal` is the smaller entry point: no social providers, no plugins, no admin UI. Importing from it rather than the default keeps a large amount of code out of the server bundle that we would never call.'
+				text: '`better-auth/minimal` is the smaller entry point: no social providers, no plugins, no organisation features. Importing from it rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything above still works.'
+			},
+			{
+				type: 'note',
+				text: 'The password rules are worth arguing about. A twelve-character minimum with no composition requirements beats an eight-character minimum that demands a symbol: length is the only rule that reliably increases the work an attacker has to do, and the symbol rules mostly teach people to append "!1".'
 			},
 
 			{ type: 'h3', id: 'hooks', text: 'Attaching the session to every request' },
@@ -236,17 +251,21 @@ export const auth = betterAuth({
 				file: 'src/hooks.server.ts',
 				lang: 'ts',
 				code: `
+import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { auth } from '#lib/server/auth.ts';
 
-export const handle: Handle = async ({ event, resolve }) => {
+const handleAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	event.locals.user = session?.user ?? null;
 	event.locals.session = session?.session ?? null;
 
 	return resolve(event);
-};`
+};
+
+// One job each, composed. \`handleHeaders\` is in chapter 34.
+export const handle: Handle = sequence(handleAuth, handleHeaders);`
 			},
 			{
 				type: 'warn',
@@ -284,20 +303,27 @@ export {};`
 				lang: 'ts',
 				code: `
 export const handleError: HandleServerError = ({ kind, error, event }) => {
-	const id = crypto.randomUUID().slice(0, 8);
-
 	/*
 	 * \`kind\` is one of 'app' | 'framework' | 'validation' | 'unknown'.
 	 *
-	 * A 'validation' error is somebody sending a malformed request — that is the
-	 * system working, and logging it at error level trains everybody to ignore
-	 * the log. The other kinds are ours and deserve the noise.
+	 * Only 'unknown' is a surprise. An 'app' error is our own \`error(404, …)\`, a
+	 * 'validation' error is somebody sending a malformed request, and a
+	 * 'framework' error already has a sensible message. Logging those at error
+	 * level trains everybody to ignore the log.
 	 */
-	if (kind !== 'validation') {
-		console.error(\`[\${id}] \${event.request.method} \${event.url.pathname}\`, error);
+	if (kind !== 'unknown') {
+		// Keep the framework's status and message; just satisfy our own \`App.Error\`.
+		return {};
 	}
 
-	return { message: 'Something went wrong on our end.', id };
+	const id = crypto.randomUUID().slice(0, 8);
+
+	console.error(\`[\${id}] \${event.request.method} \${event.url.pathname}\`, error);
+
+	return {
+		id,
+		message: 'Something went wrong at our end. Please try again.'
+	};
 };`
 			},
 			{
@@ -315,26 +341,27 @@ export const handleError: HandleServerError = ({ kind, error, event }) => {
 				file: 'src/lib/server/scheduling.ts',
 				lang: 'ts',
 				code: `
-export async function loadBookingByToken(token: string) {
-	// Check the shape before touching the database. A 26-character Crockford
-	// base32 string is cheap to verify and stops a malformed token becoming a
-	// query at all.
-	if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(token)) error(400, 'Invalid link');
+const tokenSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	// Crockford Base32, 26 characters. Matching the exact shape means a malformed
+	// token is rejected before it reaches the database.
+	v.regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, 'That link does not look right')
+);
 
-	const found = await db.query.booking.findFirst({
-		where: eq(booking.manageToken, token),
-		with: { service: true, staff: true, business: true, customer: true }
-	});
+export const getManagedBooking = query(tokenSchema, async (token): Promise<ManagedBooking> => {
+	const found = await loadBookingByToken(token);
+	if (!found) error(404, 'We could not find that booking.');
 
-	if (!found) error(404, 'Not found');
-
-	return found;
-}`
+	return { /* … only the fields this page needs … */ };
+});`
 			},
 			{
 				type: 'ul',
 				items: [
-					'**Shape first, database second.** A malformed token never becomes a query.',
+					'**Shape first, database second.** The schema rejects a malformed token before it becomes a query — so "badly formed" and "not found" cannot be told apart by timing.',
+					'**130 bits of CSPRNG output**, looked up by a unique index. Not guessable, and no prefix matching to leak length through timing either.',
+					'**Only the fields this page needs.** The query returns the whole booking row with four relations joined; the remote function hands back a flat object with no ids, no `manageToken`, and nothing about other customers.',
 					'**404, not 403.** "That token exists but is not yours" is not a sentence we ever want to say.',
 					'**`noindex` on the page.** The URL contains a credential; a search engine indexing it would be a breach delivered by Google.'
 				]
@@ -381,7 +408,7 @@ export function requireUser() {
 			},
 			{
 				type: 'p',
-				text: 'A **redirect**, not a 401, because this guards pages a human is looking at. The `redirectTo` is what turns "you were logged out" from an annoyance into a hiccup — and chapter 24 covers why that parameter has to be sanitised before it is followed.'
+				text: 'A **redirect**, not a 401, because this guards pages a human is looking at. The `redirectTo` is what turns "you were logged out" from an annoyance into a hiccup — and chapter 34 covers why that parameter has to be sanitised before it is followed.'
 			},
 			{
 				type: 'p',
@@ -497,43 +524,64 @@ export function assertCanManageDiaryOf(context: StaffContext, staffId: string): 
 				file: 'src/lib/server/scheduling.ts',
 				lang: 'ts',
 				code: `
-export async function createBooking(input: NewBooking): Promise<Booking> {
-	return writeQueue.run(async () => {
-		const created = await db.transaction(async (tx) => {
-			// 1. Re-derive availability from scratch. The client's idea of what was
-			//    free may be an hour old.
-			const slots = await availableSlotsFor(tx, input);
-			const chosen = slots.find((slot) => slot.start === input.start);
-			if (!chosen) throw new BookingError('slot_gone', 'That time is no longer available.');
+export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+	const created = await writeQueue.run(() => createBookingNow(input));
 
-			// 2. Find or create the customer.
-			const customerId = await upsertCustomer(tx, input);
+	// Only after the transaction has committed. Announcing a change that then
+	// rolls back would send every open booking page to re-read a diary that never
+	// changed — and, worse, briefly show a slot as taken that is still free.
+	publishDiaryChange(created.businessId);
 
-			// 3. Write the booking.
-			const [booked] = await tx.insert(booking).values({ ...  }).returning();
+	return created;
+}
 
-			// 4. Claim every grid cell. This is the step that can fail, and the
-			//    failure is the whole safety mechanism.
-			try {
-				await tx.insert(slotClaim).values(
-					slotsIn({ start: chosen.blockStart, end: chosen.blockEnd }).map((cell) => ({
-						staffId: input.staffId,
-						slotStart: new Date(cell),
-						bookingId: booked!.id
-					}))
-				);
-			} catch (thrown) {
-				if (isUniqueViolation(thrown)) {
-					throw new BookingError('slot_taken', 'Sorry — that time was just taken.');
-				}
-				throw thrown;
+async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
+	const now = input.now ?? Date.now();
+
+	return db.transaction(async (tx) => {
+		/* --- 1. Re-derive availability from scratch -------------------------- */
+		// … load the business, service, staff, the pairing, the rules and the
+		// occupied cells, then run the same pure \`availableSlots\` from chapter 8.
+
+		if (!offered.some((slot) => slot.start === input.start)) {
+			// Distinguish the two reasons a slot might not be on offer, because the
+			// remedies are different: one is "pick another time", the other is
+			// "you cannot book this far out at all".
+			if (input.start < now + foundBusiness.minNoticeMinutes * 60_000) {
+				throw new BookingError('too_soon', 'That time is too close to now to book online.');
 			}
+			if (input.start > now + foundBusiness.maxAdvanceDays * 86_400_000) {
+				throw new BookingError('too_far_ahead', 'The diary is not open that far ahead yet.');
+			}
+			throw new BookingError('slot_not_offered', 'That time is no longer available.');
+		}
 
-			return booked!;
-		});
+		/* --- 2. The customer -------------------------------------------------- */
+		// Find by (business, lowercased email) or insert.
 
-		// Only after the transaction has committed.
-		publishDiaryChange(diaryKey(input.businessId, created.startsAt));
+		/* --- 3. The booking row ----------------------------------------------- */
+		const [created] = await tx.insert(booking).values({ /* … snapshots … */ }).returning();
+		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
+
+		/* --- 4. The claim. This is the part that cannot be raced. -------------- */
+		const cells = slotsIn({ start: blockStart, end: blockEnd });
+
+		try {
+			await tx.insert(slotClaim).values(
+				cells.map((cell) => ({
+					staffId: chosenStaff.id,
+					slotStart: new Date(cell),
+					bookingId: created.id
+				}))
+			);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				// The whole transaction is about to roll back, so the booking row we
+				// inserted a moment ago will vanish with it. Nothing to clean up.
+				throw new BookingError('slot_taken', 'Sorry — that time was booked moments ago.');
+			}
+			throw error;
+		}
 
 		return created;
 	});
@@ -554,11 +602,15 @@ export async function createBooking(input: NewBooking): Promise<Booking> {
 				type: 'p',
 				text: 'Steps 1 and 4 look redundant. They are not: step 1 exists to produce a *good error message* in the common case, and step 4 exists to be *correct* in the rare one. Delete step 1 and the app still cannot double-book, it is just ruder about the ordinary case. Delete step 4 and it double-books.'
 			},
+			{
+				type: 'p',
+				text: 'Notice how carefully step 1 splits its refusal into three. "No longer available", "too close to now" and "the diary is not open that far ahead" are the same failure to the code and three different problems to the person reading them — and only one of the three is solved by picking another time.'
+			},
 
 			{ type: 'h3', id: 'after-commit', text: 'Publishing after the commit, not inside it' },
 			{
 				type: 'p',
-				text: '`publishDiaryChange` sits **outside** `db.transaction`. If it were inside, a dashboard could be woken up, re-read the diary, and see nothing — because the transaction it was told about has not committed yet. That is a race that reproduces about one time in fifty and looks like "the live update sometimes misses one".'
+				text: '`publishDiaryChange` sits **outside** the transaction — outside the write queue entirely, in the thin wrapper. If it were inside, a dashboard could be woken up, re-read the diary, and see nothing, because the transaction it was told about had not committed yet. Worse, a transaction that then rolled back would have announced a slot as taken that is still free. It is a race that reproduces about one time in fifty and reads as "the live update sometimes misses one".'
 			},
 
 			{ type: 'h3', id: 'sequential', text: 'A trap inside transactions' },
@@ -586,26 +638,29 @@ const [rules, claims] = await Promise.all([
 				lang: 'ts',
 				code: `
 export type BookingErrorCode =
-	| 'slot_gone'      // it stopped being offered — hours changed, notice window passed
-	| 'slot_taken'     // somebody else claimed it in the last few milliseconds
-	| 'outside_hours'
+	| 'slot_taken'          // somebody else claimed it in the last few milliseconds
+	| 'slot_not_offered'    // it stopped being offered — hours changed, day off added
+	| 'service_unavailable'
+	| 'staff_unavailable'
 	| 'too_soon'
 	| 'too_far_ahead'
-	| 'unknown_service';
+	| 'not_found'
+	| 'already_cancelled'
+	| 'too_late_to_cancel';
 
 export class BookingError extends Error {
-	constructor(
-		readonly code: BookingErrorCode,
-		message: string
-	) {
+	readonly code: BookingErrorCode;
+
+	constructor(code: BookingErrorCode, message: string) {
 		super(message);
 		this.name = 'BookingError';
+		this.code = code;
 	}
 }`
 			},
 			{
 				type: 'p',
-				text: 'A code **and** a message. The message is for the person; the code is for the interface, which can decide to refresh the grid on `slot_taken` and merely apologise on `too_far_ahead`. Matching on message text works right up until somebody improves the wording.'
+				text: 'A code **and** a message. The message is for the person; the code is for the interface, which can decide to refresh the grid on `slot_taken`, apologise on `too_far_ahead`, and — as the customer\'s cancel command does — return **409** rather than 400 for `too_late_to_cancel`, because the request was valid and the world moved on. Matching on message text works right up until somebody improves the wording.'
 			},
 
 			{
@@ -655,52 +710,55 @@ export function diaryKey(businessId: string, when: Date | number, zone: string):
 				code: `
 export async function* watchDiary(
 	key: string,
-	{ signal, intervalMs = 30_000 }: { signal?: AbortSignal; intervalMs?: number } = {}
+	{ signal, intervalMs }: WatchOptions
 ): AsyncGenerator<void> {
-	let dirty = true;   // yield once immediately, so the first read is not delayed
-	let wake: (() => void) | null = null;
+	let wake: (() => void) | undefined;
+	let pending = false;
 
-	const listener = () => {
-		dirty = true;
+	const bump = () => {
+		pending = true;
 		wake?.();
 	};
 
-	subscribers(key).add(listener);
-
 	const onAbort = () => wake?.();
-	signal?.addEventListener('abort', onAbort, { once: true });
+	signal.addEventListener('abort', onAbort, { once: true });
+
+	let set = listeners.get(key);
+	if (!set) listeners.set(key, (set = new Set()));
+	set.add(bump);
+
+	const timer = intervalMs ? setInterval(bump, intervalMs) : undefined;
+	// Keep a periodic tick from holding the process open on shutdown.
+	if (timer && typeof timer === 'object' && 'unref' in timer) timer.unref();
 
 	try {
-		while (!signal?.aborted) {
-			if (dirty) {
-				dirty = false;
+		while (!signal.aborted) {
+			if (pending) {
+				pending = false;
 				yield;
 				continue;
 			}
 
-			// Sleep until somebody publishes, or the heartbeat expires.
 			await new Promise<void>((resolve) => {
 				wake = resolve;
-				const timer = setTimeout(resolve, intervalMs);
-				// Clearing the timer matters: without it a busy diary accumulates
-				// one pending timeout per publish for the life of the connection.
-				void Promise.resolve().then(() => signal?.addEventListener('abort', () => clearTimeout(timer), { once: true }));
 			});
-			wake = null;
+			wake = undefined;
 		}
 	} finally {
-		subscribers(key).delete(listener);
-		signal?.removeEventListener('abort', onAbort);
+		if (timer) clearInterval(timer);
+		set.delete(bump);
+		if (set.size === 0) listeners.delete(key);
+		signal.removeEventListener('abort', onAbort);
 	}
 }`
 			},
 			{
 				type: 'ul',
 				items: [
-					'**`dirty` is a flag, not a counter.** Five bookings landing in the same second wake the watcher once and it re-reads the diary once. Counting them would produce five identical re-reads. Coalescing is the correct behaviour, not a shortcut.',
-					'**It yields immediately on the first pass.** A live query that waited for a change before its first value would render an empty diary until somebody booked something.',
-					'**The heartbeat.** Yielding every thirty seconds regardless keeps proxies from killing an idle connection, and means a missed publish costs half a minute of staleness rather than a whole day of it.',
-					'**`finally` always runs.** When the browser tab closes, the generator is disposed, and the listener is removed. Without that, every page view leaks a subscriber forever.'
+					'**`pending` is a flag, not a counter.** Five bookings landing in the same second wake the watcher once and it re-reads the diary once. Counting them would produce five identical re-reads. Coalescing is the correct behaviour, not a shortcut.',
+					'**The sleep has no timeout of its own.** The promise resolves only when `bump` is called — by a publish, by the interval, or by the abort listener. Nothing spins.',
+					'**`timer.unref()`** keeps a periodic tick from holding the Node process open at shutdown. Without it, `SIGTERM` on a server with one open diary page waits for a timer that will never be the last thing to happen.',
+					'**`finally` always runs.** When the browser tab closes, the generator is disposed, the listener is removed, and the key is dropped from the map once nobody is left. Without that, every page view leaks a subscriber forever.'
 				]
 			},
 			{

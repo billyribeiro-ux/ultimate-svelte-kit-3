@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The booking page — Building Halfpast</title>
+<meta name="description" content="Service, person, day, time, details — in one page that survives a refresh and works without JavaScript.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 71.42857142857143%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html" aria-current="page"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>The booking page</h1>
+			<p class="lede">Service, person, day, time, details — in one page that survives a refresh and works without JavaScript.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>The public flow, with state in the URL and the details form hidden until it is relevant.</p></aside>
+			<p>Five decisions, one page, no wizard. Each step appears as the one before it is answered, and the whole thing is one scroll on a phone.</p>
+<h3 id="url-state">The URL is the state</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const serviceSlug = $derived(page.url.searchParams.get('service'));
+
+function pickService(slug: string | null) {
+	/*
+	 * `page.url` is a `ReadonlyURL` in SvelteKit 3 — its `searchParams` has no
+	 * `set` or `delete`, and assigning to `pathname` throws. That is a good
+	 * change: mutating the page's URL object never did anything useful and
+	 * silently looked like it might. Copy it through `href` to get a real one.
+	 */
+	const url = new URL(page.url.href);
+	if (slug) url.searchParams.set('service', slug);
+	else url.searchParams.delete('service');
+
+	/*
+	 * `reset: false` keeps the scroll position and the focused element.
+	 * SvelteKit 3 replaced the old `noScroll` and `keepFocus` pair with this
+	 * one option, because wanting one without the other was almost always a
+	 * mistake — a page that stays put but throws focus to `&lt;body&gt;` strands a
+	 * keyboard user in a place they cannot see.
+	 */
+	void goto(url, { reset: false });
+}</code></pre>
+</figure>
+<p>Putting the choices in the query string buys three things for free: a refresh does not lose the customer's progress, the salon can link straight to <code>?service=cut-and-finish</code> from Instagram, and a customer can send a friend the exact page they are looking at.</p>
+<aside class="callout callout--note"><p>Two SvelteKit 3 changes are visible in those twenty lines, and the comments explain both. Read them rather than skimming: <code>ReadonlyURL</code> and the merged <code>reset</code> option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.</p></aside>
+<h3 id="progressive">Revealing the form at the right moment</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if chosenSlot}
+	&lt;section class=&quot;details&quot; {@attach reveal({ y: 16 })}&gt;
+		&lt;h2&gt;Your details&lt;/h2&gt;
+		&lt;!-- name, email, phone, note --&gt;
+	&lt;/section&gt;
+{/if}</code></pre>
+</figure>
+<p>A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. It appears when a time is chosen and animates in, which also tells the customer *something happened* without a message saying so.</p>
+<h3 id="only-one">Not asking questions with one answer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if offeredBy.length &gt; 1}
+	&lt;fieldset class=&quot;who&quot;&gt;
+		&lt;legend&gt;Choose who with&lt;/legend&gt;
+		&lt;!-- radio per person, plus &quot;anyone&quot; --&gt;
+	&lt;/fieldset&gt;
+{/if}</code></pre>
+</figure>
+<p>If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.</p>
+<h3 id="zones">Two clocks, honestly labelled</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;SlotGrid slots={daySlots} zone={viewerZone} field={book.fields.slot} /&gt;
+
+{#if zonesDiffer &amp;&amp; selectedStart !== null}
+	&lt;p class=&quot;zone-note&quot;&gt;
+		That is {formatTime(selectedStart, businessZone)} at the studio ({offsetLabel(
+			selectedStart,
+			businessZone
+		)}), and
+		{formatTime(selectedStart, viewerZone)} where you are.
+	&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>Times render in the <strong>visitor's</strong> zone, because that is the clock they will be looking at when they need to leave the house. The studio's time is shown only when the two zones actually differ <strong>and</strong> a slot has been chosen — saying &quot;that is 14:00 at the studio&quot; to somebody standing in the studio's own city is noise, and saying it before they have picked anything is noise with no referent.</p>
+<aside class="callout callout--warn"><p>The server does not know the visitor's zone on the first render, so it uses the studio's and the browser corrects it after hydration. Do not &quot;fix&quot; that by hiding times until hydration: a page whose content appears a beat late is worse than one that adjusts, and it is empty to a search engine.</p></aside>
+<h3 id="errors">When the answer is no</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if book.fields.allIssues()?.length}
+	&lt;Alert tone=&quot;error&quot; title=&quot;We could not book that&quot;&gt;
+		&lt;p&gt;{book.fields.allIssues()?.[0]?.message}&lt;/p&gt;
+	&lt;/Alert&gt;
+{/if}</code></pre>
+</figure>
+<p>The message the customer sees for a lost race is &quot;Sorry — that time was just taken. Please choose another.&quot; — and because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Choosing a service updates the URL; refreshing keeps it; the details form appears only after a time is picked; and the whole flow works with JavaScript disabled.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-design-system-in-plain-css.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A design system in plain CSS</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-slot-grid.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The slot grid</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

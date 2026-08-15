@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The five-minute grid — Building Halfpast</title>
+<meta name="description" content="Turning &quot;do these two appointments overlap?&quot; — a question with a dozen edge cases — into &quot;is this cell taken?&quot;, which has none.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html" aria-current="page"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>The five-minute grid</h1>
+			<p class="lede">Turning &quot;do these two appointments overlap?&quot; — a question with a dozen edge cases — into &quot;is this cell taken?&quot;, which has none.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write <code>src/lib/time/grid.ts</code> and understand why half-open intervals remove an entire class of bug.</p></aside>
+			<p>Here is the naive way to ask whether a new appointment clashes with an existing one:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the overlap test everybody writes</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const clashes = newStart &lt; existingEnd &amp;&amp; newEnd &gt; existingStart;</code></pre>
+</figure>
+<p>That line is actually correct. The problem is not the line — it is that you need it in six places, and one of them will be written with <code>&lt;=</code>, and the bug it produces is &quot;occasionally two customers are booked back to back with no gap, but only when one of them booked a service with a buffer&quot;. Good luck.</p>
+<h3 id="the-idea">The idea</h3>
+<p>Stop treating the diary as continuous. Treat it as a row of <strong>five-minute cells</strong>. Every appointment is a run of consecutive cells. &quot;Is this time free?&quot; becomes &quot;are all of these cells empty?&quot;, which is a set lookup and cannot be got subtly wrong.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/grid.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Occupancy granularity. Every duration, buffer and interval must divide by it. */
+export const SLOT_MINUTES = 5;
+
+/** The same number, in milliseconds, because that is the unit instants use. */
+export const SLOT_MS = SLOT_MINUTES * 60 * 1000;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why five minutes, and why it is safe everywhere</h4>
+	<p>A cell is identified by the instant it starts. Because 5 divides evenly into 60, and epoch zero falls exactly on the hour, every cell boundary is a clean multiple of <code>SLOT_MS</code> in <strong>every</strong> time zone on Earth — including the ones offset by 30 minutes (India) or 45 (Nepal, the Chatham Islands). The grid needs to know nothing about time zones at all, which is precisely why it is trustworthy.</p>
+</aside>
+<h3 id="half-open">Half-open intervals</h3>
+<p>An interval in this app is <strong>half-open</strong>: the start instant is inside it, the end instant is not.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/grid.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A half-open span of real time: `start` is inside it, `end` is not. */
+export interface Interval {
+	readonly start: number;
+	readonly end: number;
+}</code></pre>
+</figure>
+<p>This is not fussiness. An appointment that ends at 09:45 and one that starts at 09:45 do <strong>not</strong> clash. Expressing that with inclusive bounds means writing <code>end - 1</code> somewhere, and <code>end - 1</code> is a millisecond, and one day somebody will write <code>end - 1</code> in minutes instead and lose an hour.</p>
+<h3 id="slots-in">Which cells does an interval touch?</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/grid.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function floorToSlot(instant: number): number {
+	return Math.floor(instant / SLOT_MS) * SLOT_MS;
+}
+
+export function ceilToSlot(instant: number): number {
+	return Math.ceil(instant / SLOT_MS) * SLOT_MS;
+}
+
+export function slotsIn({ start, end }: Interval): number[] {
+	if (!(end &gt; start)) return [];
+
+	const first = floorToSlot(start);
+	const last = ceilToSlot(end);
+	const cells: number[] = [];
+
+	for (let cell = first; cell &lt; last; cell += SLOT_MS) cells.push(cell);
+
+	return cells;
+}</code></pre>
+</figure>
+<p>Notice the widening. The start is <strong>floored</strong> and the end is <strong>ceiled</strong>, so an appointment running 09:02–09:38 consumes the cells from 09:00 to 09:40. That is deliberate: half of the 09:00 cell is genuinely unusable, so the grid marks it taken rather than pretending somebody could squeeze in.</p>
+<aside class="callout callout--note"><p><code>Math.floor</code> rather than <code>Math.trunc</code> matters for instants before 1970, which are negative. <code>trunc</code> rounds those towards zero — i.e. *forwards* in time — and the grid would silently misalign. Nobody will book a haircut in 1969, but the day a bad input produces a negative number, flooring keeps the behaviour consistent instead of interesting.</p></aside>
+<h3 id="is-free">The check itself</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/grid.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function isFree(interval: Interval, occupied: ReadonlySet&lt;number&gt;): boolean {
+	const last = ceilToSlot(interval.end);
+	for (let cell = floorToSlot(interval.start); cell &lt; last; cell += SLOT_MS) {
+		if (occupied.has(cell)) return false;
+	}
+	return true;
+}</code></pre>
+</figure>
+<p><code>occupied</code> is a <code>Set</code> of cell start instants — which is exactly the shape a database query against our claims table produces. <code>Set.has</code> is O(1), so checking a 60-minute appointment is twelve hash lookups. Checking every candidate start time across a fortnight is a few thousand, which is nothing.</p>
+<p>It walks the cells directly rather than calling <code>slotsIn</code> and testing the array, because it can stop at the first collision and never allocates.</p>
+<h3 id="merge">Merging windows</h3>
+<p>One more function, needed the moment an owner writes two overlapping shifts by accident.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/grid.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function mergeIntervals(intervals: readonly Interval[]): Interval[] {
+	const sorted = [...intervals].filter((i) =&gt; i.end &gt; i.start).sort((a, b) =&gt; a.start - b.start);
+
+	const merged: Interval[] = [];
+	for (const next of sorted) {
+		const current = merged[merged.length - 1];
+		if (current &amp;&amp; next.start &lt;= current.end) {
+			merged[merged.length - 1] = { start: current.start, end: Math.max(current.end, next.end) };
+		} else {
+			merged.push({ start: next.start, end: next.end });
+		}
+	}
+
+	return merged;
+}</code></pre>
+</figure>
+<ul><li><code>&lt;=</code> rather than <code>&lt;</code> means <strong>touching</strong> windows merge too: 09:00–12:00 and 12:00–17:00 become one 09:00–17:00. That matters, because an appointment is allowed to straddle the seam.</li><li><code>Math.max</code> is needed because the next interval may sit entirely inside the one being held. Without it, a short window swallowed by a long one would shorten the long one.</li><li><code>[...intervals]</code> copies before sorting, because <code>sort</code> mutates and the caller did not ask for that.</li></ul>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>src/lib/time/grid.ts</code> exists and exports <code>SLOT_MS</code>, <code>floorToSlot</code>, <code>ceilToSlot</code>, <code>slotsIn</code>, <code>isFree</code> and <code>mergeIntervals</code>. You can say out loud why an appointment ending at 09:45 does not clash with one starting at 09:45.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-date-library-that-knows-places.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A date library that knows about places</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-availability-engine.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The availability engine</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

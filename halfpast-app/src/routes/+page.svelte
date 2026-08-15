@@ -63,8 +63,14 @@
 			<Button href={resolve('/sign-in')} size="lg" variant="secondary">Sign in to a diary</Button>
 		</div>
 
+		<!--
+			The seeded sign-in details used to be printed here. They are not any more:
+			`pnpm run db:seed` prints them, which is the only place somebody who can
+			run the seed needs them, and it keeps a working owner password out of
+			every deployed copy of this page.
+		-->
 		<p class="demo-note text-faint" {@attach reveal({ y: 8, delay: 0.28 })}>
-			Demo studio: <code>ada@willowlane.test</code> / <code>halfpast-demo-2026</code>
+			Run <code>pnpm run db:seed</code> — it prints the demo studio's sign-in details.
 		</p>
 	</div>
 </section>

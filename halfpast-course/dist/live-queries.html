@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live queries — Building Halfpast</title>
+<meta name="description" content="`query.live` takes an async generator. Three lines of shape, and the receptionist’s screen updates itself.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">22 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 62.857142857142854%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html" aria-current="page"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 22</p>
+			<h1>Live queries</h1>
+			<p class="lede"><code>query.live</code> takes an async generator. Three lines of shape, and the receptionist’s screen updates itself.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Availability that disappears from every open booking page the instant somebody takes it.</p></aside>
+			<p>A <code>query</code> returns a value. A <code>query.live</code> returns an <strong>async generator</strong>, and everything it yields is streamed to every browser subscribed with the same arguments.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/booking.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const getAvailability = query.live(availabilityArgs, async function* (args) {
+	const { request } = getRequestEvent();
+
+	const found = await db.query.business.findFirst({ where: eq(business.slug, args.slug) });
+	if (!found) error(404, 'We could not find that business.');
+
+	const read = async (): Promise&lt;AvailabilityResult&gt; =&gt; { /* … */ };
+
+	yield await read();
+
+	for await (const _ of watchDiary(found.id, { signal: request.signal, intervalMs: 60_000 })) {
+		void _;
+		yield await read();
+	}
+});</code></pre>
+</figure>
+<p>The shape is always the same three steps, and it is worth learning as a shape:</p>
+<ol><li><strong>Yield the current answer immediately</strong>, so the page has something to draw.</li><li><strong>Wait for a reason to look again.</strong></li><li><strong>Yield the new answer</strong>, and go back to 2.</li></ol>
+<h3 id="not-polling">Step 2 is not a poll</h3>
+<p><code>watchDiary</code> blocks until somebody actually books or cancels. A booking page left open on a quiet Tuesday afternoon costs one open connection and no queries at all. Polling every five seconds would cost seventeen thousand queries a day per open tab, to discover nothing.</p>
+<p>The one-minute heartbeat exists because <strong>time passing is itself a change</strong>. A slot two hours out disappears when the salon's notice period reaches it, and no database write announces that. Without the tick, a page left open would keep offering a time that had quietly become unbookable.</p>
+<h3 id="cleanup">The signal is not optional</h3>
+<p><code>request.signal</code> is what makes this safe to leave running. When the customer closes the tab, the signal aborts, the generator's <code>finally</code> runs, and the listener is removed.</p>
+<aside class="callout callout--warn"><p>Leave it out and every abandoned booking page leaves a subscriber behind forever. The app works perfectly for a week and then falls over, and the stack trace points at whatever unlucky code was running when memory ran out.</p></aside>
+<h3 id="choosing">What deserves to be live</h3>
+<p>Availability is live. The list of services on the same page is not — it is a plain <code>query</code>.</p>
+<p>The rule: does it change <strong>while somebody is looking at it</strong>? Availability does, constantly, because of strangers. Services change when an owner edits them, which is roughly never during one customer's visit. Making everything live costs connections and complexity to solve a problem nobody has.</p>
+<h3 id="client">On the client, it is just a query</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const availability = $derived(
+	await getAvailability({ slug, serviceId, staffId, from: day, days: 14 })
+);</code></pre>
+</figure>
+<p>No subscription to manage, no cleanup to write, no <code>onDestroy</code>. The <code>$derived</code> re-runs when the arguments change and the component re-renders when a new value arrives. The generator on the server and the <code>await</code> in the component are the entire API.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Two browser windows on the same booking page. Book a time in one; watch it vanish from the other without a reload.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="forms-without-javascript.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Forms that work without JavaScript</span>
+			</a>
+			<a class="pager__link pager__link--next" href="async-svelte.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Async Svelte, and its sharp edges</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

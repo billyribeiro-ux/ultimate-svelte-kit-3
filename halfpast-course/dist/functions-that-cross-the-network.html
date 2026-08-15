@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Functions that cross the network — Building Halfpast</title>
+<meta name="description" content="`query` and `command`: server code you import into a component and call like any other function.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 57.14285714285714%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html" aria-current="page"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>Functions that cross the network</h1>
+			<p class="lede"><code>query</code> and <code>command</code>: server code you import into a component and call like any other function.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A <code>.remote.ts</code> file whose exports run on the server, are typed end to end, and validate every argument.</p></aside>
+			<p>Here is the whole idea, in one file and one component.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/booking.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import * as v from 'valibot';
+import { query } from '$app/server';
+
+export const getBookingPage = query(slugSchema, async (slug): Promise&lt;BookingPageData&gt; =&gt; {
+	const found = await db.query.business.findFirst({ where: eq(business.slug, slug) });
+	if (!found) error(404, 'We could not find that business.');
+
+	return { /* … */ };
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { getBookingPage } from './booking.remote.ts';
+
+	const shop = $derived(await getBookingPage(data.slug));
+&lt;/script&gt;
+
+&lt;h1&gt;{shop.business.name}&lt;/h1&gt;</code></pre>
+</figure>
+<p>That is it. No endpoint to name, no <code>fetch</code> to write, no <code>+page.server.ts</code>, no response type to keep in sync. The component imports a function and awaits it. SvelteKit puts an HTTP request in the middle and neither side has to know.</p>
+<aside class="callout callout--note"><p>The server code never reaches the browser. The import is replaced at build time with a small stub that makes the request. Your database credentials, your Drizzle queries and your <code>if (!found)</code> are all server-side, and the bundle is checked to make sure of it.</p></aside>
+<h3 id="security">The security model is inverted</h3>
+<p>This is the part to take seriously, because it is the opposite of a load function.</p>
+<ul><li>A <strong>load function</strong> runs for one URL. It can trust <code>params</code>, because the router produced them.</li><li>A <strong>remote function</strong> is a public HTTP endpoint. Anybody can call it with anything, from anywhere, in any order.</li></ul>
+<p>So every argument gets a schema, and — this is the important bit — the server must never look at <code>event.params</code> or <code>event.url</code> to decide what to return.</p>
+<aside class="callout callout--warn"><p>SvelteKit enforces this: reading <code>event.params</code> or <code>event.url</code> inside a <code>query</code> <strong>throws</strong>. It is not a lint rule you can ignore. Everything the server needs must arrive as a validated argument, because the URL a remote call happens to be made from is not evidence of anything.</p></aside>
+<h3 id="schemas">Schemas, with valibot</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/booking.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const slugSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Not a valid business address'),
+	v.maxLength(64)
+);
+
+const idSchema = v.pipe(v.string(), v.uuid('Not a valid id'));
+
+const isoDateSchema = v.pipe(v.string(), v.isoDate('Expected a YYYY-MM-DD date'));
+
+const timeZoneSchema = v.pipe(
+	v.string(),
+	v.maxLength(64),
+	v.check(isValidTimeZone, 'Not a time zone this server recognises')
+);</code></pre>
+</figure>
+<p>SvelteKit accepts any <strong>Standard Schema</strong> library, which is a small shared interface that valibot, Zod, ArkType and others implement. We use valibot: it is a fraction of the size, and because every rule is a separate function, a bundler drops the ones you do not use.</p>
+<p>A schema is not paperwork. It is the only thing standing between <code>serviceId</code> and somebody sending an object where a string was expected, to see what happens.</p>
+<h3 id="commands">Commands: the ones that change things</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/studio.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const addHours = command(hoursSchema, async (data) =&gt; {
+	const context = await requireStaff(data.slug);
+	assertCanManageDiaryOf(context, data.staffId);
+
+	if (data.endMinute &lt;= data.startMinute) {
+		error(400, 'A shift has to end after it starts.');
+	}
+
+	await db.insert(availabilityRule).values({ /* … */ });
+
+	// Tell every subscriber to this query to fetch again — in the same response.
+	void getHours({ slug: data.slug }).refresh();
+	publishDiaryChange(context.business.id);
+
+	return { added: true };
+});</code></pre>
+</figure>
+<p><code>query</code> reads, <code>command</code> writes. The split is not cosmetic: queries are cached and de-duplicated by their arguments, and commands are not, because &quot;add this shift&quot; twice is two shifts.</p>
+<h3 id="single-flight">Single-flight mutations</h3>
+<p>That <code>getHours(...).refresh()</code> line is worth stopping on. It runs <strong>on the server, inside the command</strong>, and it means the response to &quot;add this shift&quot; carries the new list of hours with it.</p>
+<p>The usual pattern is: post the change, wait, then fetch the new state, wait again. Two round trips, and a visible flicker in between where the screen shows the old data. Refreshing inside the handler collapses that into one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the client-side spelling of the same idea</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// When the component knows better than the server which queries to update:
+await setServiceActive({ id, isActive }).updates(getServices(slug));</code></pre>
+</figure>
+<h3 id="errors">One trap on the way back</h3>
+<p>When a command calls <code>error(400, 'A shift has to end after it starts.')</code>, the browser sees SvelteKit's <code>HttpError</code>. And <code>HttpError</code> <strong>does not extend <code>Error</code></strong>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">looks right, silently wrong</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">catch (thrown) {
+	// Takes the else branch for every deliberate server error, because
+	// HttpError is a plain class with .status and .body — not an Error.
+	lastError = thrown instanceof Error ? thrown.message : 'Could not add that shift.';
+}</code></pre>
+</figure>
+<p>The message you wrote is discarded and the generic fallback appears instead. Nothing looks broken — a plausible sentence is still on screen — which is exactly why this survives review. We only found it because an end-to-end test asserted on the real wording.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function messageFrom(thrown: unknown, fallback: string): string {
+	if (isHttpErrorShape(thrown) &amp;&amp; typeof thrown.body.message === 'string') {
+		const message = thrown.body.message.trim();
+		if (message) return message;
+	}
+
+	if (thrown instanceof Error &amp;&amp; thrown.message.trim()) {
+		return thrown.message;
+	}
+
+	return fallback;
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Write it once, in <code>src/lib/errors.ts</code>, and use it in every catch. Seven places in this app catch a remote rejection; all seven had the same bug, because all seven were written from the same reasonable instinct.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>The booking page renders from a <code>query</code>, and a <code>command</code> that calls <code>error(400, …)</code> shows *your* message in the browser, not a generic one.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="telling-everyone-something-changed.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Telling everyone something changed</span>
+			</a>
+			<a class="pager__link pager__link--next" href="forms-without-javascript.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Forms that work without JavaScript</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

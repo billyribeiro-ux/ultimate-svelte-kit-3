@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile first, for real — Building Halfpast</title>
+<meta name="description" content="Breakpoints that come from the content, tap targets that fit a thumb, and the viewport units that actually work.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 88.57142857142857%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html" aria-current="page"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>Mobile first, for real</h1>
+			<p class="lede">Breakpoints that come from the content, tap targets that fit a thumb, and the viewport units that actually work.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Every screen usable one-handed on a phone, and tested on one.</p></aside>
+			<p>&quot;Mobile first&quot; is usually a claim rather than a practice. The practical test: <strong>write no <code>min-width</code> media query until the layout visibly needs one.</strong> If your CSS starts with a desktop layout and undoes it below 768px, that is desktop-first with extra steps.</p>
+<h3 id="no-breakpoints">Most layouts need no breakpoint at all</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the grid of times</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+	gap: var(--space-2);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the service list</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.services {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+	gap: var(--space-4);
+}</code></pre>
+</figure>
+<p>Both are fully responsive with no media query. <code>min(100%, 18rem)</code> is the detail worth stealing: without it, a card with an 18rem minimum overflows a 375px phone, because <code>minmax</code> honours the minimum even when there is not room. Capping it at 100% lets it shrink when it must.</p>
+<h3 id="breakpoints">And when you do need one</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* utilities.css — the only min-width query in the app. */
+@media (min-width: 48rem) {
+	.split {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* DateStrip.svelte — the only max-width one: below 26rem the day
+   labels stop fitting and shorten to their first two letters. */
+@media (max-width: 26rem) {
+	.day .name {
+		font-size: var(--text-xs);
+	}
+}</code></pre>
+</figure>
+<p>Two media queries in the entire application, and neither came from a table of phone sizes — both were written at the width where the content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.</p>
+<h3 id="touch">Thumbs, not cursors</h3>
+<ul><li><strong>44px minimum</strong> on anything tappable — <code>min-block-size: 2.75rem</code>. The slot grid, the day strip, every icon button.</li><li><strong>Spacing between targets</strong>, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.</li><li><strong>Primary actions at the bottom</strong> on a phone. The top of a 6.7-inch screen needs a hand shuffle.</li><li><strong><code>inputmode</code> and <code>autocomplete</code></strong> on every field. <code>autocomplete=&quot;email&quot;</code> plus <code>inputmode=&quot;email&quot;</code> is the difference between two taps and thirty.</li></ul>
+<h3 id="dvh">The viewport unit that does not lie</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.screen {
+	/* Not 100vh. */
+	min-block-size: 100dvh;
+}</code></pre>
+</figure>
+<p><code>100vh</code> on mobile Safari is the height of the viewport <strong>with the address bar hidden</strong>, which is not the height you have when the page loads. The bottom of a <code>100vh</code> element sits underneath the browser chrome, and that is where people put submit buttons. <code>dvh</code> is the dynamic viewport height and is correct at every moment.</p>
+<h3 id="testing">Testing it on a phone, in CI</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">projects: [
+	{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+	{ name: 'mobile', use: { ...devices['Pixel 7'] } }
+]</code></pre>
+</figure>
+<p>Every test in the suite runs twice, and the mobile project uses a real touch-enabled emulation — viewport, device pixel ratio, user agent and pointer type. A <code>:hover</code>-only affordance passes on desktop and fails here, which is the entire point.</p>
+<aside class="callout callout--note"><p><code>workers: 1</code>. The suite shares one database and re-seeds before every test; running two workers means two tests booking into the same diary and blaming the application for it.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>pnpm test:e2e</code> passes on both projects, and the whole booking flow can be completed one-handed on a 375px-wide screen without horizontal scrolling.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="motion-with-a-job.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Motion with a job</span>
+			</a>
+			<a class="pager__link pager__link--next" href="unit-tests-that-earn-their-keep.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Unit tests that earn their keep</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

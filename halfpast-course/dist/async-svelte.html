@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Async Svelte, and its sharp edges — Building Halfpast</title>
+<meta name="description" content="`await` inside `$derived`, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 65.71428571428571%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html" aria-current="page"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>Async Svelte, and its sharp edges</h1>
+			<p class="lede"><code>await</code> inside <code>$derived</code>, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Components that await data directly, with sensible loading and error states — and no server-side crashes.</p></aside>
+			<p>Svelte 5 with <code>experimental.async</code> lets you <code>await</code> inside <code>$derived</code> and directly in markup. It removes an entire category of code: no <code>{#await}</code> pyramids, no <code>loading</code> booleans, no <code>data.streamed.thing</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">sveltekit({
+	compilerOptions: {
+		runes: true,
+		experimental: { async: true }
+	}
+})</code></pre>
+</figure>
+<h3 id="boundaries">Boundaries</h3>
+<p>An awaiting component needs somewhere for its loading and error states to live. That is <code>&lt;svelte:boundary&gt;</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	{@render children()}
+
+	{#snippet failed(error, reset)}
+		&lt;Alert tone=&quot;error&quot; title=&quot;Something went wrong&quot;&gt;
+			&lt;p&gt;{messageFrom(error, 'We could not load this page.')}&lt;/p&gt;
+			&lt;Button onclick={reset}&gt;Try again&lt;/Button&gt;
+		&lt;/Alert&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<p>The <code>reset</code> function re-runs the failed work. For a network hiccup that is genuinely all the recovery anybody needs, and it is one line.</p>
+<aside class="callout callout--warn"><p>A <code>pending</code> snippet renders <strong>immediately during server rendering and does not wait for the awaits</strong>. Put one on the root boundary and every page in your app ships HTML whose entire body is the word &quot;Loading…&quot;. The page looks fine in a browser — it hydrates a moment later — and is empty to a search engine, a link preview, and anybody on a slow connection. We shipped that for an hour before noticing.</p></aside>
+<p>The fix is to put <code>pending</code> only where a client-side wait is genuinely expected — a panel that refetches when a filter changes — and never on the boundary that wraps a whole page.</p>
+<aside class="callout callout--warn"><p>When a component binds to a <strong>member</strong> of a <code>$state</code> object — <code>bind:value={draft.weekday}</code> — the compiler emits a getter that runs before the part of the script following the first awaited <code>$derived</code>. Declare the state after those and it is still <code>undefined</code> when the getter runs. Server rendering dies with &quot;Cannot read properties of undefined (reading 'weekday')&quot; and the page 500s before anybody sees it.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">twelve lines that reproduce it</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	const later = $derived(await Promise.resolve('ready'));
+
+	let draft = $state({ weekday: 1 });   // ← declared after the await
+&lt;/script&gt;
+
+&lt;select bind:value={draft.weekday}&gt;     &lt;!-- 500: draft is undefined --&gt;
+	&lt;option value={1}&gt;Monday&lt;/option&gt;
+&lt;/select&gt;</code></pre>
+</figure>
+<p>Move <code>let draft</code> above the <code>$derived</code> and it renders. Binding to a plain <code>$state</code> variable is unaffected, and so is reading <code>draft.weekday</code> in ordinary markup — which is exactly what makes it so easy to walk into, and so confusing when it happens.</p>
+<aside class="callout callout--note"><p>The rule to remember: <strong>declare any state you <code>bind:</code> to at the top of the script, above anything that awaits.</strong> It costs nothing, and it is a good habit regardless.</p></aside>
+<h3 id="untrack">Effects that trigger themselves</h3>
+<p>One more, because it produces a symptom that makes no sense: radio buttons that will not stay selected.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the bug</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">$effect(() =&gt; {
+	// Reads book.fields.slot in order to write it. The write invalidates the
+	// read, the effect runs again, and the selection never survives a frame.
+	if (!isStillOffered(book.fields.slot.value())) book.fields.slot.set('');
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the fix</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { untrack } from 'svelte';
+
+$effect(() =&gt; {
+	// Depend on the availability — the thing that should re-run this — and read
+	// the field without subscribing to it.
+	const offered = availability.staff.flatMap((entry) =&gt; entry.slots);
+
+	untrack(() =&gt; {
+		if (!offered.some((slot) =&gt; matches(slot, book.fields.slot.value()))) {
+			book.fields.slot.set('');
+		}
+	});
+});</code></pre>
+</figure>
+<p><code>untrack</code> says &quot;read this, but do not treat it as a dependency&quot;. The effect now re-runs when availability changes, which is the only reason it should, and clearing the field does not wake it up again.</p>
+<h3 id="why-worth-it">Why this is worth the sharp edges</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">before — SvelteKit 2</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script&gt;
+	export let data;
+&lt;/script&gt;
+
+{#await data.availability}
+	&lt;p&gt;Loading…&lt;/p&gt;
+{:then availability}
+	&lt;SlotGrid {availability} /&gt;
+{:catch error}
+	&lt;p&gt;{error.message}&lt;/p&gt;
+{/await}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">after</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script&gt;
+	const availability = $derived(await getAvailability(args));
+&lt;/script&gt;
+
+&lt;SlotGrid {availability} /&gt;</code></pre>
+</figure>
+<p>The loading and error states did not disappear — they moved to a boundary, where they are written once for a whole region instead of once per await. Multiply that across a dozen components and it is a different codebase.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Every page in the app server-renders its real content — view source and see the studio name, not &quot;Loading…&quot; — and a thrown query renders your boundary's <code>failed</code> snippet with a working Try again button.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="live-queries.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Live queries</span>
+			</a>
+			<a class="pager__link pager__link--next" href="a-design-system-in-plain-css.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A design system in plain CSS</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

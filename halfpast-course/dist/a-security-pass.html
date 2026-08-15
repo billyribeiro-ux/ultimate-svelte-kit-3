@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A security pass — Building Halfpast</title>
+<meta name="description" content="Walking the app the way somebody hostile would, with a checklist rather than a vibe.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">34 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 97.14285714285714%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html" aria-current="page"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 34</p>
+			<h1>A security pass</h1>
+			<p class="lede">Walking the app the way somebody hostile would, with a checklist rather than a vibe.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Every input validated, every object-level check in place, and nothing secret in the bundle.</p></aside>
+			<p>Not a penetration test — a walk through the eight categories that actually cause incidents in applications shaped like this one. Two of them found something real in this project.</p>
+<h3 id="bola">1. Object-level authorisation</h3>
+<p>The number one entry in the OWASP API list, and the one this app is most exposed to: every URL contains somebody else's identifier.</p>
+<ul><li><code>/manage/[slug]</code> → <code>requireStaff(slug)</code> checks membership, not just sign-in.</li><li><code>removeHours({ ruleId })</code> → loads the rule, checks its staff member belongs to <strong>this</strong> business, then checks the viewer may manage that person. Three checks, because a rule id alone proves nothing.</li><li><code>setStaffService</code> → <code>requireOwner</code>, and the staff and service ids are both re-scoped to the owner's business.</li><li><code>/booking/[token]</code> → the token *is* the credential; nothing else is trusted.</li></ul>
+<aside class="callout callout--warn"><p>The pattern to look for in your own code: any handler that takes an id and trusts it. &quot;The client sent us this id, so the client must be allowed to have it&quot; is the whole bug, and it reads as perfectly reasonable code.</p></aside>
+<h3 id="inputs">2. Every input, at the boundary</h3>
+<p>Every remote function has a schema. Not one takes a bare string. The check worth running on your own project:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>grep -rn &quot;export const .* = \(query\|command\|form\)(&quot; src/ | wc -l
+grep -rn &quot;export const .* = \(query\|command\|form\)(v\.\|export const .* = \(query\|command\|form\)([a-zA-Z]*Schema&quot; src/ | wc -l</code></pre>
+</figure>
+<p>If those two numbers differ, something takes an unvalidated argument.</p>
+<h3 id="enumeration">3. What the errors give away</h3>
+<ul><li>Wrong password and unknown email produce the <strong>identical</strong> message. Distinguishing them turns the sign-in form into a tool for discovering which of your customers have accounts. Two end-to-end tests assert this.</li><li>&quot;You do not work here&quot; is a 404, so <code>/manage/&lt;guess&gt;</code> cannot be used to enumerate the platform's businesses.</li><li>A malformed manage token is rejected on shape before it becomes a query — no timing difference between &quot;badly formed&quot; and &quot;not found&quot;.</li></ul>
+<h3 id="redirects">4. The open redirect</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/auth.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const SAFE_REDIRECT = /^\/(?!\/)[^\s]{0,512}$/;
+
+redirectTo: v.optional(
+	v.pipe(
+		v.string(),
+		v.transform((value) =&gt; (SAFE_REDIRECT.test(value) ? value : HOME))
+	),
+	HOME
+)</code></pre>
+</figure>
+<p>One leading slash, and only one. <code>//evil.example</code> is the case that catches people out: it begins with a slash, passes a naive <code>startsWith('/')</code> check, and is a protocol-relative URL that leaves your site — moments after somebody typed their password, from a link that genuinely began with your domain.</p>
+<aside class="callout callout--note"><p>We <strong>sanitise</strong> rather than reject. Rejecting is equally safe but worse to be on the end of: the value lives in a hidden field the person cannot see or correct, so a crafted link would leave them unable to sign in at all.</p></aside>
+<h3 id="secrets">5. Nothing secret in the bundle</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm run build
+grep -rn &quot;BETTER_AUTH_SECRET\|DATABASE_AUTH_TOKEN&quot; .svelte-kit/output/client/ || echo &quot;clean&quot;</code></pre>
+</figure>
+<p>SvelteKit's env system makes this hard to get wrong — <code>public: true</code> is something you have to type — but running the grep costs five seconds and the failure mode is a credential in a JavaScript file served to the internet.</p>
+<h3 id="demo-creds">6. What the pages themselves give away</h3>
+<p>Running that grep on this project turns up exactly one hit: the string <code>halfpast-demo-2026</code>, which is the seeded demo password printed helpfully next to the sign-in form.</p>
+<p>That is a teaching convenience and a block of working owner credentials on a public page. Both are true, so it has to go — and the first attempt at removing it is instructive, because it does not work.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the obvious fix, which is not one</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if dev}
+	&lt;div class=&quot;demo&quot;&gt;
+		&lt;p&gt;&lt;code&gt;ada@willowlane.test&lt;/code&gt; — owner&lt;/p&gt;
+		&lt;p&gt;Password &lt;code&gt;halfpast-demo-2026&lt;/code&gt;&lt;/p&gt;
+	&lt;/div&gt;
+{/if}</code></pre>
+</figure>
+<p><code>dev</code> from <code>$app/env</code> is <code>false</code> in a production build, so the block never renders. Run the grep again anyway.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ grep -rl &quot;halfpast-demo-2026&quot; .svelte-kit/output/client/
+.svelte-kit/output/client/_app/immutable/nodes/3.CEdgLdeS.js
+.svelte-kit/output/client/_app/immutable/nodes/12.NvAhVVEo.js</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Still there, in both files. Svelte hoists a component's markup into <strong>module-level template strings</strong>, so the literal survives even though the branch it belongs to never runs. <code>{#if dev}</code> hid the credentials from the screen and left them in a JavaScript file anybody can open. Hidden is not removed — and the only reason we know is that we ran the grep instead of trusting the reasoning.</p></aside>
+<p>So the credentials move to the one place that cannot be deployed by accident: the output of the seed script. Anybody who can run <code>pnpm run db:seed</code> can read them; no deployed copy of the page carries a working owner password.</p>
+<aside class="callout callout--note"><p>The general lesson is bigger than this one string. <strong>A conditional that hides content is not a conditional that removes it.</strong> If something must not ship, it has to be absent from the source that gets compiled — not guarded, not hidden, not behind a flag. And the way you find out which of the two you built is by grepping the build output.</p></aside>
+<h3 id="headers">7. Headers and the transport</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const response = await resolve(event);
+
+// Never let a browser guess a response is HTML when we said it was not.
+response.headers.set('X-Content-Type-Options', 'nosniff');
+// Do not leak the path a customer came from to another site.
+response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+// We use none of these. Saying so is free.
+response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+return response;</code></pre>
+</figure>
+<ul><li><code>referrer-policy</code> matters more than usual here: without it, a manage link's <strong>token</strong> travels in the <code>Referer</code> header to any external site the page links to.</li><li>CSRF is handled by SvelteKit via <code>paths.origin</code> — which is why getting that setting right in chapter 15 was a security fix, not only a bug fix.</li><li>Cookies are <code>httpOnly</code>, <code>sameSite: 'lax'</code> and <code>secure</code> in production, all from Better Auth's defaults. Verify them rather than assuming them.</li></ul>
+<h3 id="rate">8. What we deliberately did not build</h3>
+<p>There is no rate limiting on the booking endpoint. For a single-salon deployment behind a host that already does connection-level limiting, that is a defensible choice — and stating it is the point. An unwritten decision is indistinguishable from an oversight.</p>
+<p>If Halfpast became multi-tenant and public, the list to work through would be: per-IP limits on booking and sign-in, email verification before a booking holds a slot, and an audit log on the owner screens.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You have walked all eight categories against your own code, and written down the ones you decided not to address and why.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="end-to-end-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">End-to-end tests</span>
+			</a>
+			<a class="pager__link pager__link--next" href="shipping-it.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Shipping it</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

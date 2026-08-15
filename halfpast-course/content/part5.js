@@ -1,5 +1,5 @@
 /**
- * PART 5 — The interface (chapters 25–30)
+ * PART 5 — The interface (chapters 24–29)
  *
  * A design system in vanilla CSS, then the four screens that use it: the public
  * booking flow, the customer's own page, the live diary, and the owner's
@@ -118,19 +118,25 @@ export const part5 = [
 				lang: 'html',
 				code: `
 <script>
-	// Runs before first paint, before the framework exists.
-	try {
-		const stored = localStorage.getItem('halfpast-theme');
-		const dark =
-			stored === 'dark' ||
-			(stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-		if (dark) document.documentElement.dataset.theme = 'dark';
-	} catch {}
+	(function () {
+		try {
+			var choice = localStorage.getItem('halfpast-theme');
+			if (choice === 'dark' || choice === 'light') {
+				document.documentElement.dataset.theme = choice;
+			}
+		} catch (error) {
+			// No storage available. The media query still works.
+		}
+	})();
 </script>`
 			},
 			{
 				type: 'p',
-				text: 'An inline, blocking script in the head. Anything later — a Svelte component, an `onMount` — runs after the browser has painted, which means a dark-mode user gets a white flash on every single navigation. Three lines in the right place is the whole fix.'
+				text: 'An inline, blocking script in the head. Anything later — a Svelte component, an `onMount` — runs after the browser has painted, which means a dark-mode user gets a white flash on every single navigation. Not a subtle one: a full-screen strobe, in a product somebody uses at a reception desk all day.'
+			},
+			{
+				type: 'p',
+				text: 'Read the logic carefully, because the omission is the clever part. It sets `data-theme` **only** for an explicit choice. A visitor who never chose gets no attribute at all, and the CSS media query follows their operating system — including when it switches at sunset with the page open. Writing `data-theme="light"` for them would pin them to light forever. And the try/catch is there because `localStorage` throws in Safari private mode, and a theme preference is not worth breaking the page over.'
 			},
 			{
 				type: 'p',
@@ -194,13 +200,26 @@ class ThemeStore {
 				lang: 'ts',
 				code: `
 const serviceSlug = $derived(page.url.searchParams.get('service'));
-const staffId = $derived(page.url.searchParams.get('with'));
 
-function choose(next: URLSearchParams) {
-	// \`reset: false\` keeps the scroll position and focus where they are.
-	// Replacing the entry rather than pushing keeps the back button meaning
-	// "leave this page", not "undo my last twelve taps".
-	void goto(\`?\${next}\`, { replaceState: true, reset: false });
+function pickService(slug: string | null) {
+	/*
+	 * \`page.url\` is a \`ReadonlyURL\` in SvelteKit 3 — its \`searchParams\` has no
+	 * \`set\` or \`delete\`, and assigning to \`pathname\` throws. That is a good
+	 * change: mutating the page's URL object never did anything useful and
+	 * silently looked like it might. Copy it through \`href\` to get a real one.
+	 */
+	const url = new URL(page.url.href);
+	if (slug) url.searchParams.set('service', slug);
+	else url.searchParams.delete('service');
+
+	/*
+	 * \`reset: false\` keeps the scroll position and the focused element.
+	 * SvelteKit 3 replaced the old \`noScroll\` and \`keepFocus\` pair with this
+	 * one option, because wanting one without the other was almost always a
+	 * mistake — a page that stays put but throws focus to \`<body>\` strands a
+	 * keyboard user in a place they cannot see.
+	 */
+	void goto(url, { reset: false });
 }`
 			},
 			{
@@ -209,7 +228,7 @@ function choose(next: URLSearchParams) {
 			},
 			{
 				type: 'note',
-				text: 'In SvelteKit 3 `goto` takes `{ reset: false }` where Kit 2 had `keepFocus` and `noScroll`. One option, and it does the right thing on both counts. Also note `page.url` is now a `ReadonlyURL` — mutating it is a type error, which is a good thing given how many bugs "just tweak the URL object" has caused.'
+				text: 'Two SvelteKit 3 changes are visible in those twenty lines, and the comments explain both. Read them rather than skimming: `ReadonlyURL` and the merged `reset` option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.'
 			},
 
 			{ type: 'h3', id: 'progressive', text: 'Revealing the form at the right moment' },
@@ -254,16 +273,21 @@ function choose(next: URLSearchParams) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-<p class="zone-note text-muted">
-	Times shown in {zoneAbbreviation(now, viewerZone)} — your time.
-	{#if !sameWallClock(now, viewerZone, shop.business.timeZone)}
-		The studio is in {shop.business.timeZone}.
-	{/if}
-</p>`
+<SlotGrid slots={daySlots} zone={viewerZone} field={book.fields.slot} />
+
+{#if zonesDiffer && selectedStart !== null}
+	<p class="zone-note">
+		That is {formatTime(selectedStart, businessZone)} at the studio ({offsetLabel(
+			selectedStart,
+			businessZone
+		)}), and
+		{formatTime(selectedStart, viewerZone)} where you are.
+	</p>
+{/if}`
 			},
 			{
 				type: 'p',
-				text: 'Times render in the **visitor\'s** zone, because that is the clock they will be looking at when they need to leave the house. The studio\'s zone is named only when it differs — saying "the studio is in Europe/London" to somebody standing in London is noise.'
+				text: 'Times render in the **visitor\'s** zone, because that is the clock they will be looking at when they need to leave the house. The studio\'s time is shown only when the two zones actually differ **and** a slot has been chosen — saying "that is 14:00 at the studio" to somebody standing in the studio\'s own city is noise, and saying it before they have picked anything is noise with no referent.'
 			},
 			{
 				type: 'warn',
@@ -310,17 +334,15 @@ function choose(next: URLSearchParams) {
 				file: 'src/lib/components/booking/SlotGrid.svelte',
 				lang: 'svelte',
 				code: `
-<fieldset class="grid" role="radiogroup" aria-label="Choose a time">
+<div class="grid" bind:this={grid}>
 	{#each slots as slot (slot.start)}
-		<label class="slot">
-			<input
-				{...field.as('radio', \`\${slot.start}.\${slot.staffId}\`)}
-				checked={value === \`\${slot.start}.\${slot.staffId}\`}
-			/>
-			<span>{formatTime(slot.start, zone)}</span>
+		{@const value = valueOf(slot)}
+		<label class="slot" class:selected={selectedValue === value}>
+			<input {...field.as('radio', value)} />
+			<span>{labelFor(slot)}</span>
 		</label>
 	{/each}
-</fieldset>`
+</div>`
 			},
 			{
 				type: 'why',
@@ -340,20 +362,27 @@ function choose(next: URLSearchParams) {
 				code: `
 .grid {
 	display: grid;
-	/* Mobile first: as many 5.5rem columns as fit, and no media query. */
-	grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+	/*
+	 * \`auto-fill\`, not \`auto-fit\`. With \`auto-fit\` a row containing three slots
+	 * stretches them across the full width, so the same 11:00 button is a
+	 * different size depending on how many neighbours it has — which looks like
+	 * a bug. \`auto-fill\` keeps the empty tracks, so every slot is the same size
+	 * whether the day is full or nearly empty.
+	 */
+	grid-template-columns: repeat(auto-fill, minmax(min(5.5rem, 100%), 1fr));
 	gap: var(--space-2);
 }
 
 .slot {
-	min-block-size: 2.75rem;   /* 44px — the smallest comfortable tap target */
 	display: grid;
 	place-items: center;
+	min-height: 2.75rem;       /* 44px — the smallest comfortable tap target */
+	font-variant-numeric: tabular-nums;
 }`
 			},
 			{
 				type: 'p',
-				text: '`auto-fill` with `minmax` is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. 44px is the floor for a tap target, and this grid is the single most-tapped thing in the app.'
+				text: '`auto-fill` with `minmax` is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. 44px is the floor for a tap target, and this grid is the single most-tapped thing in the app. `tabular-nums` is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.'
 			},
 
 			{ type: 'h3', id: 'flip', text: 'When a slot disappears' },
@@ -474,21 +503,42 @@ export async function loadMotion() {
 			{ type: 'h3', id: 'single-flight', text: 'Cancelling in one round trip' },
 			{
 				type: 'code',
-				file: 'src/routes/booking/[token]/booking.remote.ts',
+				file: 'src/routes/booking/[token]/manage.remote.ts',
 				lang: 'ts',
 				code: `
-export const cancel = command(tokenSchema, async (token) => {
-	const booking = await cancelBooking(token, 'customer');
+export const cancelOwnBooking = command(
+	v.object({
+		token: tokenSchema,
+		reason: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(200)), '')
+	}),
+	async ({ token, reason }) => {
+		const found = await loadBookingByToken(token);
+		if (!found) error(404, 'We could not find that booking.');
 
-	// Refresh the query that drives this page, in the same response.
-	void getBooking(token).refresh();
+		try {
+			await cancelBooking({ bookingId: found.id, by: 'customer', reason: reason || undefined });
+		} catch (thrown) {
+			if (thrown instanceof BookingError) {
+				// 409 for "too late": the request was valid, the world moved on.
+				error(thrown.code === 'too_late_to_cancel' ? 409 : 400, thrown.message);
+			}
+			throw thrown;
+		}
 
-	return { cancelled: true };
-});`
+		// The refreshed booking rides back with this response — no second request.
+		void getManagedBooking(token).refresh();
+
+		return { cancelled: true };
+	}
+);`
 			},
 			{
 				type: 'p',
-				text: 'Without that line: post the cancellation, wait for a response, fire a fresh query, wait again, then re-render — with a stretch in the middle where the page still says "confirmed" and the customer wonders whether the button worked. With it, the response that confirms the cancellation carries the new state of the page.'
+				text: 'Without the `refresh()` line: post the cancellation, wait for a response, fire a fresh query, wait again, then re-render — with a stretch in the middle where the page still says "confirmed" and the customer wonders whether the button worked. With it, the response that confirms the cancellation carries the new state of the page.'
+			},
+			{
+				type: 'p',
+				text: 'The status codes are chosen, not defaulted. **409 Conflict** for "too late to cancel", because the request was perfectly valid and the world simply moved on; 400 for anything else the domain refuses. A blanket 400 would tell a monitoring dashboard that customers are sending malformed requests, when in fact they are arriving four minutes late.'
 			},
 
 			{ type: 'h3', id: 'freed', text: 'And the slot goes back on sale' },
@@ -524,22 +574,25 @@ export const cancel = command(tokenSchema, async (token) => {
 				file: 'src/routes/manage/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-<script lang="ts">
-	const diary = $derived(await getDiary({ slug: data.slug, day: chosenDay }));
-</script>
+<header class="head" {@attach reveal({ y: 10, duration: 0.4 })}>
+	<h1>{isToday ? 'Today' : formatIsoDate(activeDay)}</h1>
 
-<header>
-	<h2>Today</h2>
-	<span class="live" aria-live="polite">Live</span>
+	{#if diaryQuery.connected}
+		<span class="live"><BroadcastIcon weight="fill" aria-hidden="true" /> Live</span>
+	{/if}
 </header>
 
-{#if diary.appointments.length === 0}
+{#if entries.length === 0}
 	<p class="empty">Nothing booked. Enjoy it.</p>
 {/if}`
 			},
 			{
 				type: 'p',
 				text: 'The "Live" badge is not decoration either. A screen that changes on its own is unsettling unless the person knows it does; a small word in the corner is the difference between "that is odd" and "ah, a booking came in".'
+			},
+			{
+				type: 'p',
+				text: 'And it is gated on `diaryQuery.connected` — a property the live query exposes — so it disappears when the stream drops. A badge that says "Live" on a screen that has silently stopped updating is worse than no badge at all: it is a promise the page is no longer keeping.'
 			},
 			{
 				type: 'note',
@@ -554,8 +607,9 @@ export const cancel = command(tokenSchema, async (token) => {
 				code: `
 <button
 	type="button"
-	onclick={() => void cancelFromDiary(appointment.id)}
-	aria-label="Cancel {appointment.customerName} at {formatTime(appointment.startsAt, zone)}"
+	class="cancel"
+	onclick={() => void cancelEntry(entry)}
+	aria-label="Cancel {entry.customerName}'s appointment"
 >
 	<XIcon weight="bold" />
 </button>`

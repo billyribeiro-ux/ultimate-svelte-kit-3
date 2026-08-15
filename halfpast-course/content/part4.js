@@ -1,5 +1,5 @@
 /**
- * PART 4 — Remote functions and async Svelte (chapters 20–24)
+ * PART 4 — Remote functions and async Svelte (chapters 20–23)
  *
  * The part of SvelteKit 3 that changes how you write everything else. Load
  * functions and form actions are gone; in their place are typed functions you

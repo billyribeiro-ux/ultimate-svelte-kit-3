@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrations and seed data — Building Halfpast</title>
+<meta name="description" content="Turning the schema into actual tables, and building a demo studio you can throw away and rebuild in a second.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 37.142857142857146%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html" aria-current="page"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>Migrations and seed data</h1>
+			<p class="lede">Turning the schema into actual tables, and building a demo studio you can throw away and rebuild in a second.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A migration you can run repeatedly and a seed script that leaves the database in a known state every time.</p></aside>
+			<p>The schema file is TypeScript. The database needs SQL. <strong>drizzle-kit</strong> compares the two and writes the difference.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">drizzle.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'drizzle-kit';
+
+/**
+ * Drizzle Kit runs OUTSIDE the SvelteKit app — it is a CLI, not part of the
+ * server bundle — so it cannot use `$app/env/private`, which only exists inside
+ * Vite. It reads `process.env` directly, which is why the `db:*` scripts source
+ * `.env` first.
+ */
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set — did you copy .env.example to .env?');
+
+const authToken = process.env.DATABASE_AUTH_TOKEN;
+
+export default defineConfig({
+	schema: './src/lib/server/db/schema.ts',
+	out: './drizzle',
+	dialect: 'sqlite',
+	dbCredentials: { url, ...(authToken ? { authToken } : {}) },
+	verbose: true,
+	// Prompts before running anything destructive. Leave this on.
+	strict: true
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm exec drizzle-kit generate   # write the SQL
+pnpm exec drizzle-kit migrate    # apply it</code></pre>
+</figure>
+<p>Read the comment at the top before copying it. Drizzle Kit is a <strong>command-line tool</strong>, not part of the server bundle, so <code>$app/env/private</code> — which only exists inside Vite — is unavailable to it. It reads <code>process.env</code> directly, which is why the <code>db:*</code> scripts source <code>.env</code> first. Getting this wrong produces an import error that looks like a bug in Drizzle.</p>
+<p>Generated migrations are checked into git and never edited afterwards. If a migration is wrong, the fix is another migration — editing an applied one means your database and your history disagree, and every colleague's machine drifts a little further from yours.</p>
+<aside class="callout callout--note"><p><code>strict: true</code> makes drizzle-kit ask before doing anything destructive. On a project where a wrong answer drops a table of real appointments, being asked is a feature.</p></aside>
+<h3 id="seed">The seed script</h3>
+<p>A seed script is not a nicety. Ours is run automatically before <strong>every single end-to-end test</strong>, which is what makes those tests independent of each other and of the order they run in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">console.log('· clearing');
+
+// Order matters: children before parents, or the foreign keys refuse.
+await db.delete(slotClaim);
+await db.delete(booking);
+await db.delete(timeOff);
+await db.delete(availabilityRule);
+await db.delete(staffService);
+// ...and so on up the tree.</code></pre>
+</figure>
+<p>One decision in there is worth calling out: the seed <strong>keeps the same business row</strong> rather than dropping and recreating it. Dropping it produced an intermittent 500 in whichever test happened to run next — a live query still streaming to a page the previous test had only just closed would suddenly find its business missing. The failure pointed nowhere near the cause.</p>
+<h3 id="relative">Everything relative to today</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const today = todayIn(TIME_ZONE);
+
+await seedBooking({
+	staffId: ada.id,
+	serviceSlug: 'cut-and-finish',
+	customerIndex: 0,
+	dayOffset: 1,                     // tomorrow, whenever &quot;today&quot; is
+	startMinute: 10 * 60,
+	note: 'Growing out a bob — please keep the length.'
+});</code></pre>
+</figure>
+<p>Not a single hard-coded date. A seed with <code>2026-08-14</code> in it works beautifully until 15 August, at which point the demo diary is empty and every screenshot in your documentation shows a past appointment.</p>
+<p><code>seedBooking</code> inserts the booking <strong>and</strong> its grid claims, exactly as the real code path does. A seed that writes bookings without claims produces a demo where the diary looks full and every slot appears bookable — a very confusing ten minutes.</p>
+<h3 id="signposts">Ending with the directions</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>  Seeded Willow Lane Studio.
+
+  Booking page   /book/willow-lane
+  Owner sign-in  ada@willowlane.test  halfpast-demo-2026
+  Staff sign-in  ben@willowlane.test  halfpast-demo-2026
+
+  Manage a booking as the customer would:
+    /booking/QV8XD0E265QH1SW2VH7NN2ZP67</code></pre>
+</figure>
+<p>Thirty seconds of <code>console.log</code> that saves everybody who ever touches this project from hunting through the seed file for a password. Print the manage token too — it is the only way to reach the customer-facing cancel page without an inbox.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>pnpm run db:seed</code> twice in a row leaves the database in exactly the same state, and the printed links all work.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-line-that-stops-double-booking.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The line that stops double-booking</span>
+			</a>
+			<a class="pager__link pager__link--next" href="one-writer-at-a-time.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">One writer at a time</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

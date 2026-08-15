@@ -56,9 +56,7 @@ test.describe('without JavaScript', () => {
 			expect(count, `expected some ${selector} elements to exist`).toBeGreaterThan(0);
 
 			for (let i = 0; i < count; i += 1) {
-				const opacity = await elements
-					.nth(i)
-					.evaluate((node) => getComputedStyle(node).opacity);
+				const opacity = await elements.nth(i).evaluate((node) => getComputedStyle(node).opacity);
 
 				// The whole point. Without the inline script's guards this is 0, and
 				// the page is blank for anyone whose JavaScript did not run.
@@ -194,9 +192,7 @@ test.describe('with motion enabled', () => {
 			const elements = page.locator(selector);
 			const count = await elements.count();
 			for (let i = 0; i < count; i += 1) {
-				const opacity = await elements
-					.nth(i)
-					.evaluate((node) => getComputedStyle(node).opacity);
+				const opacity = await elements.nth(i).evaluate((node) => getComputedStyle(node).opacity);
 				expect(Number(opacity), `${selector}[${i}] should end visible`).toBeGreaterThan(0.99);
 			}
 		}

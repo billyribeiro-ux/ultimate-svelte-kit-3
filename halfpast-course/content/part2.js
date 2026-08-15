@@ -57,9 +57,9 @@ export const part2 = [
 				file: 'src/lib/server/db/index.ts',
 				lang: 'ts',
 				code: `
-import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '../../../env.ts';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
 const client = createClient({
@@ -361,21 +361,21 @@ export const slotClaim = sqliteTable(
 				file: 'src/lib/server/scheduling.ts',
 				lang: 'ts',
 				code: `
-/**
- * Whether a thrown value is SQLite's unique-constraint violation.
- *
- * The message is buried. Drizzle wraps the driver's error, and libSQL wraps the
- * native one, so the text we need is usually two links down the \`.cause\` chain.
- * Reading only the top-level message misses it and the loser of a race gets a
- * 500 instead of "sorry, just taken".
- */
-function isUniqueViolation(thrown: unknown): boolean {
-	let current: unknown = thrown;
+export function isUniqueViolation(error: unknown): boolean {
+	// Bounded so a self-referencing cause cannot spin forever.
+	for (let current = error, depth = 0; current instanceof Error && depth < 8; depth += 1) {
+		const code = 'code' in current ? String(current.code) : '';
+		const text = \`\${current.message} \${code}\`;
 
-	for (let depth = 0; depth < 8 && current; depth += 1) {
-		const message = current instanceof Error ? current.message : String(current);
-		if (/UNIQUE constraint failed|SQLITE_CONSTRAINT/i.test(message)) return true;
-		current = current instanceof Error ? current.cause : undefined;
+		if (
+			text.includes('SQLITE_CONSTRAINT_PRIMARYKEY') ||
+			text.includes('SQLITE_CONSTRAINT_UNIQUE') ||
+			text.includes('UNIQUE constraint failed')
+		) {
+			return true;
+		}
+
+		current = current.cause;
 	}
 
 	return false;
@@ -383,7 +383,19 @@ function isUniqueViolation(thrown: unknown): boolean {
 			},
 			{
 				type: 'p',
-				text: 'That loop is not defensive programming for its own sake. It was written because the top-level message said only "SQLite error", the real text was two levels down, and the symptom was a booking page that correctly refused to double-book while showing the loser a stack trace.'
+				text: 'Two things make that fiddlier than it looks, and both were learned the hard way.'
+			},
+			{
+				type: 'p',
+				text: '**The cause chain.** Drizzle wraps the driver\'s error in its own `Failed query: …`, and libSQL wraps the native SQLite error the same way, so the text we need is two or three links down `.cause`. Reading only the top-level message misses it — and the symptom is subtle: the claim is still refused by the database, so the booking stays safe, but the loser of the race sees a 500 instead of "sorry, just taken".'
+			},
+			{
+				type: 'p',
+				text: '**The spelling.** SQLite reports this as `SQLITE_CONSTRAINT_PRIMARYKEY` for a composite primary key, `SQLITE_CONSTRAINT_UNIQUE` for a unique index, and older builds only say `UNIQUE constraint failed`. All three mean "somebody got there first".'
+			},
+			{
+				type: 'p',
+				text: 'Matching on message text is uncomfortable, and it is worth being honest that it is a compromise. The alternative — checking first and inserting after — is the exact race this code exists to prevent. So the knowledge has to live somewhere, and it lives in one tested function rather than scattered through the call sites.'
 			},
 			{
 				type: 'p',
@@ -396,11 +408,13 @@ function isUniqueViolation(thrown: unknown): boolean {
 				code: `
 try {
 	await tx.insert(slotClaim).values(cells);
-} catch (thrown) {
-	if (isUniqueViolation(thrown)) {
-		throw new BookingError('slot_taken', 'Sorry — that time was just taken. Please choose another.');
+} catch (error) {
+	if (isUniqueViolation(error)) {
+		// The whole transaction is about to roll back, so the booking row we
+		// inserted a moment ago will vanish with it. Nothing to clean up.
+		throw new BookingError('slot_taken', 'Sorry — that time was booked moments ago.');
 	}
-	throw thrown;
+	throw error;
 }`
 			},
 
@@ -456,20 +470,35 @@ try {
 				lang: 'ts',
 				code: `
 import { defineConfig } from 'drizzle-kit';
-import { DATABASE_URL, DATABASE_AUTH_TOKEN } from './src/env.ts';
+
+/**
+ * Drizzle Kit runs OUTSIDE the SvelteKit app — it is a CLI, not part of the
+ * server bundle — so it cannot use \`$app/env/private\`, which only exists inside
+ * Vite. It reads \`process.env\` directly, which is why the \`db:*\` scripts source
+ * \`.env\` first.
+ */
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set — did you copy .env.example to .env?');
+
+const authToken = process.env.DATABASE_AUTH_TOKEN;
 
 export default defineConfig({
-	schema: ['./src/lib/server/db/schema.ts', './src/lib/server/db/auth.schema.ts'],
+	schema: './src/lib/server/db/schema.ts',
 	out: './drizzle',
-	dialect: 'turso',
-	dbCredentials: { url: DATABASE_URL, authToken: DATABASE_AUTH_TOKEN },
+	dialect: 'sqlite',
+	dbCredentials: { url, ...(authToken ? { authToken } : {}) },
 	verbose: true,
+	// Prompts before running anything destructive. Leave this on.
 	strict: true
 });`
 			},
 			{
 				type: 'terminal',
 				code: 'pnpm exec drizzle-kit generate   # write the SQL\npnpm exec drizzle-kit migrate    # apply it'
+			},
+			{
+				type: 'p',
+				text: 'Read the comment at the top before copying it. Drizzle Kit is a **command-line tool**, not part of the server bundle, so `$app/env/private` — which only exists inside Vite — is unavailable to it. It reads `process.env` directly, which is why the `db:*` scripts source `.env` first. Getting this wrong produces an import error that looks like a bug in Drizzle.'
 			},
 			{
 				type: 'p',

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration without magic — Building Halfpast</title>
+<meta name="description" content="SvelteKit 3 deleted `svelte.config.js` and the `$env` modules. What replaced them is better, and stricter.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">15 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 42.857142857142854%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html" aria-current="page"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 15</p>
+			<h1>Configuration without magic</h1>
+			<p class="lede">SvelteKit 3 deleted <code>svelte.config.js</code> and the <code>$env</code> modules. What replaced them is better, and stricter.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Every environment variable declared, validated and typed — and an app that refuses to start with a bad one.</p></aside>
+			<p>Two things you may have muscle memory for no longer exist in SvelteKit 3.</p>
+<h3 id="no-config-file">One config file, not two</h3>
+<p>There is no <code>svelte.config.js</code>. Everything that used to live in it now goes inside the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export default defineConfig(({ mode }) =&gt; {
+	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	return {
+		plugins: [
+			sveltekit({
+				paths: { origin: env.PUBLIC_ORIGIN },
+				compilerOptions: {
+					runes: true,
+					experimental: { async: true }
+				},
+				adapter: adapter(),
+				experimental: { remoteFunctions: true },
+				prerender: { handleHttpError: 'fail', handleMissingId: 'fail' }
+			}),
+			sveltePhosphorOptimize()
+		],
+		ssr: { external: ['@libsql/client', 'libsql'] }
+	};
+});</code></pre>
+</figure>
+<p>Three details in there are worth knowing before they cost you an evening:</p>
+<ul><li>The config is a <strong>function</strong>, so it can call <code>loadEnv</code>. It has to be, because <code>paths.origin</code> needs a value from <code>.env</code> and Vite has not loaded those when a plain object literal is evaluated. Note <code>...process.env</code> last — a real environment variable must win over a checked-in <code>.env</code> file.</li><li><code>sveltePhosphorOptimize()</code> comes <strong>after</strong> <code>sveltekit()</code>. Icon plugins rewrite imports that SvelteKit has to see first; reverse them and you get a build that succeeds and ships every icon in the library.</li><li><code>ssr.external</code> tells Vite not to bundle the native libSQL binary. Together with keeping it in <code>dependencies</code>, this is what stops the runtime <code>Cannot find module</code> we met in chapter 10.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>paths.origin — new in 3.0, and not optional here</h4>
+	<p>It is the origin SvelteKit trusts for cross-site request checks. <code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime; the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. A plain-HTTP preview server therefore computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and *every* form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
+</aside>
+<h3 id="env">Environment variables, declared</h3>
+<p>The <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules are gone. In their place: a file you write, listing every variable the app reads.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+/** A non-empty string, with surrounding whitespace stripped. */
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description:
+			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production.',
+		schema: required
+	},
+
+	BETTER_AUTH_SECRET: {
+		description: 'Signs session cookies. Rotating it signs everybody out.',
+		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+	},
+
+	PUBLIC_ORIGIN: {
+		description: 'Where the app is served from. Used for canonical URLs and CSRF checks.',
+		public: true,
+		static: true,
+		schema: origin
+	}
+});</code></pre>
+</figure>
+<ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a *type error*, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">reading them</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { DATABASE_URL } from '$app/env/private';   // server only, enforced
+import { PUBLIC_ORIGIN } from '$app/env/public';   // safe in the browser</code></pre>
+</figure>
+<h3 id="optional">Genuinely optional variables</h3>
+<p><code>defineEnvVars</code> has no <code>optional</code> or <code>default</code> option. That looks like a gap until you notice the schema can do it, and can do it with a better type.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">DATABASE_AUTH_TOKEN: {
+	description:
+		'Auth token for a remote libSQL/Turso database. Leave unset when pointing at a local file.',
+	// Returning `undefined` from a schema function is how you declare
+	// &quot;this one is genuinely allowed to be missing&quot;.
+	schema: (value) =&gt; (value ? value.trim() : undefined)
+},</code></pre>
+</figure>
+<p>The schema does not have to be a valibot pipe — a plain function works, and whatever it returns is what the import gives you. A schema may return something that is not a string, and <strong>the imported type follows it</strong>. This one produces <code>string | undefined</code>, which is the only honest type for a variable that is genuinely optional, and it collapses an empty string to <code>undefined</code> so <code>authToken: ''</code> never reaches the driver.</p>
+<h3 id="validate-with-runtime">Validate against the runtime, not a regex</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const timeZone = v.pipe(
+	required,
+	v.check((value) =&gt; {
+		try {
+			new Intl.DateTimeFormat('en-GB', { timeZone: value });
+			return true;
+		} catch {
+			return false;
+		}
+	}, 'Must be a valid IANA time zone identifier, e.g. Europe/London')
+);</code></pre>
+</figure>
+<p>A regex for time zone names would accept <code>Europe/Atlantis</code> and reject <code>America/Argentina/ComodRivadavia</code>. Asking <code>Intl</code> is the same lookup every formatted date will perform later, so a value that passes here <strong>cannot</strong> fail there. Validate against the thing that will actually use the value.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Deleting <code>DATABASE_URL</code> from <code>.env</code> makes the app refuse to start with a message naming the variable — not a stack trace fifty lines into a request.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="one-writer-at-a-time.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">One writer at a time</span>
+			</a>
+			<a class="pager__link pager__link--next" href="who-are-you.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Who are you</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

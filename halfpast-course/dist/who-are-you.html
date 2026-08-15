@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who are you — Building Halfpast</title>
+<meta name="description" content="Better Auth for staff, a bearer token in an email for customers, and why those are different problems.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">16 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 45.714285714285715%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html" aria-current="page"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 16</p>
+			<h1>Who are you</h1>
+			<p class="lede">Better Auth for staff, a bearer token in an email for customers, and why those are different problems.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Working sign-in, sessions on <code>event.locals</code>, and a customer flow that needs no account at all.</p></aside>
+			<p>Halfpast has two kinds of person and gives them two completely different answers.</p>
+<ul><li><strong>Staff</strong> sign in with an email and password, keep a session, and see a dashboard.</li><li><strong>Customers</strong> have no account, ever. They get a link in an email that lets them manage their own booking and nothing else.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why customers get no account</h4>
+	<p>Asking somebody to invent a password to book a haircut is how you lose the booking. It is also a liability: you now store credentials for people who will never return, and you owe them a password-reset flow, a breach notification plan, and a deletion process. The booking link is simpler *and* safer.</p>
+</aside>
+<h3 id="better-auth">Better Auth, in minimal form</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add better-auth</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/auth.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
+import { betterAuth } from 'better-auth/minimal';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { db } from './db/index.ts';
+
+export const auth = betterAuth({
+	baseURL: ORIGIN,
+	secret: BETTER_AUTH_SECRET,
+
+	database: drizzleAdapter(db, { provider: 'sqlite' }),
+
+	emailAndPassword: {
+		enabled: true,
+		// The default is 8. Length is the only password rule that reliably helps;
+		// the ones about symbols mostly teach people to append &quot;!1&quot;.
+		minPasswordLength: 12,
+		maxPasswordLength: 256
+	},
+
+	session: {
+		expiresIn: 60 * 60 * 24 * 30, // thirty days
+		// Slide the expiry forward at most once a day, so an active user is not
+		// logged out mid-week but we are not writing a session row on every request.
+		updateAge: 60 * 60 * 24
+	}
+});</code></pre>
+</figure>
+<p><code>better-auth/minimal</code> is the smaller entry point: no social providers, no plugins, no organisation features. Importing from it rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything above still works.</p>
+<aside class="callout callout--note"><p>The password rules are worth arguing about. A twelve-character minimum with no composition requirements beats an eight-character minimum that demands a symbol: length is the only rule that reliably increases the work an attacker has to do, and the symbol rules mostly teach people to append &quot;!1&quot;.</p></aside>
+<h3 id="hooks">Attaching the session to every request</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { sequence } from '@sveltejs/kit/hooks';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { auth } from '#lib/server/auth.ts';
+
+const handleAuth: Handle = async ({ event, resolve }) =&gt; {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+
+	event.locals.user = session?.user ?? null;
+	event.locals.session = session?.session ?? null;
+
+	return resolve(event);
+};
+
+// One job each, composed. `handleHeaders` is in chapter 34.
+export const handle: Handle = sequence(handleAuth, handleHeaders);</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Hook types moved. <code>Handle</code>, <code>HandleServerError</code> and <code>HandleClientError</code> are imported from <code>@sveltejs/kit/hooks</code> in SvelteKit 3, not from <code>@sveltejs/kit</code>. The old import is a type error, which is at least a loud failure.</p></aside>
+<p>Declare the shape once so the whole app knows it:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.d.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">declare global {
+	namespace App {
+		interface Locals {
+			user: { id: string; name: string; email: string } | null;
+			session: { id: string; expiresAt: Date } | null;
+		}
+	}
+}
+
+export {};</code></pre>
+</figure>
+<h3 id="errors">Errors that say what kind they are</h3>
+<p>SvelteKit 3 changed the shape of <code>handleError</code>. It now receives a <code>kind</code>, and it is genuinely useful.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const handleError: HandleServerError = ({ kind, error, event }) =&gt; {
+	/*
+	 * `kind` is one of 'app' | 'framework' | 'validation' | 'unknown'.
+	 *
+	 * Only 'unknown' is a surprise. An 'app' error is our own `error(404, …)`, a
+	 * 'validation' error is somebody sending a malformed request, and a
+	 * 'framework' error already has a sensible message. Logging those at error
+	 * level trains everybody to ignore the log.
+	 */
+	if (kind !== 'unknown') {
+		// Keep the framework's status and message; just satisfy our own `App.Error`.
+		return {};
+	}
+
+	const id = crypto.randomUUID().slice(0, 8);
+
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+
+	return {
+		id,
+		message: 'Something went wrong at our end. Please try again.'
+	};
+};</code></pre>
+</figure>
+<p>Returning a short <code>id</code> and printing the same one server-side is the cheapest support tool there is: the customer reads you eight characters and you find the exact stack trace.</p>
+<aside class="callout callout--note"><p>Write <code>src/hooks.client.ts</code> too, with the same shape and <code>HandleClientError</code>. A remote query that rejects during a client-side navigation renders the error page and writes <strong>nothing</strong> to the server log, because the server was never involved. Without the client hook, that is a blank 500 with no evidence anywhere. This exact tool found two real bugs in this project.</p></aside>
+<h3 id="customer-token">The customer’s bearer token</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/scheduling.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const tokenSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	// Crockford Base32, 26 characters. Matching the exact shape means a malformed
+	// token is rejected before it reaches the database.
+	v.regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, 'That link does not look right')
+);
+
+export const getManagedBooking = query(tokenSchema, async (token): Promise&lt;ManagedBooking&gt; =&gt; {
+	const found = await loadBookingByToken(token);
+	if (!found) error(404, 'We could not find that booking.');
+
+	return { /* … only the fields this page needs … */ };
+});</code></pre>
+</figure>
+<ul><li><strong>Shape first, database second.</strong> The schema rejects a malformed token before it becomes a query — so &quot;badly formed&quot; and &quot;not found&quot; cannot be told apart by timing.</li><li><strong>130 bits of CSPRNG output</strong>, looked up by a unique index. Not guessable, and no prefix matching to leak length through timing either.</li><li><strong>Only the fields this page needs.</strong> The query returns the whole booking row with four relations joined; the remote function hands back a flat object with no ids, no <code>manageToken</code>, and nothing about other customers.</li><li><strong>404, not 403.</strong> &quot;That token exists but is not yours&quot; is not a sentence we ever want to say.</li><li><strong><code>noindex</code> on the page.</strong> The URL contains a credential; a search engine indexing it would be a breach delivered by Google.</li></ul>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can sign in as the seeded owner, <code>event.locals.user</code> is populated on every request, and opening a booking link with one character changed gives a clean 404.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="configuration-without-magic.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Configuration without magic</span>
+			</a>
+			<a class="pager__link pager__link--next" href="guards-that-throw.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Guards that throw</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

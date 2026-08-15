@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The live diary — Building Halfpast</title>
+<meta name="description" content="The screen a receptionist stares at all day. Today by default, updating itself, readable across a room.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 80%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html" aria-current="page"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>The live diary</h1>
+			<p class="lede">The screen a receptionist stares at all day. Today by default, updating itself, readable across a room.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A dashboard that puts new bookings on screen without anybody pressing anything.</p></aside>
+			<p>The dashboard's home is today. Not this week, not a month grid — today, because that is the question somebody standing at a desk actually has.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;header class=&quot;head&quot; {@attach reveal({ y: 10, duration: 0.4 })}&gt;
+	&lt;h1&gt;{isToday ? 'Today' : formatIsoDate(activeDay)}&lt;/h1&gt;
+
+	{#if diaryQuery.connected}
+		&lt;span class=&quot;live&quot;&gt;&lt;BroadcastIcon weight=&quot;fill&quot; aria-hidden=&quot;true&quot; /&gt; Live&lt;/span&gt;
+	{/if}
+&lt;/header&gt;
+
+{#if entries.length === 0}
+	&lt;p class=&quot;empty&quot;&gt;Nothing booked. Enjoy it.&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>The &quot;Live&quot; badge is not decoration either. A screen that changes on its own is unsettling unless the person knows it does; a small word in the corner is the difference between &quot;that is odd&quot; and &quot;ah, a booking came in&quot;.</p>
+<p>And it is gated on <code>diaryQuery.connected</code> — a property the live query exposes — so it disappears when the stream drops. A badge that says &quot;Live&quot; on a screen that has silently stopped updating is worse than no badge at all: it is a promise the page is no longer keeping.</p>
+<aside class="callout callout--note"><p>The empty state says &quot;Nothing booked. Enjoy it.&quot; rather than &quot;No results found.&quot; One of those is written by somebody who has thought about who is reading it.</p></aside>
+<h3 id="cancel">Cancelling from the desk</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;button
+	type=&quot;button&quot;
+	class=&quot;cancel&quot;
+	onclick={() =&gt; void cancelEntry(entry)}
+	aria-label=&quot;Cancel {entry.customerName}'s appointment&quot;
+&gt;
+	&lt;XIcon weight=&quot;bold&quot; /&gt;
+&lt;/button&gt;</code></pre>
+</figure>
+<p>The visible label is an icon; the accessible name is a full sentence. A screen-reader user hearing &quot;button, button, button&quot; down a list of appointments has no idea which one they are on, and the fix is one attribute.</p>
+<p>It is also what makes the end-to-end test readable: <code>getByRole('button', { name: /Cancel Doomed Dora/ })</code>. Tests that select by accessible name are testing the thing a person actually uses, and they break when the interface becomes unusable rather than when a class name changes.</p>
+<h3 id="colour">Whose appointment is whose</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;li class=&quot;appointment&quot; style=&quot;--hue: {appointment.staffColourHue}&quot;&gt;
+	&lt;span class=&quot;who&quot;&gt;{appointment.staffName}&lt;/span&gt;
+	&lt;!-- … --&gt;
+&lt;/li&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">and in the stylesheet</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.appointment {
+	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
+}</code></pre>
+</figure>
+<p>One custom property carries the staff member's hue into the CSS, and because the colours are one lightness and six hues in oklch, they are legible at a glance and equally weighted. <strong>And the name is always there too</strong> — colour alone excludes roughly one man in twelve.</p>
+<h3 id="tabs">Navigation for a phone, without a hamburger</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;nav class=&quot;tabs&quot; aria-label=&quot;Dashboard sections&quot;&gt;
+	&lt;div class=&quot;tabs-inner container&quot;&gt;
+		{#each visible as section (section.path)}
+			{@const active = activePath === section.path}
+			&lt;a class=&quot;tab&quot; class:active href=&quot;{base}{section.path}&quot; aria-current={active ? 'page' : undefined}&gt;
+				&lt;Icon weight={active ? 'fill' : 'regular'} aria-hidden=&quot;true&quot; /&gt;
+				{section.label}
+			&lt;/a&gt;
+		{/each}
+	&lt;/div&gt;
+&lt;/nav&gt;</code></pre>
+</figure>
+<p>A horizontal scroller rather than a menu behind a button. Five short labels fit in a swipe; a hamburger costs a tap on every navigation and hides the shape of the app from somebody who has never seen it before.</p>
+<p><code>aria-current=&quot;page&quot;</code> is what tells a screen reader which tab is the current one. The colour and the filled icon say it to everybody else.</p>
+<h3 id="owner-only">Hiding doors, and locking them</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const SECTIONS = [
+	{ path: '', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
+	{ path: '/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
+	{ path: '/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
+	{ path: '/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
+	{ path: '/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
+] as const;
+
+const visible = $derived(
+	SECTIONS.filter((section) =&gt; !section.ownerOnly || data.viewer.role === 'owner')
+);</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Hiding a link is a <strong>courtesy</strong>, not a control. <code>requireOwner</code> in each section's <code>+page.server.ts</code> is the control. Both exist because showing somebody a door they cannot open is its own kind of rude — but if you only build one of the two, build the server-side one.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Sign in as the staff member: three tabs are missing, and typing their URLs directly returns 403. Sign in as the owner and book something from another window: it appears in the diary without a reload.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-customers-own-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The customer’s own page</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-owner-screens.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The owner’s screens</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shipping it — Building Halfpast</title>
+<meta name="description" content="The build, the environment, the one adapter setting that ruins your day, and what to check afterwards.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html" aria-current="page"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>Shipping it</h1>
+			<p class="lede">The build, the environment, the one adapter setting that ruins your day, and what to check afterwards.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A deployed app that survives a restart, a clock change and a Node upgrade.</p></aside>
+			<p>Everything green locally. Four things stand between that and a URL somebody can use.</p>
+<h3 id="checks">1. The gate</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test:e2e&quot;: &quot;node scripts/prepare-e2e-db.js &amp;&amp; playwright test&quot;,
+	&quot;verify&quot;: &quot;pnpm run check &amp;&amp; pnpm run lint &amp;&amp; pnpm run test:unit -- --run &amp;&amp; pnpm run build &amp;&amp; pnpm run test:e2e&quot;
+}</code></pre>
+</figure>
+<p>One command. If <code>pnpm run verify</code> is green, the thing is deployable; if it is not, nothing else matters. Put it in CI and make it required.</p>
+<h3 id="origin">2. The adapter setting that ruins your day</h3>
+<aside class="callout callout--warn"><p><code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime. The trusted origin is baked in at <strong>build time</strong> from <code>kit.paths.origin</code>, and the header fallback assumes <code>https</code>. Deploy behind a proxy that terminates TLS and forwards plain HTTP without the right headers, and every form post returns 403 &quot;Cross-site remote requests are forbidden&quot; — with a perfectly healthy-looking app behind it.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">sveltekit({
+	paths: { origin: env.PUBLIC_ORIGIN }
+})</code></pre>
+</figure>
+<p>Because it is baked in at build time, <code>PUBLIC_ORIGIN</code> must be correct <strong>when you build</strong>, not when you start. That catches people whose CI builds an artefact and whose deploy step sets the environment.</p>
+<h3 id="deps">3. Dependencies versus devDependencies</h3>
+<p>Vite bundles <code>devDependencies</code> into the server build. <code>@libsql/client</code> loads a native binary at runtime and cannot be bundled.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;dependencies&quot;: {
+	&quot;@libsql/client&quot;: &quot;^0.16.0&quot;,
+	&quot;better-auth&quot;: &quot;^1.4.0&quot;,
+	&quot;drizzle-orm&quot;: &quot;^0.45.0&quot;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">ssr: { external: ['@libsql/client', 'libsql'] }</code></pre>
+</figure>
+<p>Both are needed. Get it wrong and the app builds, deploys, starts, and dies on the first request with <code>Cannot find module '@libsql/linux-x64-gnu'</code>.</p>
+<h3 id="node">4. Pin the runtime</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;engines&quot;: { &quot;node&quot;: &quot;&gt;=24.0.0&quot; },
+&quot;packageManager&quot;: &quot;pnpm@10.33.0&quot;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.nvmrc</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-text">24.19.0</code></pre>
+</figure>
+<p>This app depends on the runtime's time zone database and on <code>Intl</code>, so &quot;whatever Node the host feels like&quot; is a real risk. Pinning also makes the ICU-version problem from chapter 32 a decision you make rather than one that happens to you.</p>
+<h3 id="migrations">Migrations on deploy</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm exec drizzle-kit migrate &amp;&amp; node build/index.js</code></pre>
+</figure>
+<p>Migrations run before the server starts, and they run from the checked-in SQL — never from <code>drizzle-kit push</code>, which compares your schema file to the live database and decides what to do about the difference. That is a fine command for your laptop and a terrible one to point at production.</p>
+<h3 id="afterwards">What to check once it is up</h3>
+<ol><li><strong>View source on the booking page.</strong> The studio name and services should be in the HTML. If you see &quot;Loading…&quot;, a <code>pending</code> snippet has escaped onto a page-level boundary.</li><li><strong>Book something.</strong> Then book the same slot from a second browser and confirm the refusal is polite.</li><li><strong>Check the diary updates live</strong> in a window you have left open.</li><li><strong>Set your phone to another time zone</strong> and load the booking page. The times should move; the studio's zone should be named.</li><li><strong>Restart the process.</strong> Everything should still be there — and <code>PRAGMA journal_mode</code> should still say <code>wal</code>.</li></ol>
+<h3 id="end">What you built</h3>
+<p>A booking platform that tells the truth about time, cannot double-book, updates itself, works without JavaScript, and is tested well enough that you would deploy it on a Friday.</p>
+<p>The three ideas worth carrying to the next thing you build, none of which are about SvelteKit:</p>
+<ol><li><strong>Know which layer is the guarantee.</strong> Halfpast has three defences against double-booking and exactly one of them is load-bearing. Being able to say which is the difference between a system you trust and one you hope about.</li><li><strong>Make the invisible testable.</strong> <code>now</code> is an argument, the availability engine is pure, and both daylight-saving transitions run in a fifth of a second. Nothing else about this project would have been provable otherwise.</li><li><strong>A client-side check is a courtesy; a server-side check is a control.</strong> Build both, and write the test that removes the courtesy.</li></ol>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>pnpm run verify</code> is green, the app is deployed, and all five post-deploy checks pass.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-security-pass.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A security pass</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The availability engine — Building Halfpast</title>
+<meta name="description" content="Recurring rules plus a full diary plus the shape of a service, in — every bookable start time, out. No database, no clock.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 22.857142857142858%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html" aria-current="page"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>The availability engine</h1>
+			<p class="lede">Recurring rules plus a full diary plus the shape of a service, in — every bookable start time, out. No database, no clock.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write <code>availableSlots</code>, and understand why <code>now</code> is an argument rather than something the function looks up.</p></aside>
+			<p>This is the largest pure function in the app and the one everything else leans on. Its job: given a person's recurring hours, what is already in their diary, and the shape of the thing being booked, produce every start time a customer may actually pick.</p>
+<p>It touches no database, no network, and — importantly — no clock.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/availability.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface AvailabilityQuery {
+	/** The zone the rules' wall-clock times are written in: the business's own. */
+	readonly timeZone: TimeZone;
+	/** Inclusive range of local calendar days to compute. */
+	readonly from: IsoDate;
+	readonly to: IsoDate;
+	readonly rules: readonly WeeklyRule[];
+	readonly service: ServiceShape;
+	/** Occupied grid cells, as start instants. */
+	readonly occupied: ReadonlySet&lt;number&gt;;
+	/** Now, as an instant. Passed in so tests can choose it. */
+	readonly now: number;
+	/** Minutes of notice required before an appointment may be booked. */
+	readonly minNoticeMinutes: number;
+	/** How far ahead the diary is open, in days. */
+	readonly maxAdvanceDays: number;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>now</code> is an argument</h4>
+	<p>A function that calls <code>Date.now()</code> inside itself can only be tested at the moment you run the test. Passing the clock in means a test can say &quot;it is 08:55 on the morning the clocks go back&quot; and get an answer in a fifth of a second. This one decision is why the DST tests later in this course exist at all — the alternative is waiting until October and hoping.</p>
+</aside>
+<h3 id="shape">The shape of a service</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/availability.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface ServiceShape {
+	readonly durationMinutes: number;
+	readonly bufferBeforeMinutes: number;
+	readonly bufferAfterMinutes: number;
+	/** How often a start time is offered. Merchandising, not physics. */
+	readonly slotIntervalMinutes: number;
+}</code></pre>
+</figure>
+<p>Four numbers, and the difference between them is worth being clear about:</p>
+<ul><li><strong>duration</strong> — what the customer experiences. A 45-minute cut is 45 minutes on their calendar.</li><li><strong>buffers</strong> — what the diary loses either side. Ten minutes to sweep up and make a coffee. The customer never sees them; the grid absolutely does.</li><li><strong>slotInterval</strong> — how often a start time is *offered*. A 45-minute service offered every 30 minutes gives 09:00, 09:30, 10:00. Offered every 15 it gives four times as many options and a diary full of unusable 15-minute gaps. This is a merchandising decision, not a physical constraint.</li></ul>
+<aside class="callout callout--note"><p>That distinction is why a <code>Slot</code> carries four numbers: <code>start</code>/<code>end</code> for the customer, <code>blockStart</code>/<code>blockEnd</code> for the diary. Show the wrong pair on the confirmation email and your customer arrives ten minutes early every time.</p></aside>
+<h3 id="windows">Step one: rules become windows</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/availability.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function windowsForDay(
+	day: IsoDate,
+	rules: readonly WeeklyRule[],
+	zone: TimeZone
+): Interval[] {
+	const weekday = weekdayOf(day);
+
+	const windows = rules
+		.filter((rule) =&gt; rule.weekday === weekday &amp;&amp; ruleAppliesOn(rule, day))
+		.map((rule) =&gt; ({
+			start: wallClockToInstant(day, rule.startMinute, zone),
+			end: wallClockToInstant(day, rule.endMinute, zone)
+		}));
+
+	return mergeIntervals(windows);
+}</code></pre>
+</figure>
+<p>Look closely at the <code>.map</code>. The two ends of the window are converted to instants <strong>independently</strong>. Nobody computes &quot;start plus 480 minutes&quot;.</p>
+<p>On an ordinary Monday, 09:00–17:00 is eight hours. On the Sunday the clocks go forward it is seven; on the Sunday they go back, nine. <strong>That is correct</strong>, and it is the answer the shop owner would give you: the door opens when the clock says nine and closes when it says five, and one Sunday a year they are genuinely there an hour longer.</p>
+<aside class="callout callout--warn"><p>The tempting alternative — &quot;the window is 480 minutes long&quot; — produces a salon that closes at four in the afternoon on one day a year and six on another. That arrives as a support ticket reading &quot;the last appointment disappeared&quot; and takes a fortnight to decode.</p></aside>
+<h3 id="string-compare">A place where string comparison is safe</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/availability.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function ruleAppliesOn(rule: WeeklyRule, day: IsoDate): boolean {
+	if (rule.effectiveFrom &amp;&amp; day &lt; rule.effectiveFrom) return false;
+	if (rule.effectiveTo &amp;&amp; day &gt; rule.effectiveTo) return false;
+	return true;
+}</code></pre>
+</figure>
+<p>Comparing dates with <code>&lt;</code> on strings looks like a mistake. Here it is not, and only here: <code>YYYY-MM-DD</code> is fixed width, zero padded, and ordered most-significant-first, so lexicographic order and chronological order are the same thing. That property is the entire reason ISO 8601 is written that way round.</p>
+<h3 id="slots">Step two: windows become slots</h3>
+<p>The rest is a walk. For each day in range, for each window, step forward by <code>slotIntervalMinutes</code> and keep the candidates that survive four filters:</p>
+<ol><li>The appointment plus its buffers fits <strong>inside</strong> the window. Not &quot;starts inside&quot; — fits.</li><li>Every grid cell it needs is free.</li><li>It starts at least <code>minNoticeMinutes</code> from now. A salon cannot honour a booking made ninety seconds ago.</li><li>It is no further ahead than <code>maxAdvanceDays</code>. Nobody wants a diary open in 2029.</li></ol>
+<aside class="callout callout--note"><p>Filter 1 is where buffers earn their keep. A 45-minute service with a 10-minute buffer after it needs 55 minutes of window, so the last offered start on a 09:00–17:00 day is 16:05 — not 16:15. Getting this wrong overbooks the end of every single day.</p></aside>
+<h3 id="guard">A guard against silent nonsense</h3>
+<p>One more thing lives in this file: a check that a service actually fits the grid.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/time/availability.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function assertServiceFitsGrid(service: ServiceShape): void {
+	for (const [name, minutes] of [
+		['duration', service.durationMinutes],
+		['buffer before', service.bufferBeforeMinutes],
+		['buffer after', service.bufferAfterMinutes],
+		['slot interval', service.slotIntervalMinutes]
+	] as const) {
+		if (!isWholeSlots(minutes)) {
+			throw new Error(`${name} must be a multiple of ${SLOT_MINUTES} minutes, got ${minutes}`);
+		}
+	}
+}</code></pre>
+</figure>
+<p>A 47-minute service would end in the middle of a cell. The grid would round it outwards, so the diary would lose 50 minutes while the customer was told 47 — and the confirmation email and the calendar would disagree by three minutes forever. Refusing at the door is kinder than rounding silently.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Calling <code>availableSlots</code> with a week of rules, an empty <code>occupied</code> set and a fixed <code>now</code> returns a list of start instants, and moving <code>now</code> forward removes the ones inside the notice period.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-five-minute-grid.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The five-minute grid</span>
+			</a>
+			<a class="pager__link pager__link--next" href="testing-time-with-vitest.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Testing time with Vitest</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

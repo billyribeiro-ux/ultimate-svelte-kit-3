@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the pieces fit — Building Halfpast</title>
+<meta name="description" content="A map of the app before we write any of it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 5.714285714285714%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html" aria-current="page"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>How the pieces fit</h1>
+			<p class="lede">A map of the app before we write any of it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A mental model of the layers, so every later chapter has somewhere to attach itself.</p></aside>
+			<p>It is easier to build something when you can already picture where each part goes. Here is the whole app in one page. Nothing here needs memorising — come back to it when a later chapter feels unmoored.</p>
+<h3 id="layers">Five layers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the stack, top to bottom</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-text">  ┌──────────────────────────────────────────────────────────┐
+  │  Pages          src/routes/**                            │
+  │                 What a person sees. No business rules.   │
+  ├──────────────────────────────────────────────────────────┤
+  │  Remote fns     *.remote.ts                              │
+  │                 The client/server boundary. Validates    │
+  │                 every argument. Checks who you are.      │
+  ├──────────────────────────────────────────────────────────┤
+  │  Services       src/lib/server/scheduling.ts             │
+  │                 Booking, cancelling, reading the diary.  │
+  │                 Transactions live here.                  │
+  ├──────────────────────────────────────────────────────────┤
+  │  Time           src/lib/time/**                          │
+  │                 Pure functions. No database, no clock.   │
+  ├──────────────────────────────────────────────────────────┤
+  │  Database       src/lib/server/db/**                     │
+  │                 Tables, and the constraint that makes    │
+  │                 double-booking impossible.               │
+  └──────────────────────────────────────────────────────────┘</code></pre>
+</figure>
+<p>The rule that keeps this honest: <strong>each layer may only call the one below it.</strong> A page never touches the database. A time function never reads the clock — you pass <code>now</code> in. That last one sounds pedantic until chapter 9, where it is the only reason we can test what happens in October without waiting until October.</p>
+<h3 id="the-grid">The idea that holds it together</h3>
+<p>One decision runs through every layer, so it is worth meeting early: <strong>the diary is not continuous.</strong> It is a row of five-minute cells.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">a morning, as the database sees it</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-text"> 09:00  09:05  09:10  09:15  09:20  09:25  09:30  09:35  09:40  09:45
+  ███    ███    ███    ███    ███    ███    ███    ███    ███    ░░░
+  └──────────────── one 45-minute appointment ──────────────┘
+
+  ███ = claimed, one row in the database each
+  ░░░ = free</code></pre>
+</figure>
+<p>An appointment does not store &quot;09:00 to 09:45&quot;. It stores nine rows, one per cell, and the database has a rule that says two rows cannot claim the same cell for the same person. &quot;Is it free?&quot; stops being a question we ask and becomes a question the database answers, atomically, by refusing.</p>
+
+<aside class="callout callout--why">
+	<h4>Why five minutes</h4>
+	<p>Small enough that nobody notices the quantisation — no salon books a 47-minute haircut — and large enough that a whole day is 288 rows rather than 86,400. Five also divides evenly into an hour, which matters more than it sounds: every cell boundary lands on a clean multiple in every time zone on Earth, including the ones offset by 30 or 45 minutes.</p>
+</aside>
+<h3 id="requests">What happens when somebody books</h3>
+<ol><li>The browser calls <code>book(...)</code> — which looks like a normal function, and is really a POST to an endpoint SvelteKit generated.</li><li>A <strong>valibot</strong> schema validates every field. If anything is wrong, the handler never runs.</li><li>The service layer opens a <strong>transaction</strong>.</li><li>Inside it, availability is recomputed <strong>on the server</strong>. What the browser believed is a hint, never an authority.</li><li>The booking row is inserted.</li><li>The slot claims are inserted — one statement, nine rows. If any cell is taken, the database refuses, the whole transaction rolls back, and the customer is told the truth.</li><li>On success, a message goes to the in-process notice board, and every open page watching that studio re-reads the diary.</li></ol>
+<aside class="callout callout--note"><p>Step 4 is the one people skip. If you trust the instant the browser sent, anybody who opens the network tab can book a time that was never on offer — outside opening hours, at 3am, in the past.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>You can name the five layers and say which direction calls flow, and you can explain what a &quot;slot claim&quot; row represents.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="node-and-tooling.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Node, pnpm and the floor</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

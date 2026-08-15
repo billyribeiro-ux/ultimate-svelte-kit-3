@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taking a booking — Building Halfpast</title>
+<meta name="description" content="The one function that writes an appointment, and the four things it does in order.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 51.42857142857142%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html" aria-current="page"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>Taking a booking</h1>
+			<p class="lede">The one function that writes an appointment, and the four things it does in order.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p><code>createBooking</code>: transactional, race-proof, and rude to nobody.</p></aside>
+			<p>Everything so far has been preparation. This is the function that takes money-shaped actions.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/scheduling.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function createBooking(input: CreateBookingInput): Promise&lt;Booking&gt; {
+	const created = await writeQueue.run(() =&gt; createBookingNow(input));
+
+	// Only after the transaction has committed. Announcing a change that then
+	// rolls back would send every open booking page to re-read a diary that never
+	// changed — and, worse, briefly show a slot as taken that is still free.
+	publishDiaryChange(created.businessId);
+
+	return created;
+}
+
+async function createBookingNow(input: CreateBookingInput): Promise&lt;Booking&gt; {
+	const now = input.now ?? Date.now();
+
+	return db.transaction(async (tx) =&gt; {
+		/* --- 1. Re-derive availability from scratch -------------------------- */
+		// … load the business, service, staff, the pairing, the rules and the
+		// occupied cells, then run the same pure `availableSlots` from chapter 8.
+
+		if (!offered.some((slot) =&gt; slot.start === input.start)) {
+			// Distinguish the two reasons a slot might not be on offer, because the
+			// remedies are different: one is &quot;pick another time&quot;, the other is
+			// &quot;you cannot book this far out at all&quot;.
+			if (input.start &lt; now + foundBusiness.minNoticeMinutes * 60_000) {
+				throw new BookingError('too_soon', 'That time is too close to now to book online.');
+			}
+			if (input.start &gt; now + foundBusiness.maxAdvanceDays * 86_400_000) {
+				throw new BookingError('too_far_ahead', 'The diary is not open that far ahead yet.');
+			}
+			throw new BookingError('slot_not_offered', 'That time is no longer available.');
+		}
+
+		/* --- 2. The customer -------------------------------------------------- */
+		// Find by (business, lowercased email) or insert.
+
+		/* --- 3. The booking row ----------------------------------------------- */
+		const [created] = await tx.insert(booking).values({ /* … snapshots … */ }).returning();
+		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
+
+		/* --- 4. The claim. This is the part that cannot be raced. -------------- */
+		const cells = slotsIn({ start: blockStart, end: blockEnd });
+
+		try {
+			await tx.insert(slotClaim).values(
+				cells.map((cell) =&gt; ({
+					staffId: chosenStaff.id,
+					slotStart: new Date(cell),
+					bookingId: created.id
+				}))
+			);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				// The whole transaction is about to roll back, so the booking row we
+				// inserted a moment ago will vanish with it. Nothing to clean up.
+				throw new BookingError('slot_taken', 'Sorry — that time was booked moments ago.');
+			}
+			throw error;
+		}
+
+		return created;
+	});
+}</code></pre>
+</figure>
+<h3 id="order">Why that order</h3>
+<ol><li><strong>Re-derive availability.</strong> The customer may have had the page open since breakfast. This catches the ordinary case and produces a specific, kind error.</li><li><strong>Upsert the customer.</strong> Before the booking, because the booking references it.</li><li><strong>Insert the booking.</strong> Now we have an ID for the claims to point at.</li><li><strong>Claim the cells.</strong> The step that can lose a race — and the only step that guarantees anything.</li></ol>
+<p>Steps 1 and 4 look redundant. They are not: step 1 exists to produce a *good error message* in the common case, and step 4 exists to be *correct* in the rare one. Delete step 1 and the app still cannot double-book, it is just ruder about the ordinary case. Delete step 4 and it double-books.</p>
+<p>Notice how carefully step 1 splits its refusal into three. &quot;No longer available&quot;, &quot;too close to now&quot; and &quot;the diary is not open that far ahead&quot; are the same failure to the code and three different problems to the person reading them — and only one of the three is solved by picking another time.</p>
+<h3 id="after-commit">Publishing after the commit, not inside it</h3>
+<p><code>publishDiaryChange</code> sits <strong>outside</strong> the transaction — outside the write queue entirely, in the thin wrapper. If it were inside, a dashboard could be woken up, re-read the diary, and see nothing, because the transaction it was told about had not committed yet. Worse, a transaction that then rolled back would have announced a slot as taken that is still free. It is a race that reproduces about one time in fifty and reads as &quot;the live update sometimes misses one&quot;.</p>
+<h3 id="sequential">A trap inside transactions</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">do not do this</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Inside a libSQL transaction, this fails:
+const [rules, claims] = await Promise.all([
+	tx.select().from(availabilityRule).where(...),
+	tx.select().from(slotClaim).where(...)
+]);
+// → &quot;cannot commit transaction - SQL statements in progress&quot;</code></pre>
+</figure>
+<p>A libSQL transaction is a single connection with one statement in flight at a time. <code>Promise.all</code> starts the second query before the first has finished and the transaction can never be committed. Two <code>await</code>s on separate lines is the fix; the parallelism you lose was never real.</p>
+<h3 id="errors">Errors with codes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/scheduling.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type BookingErrorCode =
+	| 'slot_taken'          // somebody else claimed it in the last few milliseconds
+	| 'slot_not_offered'    // it stopped being offered — hours changed, day off added
+	| 'service_unavailable'
+	| 'staff_unavailable'
+	| 'too_soon'
+	| 'too_far_ahead'
+	| 'not_found'
+	| 'already_cancelled'
+	| 'too_late_to_cancel';
+
+export class BookingError extends Error {
+	readonly code: BookingErrorCode;
+
+	constructor(code: BookingErrorCode, message: string) {
+		super(message);
+		this.name = 'BookingError';
+		this.code = code;
+	}
+}</code></pre>
+</figure>
+<p>A code <strong>and</strong> a message. The message is for the person; the code is for the interface, which can decide to refresh the grid on <code>slot_taken</code>, apologise on <code>too_far_ahead</code>, and — as the customer's cancel command does — return <strong>409</strong> rather than 400 for <code>too_late_to_cancel</code>, because the request was valid and the world moved on. Matching on message text works right up until somebody improves the wording.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>A booking taken through <code>createBooking</code> appears in the database with the right number of claim rows, and asking for the same slot twice produces a <code>BookingError</code> with code <code>slot_taken</code>.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="guards-that-throw.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Guards that throw</span>
+			</a>
+			<a class="pager__link pager__link--next" href="telling-everyone-something-changed.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Telling everyone something changed</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forms that work without JavaScript — Building Halfpast</title>
+<meta name="description" content="`form()`, `fields.&lt;name&gt;.as()`, and the rule that catches everybody once.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">21 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 60%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html" aria-current="page"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 21</p>
+			<h1>Forms that work without JavaScript</h1>
+			<p class="lede"><code>form()</code>, <code>fields.&lt;name&gt;.as()</code>, and the rule that catches everybody once.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A booking form that submits, validates and reports errors with scripting disabled — then gets better with it on.</p></aside>
+			<p><code>form()</code> is the third kind of remote function. It takes a schema and a handler, and the object it returns is spread straight onto a <code>&lt;form&gt;</code> element.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;form {...book}&gt;
+	&lt;input {...book.fields.name.as('text')} /&gt;
+	&lt;input {...book.fields.email.as('email')} /&gt;
+	&lt;button type=&quot;submit&quot;&gt;Book this time&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>With JavaScript off this is an ordinary HTML form: it posts, the server validates, and the page comes back with errors filled in. With JavaScript on, SvelteKit intercepts, posts in the background, and updates in place. Same code, same handler, same validation.</p>
+<h3 id="the-rule">The rule that catches everybody once</h3>
+<aside class="callout callout--warn"><p>Every control inside a remote form must come from <code>fields.&lt;name&gt;.as(...)</code>. A hand-written <code>&lt;input type=&quot;hidden&quot; name=&quot;slug&quot;&gt;</code> throws <strong>&quot;Form contained a field that wasn't created with form.fields.as(...)&quot;</strong> the moment the form is submitted.</p></aside>
+<p>SvelteKit has to own the name and the value in order to construct the submitted object and match it against your schema. A field it did not create is a field it cannot account for, so it refuses rather than silently dropping it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the fix</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- Not &lt;input type=&quot;hidden&quot; name=&quot;redirectTo&quot; value={redirectTo} /&gt; --&gt;
+&lt;input {...signIn.fields.redirectTo.as('hidden', redirectTo)} /&gt;</code></pre>
+</figure>
+<p>The second argument is the value. It caught us three times in this project: the booking page's service id, the slot grid's chosen time, and the sign-in page's <code>redirectTo</code>. The last one only broke sign-ins that arrived *with* a redirect, which meant every test that started at <code>/manage</code> failed and every test that started at <code>/sign-in</code> passed.</p>
+<h3 id="errors">Showing what went wrong</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if signIn.fields.allIssues()?.length}
+	&lt;Alert tone=&quot;error&quot; title=&quot;We could not sign you in&quot;&gt;
+		&lt;p&gt;{signIn.fields.allIssues()?.[0]?.message}&lt;/p&gt;
+	&lt;/Alert&gt;
+{/if}
+
+&lt;Field label=&quot;Email&quot; required error={signIn.fields.email.issues()?.[0]?.message}&gt;
+	{#snippet children({ id, describedBy, invalid })}
+		&lt;input
+			{...signIn.fields.email.as('email')}
+			{id}
+			aria-describedby={describedBy}
+			aria-invalid={invalid}
+			autocomplete=&quot;username&quot;
+		/&gt;
+	{/snippet}
+&lt;/Field&gt;</code></pre>
+</figure>
+<ul><li><code>fields.email.issues()</code> — problems with that one field, shown next to it.</li><li><code>fields.allIssues()</code> — everything, including errors that belong to the form as a whole rather than any single input.</li><li><code>aria-invalid</code> and <code>aria-describedby</code> are what make the error *readable* rather than merely visible. A screen reader announces &quot;Email, invalid entry, that does not look like an email address&quot; instead of &quot;Email, edit text&quot;.</li></ul>
+<h3 id="fusing">Fusing two answers into one field</h3>
+<p>The booking form has an interesting problem. The customer picks a <strong>time</strong>, but a time on its own is not bookable — it belongs to a particular staff member, and when the customer chose &quot;anyone&quot;, the app picked for them.</p>
+<p>The obvious design is a radio group of times plus a hidden <code>staffId</code>, updated by JavaScript when the selection changes. That design <strong>needs</strong> JavaScript. Without it the hidden field keeps whatever the server rendered — for &quot;anyone&quot;, nothing — and the form fails validation for a reason the customer can neither see nor fix.</p>
+<p>So the value carries both, and the schema splits it apart again:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/booking.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const slotValueSchema = v.pipe(
+	v.string('Please choose a time'),
+	v.regex(
+		/^\d{10,16}\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+		'Please choose a time'
+	),
+	v.transform((raw) =&gt; {
+		const separator = raw.indexOf('.');
+		return {
+			start: Number(raw.slice(0, separator)),
+			staffId: raw.slice(separator + 1)
+		};
+	})
+);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the regex before the transform</h4>
+	<p>The pipe runs in order. Validate the shape first, then split — so the handler receives a proper <code>{ start: number, staffId: string }</code> and can never be reached with <code>NaN</code> or half a selection. Splitting first and validating the pieces afterwards means writing two error messages for one mistake.</p>
+</aside>
+<p>The result: a customer with JavaScript disabled posts a complete, coherent choice using nothing but a radio button. Progressive enhancement that is genuinely progressive, rather than a fallback nobody ever tried.</p>
+<h3 id="form-for">One form per row</h3>
+<p>The services page renders an edit form for every service. They cannot share one <code>form()</code> instance — a pending state or an error on one would appear on all of them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/services/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each services as entry (entry.id)}
+	{@const editForm = saveService.for(entry.id)}
+
+	&lt;form {...editForm}&gt;
+		&lt;input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} /&gt;
+		&lt;Button type=&quot;submit&quot; loading={editForm.pending &gt; 0}&gt;Save changes&lt;/Button&gt;
+	&lt;/form&gt;
+{/each}</code></pre>
+</figure>
+<p><code>form.for(id)</code> gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p>Disable JavaScript in your browser, book an appointment end to end, and get a real confirmation page. Then submit a bad email and see the error come back attached to the right input.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="functions-that-cross-the-network.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Functions that cross the network</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-queries.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Live queries</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

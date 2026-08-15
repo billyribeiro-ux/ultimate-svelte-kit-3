@@ -61,12 +61,23 @@
 		<Button type="submit" full size="lg" loading={signIn.pending > 0}>Sign in</Button>
 	</form>
 
+	<!--
+		The seeded password used to be printed here, and `{#if dev}` was the first
+		attempt at making that safe. It is not enough, and the reason is worth
+		knowing: Svelte hoists a component's markup into module-level template
+		strings, so the literal `halfpast-demo-2026` stayed in the production
+		bundle even though the branch never rendered. Hidden is not removed —
+		`grep` on `.svelte-kit/output/client` found it in two files.
+
+		So the credentials live in one place: the output of `pnpm run db:seed`.
+		Anybody who can run the seed can read them, and no deployed copy of this
+		page carries a working owner password.
+	-->
 	<div class="demo">
 		<p class="eyebrow">Demo studio</p>
 		<p>
-			<code>ada@willowlane.test</code> — owner<br />
-			<code>ben@willowlane.test</code> — staff<br />
-			Password <code>halfpast-demo-2026</code>
+			Run <code>pnpm run db:seed</code> — it prints the seeded sign-in details, a booking page link, and
+			a customer's manage link.
 		</p>
 	</div>
 </div>

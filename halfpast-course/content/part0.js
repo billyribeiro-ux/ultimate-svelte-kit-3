@@ -160,7 +160,7 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'p',
-				text: 'The rule that keeps this honest: **each layer may only call the one below it.** A page never touches the database. A time function never reads the clock — you pass `now` in. That last one sounds pedantic until chapter 15, where it is the only reason we can test what happens in October without waiting until October.'
+				text: 'The rule that keeps this honest: **each layer may only call the one below it.** A page never touches the database. A time function never reads the clock — you pass `now` in. That last one sounds pedantic until chapter 9, where it is the only reason we can test what happens in October without waiting until October.'
 			},
 
 			{ type: 'h3', id: 'the-grid', text: 'The idea that holds it together' },

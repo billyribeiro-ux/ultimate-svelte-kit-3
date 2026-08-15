@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A database in a file — Building Halfpast</title>
+<meta name="description" content="SQLite through libSQL and Drizzle, and the two pragmas that decide whether it can serve a website at all.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Halfpast</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 35</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 28.57142857142857%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="how-the-pieces-fit.html"><span class="toc__num">02</span><span>How the pieces fit</span></a></li><li><a href="node-and-tooling.html"><span class="toc__num">03</span><span>Node, pnpm and the floor</span></a></li><li><a href="scaffolding.html"><span class="toc__num">04</span><span>Scaffolding the project</span></a></li><li><a href="three-kinds-of-time.html"><span class="toc__num">05</span><span>Three kinds of time</span></a></li><li><a href="a-date-library-that-knows-places.html"><span class="toc__num">06</span><span>A date library that knows about places</span></a></li><li><a href="the-five-minute-grid.html"><span class="toc__num">07</span><span>The five-minute grid</span></a></li><li><a href="the-availability-engine.html"><span class="toc__num">08</span><span>The availability engine</span></a></li><li><a href="testing-time-with-vitest.html"><span class="toc__num">09</span><span>Testing time with Vitest</span></a></li><li><a href="a-database-in-a-file.html" aria-current="page"><span class="toc__num">10</span><span>A database in a file</span></a></li><li><a href="the-schema.html"><span class="toc__num">11</span><span>The schema</span></a></li><li><a href="the-line-that-stops-double-booking.html"><span class="toc__num">12</span><span>The line that stops double-booking</span></a></li><li><a href="migrations-and-seed-data.html"><span class="toc__num">13</span><span>Migrations and seed data</span></a></li><li><a href="one-writer-at-a-time.html"><span class="toc__num">14</span><span>One writer at a time</span></a></li><li><a href="configuration-without-magic.html"><span class="toc__num">15</span><span>Configuration without magic</span></a></li><li><a href="who-are-you.html"><span class="toc__num">16</span><span>Who are you</span></a></li><li><a href="guards-that-throw.html"><span class="toc__num">17</span><span>Guards that throw</span></a></li><li><a href="taking-a-booking.html"><span class="toc__num">18</span><span>Taking a booking</span></a></li><li><a href="telling-everyone-something-changed.html"><span class="toc__num">19</span><span>Telling everyone something changed</span></a></li><li><a href="functions-that-cross-the-network.html"><span class="toc__num">20</span><span>Functions that cross the network</span></a></li><li><a href="forms-without-javascript.html"><span class="toc__num">21</span><span>Forms that work without JavaScript</span></a></li><li><a href="live-queries.html"><span class="toc__num">22</span><span>Live queries</span></a></li><li><a href="async-svelte.html"><span class="toc__num">23</span><span>Async Svelte, and its sharp edges</span></a></li><li><a href="a-design-system-in-plain-css.html"><span class="toc__num">24</span><span>A design system in plain CSS</span></a></li><li><a href="the-booking-page.html"><span class="toc__num">25</span><span>The booking page</span></a></li><li><a href="the-slot-grid.html"><span class="toc__num">26</span><span>The slot grid</span></a></li><li><a href="the-customers-own-page.html"><span class="toc__num">27</span><span>The customer’s own page</span></a></li><li><a href="the-live-diary.html"><span class="toc__num">28</span><span>The live diary</span></a></li><li><a href="the-owner-screens.html"><span class="toc__num">29</span><span>The owner’s screens</span></a></li><li><a href="motion-with-a-job.html"><span class="toc__num">30</span><span>Motion with a job</span></a></li><li><a href="mobile-first-for-real.html"><span class="toc__num">31</span><span>Mobile first, for real</span></a></li><li><a href="unit-tests-that-earn-their-keep.html"><span class="toc__num">32</span><span>Unit tests that earn their keep</span></a></li><li><a href="end-to-end-tests.html"><span class="toc__num">33</span><span>End-to-end tests</span></a></li><li><a href="a-security-pass.html"><span class="toc__num">34</span><span>A security pass</span></a></li><li><a href="shipping-it.html"><span class="toc__num">35</span><span>Shipping it</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>A database in a file</h1>
+			<p class="lede">SQLite through libSQL and Drizzle, and the two pragmas that decide whether it can serve a website at all.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A working database connection, with WAL mode on and a type-safe query builder over it.</p></aside>
+			<p>We are using <strong>SQLite</strong>, through a driver called <strong>libSQL</strong>, with <strong>Drizzle</strong> as the query builder on top. Three names, three jobs:</p>
+<ul><li><strong>SQLite</strong> is the database itself: a single file on disk, no server process, no port, no password.</li><li><strong>libSQL</strong> is a fork of SQLite that speaks the same SQL but can also talk to a hosted database over HTTP. Same code, local file today, managed service tomorrow.</li><li><strong>Drizzle</strong> is a query builder that knows your schema. You write TypeScript; it writes SQL; your editor knows the shape of every row that comes back.</li></ul>
+<h3 id="why-sqlite">Why SQLite for a real product</h3>
+<p>The reflex is that SQLite is a toy and a &quot;real&quot; app needs Postgres. For a booking platform, the reflex is wrong in an interesting way.</p>
+<p>A salon takes perhaps forty bookings a day. The entire business fits in a few megabytes. The read pattern is &quot;show me this week&quot;, which is one indexed range scan. There is no query in this app that SQLite handles in a meaningfully different way from Postgres — and the operational difference is enormous: no connection pool, no separate process to keep alive, no network hop, and a backup is <code>cp</code>.</p>
+<aside class="callout callout--note"><p>The honest limit: SQLite allows exactly <strong>one writer at a time</strong>, across the whole file. That is a real constraint, we will hit it in chapter 14, and the fix is four lines. It is not a reason to reach for a database server on day one.</p></aside>
+<h3 id="install">Installing</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm add drizzle-orm @libsql/client
+pnpm add -D drizzle-kit</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>@libsql/client</code> and <code>drizzle-orm</code> go in <strong>dependencies</strong>, not <code>devDependencies</code>. Vite bundles devDependencies into the server build, and <code>@libsql/client</code> loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with <code>Cannot find module '@libsql/linux-x64-gnu'</code>. This cost real time on this project.</p></aside>
+<h3 id="connection">The connection</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
+import * as schema from './schema.ts';
+
+const client = createClient({
+	url: DATABASE_URL,
+	authToken: DATABASE_AUTH_TOKEN
+});
+
+export const db = drizzle(client, { schema });</code></pre>
+</figure>
+<p>Passing <code>{ schema }</code> is what turns on the relational query builder — <code>db.query.booking.findMany({ with: { customer: true } })</code> — and gives every result its proper type. Without it you still get SQL, but you lose the part that makes Drizzle worth using.</p>
+<h3 id="pragmas">The two pragmas</h3>
+<p>A fresh SQLite database is configured for a command-line tool, not a website. Two settings need changing, and one of them has a trap in it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">void (async () =&gt; {
+	try {
+		await client.execute('PRAGMA journal_mode = WAL');
+		await client.execute('PRAGMA busy_timeout = 5000');
+	} catch (error) {
+		console.warn('[db] could not apply pragmas; continuing with defaults', error);
+	}
+})();</code></pre>
+</figure>
+<ul><li><strong><code>journal_mode = WAL</code></strong> — write-ahead logging. Without it, a single writer blocks every reader for the duration of its transaction. With it, readers carry on against the last committed state while a write is in progress. For a page that streams live availability to visitors, this is the difference between working and not.</li><li><strong><code>busy_timeout = 5000</code></strong> — how long a blocked connection waits before giving up. We will come back to why this alone is not the answer.</li></ul>
+<aside class="callout callout--warn"><p>These are two separate <code>execute</code> calls, and they must be. <code>client.batch()</code> wraps its statements in a transaction, and SQLite refuses to change journal mode inside one: *&quot;cannot change into wal mode from within a transaction&quot;*. Written as a batch, the <code>catch</code> above swallows the error and WAL silently never applies — the app works, slowly and mysteriously, under any concurrent load. Discovering that took an afternoon.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>One is permanent, one is not</h4>
+	<p><code>journal_mode</code> is written into the database file and survives restarts. <code>busy_timeout</code> is a property of the <strong>connection</strong> and must be set again every time you open one. That asymmetry is why both live here, at connection time, rather than in a migration.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<p><code>pnpm run dev</code> starts without database errors, and running <code>PRAGMA journal_mode;</code> against the file returns <code>wal</code>.</p>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="testing-time-with-vitest.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Testing time with Vitest</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-schema.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The schema</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
