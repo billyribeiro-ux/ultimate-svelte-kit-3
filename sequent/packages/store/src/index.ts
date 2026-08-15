@@ -10,3 +10,5 @@ export * from './client.ts';
 export * from './log.ts';
 export * from './ledger.ts';
 export * from './projections.ts';
+export * from './authz.ts';
+export * from './tenancy.ts';

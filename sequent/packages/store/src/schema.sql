@@ -246,3 +246,81 @@ BEFORE UPDATE ON ledger_posting
 BEGIN
 	SELECT RAISE(ABORT, 'ledger postings are immutable; post a reversing entry');
 END;
+
+/* ========================================================================== */
+/* Tenancy — firms, their people, and what each may do                         */
+/* ========================================================================== */
+
+-- A firm is the tenant. Everything else hangs off one.
+CREATE TABLE IF NOT EXISTS firm (
+	firm_id TEXT PRIMARY KEY,
+	name TEXT NOT NULL,
+	-- Simulated billing: seats bought, and the plan's ceiling.
+	plan TEXT NOT NULL DEFAULT 'starter',
+	seats INTEGER NOT NULL DEFAULT 1,
+	is_active INTEGER NOT NULL DEFAULT 1,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+-- A trading account. A firm may have several — a desk each, say — and risk
+-- limits are set per account rather than per firm, because that is the level
+-- at which a risk manager actually thinks.
+CREATE TABLE IF NOT EXISTS trading_account (
+	account_id TEXT PRIMARY KEY,
+	firm_id TEXT NOT NULL REFERENCES firm (firm_id),
+	name TEXT NOT NULL,
+	is_active INTEGER NOT NULL DEFAULT 1,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS trading_account_firm_idx ON trading_account (firm_id);
+
+CREATE TABLE IF NOT EXISTS venue_user (
+	user_id TEXT PRIMARY KEY,
+	firm_id TEXT NOT NULL REFERENCES firm (firm_id),
+	email TEXT NOT NULL UNIQUE,
+	display_name TEXT NOT NULL,
+	password_hash TEXT NOT NULL,
+	-- 'trader' | 'risk_manager' | 'firm_admin' | 'auditor' | 'venue_operator'
+	role TEXT NOT NULL,
+	is_active INTEGER NOT NULL DEFAULT 1,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+-- Which accounts a trader may send orders for. A firm_admin implicitly has all
+-- of them; a trader has exactly what is listed here and nothing else.
+CREATE TABLE IF NOT EXISTS account_assignment (
+	user_id TEXT NOT NULL REFERENCES venue_user (user_id) ON DELETE CASCADE,
+	account_id TEXT NOT NULL REFERENCES trading_account (account_id) ON DELETE CASCADE,
+	PRIMARY KEY (user_id, account_id)
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS session (
+	session_id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL REFERENCES venue_user (user_id) ON DELETE CASCADE,
+	expires_at INTEGER NOT NULL,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS session_user_idx ON session (user_id);
+
+-- API keys, for the algorithms.
+--
+-- Only the hash is stored. The secret is shown once, at creation, and if the
+-- holder loses it they get a new key — which is the correct trade: a venue that
+-- can show you your own key can also be compelled to show it to somebody else.
+CREATE TABLE IF NOT EXISTS api_key (
+	key_id TEXT PRIMARY KEY,
+	firm_id TEXT NOT NULL REFERENCES firm (firm_id),
+	account_id TEXT REFERENCES trading_account (account_id),
+	label TEXT NOT NULL,
+	secret_hash TEXT NOT NULL,
+	-- Space-separated: 'read', 'trade', 'admin'.
+	scopes TEXT NOT NULL,
+	rate_per_second INTEGER NOT NULL DEFAULT 20,
+	revoked_at INTEGER,
+	last_used_at INTEGER,
+	created_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS api_key_firm_idx ON api_key (firm_id);
