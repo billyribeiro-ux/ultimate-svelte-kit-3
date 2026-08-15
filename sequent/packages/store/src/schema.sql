@@ -140,3 +140,109 @@ CREATE TABLE IF NOT EXISTS engine_snapshot (
 	fingerprint TEXT NOT NULL,
 	body TEXT NOT NULL
 ) STRICT;
+
+/* ========================================================================== */
+/* Projections — every one of these is a rebuildable cache                     */
+/* ========================================================================== */
+
+-- The tape: every trade, in the order it happened.
+CREATE TABLE IF NOT EXISTS trade (
+	trade_id TEXT PRIMARY KEY,
+	seq INTEGER NOT NULL,
+	instrument_id TEXT NOT NULL,
+	at INTEGER NOT NULL,
+	price INTEGER NOT NULL,
+	quantity INTEGER NOT NULL,
+	aggressor TEXT,
+	buy_order_id TEXT NOT NULL,
+	buy_firm_id TEXT NOT NULL,
+	buy_account_id TEXT NOT NULL,
+	sell_order_id TEXT NOT NULL,
+	sell_firm_id TEXT NOT NULL,
+	sell_account_id TEXT NOT NULL,
+	buyer_fee INTEGER NOT NULL,
+	seller_fee INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS trade_instrument_idx ON trade (instrument_id, seq);
+CREATE INDEX IF NOT EXISTS trade_buy_account_idx ON trade (buy_account_id, seq);
+CREATE INDEX IF NOT EXISTS trade_sell_account_idx ON trade (sell_account_id, seq);
+
+-- A participant's view of their own orders. The engine holds live orders in
+-- memory; this is the durable record, including the ones that are finished.
+CREATE TABLE IF NOT EXISTS order_record (
+	order_id TEXT PRIMARY KEY,
+	seq INTEGER NOT NULL,
+	firm_id TEXT NOT NULL,
+	account_id TEXT NOT NULL,
+	instrument_id TEXT NOT NULL,
+	client_order_id TEXT NOT NULL,
+	side TEXT NOT NULL,
+	price INTEGER,
+	quantity INTEGER NOT NULL,
+	filled INTEGER NOT NULL DEFAULT 0,
+	time_in_force TEXT NOT NULL,
+	status TEXT NOT NULL,
+	cancel_reason TEXT,
+	created_at INTEGER NOT NULL,
+	updated_at INTEGER NOT NULL
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS order_record_firm_idx ON order_record (firm_id, seq DESC);
+CREATE INDEX IF NOT EXISTS order_record_client_idx ON order_record (firm_id, client_order_id);
+
+-- Net position per account per instrument, with the average price paid.
+CREATE TABLE IF NOT EXISTS position (
+	account_id TEXT NOT NULL,
+	instrument_id TEXT NOT NULL,
+	quantity INTEGER NOT NULL,
+	-- Cost basis in the same scaled units as price × quantity. Signed, so a
+	-- short position carries a negative basis and the P&L arithmetic is the
+	-- same expression for both directions.
+	cost_basis INTEGER NOT NULL,
+	realised_pnl INTEGER NOT NULL DEFAULT 0,
+	updated_at INTEGER NOT NULL,
+	PRIMARY KEY (account_id, instrument_id)
+) STRICT;
+
+/* ========================================================================== */
+/* The ledger — double entry, and the constraint that makes it one             */
+/* ========================================================================== */
+
+CREATE TABLE IF NOT EXISTS ledger_account (
+	account_id TEXT PRIMARY KEY,
+	-- 'firm_cash', 'firm_securities', 'venue_revenue', 'venue_clearing'
+	kind TEXT NOT NULL,
+	owner_id TEXT NOT NULL,
+	currency TEXT NOT NULL,
+	instrument_id TEXT
+) STRICT;
+
+-- A transaction is a group of postings that must sum to zero.
+CREATE TABLE IF NOT EXISTS ledger_transaction (
+	transaction_id TEXT PRIMARY KEY,
+	seq INTEGER NOT NULL,
+	at INTEGER NOT NULL,
+	kind TEXT NOT NULL,
+	reference TEXT
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS ledger_posting (
+	posting_id INTEGER PRIMARY KEY AUTOINCREMENT,
+	transaction_id TEXT NOT NULL REFERENCES ledger_transaction (transaction_id),
+	account_id TEXT NOT NULL REFERENCES ledger_account (account_id),
+	amount INTEGER NOT NULL,
+	CHECK (amount <> 0)
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS ledger_posting_account_idx ON ledger_posting (account_id);
+CREATE INDEX IF NOT EXISTS ledger_posting_transaction_idx ON ledger_posting (transaction_id);
+
+-- Corrections are reversing entries, never updates. Same rule as the log, and
+-- for the same reason: an accountant's question is "what did you think in
+-- March", and an updated row cannot answer it.
+CREATE TRIGGER IF NOT EXISTS ledger_posting_is_permanent
+BEFORE UPDATE ON ledger_posting
+BEGIN
+	SELECT RAISE(ABORT, 'ledger postings are immutable; post a reversing entry');
+END;
