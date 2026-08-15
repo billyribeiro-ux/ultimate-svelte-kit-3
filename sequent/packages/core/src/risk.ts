@@ -23,7 +23,15 @@
  * over maps.
  */
 
-import type { AccountId, FirmId, InstrumentId, Price, Quantity, RejectReason, Side } from '@sequent/protocol';
+import type {
+	AccountId,
+	FirmId,
+	InstrumentId,
+	Price,
+	Quantity,
+	RejectReason,
+	Side
+} from '@sequent/protocol';
 import { isOnTick, notional } from '@sequent/protocol';
 import { fillableQuantity, type Book } from './book.ts';
 import { limitsFor, positionOf, workingOf, type EngineState, type Instrument } from './state.ts';
@@ -204,7 +212,10 @@ export function checkOrder(
  */
 export function checkAgainstBook(
 	book: Book,
-	check: OrderCheck & { timeInForce: string; selfTradePrevention: 'cancel_resting' | 'cancel_aggressing' | 'cancel_both' }
+	check: OrderCheck & {
+		timeInForce: string;
+		selfTradePrevention: 'cancel_resting' | 'cancel_aggressing' | 'cancel_both';
+	}
 ): Refusal | undefined {
 	if (check.timeInForce === 'fok') {
 		const request = {

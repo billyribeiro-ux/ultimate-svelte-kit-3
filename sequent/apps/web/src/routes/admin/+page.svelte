@@ -41,7 +41,14 @@
 	let mintedKey = $state<{ keyId: string; secret: string } | null>(null);
 	let mintedHook = $state<{ endpointId: string; secret: string } | null>(null);
 
-	let newKey = $state({ label: '', read: true, trade: false, admin: false, accountId: '', rate: '20' });
+	let newKey = $state({
+		label: '',
+		read: true,
+		trade: false,
+		admin: false,
+		accountId: '',
+		rate: '20'
+	});
 	let newHook = $state({ url: '', events: ['trade.executed'] as string[] });
 
 	const keys = $derived(data.canManageKeys ? await getApiKeys() : null);
@@ -159,6 +166,10 @@
 
 <div class="container stack admin">
 	<h1>Admin</h1>
+	<!-- Which firm this page is administering. A venue operator can be looking
+	     at any of them, and "revoke this key" is a different action depending on
+	     whose it is. -->
+	<p class="small muted mono">{data.firmId}</p>
 
 	{#if lastError}
 		<p class="error" role="alert">{lastError}</p>
@@ -171,8 +182,8 @@
 			<p class="small muted">
 				Phases are not labels. <strong>pre-open</strong> accumulates orders without matching,
 				<strong>auction</strong> clears all of them at one price, and
-				<strong>continuous</strong> matches arrival by arrival. The engine uncrosses the book
-				on the way into continuous, so trading never begins on a crossed market.
+				<strong>continuous</strong> matches arrival by arrival. The engine uncrosses the book on the way
+				into continuous, so trading never begins on a crossed market.
 			</p>
 
 			<div class="instruments">
@@ -240,11 +251,21 @@
 					<label>
 						Tick size
 						<!-- In scaled units: 25 is a quarter of a penny. -->
-						<input {...listInstrument.fields.tickSize.as('text')} value="25" inputmode="numeric" required />
+						<input
+							{...listInstrument.fields.tickSize.as('text')}
+							value="25"
+							inputmode="numeric"
+							required
+						/>
 					</label>
 					<label>
 						Lot size
-						<input {...listInstrument.fields.lotSize.as('text')} value="1" inputmode="numeric" required />
+						<input
+							{...listInstrument.fields.lotSize.as('text')}
+							value="1"
+							inputmode="numeric"
+							required
+						/>
 					</label>
 				</div>
 
@@ -283,10 +304,10 @@
 			</div>
 
 			<p class="small muted">
-				A preview, built by the same function that builds the invoice — so what you see
-				mid-month is what you will be charged, rather than an estimate from a second
-				implementation that drifts. Trading fees are settled per trade through the ledger
-				and appear at zero here so they are not billed twice.
+				A preview, built by the same function that builds the invoice — so what you see mid-month is
+				what you will be charged, rather than an estimate from a second implementation that drifts.
+				Trading fees are settled per trade through the ledger and appear at zero here so they are
+				not billed twice.
 			</p>
 
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -324,7 +345,9 @@
 				<ul role="list" class="invoices">
 					{#each billing.invoices as issued (issued.invoiceId)}
 						<li class="row">
-							<span class="mono small">{new Date(issued.periodStart).toISOString().slice(0, 7)}</span>
+							<span class="mono small"
+								>{new Date(issued.periodStart).toISOString().slice(0, 7)}</span
+							>
 							<span class="mono">{money(issued.total)}</span>
 						</li>
 					{/each}
@@ -418,7 +441,8 @@
 										<button
 											type="button"
 											class="link"
-											onclick={() => void run(async () => void (await revokeKey({ keyId: key.keyId })))}
+											onclick={() =>
+												void run(async () => void (await revokeKey({ keyId: key.keyId })))}
 											aria-label="Revoke {key.label}">Revoke</button
 										>
 									{/if}
@@ -438,9 +462,9 @@
 				<h2>Webhooks</h2>
 				<p class="small muted">
 					Every delivery is signed <code class="mono">t=…,v1=…</code> over
-					<code class="mono">timestamp.body</code>. Verify it in constant time, and reject
-					anything with a timestamp more than a few minutes old — that is what stops a
-					captured delivery being replayed at you.
+					<code class="mono">timestamp.body</code>. Verify it in constant time, and reject anything
+					with a timestamp more than a few minutes old — that is what stops a captured delivery
+					being replayed at you.
 				</p>
 
 				{#if mintedHook}
@@ -456,7 +480,11 @@
 
 				<label>
 					Endpoint URL
-					<input bind:value={newHook.url} inputmode="url" placeholder="https://api.yourfirm.example/sequent" />
+					<input
+						bind:value={newHook.url}
+						inputmode="url"
+						placeholder="https://api.yourfirm.example/sequent"
+					/>
 				</label>
 
 				<fieldset class="scopes">
@@ -491,7 +519,9 @@
 									type="button"
 									class="link"
 									onclick={() =>
-										void run(async () => void (await removeWebhook({ endpointId: endpoint.endpointId })))}
+										void run(
+											async () => void (await removeWebhook({ endpointId: endpoint.endpointId }))
+										)}
 									aria-label="Remove {endpoint.url}">Remove</button
 								>
 							</div>
@@ -506,7 +536,12 @@
 				{#if hooks.deliveries.length}
 					<h3>Recent deliveries</h3>
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-					<div class="scroller" tabindex="0" role="region" aria-label="Recent deliveries, scrollable">
+					<div
+						class="scroller"
+						tabindex="0"
+						role="region"
+						aria-label="Recent deliveries, scrollable"
+					>
 						<table>
 							<thead>
 								<tr>
@@ -565,18 +600,18 @@
 			</div>
 
 			<p class="small muted">
-				Lag, not throughput. A venue processing ten thousand commands a second while
-				falling two thousand behind is not healthy, and a throughput graph makes it look
-				magnificent. The trial balance is zero by construction — anything else means
-				something wrote to the ledger outside the one function that may.
+				Lag, not throughput. A venue processing ten thousand commands a second while falling two
+				thousand behind is not healthy, and a throughput graph makes it look magnificent. The trial
+				balance is zero by construction — anything else means something wrote to the ledger outside
+				the one function that may.
 			</p>
 
 			{#if data.canRunVenue}
 				<h3>Feature flags</h3>
 				<p class="small muted">
-					A flag may change what the venue <em>offers</em>. It may never change what the
-					engine <em>decides</em> — a flag inside the engine would mean replaying the log
-					produced different history depending on when you ran it.
+					A flag may change what the venue <em>offers</em>. It may never change what the engine
+					<em>decides</em> — a flag inside the engine would mean replaying the log produced different
+					history depending on when you ran it.
 				</p>
 
 				<ul role="list" class="flags">
@@ -620,9 +655,9 @@
 				<h3>Schema</h3>
 				<p class="small muted">
 					At migration <strong class="mono">{ops.migrations.current}</strong>,
-					{ops.migrations.pending.length} pending. Changes are forward-only: the recovery
-					path for a bad migration is a new migration, because a rollback that drops a
-					column destroys the data written since the deploy.
+					{ops.migrations.pending.length} pending. Changes are forward-only: the recovery path for a bad
+					migration is a new migration, because a rollback that drops a column destroys the data written
+					since the deploy.
 				</p>
 			{/if}
 		</section>
@@ -653,9 +688,8 @@
 			</div>
 
 			<p class="small muted">
-				<strong>Oldest pending</strong> is the number to alert on, not depth. A queue of ten
-				thousand that drains in a second is healthy; a queue of one that has been stuck for
-				an hour is not.
+				<strong>Oldest pending</strong> is the number to alert on, not depth. A queue of ten thousand
+				that drains in a second is healthy; a queue of one that has been stuck for an hour is not.
 			</p>
 
 			{#if queue.dead.length}
@@ -672,7 +706,9 @@
 					type="button"
 					disabled={busy}
 					onclick={() =>
-						void run(async () => void (await retryDead({ outboxIds: queue.dead.map((m) => m.outboxId) })))}
+						void run(
+							async () => void (await retryDead({ outboxIds: queue.dead.map((m) => m.outboxId) }))
+						)}
 				>
 					Retry all {queue.dead.length}
 				</button>
@@ -684,10 +720,16 @@
 </div>
 
 <style>
-	.admin h2 { font-size: var(--text-lg); }
-	.admin h3 { margin-block-start: var(--space-3); }
+	.admin h2 {
+		font-size: var(--text-lg);
+	}
+	.admin h3 {
+		margin-block-start: var(--space-3);
+	}
 
-	.tight { gap: var(--space-1); }
+	.tight {
+		gap: var(--space-1);
+	}
 
 	/* Mobile first: one column of fields, more once there is room. */
 	.fields {
@@ -697,7 +739,9 @@
 	}
 
 	@media (min-width: 40rem) {
-		.fields { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+		.fields {
+			grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+		}
 	}
 
 	.fields label,
@@ -717,7 +761,9 @@
 		gap: var(--space-3);
 	}
 
-	.scopes legend { padding-inline: var(--space-2); }
+	.scopes legend {
+		padding-inline: var(--space-2);
+	}
 
 	.check {
 		display: inline-flex;
@@ -755,7 +801,9 @@
 	}
 
 	@media (min-width: 48rem) {
-		.instruments { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+		.instruments {
+			grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+		}
 	}
 
 	.instrument {
@@ -764,7 +812,10 @@
 		padding: var(--space-3);
 	}
 
-	.instrument header { justify-content: space-between; align-items: flex-start; }
+	.instrument header {
+		justify-content: space-between;
+		align-items: flex-start;
+	}
 
 	.phases {
 		display: flex;
@@ -778,11 +829,24 @@
 		min-block-size: 2.25rem;
 	}
 
-	.phase-button.current { border-color: var(--accent); color: var(--accent); }
+	.phase-button.current {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
 
-	.phase[data-phase='continuous'] { color: var(--bid); border-color: var(--bid); }
-	.phase[data-phase='halted'], .phase[data-phase='closed'] { color: var(--ask); border-color: var(--ask); }
-	.phase[data-phase='auction'] { color: var(--warn); border-color: var(--warn); }
+	.phase[data-phase='continuous'] {
+		color: var(--bid);
+		border-color: var(--bid);
+	}
+	.phase[data-phase='halted'],
+	.phase[data-phase='closed'] {
+		color: var(--ask);
+		border-color: var(--ask);
+	}
+	.phase[data-phase='auction'] {
+		color: var(--warn);
+		border-color: var(--warn);
+	}
 
 	.minted {
 		border: 1px solid var(--accent);
@@ -800,7 +864,8 @@
 		word-break: break-all;
 	}
 
-	.endpoints, .dead {
+	.endpoints,
+	.dead {
 		list-style: none;
 		padding: 0;
 		display: flex;
@@ -814,8 +879,12 @@
 		gap: var(--space-1);
 	}
 
-	.endpoint .row { justify-content: space-between; }
-	.url { word-break: break-all; }
+	.endpoint .row {
+		justify-content: space-between;
+	}
+	.url {
+		word-break: break-all;
+	}
 
 	.dead li {
 		border-inline-start: 2px solid var(--ask);
@@ -829,16 +898,30 @@
 	}
 
 	@media (min-width: 40rem) {
-		.stats { grid-template-columns: repeat(4, 1fr); }
+		.stats {
+			grid-template-columns: repeat(4, 1fr);
+		}
 	}
 
-	.stat { display: flex; flex-direction: column; }
-	.big { font-size: var(--text-xl); }
-	.stat.bad .big { color: var(--ask); }
+	.stat {
+		display: flex;
+		flex-direction: column;
+	}
+	.big {
+		font-size: var(--text-xl);
+	}
+	.stat.bad .big {
+		color: var(--ask);
+	}
 
-	.revoked { opacity: 0.5; }
+	.revoked {
+		opacity: 0.5;
+	}
 
-	.total-row td { border-block-start: 2px solid var(--line); border-block-end: none; }
+	.total-row td {
+		border-block-start: 2px solid var(--line);
+		border-block-end: none;
+	}
 
 	.flags {
 		list-style: none;
@@ -854,11 +937,22 @@
 		gap: var(--space-1);
 	}
 
-	.flag .row { justify-content: space-between; }
+	.flag .row {
+		justify-content: space-between;
+	}
 
-	.level[data-level='ok'] { color: var(--bid); border-color: var(--bid); }
-	.level[data-level='degraded'] { color: var(--warn); border-color: var(--warn); }
-	.level[data-level='down'] { color: var(--ask); border-color: var(--ask); }
+	.level[data-level='ok'] {
+		color: var(--bid);
+		border-color: var(--bid);
+	}
+	.level[data-level='degraded'] {
+		color: var(--warn);
+		border-color: var(--warn);
+	}
+	.level[data-level='down'] {
+		color: var(--ask);
+		border-color: var(--ask);
+	}
 
 	.invoices {
 		list-style: none;
@@ -868,12 +962,26 @@
 		gap: var(--space-1);
 	}
 
-	.invoices li { justify-content: space-between; }
+	.invoices li {
+		justify-content: space-between;
+	}
 
-	.badge.stopped, .down { color: var(--ask); }
-	.badge.stopped { border-color: var(--ask); }
-	.badge.warn { color: var(--warn); border-color: var(--warn); }
+	.badge.stopped,
+	.down {
+		color: var(--ask);
+	}
+	.badge.stopped {
+		border-color: var(--ask);
+	}
+	.badge.warn {
+		color: var(--warn);
+		border-color: var(--warn);
+	}
 
-
-	.error { color: var(--ask); border: 1px solid var(--ask); border-radius: var(--radius); padding: var(--space-2); }
+	.error {
+		color: var(--ask);
+		border: 1px solid var(--ask);
+		border-radius: var(--radius);
+		padding: var(--space-2);
+	}
 </style>

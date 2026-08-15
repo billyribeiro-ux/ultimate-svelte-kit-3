@@ -14,7 +14,14 @@ import {
 	quantity,
 	type Command
 } from '@sequent/protocol';
-import { catchUp, health, openStore, readCheckpoint, Sequencer, trialBalance } from '@sequent/store';
+import {
+	catchUp,
+	health,
+	openStore,
+	readCheckpoint,
+	Sequencer,
+	trialBalance
+} from '@sequent/store';
 import { runEngine } from './loop.ts';
 
 /**

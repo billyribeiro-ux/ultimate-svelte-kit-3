@@ -64,7 +64,12 @@ async function allAccountsOf(client: Client, firmId: string): Promise<string[]> 
 }
 
 /** The accounts a user may act on, or all of the firm's for firm-wide roles. */
-async function accountsFor(client: Client, userId: string, firmId: string, role: Role): Promise<string[]> {
+async function accountsFor(
+	client: Client,
+	userId: string,
+	firmId: string,
+	role: Role
+): Promise<string[]> {
 	if (role === 'firm_admin' || role === 'risk_manager' || role === 'venue_operator') {
 		return allAccountsOf(client, firmId);
 	}
@@ -166,9 +171,7 @@ export async function viewerFromApiKey(
 	 * trade one desk cannot, when it misbehaves at three in the morning,
 	 * misbehave on all of them.
 	 */
-	const accountIds = accountId
-		? [accountId]
-		: await allAccountsOf(client, firmId);
+	const accountIds = accountId ? [accountId] : await allAccountsOf(client, firmId);
 
 	const viewer: Viewer = {
 		userId: `key:${keyId}`,

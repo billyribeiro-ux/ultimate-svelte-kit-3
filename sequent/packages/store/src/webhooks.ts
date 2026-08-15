@@ -309,9 +309,7 @@ function isPrivateHost(host: string): boolean {
 			const low = Number.parseInt(groups[1]!, 16);
 
 			if (Number.isFinite(high) && Number.isFinite(low)) {
-				return isPrivateHost(
-					`${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`
-				);
+				return isPrivateHost(`${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`);
 			}
 		}
 	}

@@ -107,7 +107,14 @@ export async function runEngine(client: Client, options: LoopOptions): Promise<E
 			 * command, the rule is simple — either a command's events are in the log
 			 * or the command has not happened yet.
 			 */
-			await appendEvents(client, ENGINE_CONSUMER, record.seq, record.receivedAt, record.version, produced);
+			await appendEvents(
+				client,
+				ENGINE_CONSUMER,
+				record.seq,
+				record.receivedAt,
+				record.version,
+				produced
+			);
 
 			cursor = record.seq;
 			events += produced.length;

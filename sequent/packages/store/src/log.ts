@@ -94,7 +94,9 @@ export class Sequencer {
 	 * so `assertSoleWriter` below checks it rather than trusting it.
 	 */
 	async start(): Promise<void> {
-		const result = await this.#client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
+		const result = await this.#client.execute(
+			'SELECT COALESCE(MAX(seq), 0) AS high FROM command_log'
+		);
 		this.#next = Number(result.rows[0]?.['high'] ?? 0) + 1;
 	}
 
@@ -167,7 +169,9 @@ export class Sequencer {
 	 * Cheap to check, catastrophic to miss, so it is checked on every batch.
 	 */
 	async assertSoleWriter(): Promise<void> {
-		const result = await this.#client.execute('SELECT COALESCE(MAX(seq), 0) AS high FROM command_log');
+		const result = await this.#client.execute(
+			'SELECT COALESCE(MAX(seq), 0) AS high FROM command_log'
+		);
 		const high = Number(result.rows[0]?.['high'] ?? 0);
 
 		if (high !== this.nextSeq - 1) {

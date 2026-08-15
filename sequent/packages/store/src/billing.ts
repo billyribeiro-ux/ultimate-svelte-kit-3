@@ -433,7 +433,11 @@ export interface LimitCheck {
  * breaks a trading system in production, which is a thing no customer will
  * forgive and no support conversation will fix.
  */
-export async function canCreateKey(client: Client, firmId: string, plan: Plan): Promise<LimitCheck> {
+export async function canCreateKey(
+	client: Client,
+	firmId: string,
+	plan: Plan
+): Promise<LimitCheck> {
 	const result = await client.execute({
 		sql: 'SELECT COUNT(*) AS n FROM api_key WHERE firm_id = ? AND revoked_at IS NULL',
 		args: [firmId]

@@ -175,7 +175,10 @@ export const getApiKeys = query(async () => {
 			...key,
 			// A key that has never been used is a key somebody made and forgot, and
 			// that is worth showing plainly rather than as an empty cell.
-			lastUsedLabel: key.lastUsedAt === null ? 'never used' : new Date(key.lastUsedAt).toISOString().slice(0, 16).replace('T', ' '),
+			lastUsedLabel:
+				key.lastUsedAt === null
+					? 'never used'
+					: new Date(key.lastUsedAt).toISOString().slice(0, 16).replace('T', ' '),
 			revoked: key.revokedAt !== null
 		})),
 		accounts: accounts.rows.map((row) => ({
@@ -580,14 +583,21 @@ export const listInstrument = form(
 			v.string(),
 			v.trim(),
 			v.toUpperCase(),
-			v.regex(/^[A-Z][A-Z0-9.]{0,15}$/, 'A symbol is letters, digits and dots, starting with a letter.')
+			v.regex(
+				/^[A-Z][A-Z0-9.]{0,15}$/,
+				'A symbol is letters, digits and dots, starting with a letter.'
+			)
 		),
 		name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120)),
 		currency: v.pipe(v.string(), v.trim(), v.toUpperCase(), v.length(3)),
 		// Typed in pounds, stored in scaled integer units. The conversion happens
 		// here, once, rather than in the component — a UI that has to know the
 		// scale is a UI that will eventually get it wrong.
-		referencePrice: v.pipe(v.string(), v.trim(), v.regex(/^\d+(\.\d{1,4})?$/, 'A price like 455.00')),
+		referencePrice: v.pipe(
+			v.string(),
+			v.trim(),
+			v.regex(/^\d+(\.\d{1,4})?$/, 'A price like 455.00')
+		),
 		tickSize: v.pipe(v.string(), v.regex(/^\d+$/), v.transform(Number), v.minValue(1)),
 		lotSize: v.pipe(v.string(), v.regex(/^\d+$/), v.transform(Number), v.minValue(1))
 	}),

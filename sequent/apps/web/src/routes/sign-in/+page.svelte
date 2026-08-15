@@ -71,9 +71,14 @@
 		justify-content: center;
 	}
 
-	.tight { gap: var(--space-2); }
+	.tight {
+		gap: var(--space-2);
+	}
 
-	h1 { font-size: var(--text-xl); letter-spacing: 0.01em; }
+	h1 {
+		font-size: var(--text-xl);
+		letter-spacing: 0.01em;
+	}
 
 	/* The line that draws itself. One element, one transform, no layout cost. */
 	.rule {
@@ -83,7 +88,9 @@
 		border-radius: 2px;
 	}
 
-	form { margin-block-start: var(--space-2); }
+	form {
+		margin-block-start: var(--space-2);
+	}
 
 	label {
 		display: flex;

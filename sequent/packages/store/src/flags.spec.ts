@@ -103,7 +103,11 @@ describe('setting a flag', () => {
 
 	it('keeps the history, not just the latest value', async () => {
 		await setFlag(client, 'accept_orders', false, { by: 'rhys', reason: 'incident 42', now: T0 });
-		await setFlag(client, 'accept_orders', true, { by: 'mira', reason: 'resolved', now: T0 + 1000 });
+		await setFlag(client, 'accept_orders', true, {
+			by: 'mira',
+			reason: 'resolved',
+			now: T0 + 1000
+		});
 
 		const history = await flagHistory(client);
 

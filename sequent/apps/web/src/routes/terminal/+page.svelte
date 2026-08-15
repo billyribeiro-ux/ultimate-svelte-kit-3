@@ -216,8 +216,8 @@
 				<p class="error" role="alert">{lastError}</p>
 			{:else if lastSent}
 				<p class="sent small muted" role="status">
-					Sent {lastSent}. The venue has accepted the command; the engine decides the
-					outcome and it appears below.
+					Sent {lastSent}. The venue has accepted the command; the engine decides the outcome and it
+					appears below.
 				</p>
 			{/if}
 
@@ -374,12 +374,8 @@
 						<tr>
 							<td class="mono small pin">{position.accountId}</td>
 							<td class="mono small">{position.instrumentId}</td>
-							<td
-								class="mono {position.quantity > 0
-									? 'up'
-									: position.quantity < 0
-										? 'down'
-										: ''}">{position.quantity.toLocaleString('en-GB')}</td
+							<td class="mono {position.quantity > 0 ? 'up' : position.quantity < 0 ? 'down' : ''}"
+								>{position.quantity.toLocaleString('en-GB')}</td
 							>
 							<td class="mono">{position.averageLabel}</td>
 							<td
@@ -408,10 +404,24 @@
 	indicator and a button there cannot be pressed.
 -->
 <div class="ticket-bar" class:hidden={ticketOpen}>
-	<button type="button" class="open-ticket buy" onclick={() => { ticket.side = 'buy'; ticketOpen = true; }}>
+	<button
+		type="button"
+		class="open-ticket buy"
+		onclick={() => {
+			ticket.side = 'buy';
+			ticketOpen = true;
+		}}
+	>
 		Buy
 	</button>
-	<button type="button" class="open-ticket sell" onclick={() => { ticket.side = 'sell'; ticketOpen = true; }}>
+	<button
+		type="button"
+		class="open-ticket sell"
+		onclick={() => {
+			ticket.side = 'sell';
+			ticketOpen = true;
+		}}
+	>
 		Sell
 	</button>
 </div>
@@ -432,12 +442,24 @@
 		align-items: flex-start;
 	}
 
-	.head select { inline-size: 100%; }
-	.quote { gap: var(--space-3); }
-	.last { font-size: var(--text-lg); }
+	.head select {
+		inline-size: 100%;
+	}
+	.quote {
+		gap: var(--space-3);
+	}
+	.last {
+		font-size: var(--text-lg);
+	}
 
-	.phase[data-phase='halted'] { color: var(--ask); border-color: var(--ask); }
-	.phase[data-phase='continuous'] { color: var(--bid); border-color: var(--bid); }
+	.phase[data-phase='halted'] {
+		color: var(--ask);
+		border-color: var(--ask);
+	}
+	.phase[data-phase='continuous'] {
+		color: var(--bid);
+		border-color: var(--bid);
+	}
 
 	.grid {
 		display: grid;
@@ -485,7 +507,9 @@
 		transition-delay: 0s;
 	}
 
-	.ticket-head { justify-content: space-between; }
+	.ticket-head {
+		justify-content: space-between;
+	}
 
 	.ticket-bar {
 		position: fixed;
@@ -503,10 +527,18 @@
 		transition: transform 0.25s ease;
 	}
 
-	.ticket-bar.hidden { transform: translateY(110%); }
+	.ticket-bar.hidden {
+		transform: translateY(110%);
+	}
 
-	.open-ticket.buy { border-color: var(--bid); color: var(--bid); }
-	.open-ticket.sell { border-color: var(--ask); color: var(--ask); }
+	.open-ticket.buy {
+		border-color: var(--bid);
+		color: var(--bid);
+	}
+	.open-ticket.sell {
+		border-color: var(--ask);
+		color: var(--ask);
+	}
 
 	/*
 	 * From `md` up the ticket stops being a sheet and becomes an ordinary column.
@@ -515,11 +547,22 @@
 	 * floats over the page on exactly one screen size.
 	 */
 	@media (min-width: 64rem) {
-		.terminal { padding-block-end: 0; }
-		.head { flex-direction: row; justify-content: space-between; align-items: center; }
-		.head select { inline-size: auto; }
+		.terminal {
+			padding-block-end: 0;
+		}
+		.head {
+			flex-direction: row;
+			justify-content: space-between;
+			align-items: center;
+		}
+		.head select {
+			inline-size: auto;
+		}
 
-		.grid { grid-template-columns: 2fr 1fr 1fr; align-items: start; }
+		.grid {
+			grid-template-columns: 2fr 1fr 1fr;
+			align-items: start;
+		}
 
 		.ticket {
 			position: static;
@@ -533,16 +576,38 @@
 			transition: none;
 		}
 
-		.ticket-bar, .close { display: none; }
+		.ticket-bar,
+		.close {
+			display: none;
+		}
 	}
 
-	.ticket .sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-	.ticket .buy.active { border-color: var(--bid); color: var(--bid); }
-	.ticket .sell.active { border-color: var(--ask); color: var(--ask); }
-	.ticket label { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-sm); }
+	.ticket .sides {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--space-2);
+	}
+	.ticket .buy.active {
+		border-color: var(--bid);
+		color: var(--bid);
+	}
+	.ticket .sell.active {
+		border-color: var(--ask);
+		color: var(--ask);
+	}
+	.ticket label {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		font-size: var(--text-sm);
+	}
 
-	.send.buying { border-color: var(--bid); }
-	.send:not(.buying) { border-color: var(--ask); }
+	.send.buying {
+		border-color: var(--bid);
+	}
+	.send:not(.buying) {
+		border-color: var(--ask);
+	}
 
 	/* ---------------------------------------------------------------------- */
 
@@ -557,7 +622,9 @@
 		overflow-y: auto;
 	}
 
-	.tape li { justify-content: space-between; }
+	.tape li {
+		justify-content: space-between;
+	}
 
 	/*
 	 * The horizontal scroll container.
@@ -573,12 +640,34 @@
 		overscroll-behavior-x: contain;
 	}
 
-	.scroller:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	.scroller:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
 
-	table { inline-size: 100%; border-collapse: collapse; min-inline-size: 34rem; }
-	th { text-align: start; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 500; white-space: nowrap; }
-	td, th { padding-block: var(--space-1); padding-inline-end: var(--space-3); border-block-end: 1px solid var(--line); }
-	td { white-space: nowrap; }
+	table {
+		inline-size: 100%;
+		border-collapse: collapse;
+		min-inline-size: 34rem;
+	}
+	th {
+		text-align: start;
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--ink-faint);
+		font-weight: 500;
+		white-space: nowrap;
+	}
+	td,
+	th {
+		padding-block: var(--space-1);
+		padding-inline-end: var(--space-3);
+		border-block-end: 1px solid var(--line);
+	}
+	td {
+		white-space: nowrap;
+	}
 
 	/* The pinned first column, so a sideways scroll never loses the row's identity. */
 	.pin {
@@ -589,18 +678,36 @@
 	}
 
 	@media (min-width: 48rem) {
-		table { min-inline-size: 0; }
-		.pin { position: static; }
+		table {
+			min-inline-size: 0;
+		}
+		.pin {
+			position: static;
+		}
 	}
 
-	.up { color: var(--bid); }
-	.down { color: var(--ask); }
+	.up {
+		color: var(--bid);
+	}
+	.down {
+		color: var(--ask);
+	}
 
-
-	.error { color: var(--ask); border: 1px solid var(--ask); border-radius: var(--radius); padding: var(--space-2); font-size: var(--text-sm); }
-	.sent { border-inline-start: 2px solid var(--accent); padding-inline-start: var(--space-2); }
+	.error {
+		color: var(--ask);
+		border: 1px solid var(--ask);
+		border-radius: var(--radius);
+		padding: var(--space-2);
+		font-size: var(--text-sm);
+	}
+	.sent {
+		border-inline-start: 2px solid var(--accent);
+		padding-inline-start: var(--space-2);
+	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.ticket { --sheet-duration: 0.01s; }
+		.ticket {
+			--sheet-duration: 0.01s;
+		}
 	}
 </style>

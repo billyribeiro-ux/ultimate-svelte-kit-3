@@ -82,7 +82,11 @@ describe('enqueuing', () => {
 
 	it('is atomic with the caller´s transaction', async () => {
 		await withTransaction(client, async (tx) => {
-			await enqueue(tx, { kind: 'webhook', seq: 1, idempotencyKey: 'rolled-back', payload: {} }, T0);
+			await enqueue(
+				tx,
+				{ kind: 'webhook', seq: 1, idempotencyKey: 'rolled-back', payload: {} },
+				T0
+			);
 			throw new Error('deliberate rollback');
 		}).catch(() => {});
 

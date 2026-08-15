@@ -79,7 +79,9 @@ export const getTrialBalance = query(async () => {
 	return {
 		total,
 		accounts: accounts
-			.filter((account) => account.accountId.includes(viewer.firmId) || viewer.role === 'venue_operator')
+			.filter(
+				(account) => account.accountId.includes(viewer.firmId) || viewer.role === 'venue_operator'
+			)
 			.map((account) => ({
 				...account,
 				label: formatPrice(Math.abs(account.balance) as Price, 'GBP'),

@@ -58,7 +58,11 @@ export type TimeInForce = (typeof TIME_IN_FORCE)[number];
  *   `cancel_both`      — the conservative choice, and the one that surprises
  *                        people least when they read the fill report.
  */
-export const SELF_TRADE_PREVENTION = ['cancel_resting', 'cancel_aggressing', 'cancel_both'] as const;
+export const SELF_TRADE_PREVENTION = [
+	'cancel_resting',
+	'cancel_aggressing',
+	'cancel_both'
+] as const;
 export type SelfTradePrevention = (typeof SELF_TRADE_PREVENTION)[number];
 
 /**
@@ -308,7 +312,8 @@ export const placeOrderSchema = v.pipe(
 	 * at the door, where the message can still say something useful.
 	 */
 	v.check(
-		(order) => order.orderType !== 'market' || order.timeInForce === 'ioc' || order.timeInForce === 'fok',
+		(order) =>
+			order.orderType !== 'market' || order.timeInForce === 'ioc' || order.timeInForce === 'fok',
 		'A market order must be immediate-or-cancel or fill-or-kill'
 	)
 );

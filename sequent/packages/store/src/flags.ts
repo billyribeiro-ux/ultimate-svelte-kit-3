@@ -259,7 +259,9 @@ export async function listFlags(client: Client): Promise<FlagState[]> {
 export async function flagHistory(
 	client: Client,
 	limit = 50
-): Promise<Array<{ name: string; enabled: boolean; changedBy: string; reason: string; changedAt: number }>> {
+): Promise<
+	Array<{ name: string; enabled: boolean; changedBy: string; reason: string; changedAt: number }>
+> {
 	const rows = await client.execute({
 		sql: `SELECT name, enabled, changed_by, reason, changed_at
 		      FROM feature_flag_change ORDER BY changed_at DESC, rowid DESC LIMIT ?`,

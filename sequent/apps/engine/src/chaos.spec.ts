@@ -367,7 +367,7 @@ describe('a projector that keeps being restarted', () => {
 		await runUntil(last);
 
 		// One batch at a time, as if killed after every batch.
-		let applied = 0;
+		let applied: number;
 		do {
 			applied = await catchUp(client, 3);
 		} while (applied > 0);
@@ -404,7 +404,7 @@ describe('a projector that keeps being restarted', () => {
 				await client.execute(`DELETE FROM ${table}`);
 			}
 
-			let applied = 0;
+			let applied: number;
 			do {
 				applied = await catchUp(client, size);
 			} while (applied > 0);
@@ -420,7 +420,9 @@ describe('a projector that keeps being restarted', () => {
 
 /** Copy the command log verbatim into a second venue. */
 async function copyCommands(from: Client, to: Client): Promise<void> {
-	const rows = await from.execute('SELECT seq, received_at, version, kind, firm_id, body FROM command_log ORDER BY seq');
+	const rows = await from.execute(
+		'SELECT seq, received_at, version, kind, firm_id, body FROM command_log ORDER BY seq'
+	);
 
 	for (const row of rows.rows) {
 		await to.execute({
@@ -446,8 +448,7 @@ async function snapshotOfReadModels(target: Client) {
 	const out: Record<string, unknown[]> = {};
 
 	for (const table of tables) {
-		const order =
-			table === 'ledger_posting' ? 'transaction_id, account_id, amount' : 'rowid';
+		const order = table === 'ledger_posting' ? 'transaction_id, account_id, amount' : 'rowid';
 		const result = await target.execute(`SELECT * FROM ${table} ORDER BY ${order}`);
 
 		out[table] = result.rows.map((row) => {

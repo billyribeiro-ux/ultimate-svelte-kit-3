@@ -455,7 +455,8 @@ export function signInEntrance(node: HTMLElement) {
 	const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
 	if (card) timeline.from(card, { opacity: 0, y: 24, duration: 0.7 });
-	if (rule) timeline.from(rule, { scaleX: 0, transformOrigin: 'left center', duration: 0.6 }, '-=0.4');
+	if (rule)
+		timeline.from(rule, { scaleX: 0, transformOrigin: 'left center', duration: 0.6 }, '-=0.4');
 	if (fields.length) {
 		timeline.from(fields, { opacity: 0, y: 10, duration: 0.45, stagger: 0.07 }, '-=0.35');
 	}

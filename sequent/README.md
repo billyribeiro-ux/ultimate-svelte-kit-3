@@ -45,8 +45,8 @@ inconvenience — see below.
                     └─────────┘      └──────────────┘    email
 ```
 
-**Commands** are requests: *place this order*. They can be refused.
-**Events** are facts: *this order traded 400 at 455050*. They already happened.
+**Commands** are requests: _place this order_. They can be refused.
+**Events** are facts: _this order traded 400 at 455050_. They already happened.
 
 The web tier only ever appends commands. The engine is the only thing that
 decides what happened, it does so one command at a time in a total order, and
@@ -61,14 +61,14 @@ test that does exactly that and asserts the result is identical.
 
 ## The packages
 
-| | |
-|---|---|
-| `packages/protocol` | Commands, events, money, ids. The vocabulary, versioned. |
-| `packages/core` | The matching engine, auctions and risk. Pure functions, no I/O. |
-| `packages/store` | The log, projections, the ledger, tenancy, authorisation. |
-| `apps/engine` | The process that turns commands into events, and recovers. |
-| `apps/worker` | Drains the outbox: signed webhooks, and email. |
-| `apps/web` | SvelteKit 3: terminal, risk console, and the public API. |
+|                     |                                                                 |
+| ------------------- | --------------------------------------------------------------- |
+| `packages/protocol` | Commands, events, money, ids. The vocabulary, versioned.        |
+| `packages/core`     | The matching engine, auctions and risk. Pure functions, no I/O. |
+| `packages/store`    | The log, projections, the ledger, tenancy, authorisation.       |
+| `apps/engine`       | The process that turns commands into events, and recovers.      |
+| `apps/worker`       | Drains the outbox: signed webhooks, and email.                  |
+| `apps/web`          | SvelteKit 3: terminal, risk console, and the public API.        |
 
 ## Why three processes
 
@@ -95,7 +95,7 @@ about a trade that did not happen.
 Both work in development, where the process does not die and the commit does
 not fail.
 
-So the *intent to send* is written into the same transaction as the fact, and
+So the _intent to send_ is written into the same transaction as the fact, and
 `apps/worker` reads it afterwards. That buys **at-least-once** delivery — not
 exactly-once, which nothing buys over a network — so every webhook carries a
 stable delivery id and receivers de-duplicate on it.

@@ -89,7 +89,13 @@ async function project(tx: Executor, record: EventRecord): Promise<void> {
 						filled = quantity - ?,
 						updated_at = ?
 					WHERE order_id = ?`,
-				args: [event.remainingQuantity, event.reason, event.remainingQuantity, record.at, event.orderId]
+				args: [
+					event.remainingQuantity,
+					event.reason,
+					event.remainingQuantity,
+					record.at,
+					event.orderId
+				]
 			});
 			break;
 		}
@@ -250,8 +256,11 @@ async function applyToPosition(
 	let realised = Number(row?.['realised_pnl'] ?? 0);
 
 	const delta = input.signedQuantity;
-	let quantity = held;
-	let costBasis = basis;
+
+	// Declared without a value: both branches below assign both, so an initial
+	// `= held` would be dead code that reads like a default somebody relies on.
+	let quantity: number;
+	let costBasis: number;
 
 	const increasing = held === 0 || Math.sign(held) === Math.sign(delta);
 
@@ -328,8 +337,20 @@ async function postTrade(
 
 	const buyerCash = await ensureAccount(tx, 'firm_cash', event.buyFirmId, currency);
 	const sellerCash = await ensureAccount(tx, 'firm_cash', event.sellFirmId, currency);
-	const buyerStock = await ensureAccount(tx, 'firm_securities', event.buyFirmId, currency, event.instrumentId);
-	const sellerStock = await ensureAccount(tx, 'firm_securities', event.sellFirmId, currency, event.instrumentId);
+	const buyerStock = await ensureAccount(
+		tx,
+		'firm_securities',
+		event.buyFirmId,
+		currency,
+		event.instrumentId
+	);
+	const sellerStock = await ensureAccount(
+		tx,
+		'firm_securities',
+		event.sellFirmId,
+		currency,
+		event.instrumentId
+	);
 	const revenue = await ensureAccount(tx, 'venue_revenue', 'venue', currency);
 
 	const postings: Posting[] = [
@@ -453,7 +474,14 @@ export async function catchUp(
  */
 export async function rebuild(client: Client): Promise<number> {
 	await withTransaction(client, async (tx) => {
-		for (const table of ['ledger_posting', 'ledger_transaction', 'ledger_account', 'position', 'trade', 'order_record']) {
+		for (const table of [
+			'ledger_posting',
+			'ledger_transaction',
+			'ledger_account',
+			'position',
+			'trade',
+			'order_record'
+		]) {
 			await tx.execute(`DELETE FROM ${table}`);
 		}
 		await tx.execute({

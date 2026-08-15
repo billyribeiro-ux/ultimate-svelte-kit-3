@@ -155,38 +155,41 @@ export const GET = handler(async ({ viewer }, { url }) => {
  * therefore be able to send 20 orders a second, and one number with a cost
  * multiplier says that without a second bucket to keep in step.
  */
-export const POST = handler(async ({ viewer }, { request }) => {
-	const body = await jsonBody(request);
+export const POST = handler(
+	async ({ viewer }, { request }) => {
+		const body = await jsonBody(request);
 
-	/*
-	 * The body is passed to `submit` almost untouched — no field-by-field copying
-	 * here. `submit` parses it against the protocol's own valibot schema, which
-	 * is the same schema the engine validates against on replay.
-	 *
-	 * Restating the shape in this file would create a second definition of what
-	 * an order is, and the two would disagree within a month.
-	 */
-	const seq = await submit(viewer, { ...body, kind: 'place_order' }).catch((thrown: unknown) =>
 		/*
-		 * `submit` throws SvelteKit's `error()`, whose shape is `{ status, body }`
-		 * and which is *not* an `Error`. Translated generically rather than by an
-		 * `if` chain: the chain handled 400/403/404 and dropped 503, so the day the
-		 * venue gained a pause flag, "we are not accepting orders" became
-		 * "something went wrong at our end" — a retryable condition reported as a
-		 * bug.
+		 * The body is passed to `submit` almost untouched — no field-by-field copying
+		 * here. `submit` parses it against the protocol's own valibot schema, which
+		 * is the same schema the engine validates against on replay.
+		 *
+		 * Restating the shape in this file would create a second definition of what
+		 * an order is, and the two would disagree within a month.
 		 */
-		fromHttpError(thrown, 'That order was refused.')
-	);
+		const seq = await submit(viewer, { ...body, kind: 'place_order' }).catch((thrown: unknown) =>
+			/*
+			 * `submit` throws SvelteKit's `error()`, whose shape is `{ status, body }`
+			 * and which is *not* an `Error`. Translated generically rather than by an
+			 * `if` chain: the chain handled 400/403/404 and dropped 503, so the day the
+			 * venue gained a pause flag, "we are not accepting orders" became
+			 * "something went wrong at our end" — a retryable condition reported as a
+			 * bug.
+			 */
+			fromHttpError(thrown, 'That order was refused.')
+		);
 
-	return Response.json(
-		{
-			data: {
-				seq,
-				clientOrderId: body['clientOrderId'],
-				status: 'accepted',
-				message: 'The command is sequenced. Watch the event stream for the outcome.'
-			}
-		},
-		{ status: 202 }
-	);
-}, { cost: 2 });
+		return Response.json(
+			{
+				data: {
+					seq,
+					clientOrderId: body['clientOrderId'],
+					status: 'accepted',
+					message: 'The command is sequenced. Watch the event stream for the outcome.'
+				}
+			},
+			{ status: 202 }
+		);
+	},
+	{ cost: 2 }
+);

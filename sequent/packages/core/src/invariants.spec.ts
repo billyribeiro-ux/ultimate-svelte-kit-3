@@ -52,9 +52,7 @@ const FIRMS = ['firm-a', 'firm-b', 'firm-c'] as const;
 const TICK = 25;
 const REFERENCE = 455_000;
 
-const arbPrice = fc
-	.integer({ min: -40, max: 40 })
-	.map((steps) => REFERENCE + steps * TICK);
+const arbPrice = fc.integer({ min: -40, max: 40 }).map((steps) => REFERENCE + steps * TICK);
 
 const arbFirm = fc.constantFrom(...FIRMS);
 
@@ -113,7 +111,9 @@ interface Session {
 	events: Event[];
 }
 
-function run(steps: readonly (typeof arbStep extends fc.Arbitrary<infer T> ? T : never)[]): Session {
+function run(
+	steps: readonly (typeof arbStep extends fc.Arbitrary<infer T> ? T : never)[]
+): Session {
 	const state = newState();
 	const events: Event[] = [];
 	const placed: { firm: string; clientOrderId: string }[] = [];
@@ -123,7 +123,12 @@ function run(steps: readonly (typeof arbStep extends fc.Arbitrary<infer T> ? T :
 	const push = (body: Command) => {
 		seq += 1;
 		events.push(
-			...apply(state, { seq, receivedAt: 1_700_000_000_000 + seq, version: 1, body } as SequencedCommand)
+			...apply(state, {
+				seq,
+				receivedAt: 1_700_000_000_000 + seq,
+				version: 1,
+				body
+			} as SequencedCommand)
 		);
 	};
 

@@ -29,19 +29,16 @@ import {
 	negate,
 	notional,
 	orderIdFor,
-	positionKey,
 	tradeIdFor,
-	type ClientOrderId,
 	type Command,
 	type Event,
-	type OrderId,
 	type Price,
 	type Quantity,
 	type SequencedCommand,
 	type Side,
 	type Traded
 } from '@sequent/protocol';
-import { match, remove, rest, type RestingOrder } from './book.ts';
+import { match, remove, rest } from './book.ts';
 import { uncross } from './auction.ts';
 import { checkAgainstBook, checkOrder, type Refusal } from './risk.ts';
 import {
@@ -267,10 +264,12 @@ function placeOrder(
 	 * happened while their position quietly moved.
 	 */
 	if (result.aggressorCancelled && result.fills.length === 0) {
-		events.push(...refuse({
-			reason: 'self_trade_prevented',
-			detail: 'This order would have traded against your own resting order'
-		}));
+		events.push(
+			...refuse({
+				reason: 'self_trade_prevented',
+				detail: 'This order would have traded against your own resting order'
+			})
+		);
 		return events;
 	}
 
@@ -321,7 +320,11 @@ function placeOrder(
 		return events;
 	}
 
-	if (command.timeInForce === 'ioc' || command.timeInForce === 'fok' || command.orderType === 'market') {
+	if (
+		command.timeInForce === 'ioc' ||
+		command.timeInForce === 'fok' ||
+		command.orderType === 'market'
+	) {
 		events.push({
 			kind: 'order_cancelled',
 			firmId: order.firmId,
@@ -454,7 +457,10 @@ function tradeOf(
 /* Cancelling                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function cancelOrder(state: EngineState, command: Extract<Command, { kind: 'cancel_order' }>): Event[] {
+function cancelOrder(
+	state: EngineState,
+	command: Extract<Command, { kind: 'cancel_order' }>
+): Event[] {
 	const live = findLive(state, command.firmId, command.clientOrderId);
 
 	/*
@@ -483,7 +489,11 @@ function cancelOrder(state: EngineState, command: Extract<Command, { kind: 'canc
 }
 
 /** Take an order off the book and off the indexes, and report it. */
-function pull(state: EngineState, live: LiveOrder, reason: Parameters<typeof cancelEvent>[1]): Event {
+function pull(
+	state: EngineState,
+	live: LiveOrder,
+	reason: Parameters<typeof cancelEvent>[1]
+): Event {
 	const instrument = state.instruments.get(live.instrumentId);
 	if (instrument) remove(instrument.book, live);
 	untrackLive(state, live);
@@ -492,7 +502,14 @@ function pull(state: EngineState, live: LiveOrder, reason: Parameters<typeof can
 
 function cancelEvent(
 	live: LiveOrder,
-	reason: 'requested' | 'replaced' | 'ioc_remainder' | 'day_expired' | 'self_trade_prevention' | 'kill_switch' | 'instrument_halted'
+	reason:
+		| 'requested'
+		| 'replaced'
+		| 'ioc_remainder'
+		| 'day_expired'
+		| 'self_trade_prevention'
+		| 'kill_switch'
+		| 'instrument_halted'
 ): Event {
 	return {
 		kind: 'order_cancelled',
@@ -640,7 +657,10 @@ function replaceOrder(
 /* Venue and risk administration                                               */
 /* -------------------------------------------------------------------------- */
 
-function setRiskLimits(state: EngineState, command: Extract<Command, { kind: 'set_risk_limits' }>): Event[] {
+function setRiskLimits(
+	state: EngineState,
+	command: Extract<Command, { kind: 'set_risk_limits' }>
+): Event[] {
 	state.limits.set(command.accountId, {
 		maxOrderQuantity: command.maxOrderQuantity,
 		maxOrderNotional: command.maxOrderNotional,
@@ -670,7 +690,10 @@ function setRiskLimits(state: EngineState, command: Extract<Command, { kind: 'se
  * first would leave an algorithm that has already flooded the book with
  * mispriced liquidity exposed to everyone who noticed.
  */
-function setKillSwitch(state: EngineState, command: Extract<Command, { kind: 'set_kill_switch' }>): Event[] {
+function setKillSwitch(
+	state: EngineState,
+	command: Extract<Command, { kind: 'set_kill_switch' }>
+): Event[] {
 	const events: Event[] = [];
 	let cancelled = 0;
 
@@ -700,7 +723,10 @@ function setKillSwitch(state: EngineState, command: Extract<Command, { kind: 'se
 	return events;
 }
 
-function listInstrument(state: EngineState, command: Extract<Command, { kind: 'list_instrument' }>): Event[] {
+function listInstrument(
+	state: EngineState,
+	command: Extract<Command, { kind: 'list_instrument' }>
+): Event[] {
 	// Listing an instrument that already exists is a no-op rather than an error:
 	// replay must be able to apply the same command twice without diverging.
 	if (!state.instruments.has(command.instrumentId)) {
@@ -732,7 +758,11 @@ function listInstrument(state: EngineState, command: Extract<Command, { kind: 'l
  * crossed and the indicative price is published — the whole point of a call
  * auction is that everybody can see where it is heading before it clears.
  */
-function setPhase(state: EngineState, seq: number, command: Extract<Command, { kind: 'set_phase' }>): Event[] {
+function setPhase(
+	state: EngineState,
+	seq: number,
+	command: Extract<Command, { kind: 'set_phase' }>
+): Event[] {
 	const instrument = state.instruments.get(command.instrumentId);
 	if (!instrument) return [];
 
@@ -790,7 +820,9 @@ function setPhase(state: EngineState, seq: number, command: Extract<Command, { k
 		for (const live of [...state.orders.values()]) {
 			if (live.instrumentId !== command.instrumentId) continue;
 			if (command.phase === 'closed' && !live.expiresAtClose) continue;
-			events.push(pull(state, live, command.phase === 'halted' ? 'instrument_halted' : 'day_expired'));
+			events.push(
+				pull(state, live, command.phase === 'halted' ? 'instrument_halted' : 'day_expired')
+			);
 		}
 	}
 

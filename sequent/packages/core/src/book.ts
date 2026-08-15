@@ -36,7 +36,15 @@
  * Every design decision below defends that queue.
  */
 
-import type { InstrumentId, OrderId, FirmId, AccountId, Price, Quantity, Side } from '@sequent/protocol';
+import type {
+	InstrumentId,
+	OrderId,
+	FirmId,
+	AccountId,
+	Price,
+	Quantity,
+	Side
+} from '@sequent/protocol';
 
 /* -------------------------------------------------------------------------- */
 /* Resting orders                                                              */
@@ -129,7 +137,11 @@ export function emptyBook(instrumentId: InstrumentId): Book {
  * have a handful of levels and liquid ones have hundreds, and the difference
  * only shows up on the day the volume arrives.
  */
-function locate(levels: readonly PriceLevel[], price: Price, side: Side): { index: number; found: boolean } {
+function locate(
+	levels: readonly PriceLevel[],
+	price: Price,
+	side: Side
+): { index: number; found: boolean } {
 	let low = 0;
 	let high = levels.length;
 
@@ -361,7 +373,7 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 
 		if (!crosses(level.price, request.side, request.limitPrice)) break;
 
-		for (let i = 0; i < level.orders.length && remaining > 0; ) {
+		for (let i = 0; i < level.orders.length && remaining > 0;) {
 			const resting = level.orders[i]!;
 
 			if (resting.firmId === request.firmId) {

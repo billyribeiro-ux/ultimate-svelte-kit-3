@@ -68,10 +68,20 @@ const FIRMS: Array<{ id: string; name: string; accounts: string[]; people: Perso
 		name: 'Northgate Capital',
 		accounts: ['northgate-equities', 'northgate-systematic'],
 		people: [
-			{ email: 'ada@northgate.test', name: 'Ada Whitlock', role: 'trader', accounts: ['northgate-equities'] },
+			{
+				email: 'ada@northgate.test',
+				name: 'Ada Whitlock',
+				role: 'trader',
+				accounts: ['northgate-equities']
+			},
 			{ email: 'rhys@northgate.test', name: 'Rhys Okafor', role: 'risk_manager', accounts: [] },
 			{ email: 'mira@northgate.test', name: 'Mira Solberg', role: 'firm_admin', accounts: [] },
-			{ email: 'quinn@northgate.test', name: 'Quinn Adeyemi', role: 'auditor', accounts: ['northgate-equities'] }
+			{
+				email: 'quinn@northgate.test',
+				name: 'Quinn Adeyemi',
+				role: 'auditor',
+				accounts: ['northgate-equities']
+			}
 		]
 	},
 	{
@@ -79,7 +89,12 @@ const FIRMS: Array<{ id: string; name: string; accounts: string[]; people: Perso
 		name: 'Lowfield Partners',
 		accounts: ['lowfield-main'],
 		people: [
-			{ email: 'ben@lowfield.test', name: 'Ben Castellanos', role: 'trader', accounts: ['lowfield-main'] }
+			{
+				email: 'ben@lowfield.test',
+				name: 'Ben Castellanos',
+				role: 'trader',
+				accounts: ['lowfield-main']
+			}
 		]
 	}
 ];
@@ -124,7 +139,15 @@ await db.execute({
 await db.execute({
 	sql: `INSERT INTO venue_user (user_id, firm_id, email, display_name, password_hash, role, created_at)
 	      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-	args: [newId(), 'venue', 'ops@sequent.test', 'Venue Operations', passwordHash, 'venue_operator', now]
+	args: [
+		newId(),
+		'venue',
+		'ops@sequent.test',
+		'Venue Operations',
+		passwordHash,
+		'venue_operator',
+		now
+	]
 });
 
 /*
@@ -224,9 +247,36 @@ const order = (input: SeedOrder): Command => {
 };
 
 // Crossing interest, so the auction has something to clear.
-await send(order({ firm: 'northgate', account: 'northgate-equities', symbol: 'VOD.L', side: 'buy', at: 455_100, qty: 400 }));
-await send(order({ firm: 'lowfield', account: 'lowfield-main', symbol: 'VOD.L', side: 'sell', at: 454_900, qty: 300 }));
-await send(order({ firm: 'northgate', account: 'northgate-systematic', symbol: 'VOD.L', side: 'buy', at: 455_000, qty: 200 }));
+await send(
+	order({
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 455_100,
+		qty: 400
+	})
+);
+await send(
+	order({
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'VOD.L',
+		side: 'sell',
+		at: 454_900,
+		qty: 300
+	})
+);
+await send(
+	order({
+		firm: 'northgate',
+		account: 'northgate-systematic',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 455_000,
+		qty: 200
+	})
+);
 
 for (const instrument of INSTRUMENTS) {
 	await send({
@@ -250,24 +300,112 @@ for (const instrument of INSTRUMENTS) {
 console.log('· a lived-in book and a few trades');
 
 const depth: SeedOrder[] = [
-	{ firm: 'northgate', account: 'northgate-equities', symbol: 'VOD.L', side: 'buy', at: 454_800, qty: 500 },
-	{ firm: 'northgate', account: 'northgate-equities', symbol: 'VOD.L', side: 'buy', at: 454_750, qty: 800 },
-	{ firm: 'lowfield', account: 'lowfield-main', symbol: 'VOD.L', side: 'buy', at: 454_700, qty: 300 },
-	{ firm: 'lowfield', account: 'lowfield-main', symbol: 'VOD.L', side: 'sell', at: 455_050, qty: 400 },
-	{ firm: 'lowfield', account: 'lowfield-main', symbol: 'VOD.L', side: 'sell', at: 455_100, qty: 700 },
-	{ firm: 'northgate', account: 'northgate-systematic', symbol: 'VOD.L', side: 'sell', at: 455_150, qty: 250 },
+	{
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 454_800,
+		qty: 500
+	},
+	{
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 454_750,
+		qty: 800
+	},
+	{
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 454_700,
+		qty: 300
+	},
+	{
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'VOD.L',
+		side: 'sell',
+		at: 455_050,
+		qty: 400
+	},
+	{
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'VOD.L',
+		side: 'sell',
+		at: 455_100,
+		qty: 700
+	},
+	{
+		firm: 'northgate',
+		account: 'northgate-systematic',
+		symbol: 'VOD.L',
+		side: 'sell',
+		at: 455_150,
+		qty: 250
+	},
 
-	{ firm: 'northgate', account: 'northgate-equities', symbol: 'BP.L', side: 'buy', at: 382_400, qty: 600 },
-	{ firm: 'northgate', account: 'northgate-equities', symbol: 'BP.L', side: 'buy', at: 382_350, qty: 900 },
-	{ firm: 'lowfield', account: 'lowfield-main', symbol: 'BP.L', side: 'sell', at: 382_600, qty: 550 },
-	{ firm: 'lowfield', account: 'lowfield-main', symbol: 'BP.L', side: 'sell', at: 382_650, qty: 800 }
+	{
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'BP.L',
+		side: 'buy',
+		at: 382_400,
+		qty: 600
+	},
+	{
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'BP.L',
+		side: 'buy',
+		at: 382_350,
+		qty: 900
+	},
+	{
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'BP.L',
+		side: 'sell',
+		at: 382_600,
+		qty: 550
+	},
+	{
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'BP.L',
+		side: 'sell',
+		at: 382_650,
+		qty: 800
+	}
 ];
 
 for (const input of depth) await send(order(input));
 
 // Two aggressive orders, so the tape is not empty.
-await send(order({ firm: 'northgate', account: 'northgate-equities', symbol: 'VOD.L', side: 'buy', at: 455_050, qty: 150 }));
-await send(order({ firm: 'lowfield', account: 'lowfield-main', symbol: 'BP.L', side: 'sell', at: 382_400, qty: 200 }));
+await send(
+	order({
+		firm: 'northgate',
+		account: 'northgate-equities',
+		symbol: 'VOD.L',
+		side: 'buy',
+		at: 455_050,
+		qty: 150
+	})
+);
+await send(
+	order({
+		firm: 'lowfield',
+		account: 'lowfield-main',
+		symbol: 'BP.L',
+		side: 'sell',
+		at: 382_400,
+		qty: 200
+	})
+);
 
 /* -------------------------------------------------------------------------- */
 

@@ -186,8 +186,14 @@ export function cursorClause(
 	const { seq, id } = columns;
 
 	return direction === 'newest_first'
-		? { sql: `AND (${seq} < ? OR (${seq} = ? AND ${id} < ?))`, args: [cursor.seq, cursor.seq, cursor.id] }
-		: { sql: `AND (${seq} > ? OR (${seq} = ? AND ${id} > ?))`, args: [cursor.seq, cursor.seq, cursor.id] };
+		? {
+				sql: `AND (${seq} < ? OR (${seq} = ? AND ${id} < ?))`,
+				args: [cursor.seq, cursor.seq, cursor.id]
+			}
+		: {
+				sql: `AND (${seq} > ? OR (${seq} = ? AND ${id} > ?))`,
+				args: [cursor.seq, cursor.seq, cursor.id]
+			};
 }
 
 export function orderClause(

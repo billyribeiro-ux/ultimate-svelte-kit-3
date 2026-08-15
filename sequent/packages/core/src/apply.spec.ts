@@ -149,7 +149,10 @@ describe('placing an order', () => {
 
 	it('charges the taker and pays the maker', () => {
 		place({ side: 'sell', at: 455_000, qty: 100, firm: FIRM_A });
-		const trade = only(place({ side: 'buy', at: 455_000, qty: 100, firm: FIRM_B, account: ACC_B }), 'traded')[0]!;
+		const trade = only(
+			place({ side: 'buy', at: 455_000, qty: 100, firm: FIRM_B, account: ACC_B }),
+			'traded'
+		)[0]!;
 
 		// Notional is 455_000 × 100. Taker pays 3bps, maker is paid 1bps.
 		expect(trade.buyerFee).toBeGreaterThan(0);
@@ -208,7 +211,14 @@ describe('idempotency', () => {
 describe('time in force', () => {
 	it('cancels the unfilled remainder of an immediate-or-cancel order', () => {
 		place({ side: 'sell', at: 455_000, qty: 40, firm: FIRM_A });
-		const events = place({ side: 'buy', at: 455_000, qty: 100, tif: 'ioc', firm: FIRM_B, account: ACC_B });
+		const events = place({
+			side: 'buy',
+			at: 455_000,
+			qty: 100,
+			tif: 'ioc',
+			firm: FIRM_B,
+			account: ACC_B
+		});
 
 		expect(kinds(events)).toEqual(['order_accepted', 'traded', 'order_cancelled']);
 		const cancelled = only(events, 'order_cancelled')[0]!;
@@ -218,7 +228,14 @@ describe('time in force', () => {
 
 	it('refuses a fill-or-kill order the book cannot fill completely', () => {
 		place({ side: 'sell', at: 455_000, qty: 40, firm: FIRM_A });
-		const events = place({ side: 'buy', at: 455_000, qty: 100, tif: 'fok', firm: FIRM_B, account: ACC_B });
+		const events = place({
+			side: 'buy',
+			at: 455_000,
+			qty: 100,
+			tif: 'fok',
+			firm: FIRM_B,
+			account: ACC_B
+		});
 
 		expect(only(events, 'order_rejected')[0]!.reason).toBe('insufficient_liquidity');
 		// Nothing traded, and the resting order is untouched.
@@ -227,20 +244,41 @@ describe('time in force', () => {
 
 	it('fills a fill-or-kill order the book can satisfy', () => {
 		place({ side: 'sell', at: 455_000, qty: 100, firm: FIRM_A });
-		const events = place({ side: 'buy', at: 455_000, qty: 100, tif: 'fok', firm: FIRM_B, account: ACC_B });
+		const events = place({
+			side: 'buy',
+			at: 455_000,
+			qty: 100,
+			tif: 'fok',
+			firm: FIRM_B,
+			account: ACC_B
+		});
 
 		expect(kinds(events)).toEqual(['order_accepted', 'traded']);
 	});
 
 	it('refuses a market order with nothing on the other side', () => {
-		const events = place({ side: 'buy', type: 'market', qty: 100, tif: 'ioc', firm: FIRM_B, account: ACC_B });
+		const events = place({
+			side: 'buy',
+			type: 'market',
+			qty: 100,
+			tif: 'ioc',
+			firm: FIRM_B,
+			account: ACC_B
+		});
 
 		expect(only(events, 'order_rejected')[0]!.reason).toBe('no_opposing_liquidity');
 	});
 
 	it('never publishes the sentinel price a market order is stored at', () => {
 		place({ side: 'sell', at: 455_000, qty: 100, firm: FIRM_A });
-		const events = place({ side: 'buy', type: 'market', qty: 100, tif: 'ioc', firm: FIRM_B, account: ACC_B });
+		const events = place({
+			side: 'buy',
+			type: 'market',
+			qty: 100,
+			tif: 'ioc',
+			firm: FIRM_B,
+			account: ACC_B
+		});
 
 		expect(only(events, 'order_accepted')[0]!.price).toBeUndefined();
 	});
@@ -301,7 +339,9 @@ describe('the grids and the collar', () => {
 
 	it('refuses a price far from the reference — the fat-finger guard', () => {
 		// Reference is 455_000 and the default collar is 10%.
-		expect(only(place({ at: 4_550_000 }), 'order_rejected')[0]!.reason).toBe('price_outside_collar');
+		expect(only(place({ at: 4_550_000 }), 'order_rejected')[0]!.reason).toBe(
+			'price_outside_collar'
+		);
 	});
 
 	it('moves the reference to the last traded price', () => {
@@ -577,7 +617,9 @@ describe('determinism', () => {
 				...script
 			]) {
 				at += 1;
-				events.push(...apply(fresh, { seq: at, receivedAt: 1_700_000_000_000 + at, version: 1, body }));
+				events.push(
+					...apply(fresh, { seq: at, receivedAt: 1_700_000_000_000 + at, version: 1, body })
+				);
 			}
 
 			return events;

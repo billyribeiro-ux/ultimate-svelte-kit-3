@@ -38,9 +38,7 @@
 	const exposure = $derived(await getExposure());
 	const books = $derived(data.canSeeLedger ? await getTrialBalance() : null);
 
-	const workingCount = $derived(
-		exposure.working.reduce((total, row) => total + row.quantity, 0)
-	);
+	const workingCount = $derived(exposure.working.reduce((total, row) => total + row.quantity, 0));
 
 	async function toggle() {
 		busy = true;
@@ -90,9 +88,9 @@
 			</header>
 
 			<p class="muted small">
-				Engaging the stop cancels every order this firm has resting and refuses new ones.
-				It takes effect on the next command the engine reads — there is no window in which
-				some orders are stopped and others are not.
+				Engaging the stop cancels every order this firm has resting and refuses new ones. It takes
+				effect on the next command the engine reads — there is no window in which some orders are
+				stopped and others are not.
 			</p>
 
 			{#if exposure.stopped}
@@ -188,8 +186,8 @@
 		<section class="card" use:reveal={{ delay: 0.13 }}>
 			<h3>Books</h3>
 			<p class="small muted">
-				Every ledger transaction sums to zero by construction, so this total is zero or
-				something has written to the ledger outside the one function that may.
+				Every ledger transaction sums to zero by construction, so this total is zero or something
+				has written to the ledger outside the one function that may.
 			</p>
 			<p class="mono total" class:bad={books.total !== 0}>
 				trial balance: {books.total}
@@ -222,7 +220,9 @@
 </div>
 
 <style>
-	.risk header { justify-content: space-between; }
+	.risk header {
+		justify-content: space-between;
+	}
 
 	.working {
 		list-style: none;
@@ -233,15 +233,30 @@
 		gap: var(--space-1);
 	}
 
-	.working li { justify-content: space-between; }
+	.working li {
+		justify-content: space-between;
+	}
 
-	.up { color: var(--bid); }
-	.down { color: var(--ask); }
+	.up {
+		color: var(--bid);
+	}
+	.down {
+		color: var(--ask);
+	}
 
-	.badge.stopped { color: var(--ask); border-color: var(--ask); }
+	.badge.stopped {
+		color: var(--ask);
+		border-color: var(--ask);
+	}
 
-	button.danger { border-color: var(--warn); color: var(--warn); }
-	button.danger:hover:not(:disabled) { border-color: var(--ask); color: var(--ask); }
+	button.danger {
+		border-color: var(--warn);
+		color: var(--warn);
+	}
+	button.danger:hover:not(:disabled) {
+		border-color: var(--ask);
+		color: var(--ask);
+	}
 
 	/*
 	 * The armed panel gets a visible border rather than a modal overlay.
@@ -251,15 +266,21 @@
 	 * asking. Keeping the numbers visible while the confirmation is up is the
 	 * whole point of not using a dialog element here.
 	 */
-	.halt.armed { border-color: var(--warn); }
+	.halt.armed {
+		border-color: var(--warn);
+	}
 
 	.confirm {
 		border-inline-start: 3px solid var(--warn);
 		padding-inline-start: var(--space-3);
 	}
 
-	.total { margin-block: var(--space-2); }
-	.total.bad { color: var(--ask); }
+	.total {
+		margin-block: var(--space-2);
+	}
+	.total.bad {
+		color: var(--ask);
+	}
 
 	.error {
 		color: var(--ask);
@@ -269,5 +290,7 @@
 	}
 
 	/* Buttons go full-width and stack on a phone; side by side once there is room. */
-	.confirm .row button { flex: 1 1 12rem; }
+	.confirm .row button {
+		flex: 1 1 12rem;
+	}
 </style>

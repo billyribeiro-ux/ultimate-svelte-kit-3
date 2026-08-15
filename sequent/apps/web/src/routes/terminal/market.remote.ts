@@ -132,7 +132,14 @@ export interface MarketSnapshot {
 	bids: DepthLevel[];
 	asks: DepthLevel[];
 	last?: { price: number; label: string; quantity: number; aggressor?: string };
-	tape: Array<{ tradeId: string; price: number; label: string; quantity: number; at: number; aggressor?: string }>;
+	tape: Array<{
+		tradeId: string;
+		price: number;
+		label: string;
+		quantity: number;
+		at: number;
+		aggressor?: string;
+	}>;
 	seq: number;
 }
 
@@ -285,7 +292,8 @@ export const getMyOrders = query(async () => {
 		instrumentId: String(row['instrument_id']),
 		side: String(row['side']),
 		price: row['price'] === null ? null : Number(row['price']),
-		priceLabel: row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
+		priceLabel:
+			row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
 		quantity: Number(row['quantity']),
 		filled: Number(row['filled']),
 		timeInForce: String(row['time_in_force']),

@@ -136,9 +136,9 @@ describe('invoices', () => {
 	});
 
 	it('does not prorate a firm that was already active', () => {
-		expect(invoice({ usage: usage({ seats: 8 }) }).lines.some((l) => l.description.includes('/'))).toBe(
-			false
-		);
+		expect(
+			invoice({ usage: usage({ seats: 8 }) }).lines.some((l) => l.description.includes('/'))
+		).toBe(false);
 	});
 
 	it('charges metered orders beyond the allowance', () => {
@@ -231,7 +231,11 @@ describe('against a database', () => {
 	});
 
 	it('counts seats from active users only', async () => {
-		for (const [id, active] of [['u1', 1], ['u2', 1], ['u3', 0]] as const) {
+		for (const [id, active] of [
+			['u1', 1],
+			['u2', 1],
+			['u3', 0]
+		] as const) {
 			await client.execute({
 				sql: `INSERT INTO venue_user (user_id, firm_id, email, display_name, password_hash, role, is_active, created_at)
 				      VALUES (?, 'firm-a', ?, ?, 'x', 'trader', ?, ?)`,
@@ -319,7 +323,9 @@ describe('against a database', () => {
 		const keys = [];
 
 		for (let index = 0; index < desk.maxApiKeys; index += 1) {
-			keys.push(await createApiKey(client, { firmId: 'firm-a', label: `key ${index}`, scopes: ['read'] }));
+			keys.push(
+				await createApiKey(client, { firmId: 'firm-a', label: `key ${index}`, scopes: ['read'] })
+			);
 		}
 
 		await client.execute({

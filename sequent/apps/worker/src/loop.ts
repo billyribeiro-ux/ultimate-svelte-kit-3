@@ -34,10 +34,14 @@ export interface Progress {
 const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
 	new Promise((resolve) => {
 		const timer = setTimeout(resolve, ms);
-		signal.addEventListener('abort', () => {
-			clearTimeout(timer);
-			resolve();
-		}, { once: true });
+		signal.addEventListener(
+			'abort',
+			() => {
+				clearTimeout(timer);
+				resolve();
+			},
+			{ once: true }
+		);
 	});
 
 /**
@@ -140,7 +144,10 @@ export async function runWorker(client: Client, options: WorkerOptions): Promise
 					 * messages in the batch mid-flight: their leases stay held until
 					 * they expire, and the whole batch stalls because of one bad row.
 					 */
-					outcome = { retry: true, error: thrown instanceof Error ? thrown.message : String(thrown) };
+					outcome = {
+						retry: true,
+						error: thrown instanceof Error ? thrown.message : String(thrown)
+					};
 				}
 
 				if (outcome.permanent) {

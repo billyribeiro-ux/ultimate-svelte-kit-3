@@ -139,8 +139,7 @@ const SCOPE_FOR: Readonly<Record<Action, string>> = {
 /* -------------------------------------------------------------------------- */
 
 export type Decision =
-	| { readonly allowed: true }
-	| { readonly allowed: false; readonly reason: DenialReason };
+	{ readonly allowed: true } | { readonly allowed: false; readonly reason: DenialReason };
 
 /**
  * Why something was refused.
@@ -155,11 +154,7 @@ export type Decision =
  * as `forbidden`.**
  */
 export type DenialReason =
-	| 'not_found'
-	| 'forbidden'
-	| 'account_not_assigned'
-	| 'missing_scope'
-	| 'inactive';
+	'not_found' | 'forbidden' | 'account_not_assigned' | 'missing_scope' | 'inactive';
 
 const ALLOW: Decision = { allowed: true };
 const deny = (reason: DenialReason): Decision => ({ allowed: false, reason });

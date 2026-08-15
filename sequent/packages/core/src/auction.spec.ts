@@ -80,11 +80,7 @@ describe('finding the auction price', () => {
 	it('prefers the smaller imbalance when volume ties', () => {
 		// Both 100 and 101 execute 100. At 100 the surplus is +100 buyers; at 101
 		// it is 0. The price that leaves the fewest people unfilled wins.
-		const book = bookWith(
-			order('buy', 101, 100),
-			order('buy', 100, 100),
-			order('sell', 101, 100)
-		);
+		const book = bookWith(order('buy', 101, 100), order('buy', 100, 100), order('sell', 101, 100));
 
 		const chosen = findAuctionPrice(book, REFERENCE)!;
 		expect(chosen.price).toBe(101);
@@ -97,11 +93,7 @@ describe('finding the auction price', () => {
 		 * at the bottom of the range would hand the filled buyers a discount paid
 		 * for by the sellers, so the rule pushes towards the buyers' side.
 		 */
-		const book = bookWith(
-			order('buy', 102, 200),
-			order('buy', 101, 200),
-			order('sell', 100, 100)
-		);
+		const book = bookWith(order('buy', 102, 200), order('buy', 101, 200), order('sell', 100, 100));
 
 		const chosen = findAuctionPrice(book, REFERENCE)!;
 		expect(chosen.imbalance).toBeGreaterThan(0);
@@ -109,11 +101,7 @@ describe('finding the auction price', () => {
 	});
 
 	it('settles lower when every tied price leaves sellers unfilled', () => {
-		const book = bookWith(
-			order('buy', 102, 100),
-			order('sell', 100, 200),
-			order('sell', 101, 200)
-		);
+		const book = bookWith(order('buy', 102, 100), order('sell', 100, 200), order('sell', 101, 200));
 
 		const chosen = findAuctionPrice(book, REFERENCE)!;
 		expect(chosen.imbalance).toBeLessThan(0);

@@ -5,8 +5,10 @@
 	import { signOut } from './sign-in/auth.remote.ts';
 	import '#lib/styles/app.css';
 
-	let { children, data }: { children: Snippet; data: { viewer: { firmId: string; role: string } | null } } =
-		$props();
+	let {
+		children,
+		data
+	}: { children: Snippet; data: { viewer: { firmId: string; role: string } | null } } = $props();
 
 	/**
 	 * The sections this viewer can reach.
@@ -25,7 +27,11 @@
 		if (!role) return [];
 
 		const all = [
-			{ href: '/terminal', label: 'Terminal', roles: ['trader', 'auditor', 'firm_admin', 'risk_manager', 'venue_operator'] },
+			{
+				href: '/terminal',
+				label: 'Terminal',
+				roles: ['trader', 'auditor', 'firm_admin', 'risk_manager', 'venue_operator']
+			},
 			{ href: '/risk', label: 'Risk', roles: ['risk_manager', 'firm_admin', 'auditor'] },
 			{ href: '/admin', label: 'Admin', roles: ['firm_admin', 'venue_operator'] }
 		];
@@ -119,7 +125,9 @@
 		z-index: 10;
 	}
 
-	.skip:focus { inset-block-start: var(--space-3); }
+	.skip:focus {
+		inset-block-start: var(--space-3);
+	}
 
 	.chrome {
 		border-block-end: 1px solid var(--line);
@@ -136,12 +144,18 @@
 		padding-block: var(--space-3);
 	}
 
-	.top { justify-content: space-between; }
+	.top {
+		justify-content: space-between;
+	}
 
-	.brand { letter-spacing: 0.02em; }
+	.brand {
+		letter-spacing: 0.02em;
+	}
 
 	/* The firm id is the first thing to go when there is no room for it. */
-	.firm { display: none; }
+	.firm {
+		display: none;
+	}
 
 	.tabs {
 		display: flex;
@@ -171,15 +185,30 @@
 	}
 
 	@media (min-width: 48rem) {
-		.shell { flex-direction: row; align-items: center; justify-content: space-between; }
-		.top { order: 2; }
-		.tabs { order: 1; }
-		.firm { display: inline; }
+		.shell {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.top {
+			order: 2;
+		}
+		.tabs {
+			order: 1;
+		}
+		.firm {
+			display: inline;
+		}
 	}
 
+	main {
+		padding-block: var(--space-5);
+	}
 
-	main { padding-block: var(--space-5); }
-
-	.failure { margin-block-start: var(--space-6); }
-	.failure button { margin-block-start: var(--space-3); }
+	.failure {
+		margin-block-start: var(--space-6);
+	}
+	.failure button {
+		margin-block-start: var(--space-3);
+	}
 </style>

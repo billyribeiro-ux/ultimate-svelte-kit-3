@@ -304,7 +304,11 @@ export async function stats(client: Client, now = Date.now()): Promise<OutboxSta
  * `attempts` matters: without it the message is immediately dead again on its
  * first failure, and the operator concludes the retry button is broken.
  */
-export async function revive(client: Client, outboxIds: readonly number[], now = Date.now()): Promise<number> {
+export async function revive(
+	client: Client,
+	outboxIds: readonly number[],
+	now = Date.now()
+): Promise<number> {
 	if (outboxIds.length === 0) return 0;
 
 	const result = await client.execute({
@@ -318,15 +322,20 @@ export async function revive(client: Client, outboxIds: readonly number[], now =
 }
 
 /** Dead messages, for the admin screen and for the operator at 3am. */
-export async function deadLetters(client: Client, limit = 50): Promise<Array<{
-	outboxId: number;
-	kind: string;
-	firmId: string | null;
-	idempotencyKey: string;
-	attempts: number;
-	lastError: string | null;
-	failedAt: number;
-}>> {
+export async function deadLetters(
+	client: Client,
+	limit = 50
+): Promise<
+	Array<{
+		outboxId: number;
+		kind: string;
+		firmId: string | null;
+		idempotencyKey: string;
+		attempts: number;
+		lastError: string | null;
+		failedAt: number;
+	}>
+> {
 	const result = await client.execute({
 		sql: `SELECT outbox_id, kind, firm_id, idempotency_key, attempts, last_error, failed_at
 		      FROM outbox WHERE failed_at IS NOT NULL ORDER BY failed_at DESC LIMIT ?`,

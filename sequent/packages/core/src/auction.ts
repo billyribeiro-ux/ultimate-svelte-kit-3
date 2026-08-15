@@ -88,7 +88,8 @@ function candidatePrices(book: Book): Price[] {
 	const bestAsk = book.asks[0];
 	if (!bestBid || !bestAsk || bestBid.price < bestAsk.price) return [];
 
-	const inRange = (level: PriceLevel) => level.price >= bestAsk.price && level.price <= bestBid.price;
+	const inRange = (level: PriceLevel) =>
+		level.price >= bestAsk.price && level.price <= bestBid.price;
 
 	const prices = new Set<number>();
 	for (const level of book.bids) if (inRange(level)) prices.add(level.price);
@@ -149,7 +150,8 @@ export function findAuctionPrice(book: Book, referencePrice: Price): Candidate |
 	// 4. Closest to the reference. Ties inside this go to the lower price, so
 	//    the rule is total and a replay cannot pick differently.
 	return short.reduce((best, candidate) => {
-		const closer = Math.abs(candidate.price - referencePrice) - Math.abs(best.price - referencePrice);
+		const closer =
+			Math.abs(candidate.price - referencePrice) - Math.abs(best.price - referencePrice);
 		if (closer < 0) return candidate;
 		if (closer > 0) return best;
 		return candidate.price < best.price ? candidate : best;

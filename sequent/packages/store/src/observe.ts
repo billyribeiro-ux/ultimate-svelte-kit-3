@@ -211,7 +211,7 @@ export function verdict(status: Health): HealthVerdict {
 		summary:
 			level === 'ok'
 				? 'Everything is keeping up.'
-				: problems[0] ?? 'Something is wrong but nothing said what.',
+				: (problems[0] ?? 'Something is wrong but nothing said what.'),
 		problems
 	};
 }

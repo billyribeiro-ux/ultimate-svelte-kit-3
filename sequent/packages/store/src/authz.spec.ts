@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, ROLES, assertCan, can, NotAllowed, statusFor, type Action, type Role, type Viewer } from './authz.ts';
+import {
+	ACTIONS,
+	ROLES,
+	assertCan,
+	can,
+	NotAllowed,
+	statusFor,
+	type Action,
+	type Role,
+	type Viewer
+} from './authz.ts';
 
 /**
  * Authorisation, tested exhaustively.

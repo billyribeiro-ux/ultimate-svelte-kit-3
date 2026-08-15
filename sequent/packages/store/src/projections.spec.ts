@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import type { Client } from '@libsql/client';
 import {
 	asAccountId,
-	asClientOrderId,
 	asFirmId,
 	asInstrumentId,
 	asOrderId,
@@ -19,7 +18,13 @@ import {
 } from '@sequent/protocol';
 import { openStore, withTransaction } from './client.ts';
 import { appendEvents, readCheckpoint, Sequencer } from './log.ts';
-import { balanceOf, ledgerAccountId, postTransaction, trialBalance, UnbalancedTransaction } from './ledger.ts';
+import {
+	balanceOf,
+	ledgerAccountId,
+	postTransaction,
+	trialBalance,
+	UnbalancedTransaction
+} from './ledger.ts';
 import { catchUp, rebuild } from './projections.ts';
 
 /**
@@ -194,10 +199,7 @@ describe('a trade in the ledger', () => {
 
 describe('positions', () => {
 	it('tracks a long position and its cost basis', async () => {
-		await emit([
-			trade({ at: 455_000, qty: 100 }),
-			trade({ at: 457_000, qty: 100 })
-		]);
+		await emit([trade({ at: 455_000, qty: 100 }), trade({ at: 457_000, qty: 100 })]);
 		await catchUp(client);
 
 		const result = await client.execute({
@@ -215,7 +217,9 @@ describe('positions', () => {
 		await emit([trade({ at: 455_000, qty: 100 })]);
 		await catchUp(client);
 
-		const result = await client.execute('SELECT account_id, quantity FROM position ORDER BY account_id');
+		const result = await client.execute(
+			'SELECT account_id, quantity FROM position ORDER BY account_id'
+		);
 		const byAccount = Object.fromEntries(
 			result.rows.map((row) => [String(row['account_id']), Number(row['quantity'])])
 		);
@@ -285,7 +289,10 @@ describe('idempotency', () => {
 	});
 
 	it('rebuilds identically from the log alone', async () => {
-		await emit([trade({ at: 455_000, qty: 100 }), trade({ at: 460_000, qty: 150, buyAccount: ACC_B, sellAccount: ACC_A })]);
+		await emit([
+			trade({ at: 455_000, qty: 100 }),
+			trade({ at: 460_000, qty: 150, buyAccount: ACC_B, sellAccount: ACC_A })
+		]);
 		await catchUp(client);
 
 		const before = await snapshotOfReadModels();

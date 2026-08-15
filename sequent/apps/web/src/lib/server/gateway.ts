@@ -12,11 +12,7 @@
  */
 
 import { error } from '@sveltejs/kit';
-import {
-	CURRENT_VERSION,
-	parseCommand,
-	type Command
-} from '@sequent/protocol';
+import { CURRENT_VERSION, parseCommand, type Command } from '@sequent/protocol';
 import {
 	assertCan,
 	Flags,
@@ -107,7 +103,11 @@ export async function submit(
 		error(400, 'A command must be an object.');
 	}
 
-	const claimed = { ...(input as Record<string, unknown>), firmId: viewer.firmId, actorId: viewer.userId };
+	const claimed = {
+		...(input as Record<string, unknown>),
+		firmId: viewer.firmId,
+		actorId: viewer.userId
+	};
 
 	let authorised: Command;
 	try {

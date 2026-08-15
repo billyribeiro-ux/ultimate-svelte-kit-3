@@ -3,7 +3,17 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Client } from '@libsql/client';
-import { asClientOrderId, asFirmId, asInstrumentId, asUserId, asAccountId, price, quantity, type Command, type Event } from '@sequent/protocol';
+import {
+	asClientOrderId,
+	asFirmId,
+	asInstrumentId,
+	asUserId,
+	asAccountId,
+	price,
+	quantity,
+	type Command,
+	type Event
+} from '@sequent/protocol';
 import { openStore, withTransaction } from './client.ts';
 import {
 	appendEvents,
@@ -252,9 +262,7 @@ describe('events and checkpoints', () => {
 		// `caused_by` has a foreign key, so an event pointing at a command that
 		// does not exist cannot commit. The point of the test is what happens to
 		// the *checkpoint*: it must not move either.
-		await expect(
-			appendEvents(client, 'engine', 999, 1_000, 1, [accepted(1)])
-		).rejects.toThrow();
+		await expect(appendEvents(client, 'engine', 999, 1_000, 1, [accepted(1)])).rejects.toThrow();
 
 		expect(await readEvents(client, 0)).toHaveLength(0);
 		expect(await readCheckpoint(client, 'engine')).toBe(0);

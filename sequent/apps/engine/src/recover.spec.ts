@@ -339,11 +339,20 @@ describe('the engine loop', () => {
 		const other = await openStore({ url: `file:${join(otherDirectory, 'test.db')}` });
 
 		try {
-			const commands = await client.execute('SELECT seq, received_at, version, kind, firm_id, body FROM command_log ORDER BY seq');
+			const commands = await client.execute(
+				'SELECT seq, received_at, version, kind, firm_id, body FROM command_log ORDER BY seq'
+			);
 			for (const row of commands.rows) {
 				await other.execute({
 					sql: `INSERT INTO command_log (seq, received_at, version, kind, firm_id, body) VALUES (?, ?, ?, ?, ?, ?)`,
-					args: [row['seq'], row['received_at'], row['version'], row['kind'], row['firm_id'], row['body']] as never[]
+					args: [
+						row['seq'],
+						row['received_at'],
+						row['version'],
+						row['kind'],
+						row['firm_id'],
+						row['body']
+					] as never[]
 				});
 			}
 

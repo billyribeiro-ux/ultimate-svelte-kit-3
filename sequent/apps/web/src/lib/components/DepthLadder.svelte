@@ -74,6 +74,9 @@
 	 * getting it wrong produces an infinite loop rather than a wrong answer,
 	 * which is at least honest.
 	 */
+	// A `SvelteMap` here would be precisely the bug described above: nothing reads
+	// this during render, and making it reactive creates the cycle.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	const lastSize = new Map<number, number>();
 
 	function directionFor(level: DepthLevel): Direction {
@@ -248,8 +251,12 @@
 		border-radius: 2px;
 	}
 
-	.buy .bar { background: var(--bid-soft); }
-	.sell .bar { background: var(--ask-soft); }
+	.buy .bar {
+		background: var(--bid-soft);
+	}
+	.sell .bar {
+		background: var(--ask-soft);
+	}
 
 	.price {
 		position: relative;
@@ -261,11 +268,20 @@
 		text-align: start;
 	}
 
-	.buy .price { color: var(--bid); }
-	.sell .price { color: var(--ask); }
+	.buy .price {
+		color: var(--bid);
+	}
+	.sell .price {
+		color: var(--ask);
+	}
 
-	.size { text-align: end; }
-	.orders { text-align: end; inline-size: 3ch; }
+	.size {
+		text-align: end;
+	}
+	.orders {
+		text-align: end;
+		inline-size: 3ch;
+	}
 
 	.empty {
 		padding-block: var(--space-3);

@@ -6,8 +6,6 @@ import {
 	asOrderId,
 	price,
 	quantity,
-	type Price,
-	type Quantity,
 	type Side
 } from '@sequent/protocol';
 import {
@@ -40,12 +38,7 @@ const VOD = asInstrumentId('VOD.L');
 let nextSeq = 0;
 
 /** A resting order, with only the fields a test actually cares about spelled out. */
-function order(
-	side: Side,
-	at: number,
-	qty: number,
-	firm = 'firm-a'
-): RestingOrder {
+function order(side: Side, at: number, qty: number, firm = 'firm-a'): RestingOrder {
 	nextSeq += 1;
 	return {
 		orderId: asOrderId(`O${nextSeq}`),
@@ -236,11 +229,7 @@ describe('price priority and price improvement', () => {
 
 describe('the book never crosses', () => {
 	it('is uncrossed after an aggressive order sweeps a side', () => {
-		const book = bookWith(
-			order('buy', 99, 5),
-			order('sell', 100, 5),
-			order('sell', 101, 5)
-		);
+		const book = bookWith(order('buy', 99, 5), order('sell', 100, 5), order('sell', 101, 5));
 
 		match(book, {
 			side: 'buy',
@@ -365,11 +354,7 @@ describe('dry runs', () => {
 
 describe('depth', () => {
 	it('aggregates a level rather than naming the orders in it', () => {
-		const book = bookWith(
-			order('sell', 100, 5),
-			order('sell', 100, 7),
-			order('sell', 101, 2)
-		);
+		const book = bookWith(order('sell', 100, 5), order('sell', 100, 7), order('sell', 101, 2));
 
 		const { asks } = depthOf(book, 10);
 
