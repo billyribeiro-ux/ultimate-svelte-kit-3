@@ -32,8 +32,15 @@ import {
 import { newBookingReference, newId, newManageToken } from '#lib/server/db/ids.ts';
 import { addDays, slotsIn, todayIn, wallClockToInstant, type Weekday } from '#lib/time/index.ts';
 
-// Node 22 can read a `.env` file without a dependency.
-process.loadEnvFile('.env');
+/*
+ * Node 22 can read a `.env` file without a dependency.
+ *
+ * Only when nothing has been set already, though: the end-to-end harness runs
+ * this with `DATABASE_URL` pointing at a throwaway database, and loading `.env`
+ * unconditionally would quietly redirect the seed into the development one and
+ * wipe it.
+ */
+if (!process.env.DATABASE_URL) process.loadEnvFile('.env');
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set — copy .env.example to .env');
@@ -43,6 +50,18 @@ const client = createClient({
 	...(process.env.DATABASE_AUTH_TOKEN ? { authToken: process.env.DATABASE_AUTH_TOKEN } : {})
 });
 const db = drizzle(client);
+
+/*
+ * A generous busy timeout, which is safe *here* and would not be in the server.
+ *
+ * SQLite lets one process write at a time. `busy_timeout` makes a blocked writer
+ * wait rather than fail immediately — and it waits by blocking the thread. In
+ * the server that is a deadlock risk (see `write-queue.ts`); in a short-lived
+ * script whose entire job is this one task, blocking is exactly right. It lets
+ * the seeder wait politely for a running server to finish a booking instead of
+ * dying with `SQLITE_BUSY`.
+ */
+await client.execute('PRAGMA busy_timeout = 10000');
 
 const TIME_ZONE = 'Europe/London';
 const DEMO_PASSWORD = 'halfpast-demo-2026';

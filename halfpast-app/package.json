@@ -5,7 +5,7 @@
 	"version": "1.0.0",
 	"type": "module",
 	"engines": {
-		"node": ">=22.17"
+		"node": ">=24.19.0"
 	},
 	"scripts": {
 		"dev": "vite dev",
@@ -18,29 +18,26 @@
 		"format": "prettier --write .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright install && playwright test",
+		"test:e2e": "node scripts/prepare-e2e-db.js && playwright test",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
-		"db:seed": "tsx scripts/seed.ts",
+		"db:seed": "node scripts/seed.ts",
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"fonts:sync": "node scripts/sync-fonts.js",
 		"fonts:measure": "node scripts/measure-font-metrics.js"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@libsql/client": "^0.17.3",
 		"@playwright/test": "^1.60.0",
 		"@sveltejs/adapter-node": "^6.0.0-next.10",
 		"@sveltejs/kit": "^3.0.0-next.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
-		"@types/node": "^22",
+		"@types/node": "^24",
 		"@vitest/browser-playwright": "^4.1.8",
 		"auth": "^1.6.24",
-		"better-auth": "^1.6.24",
 		"drizzle-kit": "^0.31.10",
-		"drizzle-orm": "^0.45.2",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
@@ -64,6 +61,9 @@
 		"@fontsource-variable/bricolage-grotesque": "^5.3.0",
 		"@fontsource-variable/public-sans": "^5.3.0",
 		"@internationalized/date": "^3.12.3",
+		"@libsql/client": "^0.17.3",
+		"better-auth": "^1.6.24",
+		"drizzle-orm": "^0.45.2",
 		"gsap": "^3.15.0",
 		"phosphor-svelte": "^3.1.0",
 		"valibot": "^1.4.2"

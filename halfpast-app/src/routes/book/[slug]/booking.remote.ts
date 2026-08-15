@@ -252,28 +252,45 @@ export const getAvailability = query.live(availabilityArgs, async function* (arg
 /**
  * The submitted form.
  *
- * Note `start`. A form sends strings, always — so the schema takes a string and
- * transforms it into the number the rest of the code wants. Doing the conversion
- * *inside* the schema rather than in the handler means the handler receives a
- * validated `number` and cannot be reached with `NaN`.
+ * `slot` carries **both** the start time and the staff member, as one string:
+ * `1786780800000.842b81fc-…`. That is not a shortcut, it is what makes the form
+ * work with JavaScript switched off.
  *
- * `viewerTimeZone` is the customer's own zone, sent from the browser, and it is
- * used only to phrase the confirmation. It is deliberately not trusted for
- * anything that matters: the appointment is stored as an instant, and the
- * business's zone comes from the database.
+ * The obvious design — a radio group of times plus a hidden `staffId` field —
+ * needs JavaScript to keep the hidden field in step with the chosen radio.
+ * Without it the hidden field stays at whatever the server rendered, which for
+ * "anyone" is nothing at all, and the submission fails validation for a reason
+ * the customer cannot see or fix. Fusing them means the browser posts a complete,
+ * coherent choice using nothing but a radio button.
+ *
+ * The schema splits it back apart, so the handler receives a validated
+ * `{ start: number, staffId: string }` and cannot be reached with `NaN` or a
+ * half-filled selection.
+ *
+ * `viewerTimeZone` is the customer's own zone, sent from the browser. It is used
+ * only to phrase the confirmation and is deliberately not trusted for anything
+ * that matters: the appointment is stored as an instant, and the business's zone
+ * comes from the database.
  */
+const slotValueSchema = v.pipe(
+	v.string('Please choose a time'),
+	v.regex(
+		/^\d{10,16}\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+		'Please choose a time'
+	),
+	v.transform((raw) => {
+		const separator = raw.indexOf('.');
+		return {
+			start: Number(raw.slice(0, separator)),
+			staffId: raw.slice(separator + 1)
+		};
+	})
+);
+
 const bookSchema = v.object({
 	slug: slugSchema,
 	serviceId: idSchema,
-	staffId: idSchema,
-
-	start: v.pipe(
-		v.string(),
-		v.transform(Number),
-		v.number('Please choose a time'),
-		v.integer(),
-		v.minValue(1, 'Please choose a time')
-	),
+	slot: slotValueSchema,
 
 	name: v.pipe(
 		v.string(),
@@ -316,8 +333,8 @@ export const book = form(bookSchema, async (data) => {
 		const created = await createBooking({
 			businessSlug: data.slug,
 			serviceId: data.serviceId,
-			staffId: data.staffId,
-			start: data.start,
+			staffId: data.slot.staffId,
+			start: data.slot.start,
 			customerName: data.name,
 			customerEmail: data.email,
 			customerPhone: data.phone || undefined,
