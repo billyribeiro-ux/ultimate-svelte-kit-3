@@ -741,7 +741,29 @@ function setPhase(state: EngineState, seq: number, command: Extract<Command, { k
 
 	const events: Event[] = [];
 
-	if (from === 'auction') {
+	/*
+	 * When the book has to be cleared before trading resumes.
+	 *
+	 * Two cases, and the second one was missing until a property test opened
+	 * trading on a crossed book and the "never crossed during continuous"
+	 * invariant caught it.
+	 *
+	 *   - **The auction phase ending.** That is what an auction is for.
+	 *   - **Going straight from pre-open to continuous.** Orders accumulate in
+	 *     pre-open without matching, so the book is very likely crossed. A venue
+	 *     that opened continuous trading on a crossed book would hand the first
+	 *     participant to send anything a free trade against every order that
+	 *     should already have been matched.
+	 *
+	 * The real lesson is about where the rule lives. "Uncross when the auction
+	 * ends" describes the intended path; "never begin continuous trading with a
+	 * crossed book" describes the *invariant*, and only the second one is still
+	 * true when somebody adds a phase transition nobody had thought about.
+	 */
+	const wasAccumulating = from === 'pre_open' || from === 'auction';
+	const opensTrading = command.phase === 'continuous';
+
+	if (from === 'auction' || (wasAccumulating && opensTrading)) {
 		events.push(...runAuction(state, seq, instrument));
 	}
 
@@ -789,6 +811,23 @@ function runAuction(state: EngineState, seq: number, instrument: Instrument): Ev
 		}
 	];
 
+	/*
+	 * Bookkeeping happens after every trade has been reported, not during.
+	 *
+	 * `uncross` has already decremented every order's `remaining` — it clears the
+	 * whole book in one pass — so a single resting order can appear in several of
+	 * the trades below with a final remaining of zero. Untracking it the first
+	 * time zero is seen removes it from the index, and every later trade that
+	 * names it then fails its lookup and is skipped.
+	 *
+	 * The shares still moved: `uncross` did that. They would simply never have
+	 * been reported, and the venue's own event stream would understate the
+	 * volume of its own opening auction. A property test found this; no example
+	 * test would have, because it needs one order filling against two others in
+	 * a single auction.
+	 */
+	const touched = new Set<LiveOrder>();
+
 	let index = 0;
 	for (const trade of result.trades) {
 		const buy = state.orders.get(trade.buy.orderId);
@@ -808,13 +847,14 @@ function runAuction(state: EngineState, seq: number, instrument: Instrument): Ev
 		);
 		index += 1;
 
-		for (const [order, live] of [
-			[trade.buy, buy],
-			[trade.sell, sell]
-		] as const) {
-			reduceWorking(state, live, trade.quantity);
-			if (order.remaining === 0) untrackLive(state, live);
-		}
+		reduceWorking(state, buy, trade.quantity);
+		reduceWorking(state, sell, trade.quantity);
+		touched.add(buy);
+		touched.add(sell);
+	}
+
+	for (const order of touched) {
+		if (order.remaining === 0) untrackLive(state, order);
 	}
 
 	instrument.referencePrice = result.price;

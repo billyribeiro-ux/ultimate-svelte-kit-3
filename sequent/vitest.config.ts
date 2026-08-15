@@ -11,6 +11,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		include: ['packages/*/src/**/*.spec.ts', 'apps/*/src/**/*.spec.ts'],
+		// Recovery tests replay whole sessions against real SQLite files.
+		testTimeout: 30_000,
 		expect: { requireAssertions: true }
 	}
 });
