@@ -142,6 +142,47 @@ export async function chooseAvailableSlot(page: Page, fromDayIndex = 0): Promise
 	throw new Error(`No bookable slot found from day ${fromDayIndex} onwards`);
 }
 
+/**
+ * Which day is selected, as an ISO date.
+ *
+ * `data-day` and not the accessible name. The name is written for a person and
+ * contains the availability count — "Tuesday, 18 August 2026 — 26 times
+ * available" — so it changes the moment anything is booked, and a test that
+ * captured it before a booking could never match it again afterwards.
+ *
+ * The assertion is the important half: `getAttribute` returns `null` for an
+ * attribute that does not exist, and `null` compares equal to every other
+ * `null`. An earlier version of this read `aria-label`, which the day buttons
+ * have never had, so every day matched, the first one was clicked, and two
+ * tests quietly started looking at the wrong day.
+ */
+export async function selectedDay(page: Page): Promise<string> {
+	const day = await page
+		.getByRole('radiogroup', { name: 'Choose a day' })
+		.getByRole('radio', { checked: true })
+		.getAttribute('data-day');
+
+	if (!day) throw new Error('No day is selected, or the day buttons have lost their data-day.');
+	return day;
+}
+
+/**
+ * Select a specific day by its ISO date.
+ *
+ * Throws when the day is not on screen. The version this replaces was a `for`
+ * loop with a `break`, which did *nothing at all* when nothing matched and left
+ * whatever day was already selected — so the assertion that followed was
+ * measuring the wrong day and, in one case, passing because of it.
+ */
+export async function chooseDay(page: Page, day: string): Promise<void> {
+	const button = page
+		.getByRole('radiogroup', { name: 'Choose a day' })
+		.locator(`[data-day="${day}"]`);
+
+	await expect(button, `day ${day} is not in the strip`).toHaveCount(1);
+	await button.click();
+}
+
 /** Fill in the customer details and submit. Returns nothing; assert on the URL. */
 export async function submitBooking(page: Page, name: string): Promise<void> {
 	await page.getByLabel('Your name').fill(name);

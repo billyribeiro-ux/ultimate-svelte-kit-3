@@ -1,4 +1,12 @@
-import { SHOP, chooseAvailableSlot, expect, submitBooking, test } from './fixtures.ts';
+import {
+	SHOP,
+	chooseAvailableSlot,
+	chooseDay,
+	expect,
+	selectedDay,
+	submitBooking,
+	test
+} from './fixtures.ts';
 
 /**
  * The customer's journey, end to end, against a real production build.
@@ -129,10 +137,7 @@ test.describe('making a booking', () => {
 		const takenLabel = await chooseAvailableSlot(page);
 
 		// Which day are we on? The second browser has to look at the same one.
-		const selectedDay = await page
-			.getByRole('radiogroup', { name: 'Choose a day' })
-			.getByRole('radio', { checked: true })
-			.getAttribute('aria-label');
+		const day = await selectedDay(page);
 
 		await submitBooking(page, 'First Come');
 		await expect(page).toHaveURL(/\/booking\//);
@@ -145,15 +150,7 @@ test.describe('making a booking', () => {
 		// The slot may still exist for the *other* stylist, so narrow to one person.
 		await second.getByRole('radio', { name: 'Ada' }).click();
 
-		const days = second.getByRole('radiogroup', { name: 'Choose a day' }).getByRole('radio');
-		const count = await days.count();
-		for (let index = 0; index < count; index += 1) {
-			const day = days.nth(index);
-			if ((await day.getAttribute('aria-label')) === selectedDay) {
-				await day.click();
-				break;
-			}
-		}
+		await chooseDay(second, day);
 
 		// Ada is the first eligible staff member, so she took the booking.
 		await expect(second.locator('label.slot', { hasText: takenLabel })).toHaveCount(0);
@@ -182,10 +179,7 @@ test.describe('managing a booking', () => {
 		await page.getByRole('radio', { name: 'Ada' }).click();
 		const freedLabel = await chooseAvailableSlot(page, 3);
 
-		const day = await page
-			.getByRole('radiogroup', { name: 'Choose a day' })
-			.getByRole('radio', { checked: true })
-			.getAttribute('aria-label');
+		const day = await selectedDay(page);
 
 		await submitBooking(page, 'Returning Rob');
 		await expect(page).toHaveURL(/\/booking\//);
@@ -198,14 +192,7 @@ test.describe('managing a booking', () => {
 		await page.goto(`${SHOP}?service=cut-and-finish`);
 		await page.getByRole('radio', { name: 'Ada' }).click();
 
-		const days = page.getByRole('radiogroup', { name: 'Choose a day' }).getByRole('radio');
-		const count = await days.count();
-		for (let index = 0; index < count; index += 1) {
-			if ((await days.nth(index).getAttribute('aria-label')) === day) {
-				await days.nth(index).click();
-				break;
-			}
-		}
+		await chooseDay(page, day);
 
 		await expect(page.locator('label.slot', { hasText: freedLabel })).toHaveCount(1);
 	});

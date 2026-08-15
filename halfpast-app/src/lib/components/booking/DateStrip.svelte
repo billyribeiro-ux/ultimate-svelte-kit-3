@@ -84,9 +84,22 @@
 	-->
 	<div class="days" role="radiogroup" aria-label="Choose a day">
 		{#each days as entry (entry.day)}
+			<!--
+				`data-day` is the machine-readable identity of this button: the ISO
+				date, unchanged by how the day is presented.
+
+				Everything else here is written for a person — the weekday, the number,
+				the "26 times available" sentence — and all of it changes as the day
+				fills up. A test that identified a day by its accessible name would
+				therefore be comparing "Tuesday, 18 August 2026 — 26 times available"
+				against "… — 25 times available" and finding no match, which is exactly
+				what happened. Give anything that has to be found again a stable
+				identity, and do not make the presentation carry it.
+			-->
 			<button
 				type="button"
 				role="radio"
+				data-day={entry.day}
 				aria-checked={selected === entry.day}
 				class="day"
 				class:selected={selected === entry.day}
