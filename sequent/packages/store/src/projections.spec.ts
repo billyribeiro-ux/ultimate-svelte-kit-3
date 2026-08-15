@@ -17,7 +17,7 @@ import {
 	type Command,
 	type Event
 } from '@sequent/protocol';
-import { openStore } from './client.ts';
+import { openStore, withTransaction } from './client.ts';
 import { appendEvents, readCheckpoint, Sequencer } from './log.ts';
 import { balanceOf, ledgerAccountId, postTransaction, trialBalance, UnbalancedTransaction } from './ledger.ts';
 import { catchUp, rebuild } from './projections.ts';
@@ -106,30 +106,28 @@ afterEach(async () => {
 
 describe('the balancing rule', () => {
 	it('refuses a transaction whose postings do not sum to zero', async () => {
-		const tx = await client.transaction('write');
-
 		await expect(
-			postTransaction(tx, {
-				transactionId: 'T1',
-				seq: 1,
-				at: 1,
-				kind: 'test',
-				postings: [
-					{ accountId: 'a', amount: 100 as Amount },
-					{ accountId: 'b', amount: -99 as Amount }
-				]
-			})
+			withTransaction(client, (tx) =>
+				postTransaction(tx, {
+					transactionId: 'T1',
+					seq: 1,
+					at: 1,
+					kind: 'test',
+					postings: [
+						{ accountId: 'a', amount: 100 as Amount },
+						{ accountId: 'b', amount: -99 as Amount }
+					]
+				})
+			)
 		).rejects.toThrow(UnbalancedTransaction);
-
-		await tx.rollback();
 	});
 
 	it('refuses a transaction with no postings', async () => {
-		const tx = await client.transaction('write');
 		await expect(
-			postTransaction(tx, { transactionId: 'T1', seq: 1, at: 1, kind: 'test', postings: [] })
+			withTransaction(client, (tx) =>
+				postTransaction(tx, { transactionId: 'T1', seq: 1, at: 1, kind: 'test', postings: [] })
+			)
 		).rejects.toThrow(/no postings/);
-		await tx.rollback();
 	});
 
 	it('refuses to update a posting once written', async () => {

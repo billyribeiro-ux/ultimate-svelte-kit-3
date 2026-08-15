@@ -18,7 +18,7 @@ import {
 	usageFor,
 	type Usage
 } from './billing.ts';
-import { openStore } from './client.ts';
+import { openStore, withTransaction } from './client.ts';
 import { createApiKey } from './keys.ts';
 
 /**
@@ -258,9 +258,9 @@ describe('against a database', () => {
 	it('writes an invoice once', async () => {
 		const built = invoice({ usage: usage({ seats: 8 }) });
 
-		const tx = await client.transaction('write');
-		await issueInvoice(tx, built);
-		await tx.commit();
+		await withTransaction(client, async (tx) => {
+			await issueInvoice(tx, built);
+		});
 
 		expect((await invoicesFor(client, 'firm-a'))[0]?.total).toBe(built.total);
 	});
@@ -269,35 +269,33 @@ describe('against a database', () => {
 		const built = invoice({ usage: usage({ seats: 8 }) });
 
 		for (let attempt = 0; attempt < 2; attempt += 1) {
-			const tx = await client.transaction('write');
-			await issueInvoice(tx, built);
-			await tx.commit();
+			await withTransaction(client, async (tx) => {
+				await issueInvoice(tx, built);
+			});
 		}
 
 		expect(await invoicesFor(client, 'firm-a')).toHaveLength(1);
 	});
 
 	it('refuses to reissue with a different total', async () => {
-		const tx = await client.transaction('write');
-		await issueInvoice(tx, invoice({ usage: usage({ seats: 8 }) }));
-		await tx.commit();
+		await withTransaction(client, async (tx) => {
+			await issueInvoice(tx, invoice({ usage: usage({ seats: 8 }) }));
+		});
 
 		/*
 		 * The alternative is a firm receiving two different totals for the same
 		 * period and nobody knowing which one they paid. Corrections are credit
 		 * notes, for the same reason ledger corrections are reversing entries.
 		 */
-		const second = await client.transaction('write');
-		await expect(issueInvoice(second, invoice({ usage: usage({ seats: 12 }) }))).rejects.toThrow(
-			InvoiceAlreadyIssued
-		);
-		await second.rollback();
+		await expect(
+			withTransaction(client, (tx) => issueInvoice(tx, invoice({ usage: usage({ seats: 12 }) })))
+		).rejects.toThrow(InvoiceAlreadyIssued);
 	});
 
 	it('cannot be edited once written', async () => {
-		const tx = await client.transaction('write');
-		await issueInvoice(tx, invoice({ usage: usage({ seats: 8 }) }));
-		await tx.commit();
+		await withTransaction(client, async (tx) => {
+			await issueInvoice(tx, invoice({ usage: usage({ seats: 8 }) }));
+		});
 
 		await expect(
 			client.execute({ sql: 'UPDATE invoice SET total = 1 WHERE invoice_id = ?', args: ['inv-1'] })

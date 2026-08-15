@@ -40,6 +40,7 @@
  */
 
 import type { Client } from '@libsql/client';
+import { withTransaction } from './client.ts';
 
 export interface Migration {
 	/** Monotonic. Gaps are fine; duplicates are not. */
@@ -161,20 +162,18 @@ export async function migrate(client: Client, now = Date.now()): Promise<Migrati
 			continue;
 		}
 
-		const tx = await client.transaction('write');
-
 		try {
-			for (const statement of migration.statements) await tx.execute(statement);
+			await withTransaction(client, async (tx) => {
+				for (const statement of migration.statements) await tx.execute(statement);
 
-			await tx.execute({
-				sql: 'INSERT INTO schema_migration (id, name, applied_at) VALUES (?, ?, ?)',
-				args: [migration.id, migration.name, now]
+				await tx.execute({
+					sql: 'INSERT INTO schema_migration (id, name, applied_at) VALUES (?, ?, ?)',
+					args: [migration.id, migration.name, now]
+				});
 			});
 
-			await tx.commit();
 			applied.push(migration.id);
 		} catch (thrown) {
-			await tx.rollback();
 			throw new Error(
 				`Migration ${migration.id} (${migration.name}) failed and was rolled back: ${
 					thrown instanceof Error ? thrown.message : String(thrown)

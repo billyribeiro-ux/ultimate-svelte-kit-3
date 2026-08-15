@@ -24,7 +24,8 @@
  * gap detection, idempotent consumers — transfers unchanged to the fast version.
  */
 
-import type { Client, InValue, Transaction } from '@libsql/client';
+import type { Client, InValue } from '@libsql/client';
+import { withTransaction, type Executor } from './client.ts';
 import { parseCommand, type Command, type Event } from '@sequent/protocol';
 
 /* -------------------------------------------------------------------------- */
@@ -197,9 +198,18 @@ export async function appendEvents(
 	version: number,
 	events: readonly Event[]
 ): Promise<void> {
-	const tx = await client.transaction('write');
-
-	try {
+	/*
+	 * `withTransaction`, not `client.transaction()`.
+	 *
+	 * This function runs **once per command** — it is the hottest write path in
+	 * the venue — and `client.transaction()` leaks two file descriptors every
+	 * time it is called. The engine died after about ten thousand orders with
+	 * `SQLITE_CANTOPEN`, which is an error about opening the database reported by
+	 * code that had the database open the whole time.
+	 *
+	 * See `withTransaction` in `client.ts` for the full account.
+	 */
+	await withTransaction(client, async (tx) => {
 		for (const body of events) {
 			await tx.execute({
 				sql: `INSERT INTO event_log (caused_by, at, version, kind, instrument_id, body)
@@ -216,11 +226,7 @@ export async function appendEvents(
 		}
 
 		await checkpointIn(tx, consumer, causedBy, at);
-		await tx.commit();
-	} catch (error) {
-		await tx.rollback();
-		throw error;
-	}
+	});
 }
 
 /** Not every event belongs to an instrument, and the column says so honestly. */
@@ -336,7 +342,7 @@ export async function readCheckpoint(client: Client, consumer: string): Promise<
  * make the broken version the convenient one.
  */
 export async function checkpointIn(
-	tx: Transaction,
+	tx: Executor,
 	consumer: string,
 	seq: number,
 	at: number

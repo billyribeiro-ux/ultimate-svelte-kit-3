@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Client } from '@libsql/client';
-import { openStore } from './client.ts';
+import { openStore, withTransaction } from './client.ts';
 import {
 	backoffMs,
 	claim,
@@ -43,19 +43,19 @@ afterEach(async () => {
 
 /** Enqueue outside a caller's transaction, for tests that do not need atomicity. */
 async function add(message: Partial<OutboxMessage> & { idempotencyKey: string }, now = T0) {
-	const tx = await client.transaction('write');
-	await enqueue(
-		tx,
-		{
-			kind: 'webhook',
-			seq: 1,
-			firmId: 'firm-a',
-			payload: { hello: 'world' },
-			...message
-		},
-		now
+	await withTransaction(client, (tx) =>
+		enqueue(
+			tx,
+			{
+				kind: 'webhook',
+				seq: 1,
+				firmId: 'firm-a',
+				payload: { hello: 'world' },
+				...message
+			},
+			now
+		)
 	);
-	await tx.commit();
 }
 
 describe('enqueuing', () => {
@@ -81,9 +81,10 @@ describe('enqueuing', () => {
 	});
 
 	it('is atomic with the caller´s transaction', async () => {
-		const tx = await client.transaction('write');
-		await enqueue(tx, { kind: 'webhook', seq: 1, idempotencyKey: 'rolled-back', payload: {} }, T0);
-		await tx.rollback();
+		await withTransaction(client, async (tx) => {
+			await enqueue(tx, { kind: 'webhook', seq: 1, idempotencyKey: 'rolled-back', payload: {} }, T0);
+			throw new Error('deliberate rollback');
+		}).catch(() => {});
 
 		// The point of taking a Transaction rather than a Client: if the caller's
 		// work does not commit, neither does the intent to notify about it.

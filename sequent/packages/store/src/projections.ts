@@ -24,7 +24,8 @@
  * than a migration nobody wants to write.
  */
 
-import type { Client, InValue, Transaction } from '@libsql/client';
+import type { Client, InValue } from '@libsql/client';
+import { withTransaction, type Executor } from './client.ts';
 import type { Amount, Event } from '@sequent/protocol';
 import { checkpointIn, readCheckpoint, readEvents, type EventRecord } from './log.ts';
 import { ensureAccount, postTransaction, type Posting } from './ledger.ts';
@@ -44,7 +45,7 @@ export const PROJECTOR_CONSUMER = 'projections';
  * why, because "is this idempotent" is the question a reviewer should be able to
  * answer without running it.
  */
-async function project(tx: Transaction, record: EventRecord): Promise<void> {
+async function project(tx: Executor, record: EventRecord): Promise<void> {
 	const event = record.body;
 
 	switch (event.kind) {
@@ -229,7 +230,7 @@ async function project(tx: Transaction, record: EventRecord): Promise<void> {
  *     that just started.
  */
 async function applyToPosition(
-	tx: Transaction,
+	tx: Executor,
 	input: {
 		accountId: string;
 		instrumentId: string;
@@ -318,7 +319,7 @@ async function applyToPosition(
  * whatever is left over rather than computed separately and hoped about.
  */
 async function postTrade(
-	tx: Transaction,
+	tx: Executor,
 	record: EventRecord,
 	event: Extract<Event, { kind: 'traded' }>
 ): Promise<void> {
@@ -381,9 +382,8 @@ export async function applyBatch(
 	if (batch.length === 0) return;
 
 	const { notify = true } = options;
-	const tx = await client.transaction('write');
 
-	try {
+	await withTransaction(client, async (tx) => {
 		for (const record of batch) {
 			await project(tx, record);
 
@@ -406,11 +406,7 @@ export async function applyBatch(
 
 		const last = batch[batch.length - 1]!;
 		await checkpointIn(tx, PROJECTOR_CONSUMER, last.seq, last.at);
-		await tx.commit();
-	} catch (error) {
-		await tx.rollback();
-		throw error;
-	}
+	});
 }
 
 /** Catch the projections up to the end of the event log. */
@@ -456,9 +452,7 @@ export async function catchUp(
  * building must be suppressed during it.
  */
 export async function rebuild(client: Client): Promise<number> {
-	const tx = await client.transaction('write');
-
-	try {
+	await withTransaction(client, async (tx) => {
 		for (const table of ['ledger_posting', 'ledger_transaction', 'ledger_account', 'position', 'trade', 'order_record']) {
 			await tx.execute(`DELETE FROM ${table}`);
 		}
@@ -466,11 +460,7 @@ export async function rebuild(client: Client): Promise<number> {
 			sql: 'DELETE FROM consumer_checkpoint WHERE consumer = ?',
 			args: [PROJECTOR_CONSUMER]
 		});
-		await tx.commit();
-	} catch (error) {
-		await tx.rollback();
-		throw error;
-	}
+	});
 
 	return catchUp(client, 500, { notify: false });
 }

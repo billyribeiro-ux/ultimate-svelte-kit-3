@@ -10,6 +10,7 @@ import {
 	listEndpoints,
 	openStore,
 	verify,
+	withTransaction,
 	type ClaimedMessage
 } from '@sequent/store';
 import { deliverEmail, deliverWebhook, type Fetch } from './deliver.ts';
@@ -71,19 +72,19 @@ async function queue(
 	message: { kind: string; firmId?: string | undefined; payload: unknown; key?: string },
 	seq = 1
 ): Promise<ClaimedMessage> {
-	const tx = await client.transaction('write');
-	await enqueue(
-		tx,
-		{
-			kind: message.kind,
-			seq,
-			firmId: message.firmId,
-			idempotencyKey: message.key ?? `key-${seq}-${Math.random()}`,
-			payload: message.payload
-		},
-		T0
+	await withTransaction(client, (tx) =>
+		enqueue(
+			tx,
+			{
+				kind: message.kind,
+				seq,
+				firmId: message.firmId,
+				idempotencyKey: message.key ?? `key-${seq}-${Math.random()}`,
+				payload: message.payload
+			},
+			T0
+		)
 	);
-	await tx.commit();
 
 	const [claimed] = await claim(client, 'test-worker', { limit: 1, now: T0 });
 	return claimed!;

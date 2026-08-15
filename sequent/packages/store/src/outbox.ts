@@ -44,7 +44,8 @@
  * quietly means "at-least-once plus idempotent receivers", which is this.
  */
 
-import type { Client, Transaction } from '@libsql/client';
+import type { Client } from '@libsql/client';
+import type { Executor } from './client.ts';
 
 /* -------------------------------------------------------------------------- */
 /* Enqueuing                                                                   */
@@ -75,7 +76,7 @@ export interface OutboxMessage {
  * design and are re-run after any crash, so without this every restart would
  * re-notify every firm about the last batch of trades.
  */
-export async function enqueue(tx: Transaction, message: OutboxMessage, now: number): Promise<void> {
+export async function enqueue(tx: Executor, message: OutboxMessage, now: number): Promise<void> {
 	await tx.execute({
 		sql: `INSERT INTO outbox (kind, seq, firm_id, idempotency_key, payload, created_at, available_at)
 		      VALUES (?, ?, ?, ?, ?, ?, ?)

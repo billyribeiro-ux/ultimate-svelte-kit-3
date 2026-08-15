@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Client } from '@libsql/client';
 import { asClientOrderId, asFirmId, asInstrumentId, asUserId, asAccountId, price, quantity, type Command, type Event } from '@sequent/protocol';
-import { openStore } from './client.ts';
+import { openStore, withTransaction } from './client.ts';
 import {
 	appendEvents,
 	assertNoGaps,
@@ -265,11 +265,11 @@ describe('events and checkpoints', () => {
 		await sequencer.start();
 		await sequencer.append(order(1), 1_000, 1);
 
-		const tx = await client.transaction('write');
-		await tx.execute(`CREATE TABLE IF NOT EXISTS demo_projection (id INTEGER PRIMARY KEY)`);
-		await tx.execute(`INSERT INTO demo_projection (id) VALUES (1)`);
-		await checkpointIn(tx, 'demo', 1, 1_000);
-		await tx.commit();
+		await withTransaction(client, async (tx) => {
+			await tx.execute(`CREATE TABLE IF NOT EXISTS demo_projection (id INTEGER PRIMARY KEY)`);
+			await tx.execute(`INSERT INTO demo_projection (id) VALUES (1)`);
+			await checkpointIn(tx, 'demo', 1, 1_000);
+		});
 
 		expect(await readCheckpoint(client, 'demo')).toBe(1);
 	});
@@ -279,13 +279,8 @@ describe('events and checkpoints', () => {
 	});
 
 	it('advances a checkpoint rather than duplicating it', async () => {
-		const tx1 = await client.transaction('write');
-		await checkpointIn(tx1, 'demo', 5, 1);
-		await tx1.commit();
-
-		const tx2 = await client.transaction('write');
-		await checkpointIn(tx2, 'demo', 9, 2);
-		await tx2.commit();
+		await withTransaction(client, (tx) => checkpointIn(tx, 'demo', 5, 1));
+		await withTransaction(client, (tx) => checkpointIn(tx, 'demo', 9, 2));
 
 		expect(await readCheckpoint(client, 'demo')).toBe(9);
 	});

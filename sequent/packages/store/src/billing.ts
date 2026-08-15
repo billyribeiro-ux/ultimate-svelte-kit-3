@@ -29,7 +29,8 @@
  * would remember to write.
  */
 
-import type { Client, Transaction } from '@libsql/client';
+import type { Client } from '@libsql/client';
+import type { Executor } from './client.ts';
 import type { Amount } from '@sequent/protocol';
 
 /* -------------------------------------------------------------------------- */
@@ -362,7 +363,7 @@ export class InvoiceAlreadyIssued extends Error {
  * A correction is a **credit note**, exactly as a ledger correction is a
  * reversing entry, and for exactly the same reason.
  */
-export async function issueInvoice(tx: Transaction, invoice: Invoice): Promise<void> {
+export async function issueInvoice(tx: Executor, invoice: Invoice): Promise<void> {
 	const existing = await tx.execute({
 		sql: 'SELECT total FROM invoice WHERE invoice_id = ?',
 		args: [invoice.invoiceId]

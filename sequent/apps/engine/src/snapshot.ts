@@ -252,15 +252,41 @@ export async function loadSnapshot(
 	atMostSeq = Number.MAX_SAFE_INTEGER
 ): Promise<LoadedSnapshot | undefined> {
 	const result = await client.execute({
-		sql: `SELECT fingerprint, body FROM engine_snapshot WHERE seq <= ? ORDER BY seq DESC LIMIT 1`,
+		sql: `SELECT seq, fingerprint, body FROM engine_snapshot WHERE seq <= ? ORDER BY seq DESC LIMIT 1`,
 		args: [atMostSeq]
 	});
 
 	const row = result.rows[0];
 	if (!row) return undefined;
 
-	return {
-		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
-		fingerprint: String(row['fingerprint'])
-	};
+	/*
+	 * A snapshot that will not parse is treated as **absent**, not as an error.
+	 *
+	 * This is the difference between a claim and a property. Everywhere in this
+	 * codebase says the snapshot is an optimisation and the log is the system of
+	 * record — and until a fault-injection test wrote nonsense into the table,
+	 * that was only a claim: `deserialise` threw `body.instruments is not
+	 * iterable`, the exception escaped `recover`, and the engine would not start.
+	 * A corrupt cache took the venue down.
+	 *
+	 * Returning `undefined` makes recovery fall back to replaying from genesis,
+	 * which is slower and correct. That is the trade the whole architecture was
+	 * built to be able to make, and it does not exist unless this `catch` does.
+	 *
+	 * It is logged rather than swallowed silently: a venue that quietly replays
+	 * from genesis every start is one whose snapshots have been broken for
+	 * months and whose boot time nobody has questioned.
+	 */
+	try {
+		return {
+			state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
+			fingerprint: String(row['fingerprint'])
+		};
+	} catch (thrown) {
+		console.error(
+			`[engine] snapshot at seq ${Number(row['seq'])} is unreadable; replaying from genesis instead.`,
+			thrown
+		);
+		return undefined;
+	}
 }

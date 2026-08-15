@@ -31,7 +31,8 @@
  * row cannot answer that.
  */
 
-import type { Client, Transaction } from '@libsql/client';
+import type { Client } from '@libsql/client';
+import type { Executor } from './client.ts';
 import { type Amount } from '@sequent/protocol';
 
 /* -------------------------------------------------------------------------- */
@@ -94,7 +95,7 @@ export function ledgerAccountId(
 }
 
 export async function ensureAccount(
-	tx: Transaction,
+	tx: Executor,
 	kind: AccountKind,
 	ownerId: string,
 	currency: string,
@@ -150,7 +151,7 @@ export class UnbalancedTransaction extends Error {
  * error into the ledger, where it would compound. Refusing is the feature.
  */
 export async function postTransaction(
-	tx: Transaction,
+	tx: Executor,
 	input: {
 		transactionId: string;
 		seq: number;
@@ -240,7 +241,7 @@ export async function trialBalance(client: Client): Promise<{
  * the mistake had never happened, and the record still shows that it did.
  */
 export async function reverseTransaction(
-	tx: Transaction,
+	tx: Executor,
 	client: Client,
 	originalId: string,
 	input: { transactionId: string; seq: number; at: number; reason: string }
