@@ -163,6 +163,27 @@ describe('URL safety', () => {
 		expect(assertDeliverable('https://172.32.0.1/hooks').hostname).toBe('172.32.0.1');
 	});
 
+	it('refuses link-local even with the development escape hatch open', () => {
+		/*
+		 * `allowInsecure` lets a student webhook their own laptop. It must not also
+		 * let anybody reach the cloud metadata service — and it did, until a
+		 * browser test noticed the admin form accepting `169.254.169.254` on a dev
+		 * server.
+		 */
+		expect(() =>
+			assertDeliverable('http://169.254.169.254/latest/meta-data/', { allowInsecure: true })
+		).toThrow(InvalidEndpointUrl);
+
+		expect(() => assertDeliverable('http://[fe80::1]/hooks', { allowInsecure: true })).toThrow(
+			InvalidEndpointUrl
+		);
+
+		// And the hatch still does what it is for.
+		expect(assertDeliverable('http://localhost:3000/hooks', { allowInsecure: true }).port).toBe(
+			'3000'
+		);
+	});
+
 	it('refuses credentials in the URL', () => {
 		expect(() => assertDeliverable('https://user:pass@example.com/hooks')).toThrow(
 			InvalidEndpointUrl

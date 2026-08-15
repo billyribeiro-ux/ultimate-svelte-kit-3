@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DepthLevel } from '../../routes/terminal/market.remote.ts';
+	import { flash, gsap, prefersReducedMotion, type Direction } from '#lib/motion/motion.ts';
 
 	/**
 	 * The depth ladder.
@@ -54,9 +55,76 @@
 		Math.max(1, ...bids.map((level) => level.quantity), ...asks.map((level) => level.quantity))
 	);
 
-	const spread = $derived(
-		bids[0] && asks[0] ? asks[0].price - bids[0].price : undefined
-	);
+	const spread = $derived(bids[0] && asks[0] ? asks[0].price - bids[0].price : undefined);
+
+	/* ---------------------------------------------------------------------- */
+	/* Remembering the last size, so a change can be shown as a change          */
+	/* ---------------------------------------------------------------------- */
+
+	/**
+	 * What each level's size was last time we drew it.
+	 *
+	 * A plain `Map`, deliberately **not** `$state`. Nothing reads it during
+	 * render — it exists only so `directionFor` can compare — and making it
+	 * reactive would create a dependency cycle: reading it in the template makes
+	 * the template depend on it, and writing it during that same render
+	 * invalidates the thing being rendered.
+	 *
+	 * This is the general shape of "previous value" in a reactive system, and
+	 * getting it wrong produces an infinite loop rather than a wrong answer,
+	 * which is at least honest.
+	 */
+	const lastSize = new Map<number, number>();
+
+	function directionFor(level: DepthLevel): Direction {
+		const before = lastSize.get(level.price);
+		lastSize.set(level.price, level.quantity);
+
+		if (before === undefined || before === level.quantity) return 'neutral';
+
+		/*
+		 * Bigger size on a level is liquidity **arriving**, which reads as
+		 * strengthening whichever side it is on. Smaller size means it was taken
+		 * or pulled.
+		 *
+		 * Note the flash is about the *level*, not the market: a bid level growing
+		 * is not "the price went up". Colouring it green because it grew would
+		 * teach a false reflex, so the flash uses the side's own colour — a bid
+		 * flashes in bid green, an ask in ask red — and brightness carries the
+		 * change while hue carries the side.
+		 */
+		return level.quantity > before ? 'up' : 'down';
+	}
+
+	/**
+	 * Ease the bar to its new length instead of jumping.
+	 *
+	 * This is the animation that earns its keep most clearly. A bar that
+	 * teleports tells you the level is now this deep; a bar that visibly shrinks
+	 * over 200ms tells you it is *being eaten*, and a trader watching the ask
+	 * side drain can act on that a beat before the price moves.
+	 *
+	 * `overwrite: 'auto'` again, and for the same reason as the flash: on a busy
+	 * instrument the next update arrives before this tween finishes, and it must
+	 * continue from wherever the bar got to rather than snapping back to start.
+	 */
+	function bar(node: HTMLElement, fill: number) {
+		if (prefersReducedMotion()) {
+			node.style.transform = `scaleX(${fill})`;
+			return {
+				update: (next: number) => (node.style.transform = `scaleX(${next})`)
+			};
+		}
+
+		gsap.set(node, { scaleX: fill });
+
+		return {
+			update(next: number) {
+				gsap.to(node, { scaleX: next, duration: 0.22, ease: 'power2.out', overwrite: 'auto' });
+			},
+			destroy: () => gsap.killTweensOf(node)
+		};
+	}
 </script>
 
 <div class="ladder card">
@@ -82,7 +150,7 @@
 				</thead>
 				<tbody>
 					{#each column.levels as level (level.price)}
-						<tr class={column.side}>
+						<tr class={column.side} use:flash={directionFor(level)}>
 							<td class="cell">
 								<!--
 									The depth bar sits behind the row rather than beside it, so a
@@ -90,11 +158,7 @@
 									deep it is. A bar that pushes the numbers around is a bar you
 									cannot read a price off while it moves.
 								-->
-								<span
-									class="bar"
-									style="--fill: {level.quantity / largest}"
-									aria-hidden="true"
-								></span>
+								<span class="bar" use:bar={level.quantity / largest} aria-hidden="true"></span>
 								<button
 									type="button"
 									class="price mono"
@@ -155,6 +219,16 @@
 		padding-block: 1px;
 	}
 
+	/*
+	 * The row is the flash target, and it needs somewhere for the colour to go.
+	 * Without a starting `background-color` GSAP animates from the computed
+	 * value, which is `rgba(0,0,0,0)` — fine — but declaring it makes the
+	 * intent obvious to the next reader.
+	 */
+	tbody tr {
+		background-color: transparent;
+	}
+
 	.cell {
 		position: relative;
 		inline-size: 50%;
@@ -166,8 +240,10 @@
 		inset-inline-start: 0;
 		inline-size: 100%;
 		/* A transform, not a width: the compositor handles it and layout never
-		   runs. Twenty of these changing per frame is free; twenty widths is not. */
-		transform: scaleX(var(--fill));
+		   runs. Twenty of these changing per frame is free; twenty widths is not.
+		   The value is set by the `bar` action rather than a CSS variable, so it
+		   can be tweened rather than snapped. */
+		transform: scaleX(0);
 		transform-origin: left center;
 		border-radius: 2px;
 	}
@@ -194,5 +270,28 @@
 	.empty {
 		padding-block: var(--space-3);
 		font-size: var(--text-sm);
+	}
+
+	/*
+	 * Tap targets.
+	 *
+	 * A ladder row on a phone is the smallest thing anybody will try to hit, and
+	 * 44px per row would make a ten-level book taller than the screen. The
+	 * compromise: the *button* grows its hit area with padding on coarse
+	 * pointers without growing the row's visual height, using a pseudo-element
+	 * that extends beyond the text.
+	 */
+	@media (pointer: coarse) {
+		.price::after {
+			content: '';
+			position: absolute;
+			/* A ladder row is ~26px and ten of them must fit on a phone screen, so
+			   the row cannot be 44px tall. The expander takes the *hit area* to
+			   ~44px while leaving the row's height alone — the tap lands, and the
+			   book still fits. Adjacent rows' areas overlap slightly, which is
+			   fine: the nearer centre wins, which is what a thumb aims at anyway. */
+			inset-block: -9px;
+			inset-inline: 0;
+		}
 	}
 </style>

@@ -222,11 +222,51 @@ export function assertDeliverable(url: string, { allowInsecure = false } = {}): 
 	 */
 	const host = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
 
+	/*
+	 * Link-local is refused **even in development**, and that is the one carve-out
+	 * `allowInsecure` does not get.
+	 *
+	 * The flag exists so a student can point a webhook at `http://localhost:3000`
+	 * and watch a delivery arrive. It was originally implemented as "skip the
+	 * private-address check", which also permitted `169.254.169.254` — the cloud
+	 * metadata service, and the single most valuable SSRF target there is.
+	 *
+	 * A browser test caught it: the admin form accepted the metadata endpoint
+	 * without complaint, because the dev server had the flag set.
+	 *
+	 * Nobody has ever needed to send a webhook to a link-local address. Making
+	 * the escape hatch narrower than "turn the check off" costs one branch and
+	 * removes the worst thing the flag could do.
+	 */
+	if (isLinkLocal(host)) {
+		throw new InvalidEndpointUrl(url, 'link-local address');
+	}
+
 	if (isPrivateHost(host) && !allowInsecure) {
 		throw new InvalidEndpointUrl(url, 'private address');
 	}
 
 	return parsed;
+}
+
+/** 169.254.0.0/16 and fe80::/10 — where cloud metadata services live. */
+function isLinkLocal(host: string): boolean {
+	if (/^169\.254\./.test(host)) return true;
+	if (/^fe[89ab]/.test(host)) return true;
+	if (host.startsWith('::ffff:')) {
+		const rest = host.slice('::ffff:'.length);
+		if (rest.includes('.')) return isLinkLocal(rest);
+
+		const groups = rest.split(':');
+		if (groups.length === 2) {
+			const high = Number.parseInt(groups[0]!, 16);
+			const low = Number.parseInt(groups[1]!, 16);
+			if (Number.isFinite(high) && Number.isFinite(low)) {
+				return isLinkLocal(`${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`);
+			}
+		}
+	}
+	return false;
 }
 
 /**

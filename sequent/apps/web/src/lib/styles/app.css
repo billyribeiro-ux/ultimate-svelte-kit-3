@@ -148,10 +148,129 @@ input, select {
 	border: 1px solid var(--line);
 	border-radius: var(--radius-lg);
 	padding: var(--space-4);
+
+	/*
+	 * `min-inline-size: 0`, and it is not cosmetic.
+	 *
+	 * A flex or grid item's `min-width` defaults to `auto`, which resolves to its
+	 * **min-content** size — the narrowest it can be without its contents
+	 * overflowing. So an item containing a 512px-wide table refuses to be
+	 * narrower than 512px, however narrow its container is, and the page gains a
+	 * horizontal scrollbar on a 390px phone.
+	 *
+	 * The maddening part is that the table is inside `.scroller`, which has
+	 * `overflow-x: auto` and exists precisely to absorb this. It never gets the
+	 * chance: its parent has already grown to fit, so there is nothing to scroll.
+	 *
+	 * This is the single most common cause of "why does my page scroll sideways
+	 * on mobile", and it is invisible in devtools because every element looks
+	 * like it is behaving.
+	 */
+	min-inline-size: 0;
+
+	/*
+	 * And the second most common cause, which took a browser to find.
+	 *
+	 * A `position: sticky` cell inside a horizontally scrolling container
+	 * contributes its **sticky-shifted** position to scrollable overflow, and
+	 * that overflow propagates all the way up to the document. So the pinned
+	 * first column of a table that scrolls 220px sideways adds 220px of
+	 * scrollable width to the *page*, even though the table itself is correctly
+	 * clipped and nothing is visibly out of place.
+	 *
+	 * Every element measures correctly. `getBoundingClientRect` on every child
+	 * is inside its parent. The page still scrolls sideways by 122px, and the
+	 * only way to see it is to try scrolling.
+	 *
+	 * `clip` rather than `hidden`: `hidden` would make this a scroll container,
+	 * which breaks the sticky positioning it is meant to protect and gives the
+	 * card its own scrollbar. `clip` just clips. The small margin lets focus
+	 * rings and the tap-target expanders bleed a few pixels rather than being
+	 * shaved off at the border.
+	 */
+	overflow-x: clip;
+	overflow-clip-margin: 4px;
+
+	/*
+	 * Stated explicitly, because the computed value is not what you would guess.
+	 *
+	 * CSS says that when one axis is `visible` and the other is not, the
+	 * `visible` one computes to `auto` — which would silently turn every card
+	 * into a vertical scroll container. `clip` is the single exception: paired
+	 * with `clip`, `visible` stays `visible`.
+	 *
+	 * Relying on an exception without writing it down is how the next person
+	 * "tidies" this to `overflow: hidden` and gives forty panels their own
+	 * scrollbar.
+	 */
+	overflow-y: visible;
 }
 
 .stack { display: flex; flex-direction: column; gap: var(--space-3); }
 .row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+/* -------------------------------------------------------------------------- */
+/* Dense tables on small screens                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The venue is full of tables that exist to be read **down a column**: five
+ * accounts' positions, ten orders' fill ratios. That vertical comparison is the
+ * entire reason the data is in a table rather than a list.
+ *
+ * The popular mobile answer — restack each row as a labelled card — preserves
+ * every value and destroys the comparison, because the numbers no longer line
+ * up under each other. It is the right pattern for a row that is a *record*
+ * (an invoice, a booking) and the wrong one for a row that is a *measurement*.
+ *
+ * So these scroll sideways instead, with the identifying column pinned. You
+ * lose the ability to see every column at once, which is unavoidable on a
+ * 375px screen, and you keep the thing the table was for.
+ */
+.scroller {
+	overflow-x: auto;
+	margin-block-start: var(--space-2);
+	/* Stops a sideways swipe at the edge from scrolling the page behind it. */
+	overscroll-behavior-x: contain;
+	/* Same reason as `.card` above: without this the scroller itself can be
+	   forced wide by its table when it is a flex or grid item. */
+	min-inline-size: 0;
+}
+
+.scroller:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.scroller table { inline-size: 100%; border-collapse: collapse; min-inline-size: 32rem; }
+
+.scroller th {
+	text-align: start;
+	font-size: var(--text-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--ink-faint);
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.scroller td,
+.scroller th {
+	padding-block: var(--space-1);
+	padding-inline-end: var(--space-3);
+	border-block-end: 1px solid var(--line);
+	white-space: nowrap;
+}
+
+/* The pinned column, so scrolling sideways never loses the row's identity. */
+.scroller .pin {
+	position: sticky;
+	inset-inline-start: 0;
+	background: var(--surface);
+	z-index: 1;
+}
+
+@media (min-width: 48rem) {
+	.scroller table { min-inline-size: 0; }
+	.scroller .pin { position: static; }
+}
 
 .badge {
 	font-size: var(--text-xs);
@@ -161,6 +280,48 @@ input, select {
 	border: 1px solid var(--line);
 	border-radius: 999px;
 	color: var(--ink-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tap targets                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Two sizes, and which one applies is a judgement rather than a rule.
+ *
+ * WCAG 2.5.5 (AAA) asks for 44×44. WCAG 2.5.8 (AA) asks for 24×24. The
+ * difference matters because a trading screen is dense on purpose: forcing
+ * every inline "Cancel" in a table row to 44px would make a ten-row order
+ * blotter taller than a phone screen, and a trader would have to scroll to see
+ * the orders the blotter exists to show.
+ *
+ * So: **standalone controls get 44px** — buttons, inputs, nav, anything that is
+ * the reason you tapped. **Inline actions inside a dense row get 24px plus an
+ * invisible expander**, which meets AA and, because the expander is a
+ * pseudo-element, does not change the row's height at all.
+ *
+ * The expander is only applied under `pointer: coarse`. A mouse is precise
+ * enough not to need it, and on a desktop it would create overlapping hit areas
+ * between adjacent rows.
+ */
+.link {
+	background: none;
+	border: none;
+	padding: 0;
+	min-block-size: auto;
+	color: var(--accent);
+	text-decoration: underline;
+	position: relative;
+}
+
+@media (pointer: coarse) {
+	.link::after {
+		content: '';
+		position: absolute;
+		/* Grows the hit area to ~44px without growing the box to ~44px. */
+		inset-block: -12px;
+		inset-inline: -6px;
+	}
 }
 
 /* Visible to a screen reader, invisible to everyone else. Never display:none —
