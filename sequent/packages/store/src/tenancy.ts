@@ -54,14 +54,19 @@ export function verifySecret(secret: string, stored: string): boolean {
 /* Resolving a viewer                                                          */
 /* -------------------------------------------------------------------------- */
 
+/** Every active trading account at a firm. */
+async function allAccountsOf(client: Client, firmId: string): Promise<string[]> {
+	const all = await client.execute({
+		sql: 'SELECT account_id FROM trading_account WHERE firm_id = ? AND is_active = 1',
+		args: [firmId]
+	});
+	return all.rows.map((row) => String(row['account_id']));
+}
+
 /** The accounts a user may act on, or all of the firm's for firm-wide roles. */
 async function accountsFor(client: Client, userId: string, firmId: string, role: Role): Promise<string[]> {
 	if (role === 'firm_admin' || role === 'risk_manager' || role === 'venue_operator') {
-		const all = await client.execute({
-			sql: 'SELECT account_id FROM trading_account WHERE firm_id = ? AND is_active = 1',
-			args: [firmId]
-		});
-		return all.rows.map((row) => String(row['account_id']));
+		return allAccountsOf(client, firmId);
 	}
 
 	const assigned = await client.execute({
@@ -147,11 +152,29 @@ export async function viewerFromApiKey(
 	 * the blast radius of a compromised key should not include the firm's user
 	 * list.
 	 */
+	/*
+	 * A pinned key trades exactly one account; an unpinned one trades all of the
+	 * firm's.
+	 *
+	 * The `account_assignment` table is keyed on `venue_user`, and a key is not a
+	 * user — so looking a key up there returns nothing, always. An earlier
+	 * version of this function did exactly that, and the result was an unpinned
+	 * key that authenticated perfectly and then refused every order it sent, for
+	 * a reason no log line explained.
+	 *
+	 * Pinning stays the recommendation for an algorithm: a key that can only
+	 * trade one desk cannot, when it misbehaves at three in the morning,
+	 * misbehave on all of them.
+	 */
+	const accountIds = accountId
+		? [accountId]
+		: await allAccountsOf(client, firmId);
+
 	const viewer: Viewer = {
 		userId: `key:${keyId}`,
 		firmId,
 		role: 'trader',
-		accountIds: accountId ? [accountId] : await accountsFor(client, `key:${keyId}`, firmId, 'trader'),
+		accountIds,
 		scopes: String(row['scopes']).split(' ').filter(Boolean)
 	};
 

@@ -56,22 +56,33 @@ export async function submit(
 	input: unknown,
 	now: number = Date.now()
 ): Promise<number> {
-	// Shape first. An unparseable command never becomes a permission question.
-	let command: Command;
+	/*
+	 * Identity is stamped on **before** the command is parsed, not after.
+	 *
+	 * The order is the point. A client that could name its own firm could trade
+	 * as anybody, so `firmId` and `actorId` are overwritten with the viewer's —
+	 * and doing it first means a client-supplied value is never even syntactically
+	 * meaningful. There is no window in which a parsed command carries a firm
+	 * somebody else chose.
+	 *
+	 * Doing it the other way round — parse, then overwrite — also worked, and had
+	 * a subtler cost: the schema required a `firmId`, so every caller had to
+	 * invent one purely to have it thrown away. The public API's first order was
+	 * rejected with `Expected "firmId" but received undefined`, which is a
+	 * confusing thing to tell somebody about a field they are not allowed to set.
+	 */
+	if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+		error(400, 'A command must be an object.');
+	}
+
+	const claimed = { ...(input as Record<string, unknown>), firmId: viewer.firmId, actorId: viewer.userId };
+
+	let authorised: Command;
 	try {
-		command = parseCommand(input);
+		authorised = parseCommand(claimed);
 	} catch (thrown) {
 		error(400, thrown instanceof Error ? thrown.message : 'Invalid command');
 	}
-
-	/*
-	 * The firm on the command is overwritten with the viewer's, never trusted.
-	 *
-	 * A client that could name its own firm could trade as anybody. This is the
-	 * single most important line in the gateway, and it is one line — which is
-	 * exactly why it is easy to leave out.
-	 */
-	const authorised = { ...command, firmId: viewer.firmId, actorId: viewer.userId } as Command;
 
 	try {
 		assertCan(viewer, ACTION_FOR[authorised.kind], {

@@ -103,8 +103,6 @@ export const setKillSwitch = command(
 
 		const seq = await submit(viewer, {
 			kind: 'set_kill_switch',
-			firmId: viewer.firmId,
-			actorId: viewer.userId,
 			targetFirmId: viewer.firmId,
 			engaged,
 			reason: reason || (engaged ? 'Stopped by risk' : 'Released by risk')
@@ -128,8 +126,6 @@ export const setRiskLimits = command(
 
 		const seq = await submit(viewer, {
 			kind: 'set_risk_limits',
-			firmId: viewer.firmId,
-			actorId: viewer.userId,
 			...input
 		});
 

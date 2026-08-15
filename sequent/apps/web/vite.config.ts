@@ -20,6 +20,29 @@ export default defineConfig(({ mode }) => {
 				// so a plain-HTTP preview computes the wrong origin and every POST
 				// comes back 403.
 				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
+
+				/*
+				 * Kit's own cross-site check is turned off, and replaced by a stricter
+				 * one in `hooks.server.ts`. Read that before deciding this is reckless.
+				 *
+				 * Kit blocks a non-GET request when its `Content-Type` is form-like *or
+				 * absent* and the `Origin` does not match. Two consequences:
+				 *
+				 *   1. A body-less `DELETE /api/v1/orders/ORD-1` sends no content type,
+				 *      so it is blocked — and there is no way for an API client to know
+				 *      it must send a content type on a request with no body.
+				 *   2. A cross-origin `POST` with `Content-Type: application/json` is
+				 *      *allowed*, because browsers cannot send one without a CORS
+				 *      preflight. True, but it makes our safety depend on the browser.
+				 *
+				 * Our rule instead: **any state-changing request authenticated by a
+				 * cookie must carry a matching Origin.** Bearer-token requests are
+				 * exempt because CSRF is a cookie attack — a browser attaches cookies to
+				 * a forged cross-site request automatically and never attaches an
+				 * `Authorization` header. That covers case 1 and closes case 2.
+				 */
+				csrf: { trustedOrigins: ['*'] },
+
 				compilerOptions: { runes: true, experimental: { async: true } },
 				adapter: adapter(),
 				experimental: { remoteFunctions: true }

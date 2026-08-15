@@ -24,17 +24,31 @@ import {
 	type Command
 } from '@sequent/protocol';
 import { newId } from '@sequent/protocol/generate';
-import { catchUp, hashSecret, openStore, Sequencer } from '@sequent/store';
+import { catchUp, createApiKey, hashSecret, openStore, Sequencer } from '@sequent/store';
 import { runEngine } from '@sequent/engine';
 
-const FILE = 'sequent.db';
+/*
+ * The same `DATABASE_URL` every other process reads.
+ *
+ * Hardcoding `sequent.db` here would seed a file relative to *this* script's
+ * working directory, which is not where the engine looks. See `scripts/paths.js`
+ * — a relative database path is the multi-process bug that fails silently,
+ * because SQLite creates the missing file instead of complaining.
+ */
+const URL_ = process.env['DATABASE_URL'] ?? 'file:sequent.db';
 const PASSWORD = 'sequent-demo-2026';
+
+if (!URL_.startsWith('file:')) {
+	throw new Error(`Refusing to seed a non-file database: ${URL_}`);
+}
+
+const FILE = URL_.slice('file:'.length);
 
 await rm(FILE, { force: true });
 await rm(`${FILE}-wal`, { force: true });
 await rm(`${FILE}-shm`, { force: true });
 
-const db = await openStore({ url: `file:${FILE}` });
+const db = await openStore({ url: URL_ });
 const now = Date.now();
 
 /* -------------------------------------------------------------------------- */
@@ -111,6 +125,22 @@ await db.execute({
 	sql: `INSERT INTO venue_user (user_id, firm_id, email, display_name, password_hash, role, created_at)
 	      VALUES (?, ?, ?, ?, ?, ?, ?)`,
 	args: [newId(), 'venue', 'ops@sequent.test', 'Venue Operations', passwordHash, 'venue_operator', now]
+});
+
+/*
+ * An API key, so the public API is usable the moment the venue is seeded.
+ *
+ * Pinned to one account and given both scopes, which is what a member firm's
+ * algorithm would actually be issued. The secret is printed here and nowhere
+ * else — reseeding is how you get another one, exactly as in production.
+ */
+const demoKey = await createApiKey(db, {
+	firmId: 'northgate',
+	label: 'demo algo',
+	scopes: ['read', 'trade'],
+	accountId: 'northgate-equities',
+	ratePerSecond: 20,
+	now
 });
 
 /* -------------------------------------------------------------------------- */
@@ -268,6 +298,11 @@ console.log('    mira@northgate.test   firm admin    people and keys');
 console.log('    quinn@northgate.test  auditor       reads everything, changes nothing');
 console.log('    ben@lowfield.test     trader        the other side of the book');
 console.log('    ops@sequent.test      venue ops     lists instruments, moves phases');
+console.log('');
+console.log('  An API key for Northgate (read + trade, pinned to northgate-equities):');
+console.log(`    ${demoKey.secret}`);
+console.log('');
+console.log('    curl -H "Authorization: Bearer $KEY" localhost:5173/api/v1/instruments');
 console.log('');
 
 db.close();

@@ -357,8 +357,6 @@ export const placeOrder = command(
 
 		const seq = await submit(viewer, {
 			kind: 'place_order',
-			firmId: viewer.firmId,
-			actorId: viewer.userId,
 			selfTradePrevention: 'cancel_both',
 			...input,
 			instrumentId: asInstrumentId(input.instrumentId)
@@ -379,8 +377,6 @@ export const cancelOrder = command(
 
 		const seq = await submit(viewer, {
 			kind: 'cancel_order',
-			firmId: viewer.firmId,
-			actorId: viewer.userId,
 			clientOrderId
 		});
 
