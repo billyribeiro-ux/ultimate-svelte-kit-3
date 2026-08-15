@@ -10,7 +10,7 @@
 
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	import { reveal, revealGroup } from '#lib/motion/index.ts';
+	import { revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/blog');
 

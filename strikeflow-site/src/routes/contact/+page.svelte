@@ -4,7 +4,7 @@
 	import Seo from '#lib/seo/Seo.svelte';
 	import { breadcrumbSchema } from '#lib/seo/schema.ts';
 	import { absoluteUrl, site } from '#lib/data/site.ts';
-	import { reveal, revealGroup } from '#lib/motion/index.ts';
+	import { revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/contact');
 

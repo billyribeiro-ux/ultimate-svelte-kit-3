@@ -115,11 +115,30 @@ describe('formatting', () => {
 	});
 
 	it('formats large values compactly', () => {
-		// Note the trailing zero in "$5.60K". `Intl` compact *currency* formatting
-		// keeps the currency's minimum fraction digits, so it isn't trimmed the way
-		// plain compact number formatting would be. Asserting the real output rather
-		// than the intuitive one is the point of writing the test.
+		// This one is stable: two significant decimals, no trailing zero to argue
+		// about, and every ICU version agrees.
 		expect(formatCompactUsd(1_240_000)).toBe('$1.24M');
-		expect(formatCompactUsd(5_600)).toBe('$5.60K');
+	});
+
+	it('formats a value with a trailing zero, whichever ICU is installed', () => {
+		/*
+		 * DELIBERATELY A PATTERN, NOT AN EXACT STRING.
+		 *
+		 * `Intl` is implemented by ICU, the Unicode library Node bundles, and its
+		 * output is a moving target across versions. Compact *currency* formatting
+		 * used to keep the currency's minimum fraction digits — `$5.60K` — and as
+		 * of ICU 78.3 it trims them: `$5.6K`. Node 22 ships 78.2, Node 24 ships
+		 * 78.3, so the same code produces different text on each.
+		 *
+		 * A byte-exact assertion here is therefore not a test of this function. It
+		 * is a test of which Node version is installed, and it fails on upgrade for
+		 * a reason that has nothing to do with the code under test. This project
+		 * learned that the hard way while moving from Node 22 to Node 24.
+		 *
+		 * What the app actually needs is the right symbol, the right magnitude
+		 * suffix, and no more than two decimals. That is what this asserts.
+		 */
+		expect(formatCompactUsd(5_600)).toMatch(/^\$5\.60?K$/);
+		expect(formatCompactUsd(1_000)).toMatch(/^\$1(\.00)?K$/);
 	});
 });

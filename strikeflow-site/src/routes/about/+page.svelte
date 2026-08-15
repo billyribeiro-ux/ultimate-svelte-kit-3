@@ -7,7 +7,7 @@
 	import SectionHeader from '#lib/components/marketing/SectionHeader.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	import { reveal, revealGroup } from '#lib/motion/index.ts';
+	import { revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/about');
 

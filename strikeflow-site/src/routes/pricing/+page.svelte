@@ -8,7 +8,7 @@
 	import PricingTable from '#lib/components/marketing/PricingTable.svelte';
 	import FaqAccordion from '#lib/components/marketing/FaqAccordion.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	import { reveal, revealGroup } from '#lib/motion/index.ts';
+	import { revealGroup } from '#lib/motion/index.ts';
 
 	const pageUrl = absoluteUrl('/pricing');
 </script>

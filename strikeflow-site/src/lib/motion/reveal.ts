@@ -67,7 +67,7 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			// released by the inline script in that case, so content is visible.
 			if (!motion || cancelled) return;
 
-			const { gsap, ScrollTrigger } = motion;
+			const { gsap } = motion;
 
 			const {
 				from = 'up',
