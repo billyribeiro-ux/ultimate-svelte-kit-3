@@ -109,8 +109,8 @@ if (clash.length === 0) {
 			{
 				type: 'ul',
 				items: [
-					'**Node 24.19.0** or newer — the current LTS. Chapter 3 covers installing it.',
-					'**pnpm 10** — installed with `npm i -g pnpm`.',
+					'**Node 24.20.0** or newer — the current LTS. Chapter 3 covers installing it.',
+					'**pnpm 11** — installed with `npm i -g pnpm`.',
 					'A terminal, an editor, and a browser. No database server: SQLite lives in a file.'
 				]
 			},
@@ -226,7 +226,7 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'p',
-				text: 'This project targets **Node 24.19.0**, codename Krypton, the active LTS line. Check what you have:'
+				text: 'This project targets **Node 24.20.0**, codename Krypton, the active LTS line. Check what you have:'
 			},
 			{ type: 'terminal', code: 'node --version' },
 			{
@@ -235,9 +235,9 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'terminal',
-				code: `nvm install 24.19.0
-nvm use 24.19.0
-node --version   # v24.19.0`
+				code: `nvm install 24.20.0
+nvm use 24.20.0
+node --version   # v24.20.0`
 			},
 			{
 				type: 'note',
@@ -256,7 +256,7 @@ node --version   # v24.19.0`
 				code: `
 {
 	"engines": {
-		"node": ">=24.19.0"
+		"node": ">=24.20.0"
 	}
 }`
 			},
@@ -284,7 +284,7 @@ This is happening because the package's manifest has an engines.node field.`
 				type: 'p',
 				text: 'Add an `.nvmrc` too, so `nvm use` in the project folder picks the right one with no arguments:'
 			},
-			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.19.0' },
+			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.20.0' },
 
 			{ type: 'h3', id: 'icu', text: 'A version really can change behaviour' },
 			{
@@ -319,7 +319,7 @@ new Intl.NumberFormat('en-US', {
 			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 10.x' },
 			{
 				type: 'checkpoint',
-				text: '`node --version` reports 24.19.0 or newer, and `pnpm --version` reports 10 or newer.'
+				text: '`node --version` reports 24.20.0 or newer, and `pnpm --version` reports 11 or newer.'
 			}
 		]
 	},

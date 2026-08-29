@@ -36,7 +36,7 @@ run('node', ['node_modules/drizzle-kit/bin.cjs', 'migrate']);
 /*
  * `node scripts/seed.ts` — no transpiler, no build step.
  *
- * Node 22 strips TypeScript types on the fly. Types are erased, not checked
+ * Node (22 and newer) strips TypeScript types on the fly. Types are erased, not checked
  * (that is `svelte-check`'s job), and syntax that *emits* rather than erases —
  * `enum`, namespaces, parameter properties — is unavailable. Neither costs us
  * anything here, and it removes a dependency that existed only to run one file.

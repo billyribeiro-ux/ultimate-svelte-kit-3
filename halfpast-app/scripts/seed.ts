@@ -15,6 +15,7 @@
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { hashPassword } from 'better-auth/crypto';
+import { createLocalAccountIssuer } from 'better-auth/db';
 import {
 	account,
 	availabilityRule,
@@ -33,7 +34,7 @@ import { newBookingReference, newId, newManageToken } from '#lib/server/db/ids.t
 import { addDays, slotsIn, todayIn, wallClockToInstant, type Weekday } from '#lib/time/index.ts';
 
 /*
- * Node 22 can read a `.env` file without a dependency.
+ * Node (22 and newer) reads a `.env` file without a dependency.
  *
  * Only when nothing has been set already, though: the end-to-end harness runs
  * this with `DATABASE_URL` pointing at a throwaway database, and loading `.env`
@@ -135,6 +136,9 @@ async function createStaffUser(name: string, email: string) {
 		id: newId(),
 		accountId: userId,
 		providerId: 'credential',
+		// Better Auth 1.7 filters sign-ins on the issuer as well as the provider,
+		// and asks its own helper for the value rather than guessing the format.
+		issuer: createLocalAccountIssuer('credential'),
 		userId,
 		password: await hashPassword(DEMO_PASSWORD)
 	});
