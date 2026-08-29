@@ -700,7 +700,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 requires Node 22.17 or newer and will refuse to install on anything older. If yours is older, get the current LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
+				text: 'SvelteKit 3 requires Node 22.17 or newer, and this project targets the current LTS — **24.20.0** at the time of writing. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
 			},
 			{ type: 'h3', id: 'packages', text: 'Packages and the package manager' },
 			{
@@ -737,7 +737,7 @@ mkdir new-thing  # make a directory`
 		"gsap": "^3.15.0"
 	},
 	"devDependencies": {
-		"vite": "^8.1.5"
+		"vite": "^8.2.2"
 	}
 }`
 			},

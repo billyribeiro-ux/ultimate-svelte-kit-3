@@ -11,7 +11,7 @@ Three complete projects, each with its own build-along course.
 | [`sequent/`](./sequent) | **Project 3** — Sequent, a stock exchange. A matching engine, an opening auction, central clearing, a double-entry ledger, and an event log the whole venue can be rebuilt from. |
 | [`sequent-course/`](./sequent-course) | Its 42-chapter course, for somebody who has finished project 2. Open `sequent-course/dist/index.html`. |
 
-Requires **Node 24.19.0** (the current LTS line, "Krypton") and **pnpm 10+**.
+Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
 All three pin it in `.nvmrc` and `engines`.
 
 ## Quick start

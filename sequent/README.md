@@ -117,7 +117,7 @@ a way that takes an auditor to find.
 ## The tests
 
 ```sh
-pnpm test        # 289 tests
+pnpm test        # 374 tests
 pnpm check       # types, across all six packages
 pnpm verify      # both, plus a production build
 ```

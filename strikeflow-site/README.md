@@ -32,8 +32,8 @@ drifts out of date.
 
 ## Requirements
 
-- **Node 22.17+** (SvelteKit 3 requires it — check with `node -v`)
-- **pnpm 10+**
+- **Node 24.20.0** — the current LTS, pinned in `.nvmrc` and `engines` (SvelteKit 3’s own floor is 22.17)
+- **pnpm 11+**
 
 ## Getting started
 

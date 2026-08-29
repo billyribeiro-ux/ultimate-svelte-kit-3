@@ -59,9 +59,9 @@ export const part1 = [
 			},
 			{
 				type: 'p',
-				text: 'You need **Node 22.17 or newer**. SvelteKit 3 requires it and will refuse to install otherwise. Check with:'
+				text: 'You need **Node 24.20.0**, the current LTS — SvelteKit 3 itself refuses anything below 22.17. Check with:'
 			},
-			{ type: 'terminal', code: 'node -v\n# should print v22.17.0 or higher' },
+			{ type: 'terminal', code: 'node -v\n# should print v24.20.0 or higher' },
 			{
 				type: 'p',
 				text: "If it's older, install the current LTS from [nodejs.org](https://nodejs.org) or use a version manager like `nvm` or `fnm`."
