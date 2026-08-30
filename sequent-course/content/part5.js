@@ -34,7 +34,7 @@ export const part5 = [
 	"error": {
 		"code": "rate_limited",
 		"message": "Too many requests.",
-		"requestId": "3f9a2c7e1b04"
+		"requestId": "3f9a2c7e-1b0"
 	}
 }`
 			},
@@ -130,7 +130,7 @@ return new ApiError('internal', 'Something went wrong at our end.');`
 			},
 			{
 				type: 'p',
-				text: 'Then we added the venue-pause feature flag, which throws `error(503, \'The venue is not accepting new orders at the moment.\')`. The chain has no 503 branch, so it fell through to the last line, and pausing the venue told every API client **"something went wrong at our end"** — a 500, which clients treat as a bug to report rather than a state to wait out.'
+				text: 'Then we added the venue-pause feature flag, which throws `error(503, \'The venue is not accepting new orders at the moment. Cancels still work.\')`. The chain has no 503 branch, so it fell through to the last line, and pausing the venue told every API client **"something went wrong at our end"** — a 500, which clients treat as a bug to report rather than a state to wait out.'
 			},
 			{
 				type: 'code',
@@ -255,7 +255,7 @@ export function handler(
 			{
 				type: 'terminal',
 				code: `
-ak_7f2cQe9xK.Zq4mR8sT1vB6nW3yU0pL5hJ2gF7dA9cX1eK4oI8u`
+ak_7f2cQe9xKm4t.Zq4mR8sT1vB6nW3yU0pL5hJ2gF7dA9cX1eK4oI8uW2d`
 			},
 			{
 				type: 'p',
@@ -282,11 +282,11 @@ ak_7f2cQe9xK.Zq4mR8sT1vB6nW3yU0pL5hJ2gF7dA9cX1eK4oI8u`
 /*
  * 9 bytes of id, 32 of secret, both from \`randomBytes\`.
  *
- * \`randomBytes\` and not \`Math.random()\`. The latter is a fast pseudo-random
- * generator seeded from something guessable, and its output is predictable from
- * a handful of prior values — fine for picking a colour, catastrophic for a
- * credential. This distinction is the single most common way a competent
- * codebase ends up with a forgeable token.
+ * \`randomBytes\` and not \`Math.random()\`. The latter is a fast
+ * pseudo-random generator seeded from something guessable, and its output is
+ * predictable from a handful of prior values — fine for picking a colour,
+ * catastrophic for a credential. This distinction is the single most common
+ * way a competent codebase ends up with a forgeable token.
  *
  * 32 bytes is 256 bits. There is no attack on that; guessing is not a threat
  * model, leakage is, which is why the rest of this file is about leakage.
@@ -456,7 +456,13 @@ take(key: string, config: BucketConfig, now: number, cost = 1): Verdict {
 	}
 
 	bucket.tokens -= cost;
-	return { allowed: true, remaining: Math.floor(bucket.tokens), retryAfter: 0, resetAt: this.#fullAt(bucket, config, now) };
+
+	return {
+		allowed: true,
+		remaining: Math.floor(bucket.tokens),
+		retryAfter: 0,
+		resetAt: this.#fullAt(bucket, config, now)
+	};
 }`
 			},
 			{
@@ -659,11 +665,14 @@ const result = await client.execute({
 	            AND failed_at IS NULL
 	            AND available_at <= ?
 	            AND (leased_until IS NULL OR leased_until <= ?)
+	            \${kind ? 'AND kind = ?' : ''}
 	          ORDER BY available_at, outbox_id
 	          LIMIT ?
 	      )
 	      RETURNING outbox_id, kind, seq, firm_id, idempotency_key, payload, attempts, created_at\`,
-	args: [now + leaseMs, worker, now, now, limit]
+	args: kind
+		? [now + leaseMs, worker, now, now, kind, limit]
+		: [now + leaseMs, worker, now, now, limit]
 });`
 			},
 			{
@@ -732,18 +741,30 @@ if (message.attempts >= maxAttempts) {
 				file: 'apps/worker/src/deliver.ts',
 				lang: 'ts',
 				code: `
-export interface Disposition {
-	readonly ok: boolean;
-	/** Try again later. */
-	readonly retry?: boolean;
-	/** Give up now — this will never succeed. Distinct from \`ok\`. */
+/**
+ * What happened, in three dispositions rather than two.
+ *
+ * \`retry: false\` on its own means **done** — either delivered, or there was
+ * nobody to deliver to, which is equally finished. \`permanent: true\` means it
+ * will never succeed and should go straight to the dead letters.
+ *
+ * The third case is the one a boolean cannot express, and leaving it out is how
+ * a message that is broken forever gets marked delivered: \`retry: false\` and
+ * the loop calls \`succeed()\`.
+ */
+export interface DeliveryOutcome {
+	readonly delivered: number;
+	readonly failed: number;
+	/** True if the whole message should be tried again later. */
+	readonly retry: boolean;
+	/** True if it will never succeed. Dead-letter it now rather than in an hour. */
 	readonly permanent?: boolean;
-	readonly reason?: string;
+	readonly error?: string;
 }`
 			},
 			{
 				type: 'warn',
-				text: 'Two booleans are not enough for three outcomes. "It worked", "it failed and might work later" and "it failed and never will" are genuinely three states, and collapsing the last two into `!retry` made the queue report success for a message it had thrown away.'
+				text: 'One boolean is not enough for three outcomes. "It worked", "it failed and might work later" and "it failed and never will" are genuinely three states, and collapsing the last two into `retry: false` made the queue report success for a message it had thrown away. Two fields encode all three: `retry` says "try again later", and `permanent` says "dead-letter it now" — distinct from done.'
 			},
 			{
 				type: 'checkpoint',
@@ -925,9 +946,11 @@ if (host.startsWith('::ffff:')) {
  * Link-local is refused **even in development**, and that is the one carve-out
  * \`allowInsecure\` does not get.
  *
- * Nobody has ever needed to send a webhook to a link-local address. Making the
- * escape hatch narrower than "turn the check off" costs one branch and removes
- * the worst thing the flag could do.
+ * …
+ *
+ * Nobody has ever needed to send a webhook to a link-local address. Making
+ * the escape hatch narrower than "turn the check off" costs one branch and
+ * removes the worst thing the flag could do.
  */
 if (isLinkLocal(host)) {
 	throw new InvalidEndpointUrl(url, 'link-local address');
