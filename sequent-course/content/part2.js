@@ -38,6 +38,8 @@ export const part2 = [
 -- because the sequencer owns it. Letting SQLite choose would mean the ordering
 -- authority lived in two places, and the day they disagree is the day replay
 -- stops reproducing history.
+--
+-- …
 CREATE TABLE IF NOT EXISTS command_log (
 	seq INTEGER PRIMARY KEY,
 
@@ -46,7 +48,8 @@ CREATE TABLE IF NOT EXISTS command_log (
 	received_at INTEGER NOT NULL,
 
 	-- Which rules version was in force. Replay dispatches on this rather than on
-	-- whatever the engine happens to have compiled in.
+	-- whatever the engine happens to have compiled in, so a change to matching
+	-- logic does not rewrite what happened last March.
 	version INTEGER NOT NULL,
 
 	kind TEXT NOT NULL,
@@ -58,10 +61,14 @@ CREATE TABLE IF NOT EXISTS command_log (
 	body TEXT NOT NULL
 ) STRICT;
 
+-- …
+
 -- Events, in the order the engine produced them.
 --
 -- \`caused_by\` points at the command that produced this event. It is the single
--- most useful column in the database during an incident.
+-- most useful column in the database during an incident: every event knows its
+-- cause, and every derived identifier contains its own sequence number, so
+-- "why did this happen" is a lookup rather than an investigation.
 CREATE TABLE IF NOT EXISTS event_log (
 	seq INTEGER PRIMARY KEY AUTOINCREMENT,
 	caused_by INTEGER NOT NULL REFERENCES command_log (seq),
@@ -127,7 +134,6 @@ END;`
 await client.execute('PRAGMA journal_mode = WAL');
 await client.execute('PRAGMA busy_timeout = 5000');
 await client.execute('PRAGMA foreign_keys = ON');
-
 /*
  * \`synchronous = FULL\` rather than the WAL default of \`NORMAL\`.
  *
@@ -174,6 +180,7 @@ export class Sequencer {
 	#next: number | undefined;
 	readonly #client: Client;
 
+	/* … */
 	constructor(client: Client) {
 		this.#client = client;
 	}
@@ -220,9 +227,8 @@ async assertSoleWriter(): Promise<void> {
 
 	if (high !== this.nextSeq - 1) {
 		throw new Error(
-			\`Another writer has appended to the log: expected high-water \${
-				this.nextSeq - 1
-			}, found \${high}. Two sequencers are running. Stop one before anything else.\`
+			\`Another writer has appended to the log: expected high-water \${this.nextSeq - 1}, found \${high}. \` +
+				'Two sequencers are running. Stop one before anything else.'
 		);
 	}
 }`
@@ -249,12 +255,21 @@ async append(body: Command, receivedAt: number, version: number): Promise<Comman
 	/*
 	 * Validated here, even though the gateway already did.
 	 *
-	 * The reason is the append-only trigger: a malformed command written to this
-	 * table can never be corrected or removed. It sits there being replayed by
-	 * every recovery, forever, and the engine has to cope with it on every one.
+	 * The duplication is deliberate, and the reason is the append-only trigger:
+	 * a malformed command written to this table can never be corrected or
+	 * removed. It sits there being replayed by every recovery, forever, and the
+	 * engine has to cope with it on every single one.
 	 *
 	 * That asymmetry — cheap to check, impossible to undo — is what makes a
-	 * second parse worth its cost at the boundary of a durable log.
+	 * second parse worth its cost at the boundary of a durable log. It also
+	 * covers the writers that are not the gateway: the seed, an admin script,
+	 * a migration. A drill script that sent \`firmId\` where the schema wanted
+	 * \`targetFirmId\` is exactly how this got added: it wrote happily, and the
+	 * engine then produced an event with an \`undefined\` field that a downstream
+	 * worker retried six times before anybody noticed.
+	 *
+	 * TypeScript did not catch it because the script cast, and a cast is a
+	 * promise the compiler has no way to check.
 	 */
 	let validated: Command;
 	try {
@@ -374,23 +389,34 @@ export async function appendEvents(
 	version: number,
 	events: readonly Event[]
 ): Promise<void> {
+	/* … */
 	await withTransaction(client, async (tx) => {
 		for (const body of events) {
 			await tx.execute({
 				sql: \`INSERT INTO event_log (caused_by, at, version, kind, instrument_id, body)
 				      VALUES (?, ?, ?, ?, ?, ?)\`,
-				args: [causedBy, at, version, body.kind, instrumentOf(body), JSON.stringify(body)]
+				args: [
+					causedBy,
+					at,
+					version,
+					body.kind,
+					instrumentOf(body) as InValue,
+					JSON.stringify(body)
+				]
 			});
 		}
 
-		// Inside. Always inside.
 		await checkpointIn(tx, consumer, causedBy, at);
 	});
 }`
 			},
 			{
+				type: 'p',
+				text: 'The `checkpointIn` call at the bottom is inside the transaction. Always inside.'
+			},
+			{
 				type: 'note',
-				text: 'Notice that `appendEvents` is the **only** function that knows this rule. An individual projector cannot get it wrong, because it never sees the checkpoint. Putting a rule in exactly one place is how you stop it being violated by the fourteenth person to add a consumer.'
+				text: 'Notice that the rule lives in exactly **one place per consumer**: `appendEvents` for the engine, `applyBatch` for the projector. An individual projector cannot get it wrong, because it never sees the checkpoint. Putting a rule in exactly one place is how you stop it being violated by the fourteenth person to add a consumer.'
 			},
 
 			{ type: 'h3', id: 'idempotent', text: 'And every consumer is idempotent anyway' },
@@ -405,13 +431,13 @@ export async function appendEvents(
 			{
 				type: 'ul',
 				items: [
-					'`INSERT ... ON CONFLICT DO NOTHING`, never a bare insert',
-					'`SET filled = quantity - remaining` computed from the event, never `filled = filled + n`'
+					'`INSERT ... ON CONFLICT DO UPDATE`, never a bare insert',
+					'`SET filled = ?` computed from the event, never an unguarded `filled = filled + ?`'
 				]
 			},
 			{
 				type: 'p',
-				text: 'That second one is the important discipline. An accumulating update is correct exactly once and wrong on every replay — and replay is not an exceptional path here, it is the normal recovery path.'
+				text: 'That second one is the important discipline. An unguarded accumulating update is correct exactly once and wrong on every replay — and replay is not an exceptional path here, it is the normal recovery path. The one increment the trade projector does make sits behind an already-projected check keyed on the trade id, so it runs at most once per trade: the guard, not the increment, is what makes it safe.'
 			},
 
 			{ type: 'h3', id: 'gaps', text: 'Detecting a gap' },
@@ -421,37 +447,49 @@ export async function appendEvents(
 				lang: 'ts',
 				code: `
 /**
- * Are there holes in the sequence?
+ * Check the log has no holes.
  *
- * There should never be — the sequencer assigns consecutively and nothing may
- * delete. But "should never be" is a claim, and this is how you check it.
+ * A gap means a command was assigned a sequence number and never committed,
+ * which means the total order has a hole in it and every replay after that
+ * point is describing a different venue from the one that ran.
  *
- * A gap means either a command vanished or a second writer was running. Both
- * are catastrophic and both are invisible until somebody counts.
+ * This should never fire. It is checked at startup anyway, because the cost is
+ * one query and the alternative is discovering it from a participant asking why
+ * their fill is missing.
  */
 export async function assertNoGaps(client: Client): Promise<void> {
-	const result = await client.execute(\`
-		SELECT MIN(seq) AS lowest, MAX(seq) AS highest, COUNT(*) AS total FROM command_log
-	\`);
+	const result = await client.execute(
+		\`SELECT COUNT(*) AS n, COALESCE(MIN(seq), 1) AS lo, COALESCE(MAX(seq), 0) AS hi FROM command_log\`
+	);
 
 	const row = result.rows[0];
-	if (!row || Number(row['total']) === 0) return;
+	if (!row) return;
 
-	const expected = Number(row['highest']) - Number(row['lowest']) + 1;
+	const count = Number(row['n']);
+	const lo = Number(row['lo']);
+	const hi = Number(row['hi']);
 
-	if (Number(row['total']) !== expected) {
+	if (count === 0) return;
+
+	// Sequence numbers start at 1 and increase by exactly one.
+	if (lo !== 1 || hi - lo + 1 !== count) {
 		throw new Error(
-			\`The command log has gaps: \${row['total']} rows spanning \${row['lowest']}–\${row['highest']}.\`
+			\`The command log has gaps: \${count} rows spanning \${lo}..\${hi}. \` +
+				'The total order is incomplete and replay cannot be trusted.'
 		);
 	}
 }`
+			},
+			{
+				type: 'p',
+				text: 'The `lo !== 1` half of the check is not decoration. A log missing its *first* rows still has a contiguous span, so counting rows against the span alone would pass it — pinning the start of the sequence to 1 is what catches that case.'
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can describe both ways of getting a checkpoint wrong, and what each looks like afterwards',
 					'You can state the rule in one sentence',
-					'You can explain why `filled = filled + n` is dangerous and `filled = quantity - remaining` is not'
+					'You can explain why an unguarded `filled = filled + ?` is dangerous and `SET filled = ?` computed from the event is not'
 				]
 			}
 		]
@@ -485,29 +523,28 @@ export async function assertNoGaps(client: Client): Promise<void> {
 				lang: 'ts',
 				code: `
 /**
- * A hash of the whole engine state.
+ * A short, order-independent hash of the venue's state.
  *
- * Not for security — FNV-1a is not a cryptographic hash and does not need to
- * be. It is for **comparison**: "did replaying from genesis produce the same
- * state as loading the snapshot?" is a question you want to answer with one
- * number rather than a deep equality over a hundred thousand orders.
+ * Used to prove that a recovered engine arrived at the same place as the one it
+ * replaced. Comparing two states field by field would work and would need
+ * updating every time the state grows a field — and the version that forgets to
+ * compare the new field is the version that passes while being wrong.
  *
- * Every test in the fault-injection suite ends with a fingerprint comparison,
- * because "roughly the same book" is not a property — it is the absence of one.
+ * FNV-1a over the canonical JSON. Not a cryptographic hash: nobody is attacking
+ * this, and 32 bits of "did these two runs agree" is exactly the question.
  */
 export function fingerprint(state: EngineState): string {
-	let hash = 0x811c9dc5;
+	const canonical = JSON.stringify(serialise(state));
 
-	// Deterministic order, or the fingerprint means nothing: two identical
-	// states that happened to be built in a different order must hash the same.
-	for (const line of canonicalLines(state)) {
-		for (let index = 0; index < line.length; index += 1) {
-			hash ^= line.charCodeAt(index);
-			hash = Math.imul(hash, 0x01000193);
-		}
+	let hash = 0x811c9dc5;
+	for (let i = 0; i < canonical.length; i += 1) {
+		hash ^= canonical.charCodeAt(i);
+		// The FNV prime, by shift-and-add, because \`hash * 16777619\` loses
+		// precision the moment the product passes 2^53.
+		hash = (hash + ((hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24))) >>> 0;
 	}
 
-	return (hash >>> 0).toString(16).padStart(8, '0');
+	return hash.toString(16).padStart(8, '0');
 }`
 			},
 
@@ -525,12 +562,26 @@ export function fingerprint(state: EngineState): string {
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
-	// Sorted by seq before resting, so price-time priority is reconstructed
-	// exactly — an order that was in front stays in front.
-	for (const record of [...body.orders].sort((a, b) => a.seq - b.seq)) {
-		const order = toRestingOrder(record);
+	for (const record of body.orders) {
+		const instrument = state.instruments.get(record.instrumentId as InstrumentId);
+		if (!instrument) continue;
+
+		const order: LiveOrder = {
+			orderId: record.orderId as OrderId,
+			firmId: record.firmId as LiveOrder['firmId'],
+			accountId: record.accountId as LiveOrder['accountId'],
+			instrumentId: record.instrumentId as InstrumentId,
+			clientOrderId: record.clientOrderId as LiveOrder['clientOrderId'],
+			side: record.side,
+			price: record.price as Price,
+			originalQuantity: record.originalQuantity as Quantity,
+			remaining: record.remaining as Quantity,
+			seq: record.seq,
+			expiresAtClose: record.expiresAtClose
+		};
+
+		rest(instrument.book, order);
 		trackLive(state, order);
-		if (order.filled < order.quantity) rest(state.books.get(order.instrumentId)!, order);
 	}`
 			},
 
@@ -560,6 +611,8 @@ TypeError: body.instruments is not iterable
 				code: `
 	/*
 	 * A snapshot that will not parse is treated as **absent**, not as an error.
+	 *
+	 * …
 	 *
 	 * Returning \`undefined\` makes recovery fall back to replaying from genesis,
 	 * which is slower and correct. That is the trade the whole architecture was
@@ -595,9 +648,11 @@ it('has a snapshot to ignore in the first place', async () => {
 
 	/*
 	 * Without this, the two tests above pass trivially: if the engine never
-	 * wrote a snapshot, "recovers without one" and "recovers from a corrupt one"
-	 * are both testing the same empty path, and the suite is green while proving
-	 * nothing.
+	 * wrote a snapshot, "recovers without one" and "recovers from a corrupt
+	 * one" are both testing the same empty path, and the suite is green while
+	 * proving nothing.
+	 *
+	 * \`runEngine\` writes one on clean shutdown, so there must be one here.
 	 */
 	const snapshot = await loadSnapshot(client);
 
@@ -645,6 +700,8 @@ while (!signal.aborted) {
 		continue;
 	}
 
+	// …
+
 	for (const record of batch) {
 		if (signal.aborted) break;
 
@@ -659,10 +716,20 @@ while (!signal.aborted) {
 		 * command, the rule is simple — either a command's events are in the log
 		 * or the command has not happened yet.
 		 */
-		await appendEvents(client, ENGINE_CONSUMER, record.seq, record.receivedAt, record.version, produced);
+		await appendEvents(
+			client,
+			ENGINE_CONSUMER,
+			record.seq,
+			record.receivedAt,
+			record.version,
+			produced
+		);
 
 		cursor = record.seq;
+		// …
 	}
+
+	// …
 }`
 			},
 
@@ -676,12 +743,13 @@ const checkpoint = await readCheckpoint(client, ENGINE_CONSUMER);
 let cursor = Math.min(checkpoint, state.lastSeq);
 
 /*
- * If the checkpoint is behind the recovered state, the state has seen commands
- * whose events were never committed. The state is the thing that is wrong, so
- * rebuild it up to the checkpoint and go from there.
+ * If the checkpoint is behind the recovered state, the state has seen
+ * commands whose events were never committed. The state is the thing that is
+ * wrong, so rebuild it up to the checkpoint and go from there.
  */
 if (checkpoint < state.lastSeq) {
-	Object.assign(state, await recoverTo(client, checkpoint));
+	const rebuilt = await recoverTo(client, checkpoint);
+	Object.assign(state, rebuilt);
 	cursor = checkpoint;
 }`
 			},
@@ -699,6 +767,9 @@ if (checkpoint < state.lastSeq) {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 	process.on(signal, () => {
 		if (shuttingDown) {
+			// A second signal means somebody is impatient and the graceful path is
+			// stuck. Honour it — but say so, because the checkpoint may now be
+			// behind and the next start will replay.
 			console.error('[engine] second signal, exiting immediately');
 			process.exit(130);
 		}
@@ -743,7 +814,7 @@ after 4000 transactions: 8033`
 			},
 			{
 				type: 'p',
-				text: 'The engine opens one transaction per command, so at the default limit of 20,000 it dies after about ten thousand orders. A venue would have run for a few minutes of real trading.'
+				text: 'The engine opens one transaction per command, so at the default file-descriptor limit it dies after about ten thousand orders. A venue would have run for a few minutes of real trading.'
 			},
 			{
 				type: 'p',
@@ -768,10 +839,12 @@ after 500: 1033`
 /**
  * Run a function inside a transaction, on **this** connection.
  *
- * \`BEGIN IMMEDIATE\` rather than \`client.transaction()\`. It is also *more*
- * correct for our purposes: \`IMMEDIATE\` takes the write lock at the start
- * rather than upgrading half way through, so a busy venue gets a clean wait on
- * \`busy_timeout\` instead of \`SQLITE_BUSY\` mid-transaction.
+ * …
+ *
+ * \`BEGIN IMMEDIATE\` on the existing connection has none of that. It is also
+ * *more* correct for our purposes: \`IMMEDIATE\` takes the write lock at the
+ * start rather than upgrading half way through, so a busy venue gets a clean
+ * wait on \`busy_timeout\` instead of \`SQLITE_BUSY\` mid-transaction.
  */
 export async function withTransaction<T>(
 	client: Executor,
@@ -787,18 +860,26 @@ export async function withTransaction<T>(
 			await client.execute('COMMIT');
 			return result;
 		} catch (thrown) {
+			/* … */
 			try {
 				await client.execute('ROLLBACK');
 			} catch {
 				// The original error is the one worth having.
 			}
+
 			throw thrown;
 		}
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
 	// transaction would block every later one on this connection forever.
-	chains.set(client, run.then(() => undefined, () => undefined));
+	chains.set(
+		client,
+		run.then(
+			() => undefined,
+			() => undefined
+		)
+	);
 
 	return run;
 }`
