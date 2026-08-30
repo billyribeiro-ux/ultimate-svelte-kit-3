@@ -46,7 +46,10 @@ export const MIGRATIONS: readonly Migration[] = [
 	{
 		id: 1,
 		name: 'firm.billable_from',
-		statements: ['ALTER TABLE firm ADD COLUMN billable_from INTEGER']
+		statements: [
+			// …
+			'ALTER TABLE firm ADD COLUMN billable_from INTEGER'
+		]
 	},
 	// …
 ];`
@@ -89,9 +92,9 @@ export const MIGRATIONS: readonly Migration[] = [
  * \`created_at\` is the wrong date to prorate from — and prorating from the
  * wrong date is the most common billing complaint there is.
  *
- * Nullable rather than \`NOT NULL DEFAULT 0\`: null means "not yet billable",
- * which is a real state, and a default of zero would mean every existing firm
- * was billable from 1970.
+ * Nullable rather than \`NOT NULL DEFAULT 0\`: null means "not yet
+ * billable", which is a real state, and a default of zero would mean
+ * every existing firm was billable from 1970.
  */
 'ALTER TABLE firm ADD COLUMN billable_from INTEGER'`
 			},
@@ -156,15 +159,16 @@ export const FLAGS = {
 		description:
 			'Accept new orders at the gateway. Off is a venue-wide pause that leaves existing orders resting.'
 	},
+	// …
 	deliver_webhooks: {
 		default: true,
 		description: 'Let the worker deliver webhooks. Off queues them, it does not drop them.'
 	},
+	// …
 	new_firm_signup: {
 		default: false,
 		description: 'Allow a new member firm to be created. Off by default: onboarding is manual.'
 	}
-	// …
 } as const;
 
 export type FlagName = keyof typeof FLAGS;`
@@ -224,7 +228,7 @@ async enabled(name: FlagName, now = Date.now()): Promise<boolean> {
 			},
 			{
 				type: 'p',
-				text: 'Five seconds of cache. Long enough that a busy venue does one query per flag per five seconds rather than one per order; short enough that "I turned it off" and "it is off" are the same sentence in an incident.'
+				text: 'Five seconds of cache. Long enough that a busy venue does one query per flag per five seconds rather than one per request; short enough that "I turned it off" and "it is off" are the same sentence in an incident.'
 			},
 			{
 				type: 'why',
@@ -257,10 +261,10 @@ if (!input.reason.trim()) {
  * The flag check goes **after** authorisation and before the append.
  *
  * After, because "the venue is paused" is not something to tell somebody who
- * was not allowed to send this anyway — that would leak which commands exist to
- * whoever is probing. Before the append, because a paused venue must not put
- * the command in the log at all: a log entry is a promise the engine will apply
- * it, and pausing means not making that promise.
+ * was not allowed to send this anyway — that would leak which commands exist
+ * to whoever is probing. Before the append, because a paused venue must not
+ * put the command in the log at all: a log entry is a promise the engine will
+ * apply it, and pausing means not making that promise.
  */
 const flag = FLAG_FOR[authorised.kind];
 if (flag && !(await flags.enabled(flag))) {
@@ -334,7 +338,7 @@ export interface Plan {
 			},
 			{
 				type: 'p',
-				text: 'A table rather than a chain of conditionals, for the same reason the permission matrix in Part 3 is a table: **somebody who is not a programmer has to be able to check it.** A pricing bug found by the finance team reading this table costs a conversation. The same bug found by a customer costs a refund and some trust.'
+				text: 'A table rather than a chain of conditionals, for the same reason the permission matrix in Part 3 is a table: **somebody who is not a programmer has to be able to check it.** A pricing bug found by the finance team reading this table costs nothing. The same bug found by a customer costs a refund and a conversation.'
 			},
 			{
 				type: 'note',
@@ -380,12 +384,23 @@ export function prorate(amount: Amount, daysActive: number, daysInPeriod: number
 /**
  * What a firm used in a period.
  *
- * Counted from the event log rather than from a counter, so re-running this
- * produces the same number. A counter incremented by the projector would drift
- * the first time a batch was replayed — and projectors replay after every
- * crash, by design.
+ * Derived by counting the log, not by a counter somebody increments. That is
+ * the property that makes it safe to re-run: the same window always produces
+ * the same number, however many times a projector has replayed it, and a
+ * disputed invoice can be recomputed from first principles months later.
+ *
+ * A \`usage_counter\` table incremented on each order would be faster and would
+ * drift the first time the projector re-applied a batch after a crash — by an
+ * amount nobody could ever reconstruct.
  */
-export async function usageFor(client: Client, firmId: string, from: number, to: number) { /* … */ }`
+export async function usageFor(
+	client: Client,
+	firmId: string,
+	from: number,
+	to: number
+): Promise<Usage> {
+	// …
+}`
 			},
 			{
 				type: 'why',
@@ -460,22 +475,23 @@ export async function usageFor(client: Client, firmId: string, from: number, to:
 				type: 'code',
 				lang: 'ts',
 				code: `
-it('never crosses the book', () => {
+it('never leaves a crossed book during continuous trading', () => {
 	fc.assert(
-		fc.property(fc.array(arbitraryOrder(), { maxLength: 200 }), (orders) => {
-			let state = emptyBook();
-			for (const order of orders) state = apply(state, order).state;
+		fc.property(arbSession, (steps) => {
+			const { state } = run(steps);
+			const instrument = state.instruments.get(VOD)!;
 
-			const bid = bestBid(state);
-			const ask = bestAsk(state);
-			if (bid && ask) expect(bid.price).toBeLessThan(ask.price);
-		})
+			if (instrument.phase === 'continuous') {
+				expect(isCrossed(instrument.book)).toBe(false);
+			}
+		}),
+		{ numRuns: 400 }
 	);
 });`
 			},
 			{
 				type: 'p',
-				text: '`fast-check` generates hundreds of random order sequences and checks the property after each. When it finds a failure it **shrinks** it — repeatedly simplifying the input while the failure persists — so what you get is not a 200-order sequence but the three orders that actually matter.'
+				text: '`fast-check` generates hundreds of random sessions and checks the property after each. When it finds a failure it **shrinks** it — repeatedly simplifying the input while the failure persists — so what you get is not a 120-step session but the three orders that actually matter.'
 			},
 			{
 				type: 'note',
@@ -509,17 +525,25 @@ it('never crosses the book', () => {
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
+/*
+ * A snapshot that will not parse is treated as **absent**, not as an error.
+ *
+ * …
+ *
+ * It is logged rather than swallowed silently: a venue that quietly replays
+ * from genesis every start is one whose snapshots have been broken for
+ * months and whose boot time nobody has questioned.
+ */
 try {
-	return { seq, state: deserialise(JSON.parse(body)) };
-} catch {
-	/*
-	 * A corrupt snapshot is treated as an absent one.
-	 *
-	 * The snapshot is an optimisation: everything in it can be rebuilt by
-	 * replaying the log. Throwing here converts "startup is slower than usual"
-	 * into "the venue does not start", which is the worst possible trade for a
-	 * file whose entire purpose is to save time.
-	 */
+	return {
+		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
+		fingerprint: String(row['fingerprint'])
+	};
+} catch (thrown) {
+	console.error(
+		\`[engine] snapshot at seq \${Number(row['seq'])} is unreadable; replaying from genesis instead.\`,
+		thrown
+	);
 	return undefined;
 }`
 			},
@@ -537,12 +561,15 @@ try {
  *
  *   **Where it breaks first.** Every system has one bottleneck at a time, and
  *   knowing which one is the difference between optimising something that
- *   matters and optimising something that does not.
+ *   matters and optimising something that does not. Here it is the sequencer:
+ *   one writer, by design, and therefore the ceiling on the whole venue.
  *
  *   **Whether correctness survives volume.** Almost every concurrency bug is
  *   invisible below some threshold. The assertions at the end of these tests
  *   are the same ones the small suites make — the books balance, no order is
  *   overfilled — and they are the point. The timing is context.
+ *
+ * …
  */`
 			},
 			{
@@ -585,19 +612,39 @@ export async function withTransaction<T>(
 
 	const run = previous.then(async () => {
 		await client.execute('BEGIN IMMEDIATE');
+
 		try {
 			const result = await work(client);
 			await client.execute('COMMIT');
 			return result;
 		} catch (thrown) {
-			try { await client.execute('ROLLBACK'); } catch { /* original error is the one worth having */ }
+			/*
+			 * The rollback is itself wrapped, and its failure is swallowed.
+			 *
+			 * If the connection has gone, \`ROLLBACK\` throws too — and throwing *that*
+			 * would replace the real error with a meaningless one, hiding the reason
+			 * the transaction failed in the first place.
+			 */
+			try {
+				await client.execute('ROLLBACK');
+			} catch {
+				// The original error is the one worth having.
+			}
+
 			throw thrown;
 		}
 	});
 
-	// Note the double-swallow: the chain must survive a rejection, or one failed
-	// write leaves every later transaction on this connection waiting forever.
-	chains.set(client, run.then(() => undefined, () => undefined));
+	// The chain must continue whether this call succeeded or not, or one failed
+	// transaction would block every later one on this connection forever.
+	chains.set(
+		client,
+		run.then(
+			() => undefined,
+			() => undefined
+		)
+	);
+
 	return run;
 }`
 			},
@@ -698,11 +745,37 @@ if (status.outboxDead > 0) {
 				file: 'apps/web/src/routes/healthz/+server.ts',
 				lang: 'ts',
 				code: `
-// 503 only for \`down\`. A \`degraded\` venue is slow, not broken — and pulling a
-// slow machine out of the load balancer removes capacity from a system that is
-// already struggling to keep up, which is how a degradation becomes an outage.
-const status = verdict(await health(db));
-return Response.json(status, { status: status.level === 'down' ? 503 : 200 });`
+export const GET: RequestHandler = async ({ url }) => {
+	const status = await health(db);
+	const result = verdict(status);
+
+	const body = {
+		status: result.level,
+		summary: result.summary,
+		lag: {
+			engine: status.engineLag,
+			projector: status.projectorLag,
+			outboxAgeMs: status.outboxAgeMs
+		},
+		// A boolean, not the amount. The amount is the venue's business; whether
+		// the books balance is the only part an outsider needs.
+		booksBalance: status.trialBalance === 0,
+		...(url.searchParams.get('verbose') === '1' ? { problems: result.problems } : {})
+	};
+
+	return Response.json(body, {
+		status: result.level === 'down' ? 503 : 200,
+		headers: {
+			// Never cached. A health check served from a CDN is a health check that
+			// reports the state of a minute ago, forever.
+			'cache-control': 'no-store'
+		}
+	});
+};`
+			},
+			{
+				type: 'p',
+				text: 'A load balancer reads the status code and nothing else, so only `down` answers **503** — which takes the instance out of rotation. A `degraded` venue answers 200: it is slow, not broken, and pulling a slow machine out of the load balancer removes capacity from a system that is already struggling to keep up, which is how a degradation becomes an outage.'
 			},
 			{
 				type: 'p',
@@ -738,9 +811,11 @@ if (/secret|password|token|authorization|cookie|key_hash/i.test(key)) {
 				code: `
 $ pnpm dev
 
-[web]    ➜ http://localhost:5173
-[engine] engine: applied 0, projected 0, waiting
-[worker] worker: 0 pending, 0 dead`
+[web]       ➜ http://localhost:5173
+[engine]    starting against file:venue.db
+[engine]    resuming from seq 48213
+[projector] resuming from seq 48210
+[worker]    12 pending, 0 dead on arrival`
 			},
 			{
 				type: 'ul',
