@@ -30,30 +30,57 @@ export const part2 = [
 export const site = {
 	name: 'StrikeFlow',
 	legalName: 'StrikeFlow Data Inc.',
+
+	/** Used as the \`<title>\` suffix on every page except the home page. */
 	titleSuffix: 'StrikeFlow',
+
 	tagline: 'Real-time options flow, decoded.',
+
+	// …
 	description:
-		'StrikeFlow streams the full options tape in real time — sweeps, blocks, dark pool ' +
-		'prints and dealer gamma — so you can read institutional positioning as it happens.',
+		'StrikeFlow streams the full options tape in real time — sweeps, blocks, dark pool prints and dealer gamma — so you can read institutional positioning as it happens.',
+
+	/** Canonical origin, validated and de-slashed in \`src/env.ts\`. */
 	url: PUBLIC_SITE_URL,
+
 	locale: 'en_US',
 	language: 'en',
+
+	founded: '2021',
+
 	contact: {
 		email: 'hello@strikeflow.io',
-		support: 'support@strikeflow.io'
+		support: 'support@strikeflow.io',
+		press: 'press@strikeflow.io',
+		phone: '+1-212-555-0148'
 	},
+
+	address: {
+		street: '85 Broad Street, Floor 17',
+		city: 'New York',
+		region: 'NY',
+		postalCode: '10004',
+		country: 'US'
+	},
+
+	// …
 	social: {
 		x: 'https://x.com/strikeflow',
-		linkedin: 'https://www.linkedin.com/company/strikeflow'
+		linkedin: 'https://www.linkedin.com/company/strikeflow',
+		github: 'https://github.com/strikeflow',
+		youtube: 'https://www.youtube.com/@strikeflow'
 	},
+
+	/** Fallback social share image. 1200×630 is the ratio X and LinkedIn both crop to. */
 	ogImage: '/og/default.png',
 	ogImageWidth: 1200,
 	ogImageHeight: 630
 } as const;
 
+/** Every social URL as an array — the shape \`sameAs\` wants. */
 export const socialProfiles: readonly string[] = Object.values(site.social);
 
-/** Turn a root-relative path into an absolute URL. */
+// …
 export function absoluteUrl(path: string): string {
 	if (path.startsWith('http://') || path.startsWith('https://')) return path;
 	return \`\${site.url}\${path.startsWith('/') ? path : \`/\${path}\`}\`;
@@ -72,16 +99,22 @@ export function absoluteUrl(path: string): string {
 
 /**
  * Route IDs that take no parameters.
- * Filters '/blog/[slug]' out of the union, so nav can only hold safe links.
+ *
+ * \`PageRouteId\` includes dynamic routes like \`/blog/[slug]\`, which you can't link to
+ * without supplying a \`slug\`. This conditional type filters any route ID containing a
+ * \`[\` out of the union, so the nav can only ever hold routes that are safe to link
+ * to directly — and \`resolve(href)\` type-checks without needing a params argument.
  */
 export type StaticRoute = Exclude<PageRouteId, \`\${string}[\${string}\`>;
 
 export interface NavLink {
 	readonly label: string;
 	readonly href: StaticRoute;
+	/** Optional one-liner, shown in the mobile drawer where there's room for it. */
 	readonly description?: string;
 }
 
+/** Primary navigation, shown in the header. Kept short on purpose. */
 export const primaryNav: readonly NavLink[] = [
 	{ label: 'Features', href: '/features', description: 'What the platform does' },
 	{ label: 'Pricing', href: '/pricing', description: 'Plans and what each includes' },
@@ -107,16 +140,20 @@ export const primaryNav: readonly NavLink[] = [
 				type: 'code',
 				file: 'src/lib/data/features.ts',
 				lang: 'ts',
-				code: `export type IconName =
-	| 'PulseIcon' | 'CrosshairIcon' | 'FunctionIcon'
-	| 'EyeIcon' | 'BellRingingIcon' | 'RewindIcon';
+				code: `/** Icon names map 1:1 to Phosphor icon component names. */
+export type IconName =
+	'PulseIcon' | 'CrosshairIcon' | 'FunctionIcon' | 'EyeIcon' | 'BellRingingIcon' | 'RewindIcon';
 
 export interface Feature {
+	/** Stable key — used for anchors, keys in {#each}, and analytics. */
 	readonly id: string;
 	readonly title: string;
-	readonly summary: string;   // one line, used in cards AND structured data
-	readonly detail: string;    // longer copy, features page only
+	/** One-line summary. Used in cards and in structured data. */
+	readonly summary: string;
+	/** Longer copy, used on the features page. */
+	readonly detail: string;
 	readonly icon: IconName;
+	/** Three concrete capabilities. Specificity is what makes copy credible. */
 	readonly points: readonly string[];
 }
 
@@ -125,20 +162,20 @@ export const features: readonly Feature[] = [
 		id: 'live-flow',
 		title: 'Live flow scanner',
 		summary: 'Every sweep, block and split order as it prints — not thirty seconds later.',
-		detail: 'We consume the full OPRA feed and normalise it into a single stream…',
+		// …
 		icon: 'PulseIcon',
 		points: [
 			'Sub-250ms from exchange print to your screen',
 			'Sweep, block, split and cross classification',
 			'Filter by premium, size, expiry, moneyness or ticker'
 		]
-	}
+	},
 	// …five more
 ];`
 			},
 			{
 				type: 'note',
-				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.'
+				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.'
 			},
 			{
 				type: 'p',
@@ -200,7 +237,7 @@ export const features: readonly Feature[] = [
 import * as v from 'valibot';
 
 export const variables = defineEnvVars({
-	/** Canonical origin, no trailing slash. */
+	// …
 	PUBLIC_SITE_URL: {
 		public: true,
 		static: true,
@@ -208,17 +245,23 @@ export const variables = defineEnvVars({
 		schema: v.pipe(
 			v.optional(v.string(), 'http://localhost:5173'),
 			v.url('PUBLIC_SITE_URL must be a valid absolute URL'),
-			// Strip a trailing slash once, here, rather than defensively everywhere else
+			// A trailing slash here produces "https://site.com//about" downstream.
+			// Strip it once, here, rather than defensively everywhere else.
 			v.transform((url) => url.replace(/\\/+$/, ''))
 		)
 	},
 
-	/** Private by default — no \`public: true\`. */
+	/**
+	 * Directory where captured leads are appended.
+	 *
+	 * Private: the browser has no business knowing where we write.
+	 */
 	LEADS_DIR: {
 		description: 'Directory for the newline-delimited JSON lead log.',
 		schema: v.optional(v.string(), '.data')
 	},
 
+	// …
 	EBOOK_TOKEN_SECRET: {
 		description: 'HMAC key for signing ebook download links. Set this in production.',
 		schema: v.optional(v.pipe(v.string(), v.minLength(32, 'Use at least 32 characters')))
@@ -256,13 +299,23 @@ import { EBOOK_TOKEN_SECRET } from '$app/env/private';`
 				type: 'code',
 				file: '.env.example',
 				lang: 'bash',
-				code: `# Copy to .env and fill in. .env is gitignored; this file is not.
+				code: `# Copy to \`.env\` and fill in. \`.env\` is gitignored; this file is not.
+#
+# Every variable here is declared and validated in \`src/env.ts\`.
+# If you add one there, add it here too — this file is the documentation
+# a new engineer reads before their first \`pnpm dev\`.
 
+# Canonical origin. No trailing slash.
+# Local dev can leave this as-is; production MUST set it to the real domain,
+# or every canonical tag, Open Graph URL and sitemap entry will point at localhost.
 PUBLIC_SITE_URL="http://localhost:5173"
+
+# Where captured leads are appended as newline-delimited JSON.
 LEADS_DIR=".data"
 
-# Generate with:
-#   node -e "console.log(crypto.randomBytes(32).toString('hex'))"
+# Signs the ebook download links. Minimum 32 characters.
+# Generate one with:  node -e "console.log(crypto.randomBytes(32).toString('hex'))"
+# Leave unset in development and a throwaway key is generated at boot.
 EBOOK_TOKEN_SECRET=""`
 			},
 			{
@@ -306,19 +359,26 @@ EBOOK_TOKEN_SECRET=""`
 				code: `<script lang="ts">
 	import { page } from '$app/state';
 	import { site, absoluteUrl } from '#lib/data/site.ts';
+	// …
 
 	interface Props {
 		/** Page title WITHOUT the brand suffix — this component adds it. */
 		title: string;
 		/** ~155 characters. Longer gets truncated in the results page. */
 		description: string;
-		/** Defaults to the current pathname. Override only for genuine duplicates. */
+		/**
+		 * Root-relative canonical path. Defaults to the current pathname, which is
+		 * correct for virtually every page. Override it only when two routes
+		 * legitimately serve the same content.
+		 */
 		canonicalPath?: string;
 		type?: 'website' | 'article';
+		/** Root-relative or absolute social share image. */
 		image?: string;
 		imageAlt?: string;
-		/** Keep a page out of the index. For thank-you and gated pages. */
+		/** Keep a page out of the index. Use for thank-you and gated pages. */
 		noindex?: boolean;
+		/** Extra JSON-LD nodes. Organization, WebSite and WebPage are added for you. */
 		schema?: readonly SchemaNode[];
 		article?: ArticleMeta;
 	}
@@ -334,6 +394,8 @@ EBOOK_TOKEN_SECRET=""`
 		schema = [],
 		article
 	}: Props = $props();
+
+	// …
 </script>`
 			},
 			{
@@ -357,9 +419,7 @@ EBOOK_TOKEN_SECRET=""`
 				type: 'code',
 				lang: 'ts',
 				file: 'src/lib/seo/Seo.svelte',
-				code: `const fullTitle = $derived(
-	title === site.name ? title : \`\${title} | \${site.titleSuffix}\`
-);`
+				code: `const fullTitle = $derived(title === site.name ? title : \`\${title} | \${site.titleSuffix}\`);`
 			},
 			{
 				type: 'p',
@@ -403,7 +463,7 @@ EBOOK_TOKEN_SECRET=""`
 	<link rel="canonical" href={canonical} />
 	<meta name="robots" content={robots} />
 
-	<!-- Open Graph: LinkedIn, Facebook, Slack, Discord, iMessage -->
+	<!-- Open Graph: read by LinkedIn, Facebook, Slack, Discord, iMessage and others. -->
 	<meta property="og:type" content={type} />
 	<meta property="og:url" content={canonical} />
 	<meta property="og:title" content={fullTitle} />
@@ -413,8 +473,13 @@ EBOOK_TOKEN_SECRET=""`
 	<meta property="og:image" content={ogImageUrl} />
 	<meta property="og:image:width" content={String(site.ogImageWidth)} />
 	<meta property="og:image:height" content={String(site.ogImageHeight)} />
+	<!-- Alt text on a share image is an accessibility requirement, not decoration. -->
 	<meta property="og:image:alt" content={imageAlt ?? \`\${site.name} — \${site.tagline}\`} />
 
+	<!--
+		Article-specific Open Graph. Only emitted for articles, because claiming a
+		publish date on a pricing page is noise at best and misleading at worst.
+	-->
 	{#if type === 'article' && article}
 		<meta property="article:published_time" content={article.published} />
 		{#if article.modified}
@@ -426,14 +491,18 @@ EBOOK_TOKEN_SECRET=""`
 		{/each}
 	{/if}
 
-	<!-- X / Twitter -->
+	<!-- X / Twitter cards. \`summary_large_image\` is the full-width variant. -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={fullTitle} />
 	<meta name="twitter:description" content={description} />
 	<meta name="twitter:image" content={ogImageUrl} />
 	<meta name="twitter:image:alt" content={imageAlt ?? \`\${site.name} — \${site.tagline}\`} />
+	<meta name="twitter:site" content="@strikeflow" />
 
+	<!-- Colours the browser chrome on mobile. Small touch, feels native. -->
 	<meta name="theme-color" content="#05070c" />
+
+	<!-- … -->
 </svelte:head>`
 			},
 			{
@@ -521,18 +590,35 @@ EBOOK_TOKEN_SECRET=""`
 		legalName: site.legalName,
 		url: \`\${site.url}/\`,
 		description: site.description,
+		foundingDate: site.founded,
 		logo: {
 			'@type': 'ImageObject',
 			url: absoluteUrl('/brand/logo-512.png'),
 			width: 512,
 			height: 512
 		},
+		// …
 		sameAs: socialProfiles,
+		address: {
+			'@type': 'PostalAddress',
+			streetAddress: site.address.street,
+			addressLocality: site.address.city,
+			addressRegion: site.address.region,
+			postalCode: site.address.postalCode,
+			addressCountry: site.address.country
+		},
 		contactPoint: [
 			{
 				'@type': 'ContactPoint',
 				contactType: 'customer support',
 				email: site.contact.support,
+				availableLanguage: ['English']
+			},
+			{
+				'@type': 'ContactPoint',
+				contactType: 'sales',
+				email: site.contact.email,
+				telephone: site.contact.phone,
 				availableLanguage: ['English']
 			}
 		]
@@ -552,10 +638,10 @@ EBOOK_TOKEN_SECRET=""`
 				type: 'code',
 				file: 'src/lib/seo/schema.ts',
 				lang: 'ts',
-				code: `		offers: plans.map((plan) => ({ /* … */ }))
-		// NOTE: there is deliberately no \`aggregateRating\` here.
-		// We have not collected verifiable reviews, and inventing one is a spam
-		// policy violation that gets sites manually penalised.`
+				code: `	offers: plans.map((plan) => ({ /* … */ }))
+	// NOTE: there is deliberately no \`aggregateRating\` here. We have not collected
+	// verifiable reviews, and inventing one is a spam policy violation that gets
+	// sites manually penalised. Rich stars are not worth a manual action.`
 			},
 			{
 				type: 'warn',
@@ -571,9 +657,13 @@ EBOOK_TOKEN_SECRET=""`
 				file: 'src/lib/seo/schema.ts',
 				lang: 'ts',
 				code: `export function buildGraph(nodes: readonly SchemaNode[]): Record<string, unknown> {
-	return { '@context': 'https://schema.org', '@graph': nodes };
+	return {
+		'@context': 'https://schema.org',
+		'@graph': nodes
+	};
 }
 
+/* … */
 export function serializeJsonLd(graph: Record<string, unknown>): string {
 	return JSON.stringify(graph)
 		.replace(/</g, '\\\\u003c')
@@ -591,18 +681,28 @@ export function serializeJsonLd(graph: Record<string, unknown>): string {
 				file: 'src/lib/seo/Seo.svelte',
 				lang: 'svelte',
 				code: `const jsonLdScript = $derived(
-	// Built by concatenation so the closing-tag text never appears literally
-	// in this file — not even inside a comment.
+	// Assembled by concatenation, so the closing-tag text is never written
+	// literally anywhere in this file — not even inside a comment. An HTML
+	// tokeniser scans for that character sequence without understanding
+	// JavaScript, so a literal occurrence would end this component's own script
+	// block early. It is a genuine parsing hazard, not a style preference.
 	'<script type="application/ld+json">' +
 		serializeJsonLd(
 			buildGraph([
 				organizationSchema(),
 				websiteSchema(),
-				webPageSchema({ url: canonical, name: fullTitle, description }),
+				webPageSchema({
+					url: canonical,
+					name: fullTitle,
+					description,
+					datePublished: article?.published,
+					dateModified: article?.modified ?? article?.published
+				}),
 				...schema
 			])
 		) +
-		'</' + 'script>'
+		'</' +
+		'script>'
 );`
 			},
 			{
@@ -676,15 +776,30 @@ export const staticSitemapEntries: readonly SitemapEntry[] = [
 				lang: 'ts',
 				code: `import type { RequestHandler } from './$types';
 import { absoluteUrl } from '#lib/data/site.ts';
-import { staticSitemapEntries } from '#lib/seo/routes.ts';
+import { staticSitemapEntries, type SitemapEntry } from '#lib/seo/routes.ts';
 import { postsByDate } from '#lib/data/posts.ts';
 
 export const prerender = true;
 
+/**
+ * Escape the five XML predefined entities.
+ *
+ * A single raw \`&\` in a URL makes the entire sitemap a parse error, and the crawler
+ * discards the whole file rather than the offending line. Cheap insurance.
+ */
 function escapeXml(value: string): string {
 	return value
-		.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&apos;');
+}
+
+function toUrlElement(entry: SitemapEntry | { path: string; lastmod?: string }): string {
+	const loc = escapeXml(absoluteUrl(entry.path));
+	const lastmod = entry.lastmod ? \`\\n\\t\\t<lastmod>\${entry.lastmod}</lastmod>\` : '';
+	return \`\\t<url>\\n\\t\\t<loc>\${loc}</loc>\${lastmod}\\n\\t</url>\`;
 }
 
 export const GET: RequestHandler = () => {
@@ -693,14 +808,10 @@ export const GET: RequestHandler = () => {
 		lastmod: post.updated ?? post.published
 	}));
 
-	const urls = [...staticSitemapEntries, ...blogEntries]
-		.map((entry) => {
-			const loc = escapeXml(absoluteUrl(entry.path));
-			const lastmod = entry.lastmod ? \`\\n\\t\\t<lastmod>\${entry.lastmod}</lastmod>\` : '';
-			return \`\\t<url>\\n\\t\\t<loc>\${loc}</loc>\${lastmod}\\n\\t</url>\`;
-		})
-		.join('\\n');
+	const urls = [...staticSitemapEntries, ...blogEntries].map(toUrlElement).join('\\n');
 
+	// The namespace must be exactly this. A wrong or missing xmlns means the file
+	// parses as generic XML and every crawler rejects it as "not a sitemap".
 	const xml = \`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 \${urls}
@@ -709,7 +820,10 @@ export const GET: RequestHandler = () => {
 	return new Response(xml, {
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
+			// One hour at the CDN, with a day of stale-while-revalidate. A sitemap that
+			// is an hour out of date has never harmed anyone; an origin hit per crawl has.
 			'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+			// The sitemap itself should never appear as a search result.
 			'X-Robots-Tag': 'noindex'
 		}
 	});
@@ -739,22 +853,32 @@ export const GET: RequestHandler = () => {
 				code: `export const prerender = true;
 
 export const GET: RequestHandler = () => {
-	const body = \`User-agent: *
+	const body = \`# https://www.robotstxt.org/robotstxt.html
+# Crawling is allowed. See the <meta name="robots"> tag on individual pages
+# for indexing directives — that's the mechanism that actually controls the index.
+
+User-agent: *
 Allow: /
 
-# Internal asset directory — nothing here is a page
+# SvelteKit's internal asset directory. Nothing here is a page; letting crawlers
+# walk it just burns crawl budget on hashed JS chunks.
 Disallow: /_app/
 
-# Gated pages. The noindex meta tag is what keeps these out of the index;
-# these lines just save the crawl budget.
+# Gated confirmation page. Also carries a noindex meta tag, which is what actually
+# keeps it out of the index — this line just saves the crawl.
 Disallow: /guide/thank-you
+
+# Signed, single-use download links. Never useful to a crawler.
 Disallow: /guide/download
 
 Sitemap: \${absoluteUrl('/sitemap.xml')}
 \`;
 
 	return new Response(body, {
-		headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+		headers: {
+			'Content-Type': 'text/plain; charset=utf-8',
+			'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
+		}
 	});
 };`
 			},
@@ -807,26 +931,55 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 				lang: 'svelte',
 				code: `<script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { magnetic } from '#lib/motion/index.ts';
+
+	type Variant = 'primary' | 'secondary' | 'ghost';
+	type Size = 'sm' | 'md' | 'lg';
 
 	interface Props {
-		variant?: 'primary' | 'secondary' | 'ghost';
-		size?: 'sm' | 'md' | 'lg';
+		variant?: Variant;
+		size?: Size;
 		/** Provide this and you get an <a>. Omit it and you get a <button>. */
 		href?: string;
+		/** Opens in a new tab with the correct rel attributes. */
 		external?: boolean;
+		/** Stretches to fill its container — the right default on narrow screens. */
 		fullWidth?: boolean;
 		disabled?: boolean;
+		/** Only meaningful for <button>. */
 		type?: 'button' | 'submit' | 'reset';
+		/** Optional label for screen readers when the visible text isn't enough. */
+		ariaLabel?: string;
 		onclick?: (event: MouseEvent) => void;
 		children: Snippet;
+		/** Optional leading icon, rendered before the label. */
 		icon?: Snippet;
+		/** Optional trailing icon, rendered after the label. */
 		iconTrailing?: Snippet;
+		/**
+		 * Lean slightly toward the cursor on approach.
+		 *
+		 * Reserve this for primary calls to action. If every button on the page is
+		 * magnetic the effect stops reading as premium and starts reading as unstable.
+		 * It is automatically inert on touch devices and under reduced motion.
+		 */
+		pull?: boolean;
 	}
 
 	let {
-		variant = 'primary', size = 'md', href, external = false,
-		fullWidth = false, disabled = false, type = 'button',
-		onclick, children, icon, iconTrailing
+		variant = 'primary',
+		size = 'md',
+		href,
+		external = false,
+		fullWidth = false,
+		disabled = false,
+		type = 'button',
+		ariaLabel,
+		onclick,
+		children,
+		icon,
+		iconTrailing,
+		pull = false
 	}: Props = $props();
 
 	const tag = $derived(href ? 'a' : 'button');
@@ -836,21 +989,35 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 	this={tag}
 	class="btn btn--{variant} btn--{size}"
 	class:btn--full={fullWidth}
+	class:btn--disabled={disabled}
 	{href}
 	{onclick}
+	aria-label={ariaLabel}
+	role={href ? undefined : 'button'}
 	target={external ? '_blank' : undefined}
 	rel={external ? 'noopener noreferrer' : undefined}
 	type={href ? undefined : type}
 	disabled={href ? undefined : disabled}
+	aria-disabled={href && disabled ? 'true' : undefined}
+	tabindex={href && disabled ? -1 : undefined}
+	{@attach pull && !disabled ? magnetic() : undefined}
 >
-	{#if icon}<span class="btn__icon" aria-hidden="true">{@render icon()}</span>{/if}
+	{#if icon}
+		<span class="btn__icon" aria-hidden="true">{@render icon()}</span>
+	{/if}
 	<span class="btn__label">{@render children()}</span>
-	{#if iconTrailing}<span class="btn__icon" aria-hidden="true">{@render iconTrailing()}</span>{/if}
+	{#if iconTrailing}
+		<span class="btn__icon" aria-hidden="true">{@render iconTrailing()}</span>
+	{/if}
 </svelte:element>`
 			},
 			{
 				type: 'note',
 				text: '`Snippet` is the Svelte 5 replacement for slots. A snippet prop is a chunk of markup the parent passes in, rendered with `{@render …}`. Unlike slots, snippets are ordinary values: typed, passable, and usable in `{#if}`.'
+			},
+			{
+				type: 'note',
+				text: 'The `magnetic` import and the `pull` prop reach forward to the motion system we build in part 4 — a magnetic button leans slightly toward the cursor on approach. This is the finished file; if you are building strictly chapter by chapter, leave those two pieces out until part 4. Either way `{@attach undefined}` is a no-op, so a button without `pull` behaves as though the attachment were never there.'
 			},
 			{ type: 'h3', id: 'touch', text: 'Two CSS details that matter on phones' },
 			{
@@ -858,20 +1025,44 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 				file: 'src/lib/components/ui/Button.svelte',
 				lang: 'css',
 				code: `.btn {
-	/* 44px minimum touch target — Apple's and Google's guidelines,
-	   and WCAG 2.2 Success Criterion 2.5.8 */
+	/* … */
+
+	/*
+	 * 44px is the minimum touch target recommended by both Apple's and Google's
+	 * guidelines, and it's WCAG 2.2 Success Criterion 2.5.8. Smaller buttons get
+	 * mis-tapped, and on a marketing site a mis-tapped CTA is a lost conversion.
+	 */
 	min-height: 2.75rem;
 
-	/* Stops a double-tap zooming on iOS, and kills the 300ms tap delay */
+	/* Stop a double-tap from zooming on iOS, and kill the 300ms tap delay. */
 	touch-action: manipulation;
 	-webkit-tap-highlight-color: transparent;
+
+	/* … */
 }
 
-/* Hover styles ONLY on devices with a real pointer */
+/* … */
+
 @media (hover: hover) {
+	/*
+	 * NOTE: no \`transform\` here. The magnetic attachment owns this element's
+	 * transform, and a CSS hover transform would be overwritten by GSAP's inline
+	 * style mid-hover — producing a visible fight between the two. Where two
+	 * systems can write the same property, exactly one of them must own it.
+	 */
 	.btn--primary:hover:not(.btn--disabled) {
 		background-color: var(--accent-hover);
-		transform: translateY(-1px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.btn--secondary:hover:not(.btn--disabled) {
+		background-color: var(--surface-overlay);
+		border-color: var(--border-strong);
+	}
+
+	.btn--ghost:hover:not(.btn--disabled) {
+		background-color: var(--surface-raised);
+		color: var(--text-primary);
 	}
 }`
 			},
@@ -879,6 +1070,11 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 				type: 'why',
 				title: 'Why hover styles need a media query',
 				text: 'On a touchscreen there is no hover — but browsers fake one on tap, and it **sticks** until you tap elsewhere. So a phone user taps your button and it stays lit up afterwards, looking broken. `@media (hover: hover)` means those styles only apply to devices with a real pointer. Almost nobody does this, and it is one line.'
+			},
+			{
+				type: 'why',
+				title: 'Why there is deliberately no transform in the hover rule',
+				text: 'Almost every button tutorial nudges the button up a pixel on hover. Ours does not, and the NOTE comment in the source is the whole lesson: in part 4 this element gets the magnetic attachment, and GSAP drives it by writing an inline `transform`. If a CSS hover rule also wrote `transform`, the two would overwrite each other mid-hover — a visible fight. Where two systems can write the same property, exactly one of them must own it. So hover gets `background-color` and `box-shadow`; the attachment owns `transform`.'
 			},
 			{ type: 'h3', id: 'icons', text: 'The icon registry' },
 			{
@@ -890,15 +1086,24 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 				file: 'src/lib/components/ui/icons.ts',
 				lang: 'ts',
 				code: `import {
-	PulseIcon, CrosshairIcon, FunctionIcon,
-	EyeIcon, BellRingingIcon, RewindIcon
+	PulseIcon,
+	CrosshairIcon,
+	FunctionIcon,
+	EyeIcon,
+	BellRingingIcon,
+	RewindIcon
 } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
+/* … */
 export const featureIcons: Record<IconName, Component<Record<string, unknown>>> = {
-	PulseIcon, CrosshairIcon, FunctionIcon,
-	EyeIcon, BellRingingIcon, RewindIcon
+	PulseIcon,
+	CrosshairIcon,
+	FunctionIcon,
+	EyeIcon,
+	BellRingingIcon,
+	RewindIcon
 } as Record<IconName, Component<Record<string, unknown>>>;`
 			},
 			{
@@ -980,12 +1185,17 @@ export default defineConfig({
 	import { afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { scrollY } from 'svelte/reactivity/window';
-	import { ListIcon, XIcon } from 'phosphor-svelte';
-	import { primaryNav, type StaticRoute } from '#lib/data/nav.ts';
+	import { ListIcon, XIcon, ArrowRightIcon } from 'phosphor-svelte';
 
+	import { primaryNav, type StaticRoute } from '#lib/data/nav.ts';
+	import Logo from '#lib/components/ui/Logo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+
+	// …
 	let drawer = $state<HTMLDialogElement | null>(null);
 	let isOpen = $state(false);
 
+	// …
 	const isScrolled = $derived((scrollY.current ?? 0) > 8);
 
 	function openDrawer() {
@@ -997,18 +1207,26 @@ export default defineConfig({
 		drawer?.close();
 	}
 
-	/* The dialog fires 'close' however it was closed — our button, Escape, or
-	   a backdrop click. Syncing state here means we cannot get out of sync. */
+	/**
+	 * The dialog fires \`close\` however it was closed — our button, the Escape key,
+	 * or a backdrop click. Syncing state here rather than in \`closeDrawer\` means we
+	 * can't get out of sync when the browser closes it behind our back.
+	 */
 	function handleClose() {
 		isOpen = false;
 	}
 
-	/* The browser has no idea a client-side route changed. Without this, tapping
-	   a link changes the page underneath while the drawer stays open on top. */
+	/**
+	 * Close on navigation.
+	 *
+	 * Without this, tapping a link in the drawer changes the page underneath while
+	 * the drawer stays open on top of it — a classic SPA bug.
+	 */
 	afterNavigate(() => {
 		if (drawer?.open) drawer.close();
 	});
 
+	// …
 	function isCurrent(href: StaticRoute): boolean {
 		const target = resolve(href);
 		const here = page.url.pathname;
@@ -1032,6 +1250,7 @@ export default defineConfig({
 			<Logo size={1.5} />
 		</a>
 
+		<!-- … -->
 		<nav class="header__nav" aria-label="Main">
 			<ul class="header__nav-list" role="list">
 				{#each primaryNav as link (link.href)}
@@ -1041,27 +1260,39 @@ export default defineConfig({
 							class:is-current={isCurrent(link.href)}
 							href={resolve(link.href)}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}
-						>{link.label}</a>
+						>
+							{link.label}
+						</a>
 					</li>
 				{/each}
 			</ul>
 		</nav>
 
-		<button
-			class="header__toggle"
-			type="button"
-			onclick={openDrawer}
-			aria-expanded={isOpen}
-			aria-haspopup="dialog"
-			aria-label="Open navigation menu"
-		>
-			<ListIcon size={24} aria-hidden="true" />
-		</button>
+		<div class="header__actions">
+			<div class="header__cta">
+				<Button href={resolve('/guide')} variant="primary" size="sm">
+					Free guide
+					{#snippet iconTrailing()}<ArrowRightIcon />{/snippet}
+				</Button>
+			</div>
+
+			<button
+				class="header__toggle"
+				type="button"
+				onclick={openDrawer}
+				aria-expanded={isOpen}
+				aria-haspopup="dialog"
+				aria-label="Open navigation menu"
+			>
+				<ListIcon size={24} aria-hidden="true" />
+			</button>
+		</div>
 	</div>
 </header>
 
+<!-- … -->
 <dialog bind:this={drawer} class="drawer" onclose={handleClose} aria-label="Navigation menu">
-	<!-- drawer contents -->
+	<!-- … -->
 </dialog>`
 			},
 			{
@@ -1079,14 +1310,17 @@ export default defineConfig({
 				file: 'src/lib/components/layout/SiteHeader.svelte',
 				lang: 'css',
 				code: `.drawer {
-	margin: 0 0 0 auto;        /* pin to the right edge */
+	margin: 0 0 0 auto; /* pin to the right edge */
 	padding: 0;
 	border: none;
 	width: min(22rem, 88vw);
+	max-width: none;
 	height: 100%;
 	max-height: 100%;
 	background-color: var(--surface);
 	border-left: 1px solid var(--border);
+	color: var(--text-secondary);
+	overflow: hidden;
 }
 
 .drawer::backdrop {
@@ -1094,16 +1328,31 @@ export default defineConfig({
 	backdrop-filter: blur(2px);
 }
 
-/* [open] is set by the browser, so we animate without tracking state */
-.drawer[open] { animation: slide-in var(--dur-slow) var(--ease-out); }
-
-@keyframes slide-in {
-	from { transform: translateX(100%); }
-	to   { transform: translateX(0); }
+/* \`[open]\` is set by the browser, so we get the animation without tracking state. */
+.drawer[open] {
+	animation: slide-in var(--dur-slow) var(--ease-out);
 }
 
+.drawer[open]::backdrop {
+	animation: fade-in var(--dur-base) var(--ease-out);
+}
+
+@keyframes slide-in {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+/* … */
+
 .drawer__panel {
-	/* Respects the iOS home indicator and notch */
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	/* Respects the iOS home indicator and notch. */
 	padding: var(--space-4) var(--space-5) max(var(--space-5), env(safe-area-inset-bottom));
 	overflow-y: auto;
 	overscroll-behavior: contain;
@@ -1136,7 +1385,7 @@ export default defineConfig({
 			{ type: 'h3', id: 'layout', text: 'The root layout' },
 			{
 				type: 'p',
-				text: '`src/routes/+layout.svelte` wraps every page. Three jobs, and nothing else — layouts that accumulate logic become the hardest file in the codebase to reason about.'
+				text: '`src/routes/+layout.svelte` wraps every page. It does exactly four things — imports the one global stylesheet, sets the favicon, renders the shell (skip link, header, main landmark, footer), and registers the cross-page view transition we flesh out in part 4 — and nothing else. Layouts that accumulate logic become the hardest file in the codebase to reason about.'
 			},
 			{
 				type: 'code',
@@ -1144,31 +1393,55 @@ export default defineConfig({
 				lang: 'svelte',
 				code: `<script lang="ts">
 	import '#lib/styles/app.css';
+	import { onNavigate } from '$app/navigation';
 
 	import favicon from '#lib/assets/favicon.svg';
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
+	import { prefersReducedMotion } from '#lib/motion/index.ts';
 
 	let { children } = $props();
+
+	// …
+	onNavigate((navigation) => {
+		// Not supported in every browser, and correctly skipped for reduced motion.
+		// Returning nothing lets SvelteKit navigate normally.
+		if (!document.startViewTransition || prefersReducedMotion()) return;
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+<!-- … -->
 <a class="skip-link" href="#main">Skip to content</a>
 
 <div class="app-shell">
 	<SiteHeader />
+
+	<!-- … -->
 	<main id="main" tabindex="-1">
 		{@render children()}
 	</main>
+
 	<SiteFooter />
 </div>`
 			},
 			{
 				type: 'p',
 				text: 'That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.'
+			},
+			{
+				type: 'note',
+				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.'
 			},
 			{
 				type: 'why',
@@ -1185,8 +1458,15 @@ export default defineConfig({
 	min-height: 100svh;
 }
 
-main { flex: 1; }
-main:focus { outline: none; }`
+main {
+	flex: 1;
+}
+
+/* The programmatic focus from the skip link shouldn't paint a ring around the
+   whole page — the scroll position is feedback enough. */
+main:focus {
+	outline: none;
+}`
 			},
 			{
 				type: 'why',
@@ -1224,17 +1504,50 @@ export const trailingSlash = 'never';`
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 
-		<link rel="preload" href="/fonts/montserrat-latin-wght-normal.woff2"
-		      as="font" type="font/woff2" crossorigin />
-		<link rel="preload" href="/fonts/sofia-sans-latin-wght-normal.woff2"
-		      as="font" type="font/woff2" crossorigin />
+		<!-- … -->
+		<link
+			rel="preload"
+			href="/fonts/montserrat-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href="/fonts/sofia-sans-latin-wght-normal.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
 
+		<!-- … -->
 		<meta name="theme-color" content="#05070c" />
+
+		<!-- … -->
 		<meta name="color-scheme" content="dark" />
+
+		<!-- … the MOTION GATE comment — see the note below … -->
+		<script>
+			(function () {
+				var root = document.documentElement;
+				try {
+					var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+					if (!reduced) {
+						root.classList.add('motion-pending');
+						setTimeout(function () {
+							root.classList.remove('motion-pending');
+						}, 2500);
+					}
+				} catch (error) {
+					root.classList.remove('motion-pending');
+				}
+			})();
+		</script>
 
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<!-- … -->
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>`
@@ -1255,6 +1568,10 @@ export const trailingSlash = 'never';`
 			{
 				type: 'p',
 				text: '`data-sveltekit-preload-data="hover"` on `<body>` makes SvelteKit start loading a route\'s code and data when the pointer enters a link — roughly 200ms before the click lands. On touch devices it falls back to `touchstart`. Navigation then feels instant.'
+			},
+			{
+				type: 'note',
+				text: 'That `<script>` in the head is the **motion gate** — the only inline script on the site. It adds a `motion-pending` class to `<html>` before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all `catch`) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles `motion-pending` yet.'
 			},
 			{
 				type: 'checkpoint',
@@ -1285,7 +1602,13 @@ export const trailingSlash = 'never';`
 				type: 'code',
 				file: 'src/lib/utils/market-data.ts',
 				lang: 'ts',
-				code: `/** Mulberry32 — a tiny, fast, seeded PRNG. Not cryptographic; not trying to be. */
+				code: `/**
+ * Mulberry32 — a tiny, fast, seeded PRNG.
+ *
+ * Not cryptographically secure and not trying to be. It's about 8 lines, has a
+ * period of 2^32, and passes enough statistical tests to look convincingly random
+ * to a human eye. Perfect for this; useless for security.
+ */
 export function mulberry32(seed: number): () => number {
 	let a = seed >>> 0;
 	return function next(): number {
@@ -1305,11 +1628,15 @@ export function mulberry32(seed: number): () => number {
 				type: 'code',
 				file: 'src/lib/utils/market-data.ts',
 				lang: 'ts',
-				code: `		const shock = (random() - 0.5) * 1.6;      // the random tick
-		const reversion = (anchor - value) * 0.045; // pull back toward the anchor
-		const drift = 0.028;                        // gentle overall trend
+				code: `	// Three components, which together read as "a market":
+	//   shock     — the random tick
+	//   reversion — a pull back toward the anchor
+	//   drift     — a gentle overall trend, so the chart has a direction
+	const shock = (random() - 0.5) * 1.6;
+	const reversion = (anchor - value) * 0.045;
+	const drift = 0.028;
 
-		value = Math.max(1, value + shock + reversion + drift);`
+	value = Math.max(1, value + shock + reversion + drift);`
 			},
 			{
 				type: 'note',
@@ -1327,33 +1654,73 @@ export function mulberry32(seed: number): () => number {
 				code: `<script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { generateSeries, nextPoint, mulberry32, formatUsd } from '#lib/utils/market-data.ts';
+	import {
+		generateSeries,
+		nextPoint,
+		mulberry32,
+		formatUsd,
+		type PricePoint
+	} from '#lib/utils/market-data.ts';
 
-	let { height = 300, symbol = 'SPY', live = true, seed = 20260814 } = $props();
+	interface Props {
+		/** Chart height in pixels. Kept short on phones by the caller. */
+		height?: number;
+		/** Ticker shown in the header strip. */
+		symbol?: string;
+		/** Append a new bar on a timer. Automatically disabled for reduced-motion users. */
+		live?: boolean;
+		/** Change for a different deterministic shape. */
+		seed?: number;
+	}
 
+	let { height = 300, symbol = 'SPY', live = true, seed = 20260814 }: Props = $props();
+
+	// …
 	const initial = $derived(generateSeries({ seed }));
 
+	// …
 	let tick = $state<{ last: number; changeAbs: number; changePct: number } | null>(null);
 
 	const last = $derived(tick?.last ?? initial.last);
 	const changeAbs = $derived(tick?.changeAbs ?? initial.changeAbs);
+	const changePct = $derived(tick?.changePct ?? initial.changePct);
+
 	const isUp = $derived(changeAbs >= 0);
 
-	/* A chart that animates forever is an accessibility problem — WCAG 2.2.2
-	   requires moving content lasting over five seconds be pausable. Honouring
-	   the OS setting satisfies that without a pause button nobody finds. */
+	/*
+	 * \`prefersReducedMotion\` from \`svelte/motion\` is a ready-made reactive media
+	 * query. \`.current\` is \`false\` during SSR and updates in the browser. Reading it
+	 * inside \`$derived\` means the chart stops ticking the moment a user changes the
+	 * setting — no reload needed.
+	 *
+	 * A chart that animates forever is a genuine accessibility problem: WCAG 2.2.2
+	 * requires that moving content lasting more than five seconds can be paused.
+	 * Honouring the OS setting satisfies that without a pause button nobody finds.
+	 */
 	const shouldAnimate = $derived(live && !prefersReducedMotion.current);
 
+	/**
+	 * The chart attachment.
+	 *
+	 * It reads \`shouldAnimate\` and \`height\`, so Svelte re-runs it (tearing down the
+	 * old chart first, via the returned cleanup) whenever either changes.
+	 */
 	const chart: Attachment<HTMLDivElement> = (node) => {
+		// Guards the async gap: if the component unmounts while the dynamic import is
+		// still in flight, we must not go on to create a chart in a detached node.
 		let disposed = false;
 		let teardown: (() => void) | undefined;
 
-		const data = initial;       // snapshot once — reading it in the timer
-		const animate = shouldAnimate; // would make the effect re-run in a loop
+		// Snapshot the derived data ONCE, at attachment time. Reading \`initial\` again
+		// inside the timer would make the effect depend on it and re-run in a loop.
+		const data = initial;
+		const animate = shouldAnimate;
+
+		// A fresh chart means a fresh tail.
 		tick = null;
 
 		void (async () => {
-			const { createChart, AreaSeries, HistogramSeries, ColorType } =
+			const { createChart, AreaSeries, HistogramSeries, ColorType, CrosshairMode, LineStyle } =
 				await import('lightweight-charts');
 
 			if (disposed) return;
@@ -1361,20 +1728,53 @@ export function mulberry32(seed: number): () => number {
 			const api = createChart(node, {
 				autoSize: true,
 				height,
-				layout: { background: { type: ColorType.Solid, color: 'transparent' } }
-				/* …more options… */
+				layout: {
+					background: { type: ColorType.Solid, color: 'transparent' },
+					textColor: '#7f8ba3',
+					fontFamily: "'Sofia Sans Variable', system-ui, sans-serif",
+					attributionLogo: false
+				},
+				// …grid, price-scale, time-scale and crosshair options…
+				handleScroll: false,
+				handleScale: false
 			});
 
-			const priceSeries = api.addSeries(AreaSeries, { lineColor: '#4f7dff', lineWidth: 2 });
+			const priceSeries = api.addSeries(AreaSeries, {
+				lineColor: '#4f7dff',
+				lineWidth: 2,
+				topColor: 'rgba(79, 125, 255, 0.28)',
+				bottomColor: 'rgba(79, 125, 255, 0.01)',
+				priceLineVisible: false,
+				lastValueVisible: false
+			});
+
+			const volumeSeries = api.addSeries(HistogramSeries, {
+				priceFormat: { type: 'volume' },
+				// An empty priceScaleId makes this an overlay with its own invisible
+				// scale, so volume bars sit under the price line instead of squashing it.
+				priceScaleId: ''
+			});
+
+			volumeSeries.priceScale().applyOptions({
+				scaleMargins: { top: 0.78, bottom: 0 }
+			});
+
+			// \`slice()\` because \`setData\` wants a mutable array and our source arrays
+			// are \`readonly\` — a copy is cheaper than weakening the type.
 			priceSeries.setData(data.price.slice());
+			volumeSeries.setData(data.volume.slice());
 			api.timeScale().fitContent();
 
 			let timer: ReturnType<typeof setInterval> | undefined;
+
 			if (animate) { /* …append a bar every 1600ms… */ }
 
 			teardown = () => {
 				if (timer) clearInterval(timer);
-				api.remove();   // disposes canvas, ResizeObserver and listeners
+				// \`remove()\` disposes the canvas, the ResizeObserver and every internal
+				// listener. Skip it and you leak a full chart instance on every
+				// navigation — which on a SPA compounds until the tab dies.
+				api.remove();
 			};
 		})();
 
@@ -1385,7 +1785,13 @@ export function mulberry32(seed: number): () => number {
 	};
 </script>
 
-<div class="chart__canvas" style="min-height: {height}px" aria-hidden="true" {@attach chart}></div>`
+<!-- … -->
+<div
+	class="chart__canvas"
+	style="min-height: {height}px"
+	aria-hidden="true"
+	{@attach chart}
+></div>`
 			},
 			{ type: 'h3', id: 'three-things', text: 'Three things worth understanding' },
 			{
@@ -1432,20 +1838,35 @@ export function mulberry32(seed: number): () => number {
 				file: 'src/lib/components/marketing/SectionHeader.svelte',
 				lang: 'svelte',
 				code: `interface Props {
+	/** Small uppercase label above the heading. */
 	eyebrow?: string;
 	title: string;
+	/** Intro paragraph below the heading. */
 	lede?: string;
-	/** Heading level — defaults to 2, correct for a section inside a page with one h1 */
+	/** Heading level. Defaults to 2 — correct for a section inside a page with one h1. */
 	level?: 2 | 3;
 	align?: 'start' | 'center';
+	/** Anchor id, so the section can be linked to directly. */
 	id?: string;
+	/** Optional extra content (buttons, badges) below the lede. */
 	children?: Snippet;
+	/**
+	 * Animate the heading on scroll — a masked line-by-line reveal.
+	 *
+	 * Off by default. A page where *every* heading performs is exhausting; the
+	 * effect works because it is used on the two or three that matter.
+	 */
+	animate?: boolean;
 }`
 			},
 			{
 				type: 'why',
 				title: 'Why a level prop at all',
 				text: 'Heading levels are a document outline, not font sizes. A screen reader user can pull up a list of headings and navigate by it, and jumping from `<h1>` to `<h3>` makes that outline read as though content is missing. So: visual size comes from CSS, and the level comes from where the section genuinely sits in the hierarchy. They are separate decisions.'
+			},
+			{
+				type: 'note',
+				text: '`animate` belongs to the motion system from part 4: when set, the heading gets a masked line-by-line reveal on scroll. It defaults to off, and stays off for every header except the two or three that matter.'
 			},
 			{ type: 'h3', id: 'grid', text: 'FeatureGrid, and a Safari quirk' },
 			{
@@ -1460,10 +1881,21 @@ export function mulberry32(seed: number): () => number {
 				<span class="feature-grid__icon" aria-hidden="true">
 					<Icon size={26} weight="duotone" />
 				</span>
+
 				<svelte:element this={\`h\${level}\`} class="feature-grid__title" id={feature.id}>
 					{feature.title}
 				</svelte:element>
-				<p>{feature.summary}</p>
+
+				<p class="feature-grid__summary">{feature.summary}</p>
+
+				{#if detailed}
+					<p class="feature-grid__detail">{feature.detail}</p>
+					<ul class="feature-grid__points" role="list">
+						{#each feature.points as point (point)}
+							<li>{point}</li>
+						{/each}
+					</ul>
+				{/if}
 			</Card>
 		</li>
 	{/each}
@@ -1482,11 +1914,16 @@ export function mulberry32(seed: number): () => number {
 				type: 'code',
 				file: 'src/lib/components/marketing/StatStrip.svelte',
 				lang: 'svelte',
-				code: `<dl class="stats">
+				code: `<dl class="stats" class:stats--bordered={bordered}>
 	{#each stats as stat (stat.label)}
 		<div class="stats__item">
 			<dt class="stats__label">{stat.label}</dt>
-			<dd class="stats__value tabular">{stat.value}</dd>
+			<dd class="stats__value tabular" {@attach animated ? counter() : undefined}>
+				{stat.value}
+			</dd>
+			{#if stat.note}
+				<dd class="stats__note">{stat.note}</dd>
+			{/if}
 		</div>
 	{/each}
 </dl>`
@@ -1494,6 +1931,10 @@ export function mulberry32(seed: number): () => number {
 			{
 				type: 'p',
 				text: 'A number and its label are genuinely a term/definition pair. Marking them up as a `<dl>` means a screen reader announces "median latency, 240 milliseconds" rather than two orphaned strings that happen to sit near each other.'
+			},
+			{
+				type: 'note',
+				text: 'Two details worth noticing: the second `<dd>` is an honest-footnote slot — a stat that needs qualifying carries its qualifier in the markup, not a tooltip. And `{@attach animated ? counter() : undefined}` reaches forward to the count-up attachment from part 4, which animates the visible copy while the real value stays in the DOM for assistive tech. With `animated` off (the default) it is a no-op.'
 			},
 			{
 				type: 'code',
@@ -1517,7 +1958,9 @@ export function mulberry32(seed: number): () => number {
 				<CaretDownIcon size={18} weight="bold" />
 			</span>
 		</summary>
-		<div class="faq__answer"><p>{item.answer}</p></div>
+		<div class="faq__answer">
+			<p>{item.answer}</p>
+		</div>
 	</details>
 {/each}`
 			},
@@ -1551,17 +1994,23 @@ export function mulberry32(seed: number): () => number {
 		type="button"
 		role="radio"
 		aria-checked={billing === 'monthly'}
+		class="pricing__toggle-option"
 		class:is-active={billing === 'monthly'}
 		onclick={() => (billing = 'monthly')}
-	>Monthly</button>
-
+	>
+		Monthly
+	</button>
 	<button
 		type="button"
 		role="radio"
 		aria-checked={billing === 'annual'}
+		class="pricing__toggle-option"
 		class:is-active={billing === 'annual'}
 		onclick={() => (billing = 'annual')}
-	>Annual <span class="pricing__saving">save {bestSaving}%</span></button>
+	>
+		Annual
+		<span class="pricing__saving">save {bestSaving}%</span>
+	</button>
 </div>`
 			},
 			{
