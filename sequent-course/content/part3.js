@@ -80,18 +80,25 @@ case 'order_cancelled': {
 				code: `
 case 'traded': {
 	await tx.execute({
-		sql: 'INSERT INTO trade (...) VALUES (...) ON CONFLICT (trade_id) DO NOTHING',
-		args: [/* ... */]
+		sql: \`INSERT INTO trade (
+				trade_id, seq, instrument_id, at, price, quantity, aggressor,
+				buy_order_id, buy_firm_id, buy_account_id,
+				sell_order_id, sell_firm_id, sell_account_id,
+				buyer_fee, seller_fee
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT (trade_id) DO NOTHING\`,
+		// …
 	});
 
 	/*
 	 * The trade is the idempotency key for everything downstream of it.
 	 *
-	 * If the ledger already has a transaction under this trade id, this trade has
-	 * already been projected — so the position updates and fill increments below
-	 * must not run again. Without this check a replayed batch would move every
-	 * position twice and the ledger would still balance, which is the worst kind
-	 * of wrong: internally consistent and completely false.
+	 * If the ledger already holds a transaction under this trade id, the
+	 * trade has already been projected — so the position updates and ledger
+	 * postings below must not run again. Without this check a replayed batch
+	 * would move every position twice and the ledger would still balance,
+	 * which is the worst kind of wrong: internally consistent and completely
+	 * false.
 	 */
 	const alreadySeen = await tx.execute({
 		sql: 'SELECT COUNT(*) AS n FROM ledger_transaction WHERE transaction_id = ?',
@@ -99,10 +106,17 @@ case 'traded': {
 	});
 	if (Number(alreadySeen.rows[0]?.['n'] ?? 0) > 0) break;
 
-	// Everything below runs at most once per trade.
-	await applyToPosition(tx, { /* buyer */ });
-	await applyToPosition(tx, { /* seller */ });
-	await markFilled(tx, event);
+	await applyToPosition(tx, {
+		accountId: event.buyAccountId,
+		// …
+	});
+	await applyToPosition(tx, {
+		accountId: event.sellAccountId,
+		// …
+	});
+
+	// …
+
 	await postTrade(tx, record, event);
 	break;
 }`
@@ -135,13 +149,22 @@ ask levels: [ '£45.49', '£45.505', '£45.51' ]`
 				file: 'packages/store/src/projections.ts',
 				lang: 'ts',
 				code: `
+// …
 /*
  * Mark both sides as filled.
  *
- * This was missing, and the symptom was excellent: the depth ladder showed a
- * **crossed** book. The engine was right the whole time. Only the read model
- * was lying, which is precisely the failure mode projections have — nothing
- * throws, the numbers are just wrong in a way that looks like a matching bug.
+ * This was missing, and the symptom was excellent: the depth ladder
+ * showed a **crossed** book. An order that fills completely produces
+ * trades and no cancellation, so the projection left it \`working\` with
+ * \`filled = 0\` forever — and the ladder, which is derived from working
+ * orders, kept showing liquidity that had already been consumed.
+ *
+ * The engine was right the whole time. Only the read model was lying,
+ * which is precisely the failure mode projections have: nothing throws,
+ * the numbers are just wrong in a way that looks like a matching bug.
+ *
+ * The increments are safe because the whole block sits behind the
+ * already-projected guard above, so it runs at most once per trade.
  */
 for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 	await tx.execute({
@@ -152,7 +175,8 @@ for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 			WHERE order_id = ?\`,
 		args: [event.quantity, event.quantity, record.at, orderId]
 	});
-}`
+}
+// …`
 			},
 			{
 				type: 'why',
@@ -168,8 +192,14 @@ for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 				code: `
 export async function rebuild(client: Client): Promise<number> {
 	await withTransaction(client, async (tx) => {
-		for (const table of ['ledger_posting', 'ledger_transaction', 'ledger_account',
-		                     'position', 'trade', 'order_record']) {
+		for (const table of [
+			'ledger_posting',
+			'ledger_transaction',
+			'ledger_account',
+			'position',
+			'trade',
+			'order_record'
+		]) {
 			await tx.execute(\`DELETE FROM \${table}\`);
 		}
 		await tx.execute({
@@ -179,7 +209,6 @@ export async function rebuild(client: Client): Promise<number> {
 	});
 
 	return catchUp(client, 500, { notify: false });
-	//                            ^^^^^^^^^^^^^^^
 }`
 			},
 			{
@@ -235,7 +264,7 @@ export async function rebuild(client: Client): Promise<number> {
 			},
 			{
 				type: 'p',
-				text: 'Two columns means two places to make an error, and a balance check written as `SUM(debit) - SUM(credit)` — which is a subtraction somebody will eventually get backwards. One **signed** column makes "does this balance" into `SUM(amount) = 0`, which is very hard to get wrong.'
+				text: 'Two columns means two places to make an error, and a balance check written as `SUM(debit) - SUM(credit)` — which is a subtraction somebody will eventually get backwards. One **signed** column — positive is a debit, negative is a credit — makes "does this balance" into `SUM(amount) = 0`, which is very hard to get wrong.'
 			},
 			{
 				type: 'code',
@@ -244,29 +273,35 @@ export async function rebuild(client: Client): Promise<number> {
 				code: `
 export interface Posting {
 	readonly accountId: string;
-	/** Positive is a debit, negative is a credit. They must cancel. */
 	readonly amount: Amount;
 }
 
-export async function postTransaction(tx: Executor, input: {
-	transactionId: string;
-	seq: number;
-	at: number;
-	kind: string;
-	postings: readonly Posting[];
-}): Promise<void> {
+// …
+
+export async function postTransaction(
+	tx: Executor,
+	input: {
+		transactionId: string;
+		seq: number;
+		at: number;
+		kind: string;
+		reference?: string;
+		postings: readonly Posting[];
+	}
+): Promise<void> {
 	const total = input.postings.reduce((sum, posting) => sum + posting.amount, 0);
 
 	if (total !== 0) {
 		throw new UnbalancedTransaction(input.transactionId, total, input.postings);
 	}
 
-	// A transaction with no postings balances trivially and means nothing.
+	// A transaction with no postings balances trivially and means nothing. Almost
+	// always a bug in the caller rather than a deliberate no-op.
 	if (input.postings.length === 0) {
 		throw new Error(\`Ledger transaction \${input.transactionId} has no postings\`);
 	}
 
-	// ...insert
+	// …
 }`
 			},
 			{
@@ -316,16 +351,16 @@ export const ACCOUNT_KINDS = [
 				code: `
 const postings: Posting[] = [
 	// The exchange of value itself.
-	{ accountId: buyerCash,   amount: -notional },
-	{ accountId: buyerStock,  amount:  notional },
-	{ accountId: sellerStock, amount: -notional },
-	{ accountId: sellerCash,  amount:  notional },
+	{ accountId: buyerCash, amount: -notional as Amount },
+	{ accountId: buyerStock, amount: notional as Amount },
+	{ accountId: sellerStock, amount: -notional as Amount },
+	{ accountId: sellerCash, amount: notional as Amount },
 
-	// Fees. A negative fee is a rebate, and the sign handles it with no special
-	// case anywhere: the maker is *paid*, and the arithmetic is identical.
-	{ accountId: buyerCash,   amount: -event.buyerFee },
-	{ accountId: sellerCash,  amount: -event.sellerFee },
-	{ accountId: revenue,     amount:  event.buyerFee + event.sellerFee }
+	// Fees. A negative fee is a rebate, and the sign handles it with no
+	// special case anywhere.
+	{ accountId: buyerCash, amount: -event.buyerFee as Amount },
+	{ accountId: sellerCash, amount: -event.sellerFee as Amount },
+	{ accountId: revenue, amount: (event.buyerFee + event.sellerFee) as Amount }
 ];`
 			},
 			{
@@ -340,8 +375,8 @@ const postings: Posting[] = [
 				lang: 'sql',
 				code: `
 -- Corrections are reversing entries, never updates. Same rule as the log, and
--- for the same reason: an accountant's question is "what did you think the
--- balance was in March", and an updated row cannot answer it.
+-- for the same reason: an accountant's question is "what did you think in
+-- March", and an updated row cannot answer it.
 CREATE TRIGGER IF NOT EXISTS ledger_posting_is_permanent
 BEFORE UPDATE ON ledger_posting
 BEGIN
@@ -360,11 +395,29 @@ END;`
  * negatives of the original's. The books end up where they would have been if
  * the mistake had never happened, and the record still shows that it did.
  */
-export async function reverseTransaction(/* ... */) {
+export async function reverseTransaction(
+	tx: Executor,
+	client: Client,
+	originalId: string,
+	input: { transactionId: string; seq: number; at: number; reason: string }
+): Promise<void> {
+	const result = await client.execute({
+		sql: 'SELECT account_id, amount FROM ledger_posting WHERE transaction_id = ?',
+		args: [originalId]
+	});
+
+	// …
+
 	await postTransaction(tx, {
+		transactionId: input.transactionId,
+		seq: input.seq,
+		at: input.at,
 		kind: 'reversal',
 		reference: \`\${originalId} \${input.reason}\`,
-		postings: original.map((row) => ({ accountId: row.accountId, amount: -row.amount }))
+		postings: result.rows.map((row) => ({
+			accountId: String(row['account_id']),
+			amount: -Number(row['amount']) as Amount
+		}))
 	});
 }`
 			},
@@ -384,10 +437,15 @@ export async function reverseTransaction(/* ... */) {
  *
  * Running it is the cheapest possible audit and it should be part of the test
  * suite rather than a monthly ritual. If it is ever non-zero, something has
- * written to \`ledger_posting\` outside \`postTransaction\` — and finding out
- * which day that started is much easier than finding out which year.
+ * written to \`ledger_posting\` outside \`postTransaction\`, and finding out which
+ * day that started is much easier than finding out which year.
  */
-export async function trialBalance(client: Client) { /* ... */ }`
+export async function trialBalance(client: Client): Promise<{
+	accounts: Array<{ accountId: string; kind: string; balance: number }>;
+	total: number;
+}> {
+	// …
+}`
 			},
 			{
 				type: 'p',
@@ -488,11 +546,11 @@ const ALLOWED: Readonly<Record<Role, readonly Action[]>> = {
 				code: `
 export function can(viewer: Viewer, action: Action, target: Target = {}): Decision {
 	/*
-	 * 1. The tenant boundary — FIRST.
+	 * 1. The tenant boundary.
 	 *
-	 * A venue operator is above it. Everybody else is confined to their own
-	 * firm, and asking about another one gets the same answer as asking about a
-	 * firm that does not exist.
+	 * A venue operator is above it — they administer the venue itself. Everybody
+	 * else is confined to their own firm, and asking about another one gets the
+	 * same answer as asking about a firm that does not exist.
 	 */
 	if (target.firmId !== undefined && target.firmId !== viewer.firmId) {
 		if (viewer.role !== 'venue_operator') return deny('not_found');
@@ -501,14 +559,29 @@ export function can(viewer: Viewer, action: Action, target: Target = {}): Decisi
 	// 2. Does the role permit this action at all?
 	if (!ALLOWED[viewer.role].includes(action)) return deny('forbidden');
 
-	// 3. Account assignment. Belonging to the firm is not the same as being
-	//    allowed to trade on a particular desk.
+	/*
+	 * 3. Account assignment.
+	 *
+	 * Belonging to the firm is not the same as being allowed to trade on a
+	 * particular desk. A trader assigned to the equities account must not be able
+	 * to send an order on the derivatives one just because both are theirs.
+	 *
+	 * \`firm_admin\` and \`risk_manager\` are exempt because their actions are
+	 * firm-wide by definition — a kill switch that only covered some of a firm's
+	 * accounts would be worse than none.
+	 */
 	if (target.accountId !== undefined && needsAssignment(viewer.role)) {
 		if (!viewer.accountIds.includes(target.accountId)) return deny('account_not_assigned');
 	}
 
-	// 4. API key scopes, if this is a key rather than a person. Applied last,
-	//    and only ever narrowing.
+	/*
+	 * 4. API key scopes, if this is a key rather than a person.
+	 *
+	 * Applied last, and only ever narrowing. A key cannot grant something the
+	 * role does not already allow — which is what makes revoking a person's
+	 * account enough to stop their keys, rather than a separate job somebody
+	 * forgets.
+	 */
 	if (viewer.scopes !== undefined) {
 		if (!viewer.scopes.includes(SCOPE_FOR[action])) return deny('missing_scope');
 	}
@@ -554,21 +627,39 @@ export type DenialReason =
 				file: 'packages/store/src/authz.spec.ts',
 				lang: 'ts',
 				code: `
-it('has a complete and deliberate matrix', () => {
-	// Five roles, thirteen actions, sixty-five assertions. Every cell of the
-	// permission table, asserted explicitly — so a change to ALLOWED that
-	// somebody did not mean to make fails here rather than in production.
+describe('the complete matrix', () => {
+	/*
+	 * Every role against every action, written out.
+	 *
+	 * This is long and it is the most valuable test in the file. A change to the
+	 * permission table that nobody intended shows up here as a diff a reviewer
+	 * can read, rather than as an absence of a test nobody thought to write.
+	 */
+	const EXPECTED: Record<Role, readonly Action[]> = {
+		trader: ['place_order', 'cancel_order', 'view_orders', 'view_positions'],
+		// …
+	};
+
 	for (const role of ROLES) {
-		for (const action of ACTIONS) {
-			expect(can(viewer(role), action).allowed, \`\${role} / \${action}\`)
-				.toBe(EXPECTED[role].includes(action));
-		}
+		it(\`\${role} may do exactly what the table says\`, () => {
+			const allowed = ACTIONS.filter((action) => can(viewer(role), action).allowed);
+			expect([...allowed].sort()).toEqual([...EXPECTED[role]].sort());
+		});
 	}
+
+	it('gives nobody every permission', () => {
+		// A role that can do everything is a role somebody will be given by
+		// accident. If one ever appears here, it should be a deliberate diff.
+		for (const role of ROLES) {
+			const allowed = ACTIONS.filter((action) => can(viewer(role), action).allowed);
+			expect(allowed.length).toBeLessThan(ACTIONS.length);
+		}
+	});
 });`
 			},
 			{
 				type: 'note',
-				text: 'Sixty-five assertions sounds excessive until you consider the alternative: a permission table that nobody has ever checked in full, protecting other people\'s money. It is possible *because* `can` is pure — no database, no request, no session lookup.'
+				text: 'Sixty-five cells — five roles by thirteen actions — covered by five assertions, one sorted-array comparison per role, plus a guard that no role ever holds every permission. Checking the whole table sounds excessive until you consider the alternative: a permission table that nobody has ever checked in full, protecting other people\'s money. It is possible *because* `can` is pure — no database, no request, no session lookup.'
 			},
 
 			{ type: 'h3', id: 'bug', text: 'Bug found: the risk console let traders in' },
