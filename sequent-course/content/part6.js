@@ -26,18 +26,48 @@ export const part6 = [
 
 			{ type: 'h3', id: 'breakpoints', text: 'Breakpoints from content, not devices' },
 			{
+				type: 'p',
+				text: 'The queries live where the content lives, not in a central list of devices. The global stylesheet owns exactly one — `48rem`, where dense tables stop needing their mobile treatment (next chapter). The other two sit in the components whose layout actually changes at that width. The ladder is the smallest example: base styles are the phone, no media query, and the second column arrives only when there is room for it.'
+			},
+			{
 				type: 'code',
-				file: 'apps/web/src/lib/styles/app.css',
+				file: 'apps/web/src/lib/components/DepthLadder.svelte',
 				lang: 'css',
 				code: `
-/* Base styles: the phone. No media query. */
-
-@media (min-width: 48rem) {
-	/* 768px — a tablet, or a phone turned sideways. */
+.sides {
+	display: grid;
+	/* Mobile first: one column, and two only when there is room for both. */
+	grid-template-columns: 1fr;
+	gap: var(--space-4);
 }
 
+@media (min-width: 40rem) {
+	.sides {
+		grid-template-columns: 1fr 1fr;
+	}
+}`
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'css',
+				code: `
+/*
+ * From \`md\` up the ticket stops being a sheet and becomes an ordinary column.
+ * Everything the sheet needed is unset explicitly rather than left to
+ * cascade — a half-unset fixed element is the classic source of a panel that
+ * floats over the page on exactly one screen size.
+ */
 @media (min-width: 64rem) {
-	/* 1024px — a laptop. Where the terminal gets its side-by-side layout. */
+	.terminal {
+		padding-block-end: 0;
+	}
+	/* … */
+	.grid {
+		grid-template-columns: 2fr 1fr 1fr;
+		align-items: start;
+	}
+	/* … */
 }`
 			},
 			{
@@ -45,14 +75,14 @@ export const part6 = [
 				items: [
 					'**`min-width`, never `max-width`.** Base styles are the small screen; each query *adds* as room appears. Written the other way round, every rule needs an override and the cascade fights you.',
 					'**`rem`, not `px`.** A person who has set their browser font to 20px gets breakpoints that scale with it. In `px` they get a layout that switches at the wrong moment for their text size.',
-					'**Two breakpoints.** Not five. Every extra one is a layout somebody has to check, and this app only genuinely has three shapes: one column, two columns, and the full desk.'
+					'**Three breakpoints.** Not five. Every extra one is a layout somebody has to check, and each of these three is earned by content: `40rem`, where the ladder\'s two sides and the admin grids go two-up; `48rem`, where tables fit and stop needing the mobile treatment; `64rem`, where the terminal gets its side-by-side desk.'
 				]
 			},
 
 			{ type: 'h3', id: 'the-bug', text: 'The page that scrolled sideways' },
 			{
 				type: 'p',
-				text: 'The terminal was checked at 390px in a real browser. It scrolled sideways by 122 pixels. Every panel measured correctly — `getBoundingClientRect` on every child was inside its parent — and the page still scrolled.'
+				text: 'The terminal was checked at 390px in a real browser. It scrolled sideways by 220 pixels. Every panel measured correctly — `getBoundingClientRect` on every child was inside its parent — and the page still scrolled.'
 			},
 			{
 				type: 'p',
@@ -64,6 +94,8 @@ export const part6 = [
 				lang: 'css',
 				code: `
 .card {
+	/* … */
+
 	/*
 	 * \`min-inline-size: 0\`, and it is not cosmetic.
 	 *
@@ -76,8 +108,12 @@ export const part6 = [
 	 * The maddening part is that the table is inside \`.scroller\`, which has
 	 * \`overflow-x: auto\` and exists precisely to absorb this. It never gets the
 	 * chance: its parent has already grown to fit, so there is nothing to scroll.
+	 *
+	 * …
 	 */
 	min-inline-size: 0;
+
+	/* … */
 }`
 			},
 			{
@@ -196,14 +232,23 @@ export const part6 = [
 	margin-block-start: var(--space-2);
 	/* Stops a sideways swipe at the edge from scrolling the page behind it. */
 	overscroll-behavior-x: contain;
-	/* Same reason as \`.card\`: without this the scroller itself can be forced
-	   wide by its table when it is a flex or grid item. */
+	/* Same reason as \`.card\` above: without this the scroller itself can be
+	   forced wide by its table when it is a flex or grid item. */
 	min-inline-size: 0;
 }
 
-.scroller:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.scroller:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
 
-.scroller table { inline-size: 100%; border-collapse: collapse; min-inline-size: 32rem; }
+.scroller table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	min-inline-size: 32rem;
+}
+
+/* … */
 
 /* The pinned column, so scrolling sideways never loses the row's identity. */
 .scroller .pin {
@@ -214,8 +259,12 @@ export const part6 = [
 }
 
 @media (min-width: 48rem) {
-	.scroller table { min-inline-size: 0; }
-	.scroller .pin { position: static; }
+	.scroller table {
+		min-inline-size: 0;
+	}
+	.scroller .pin {
+		position: static;
+	}
 }`
 			},
 			{
@@ -242,8 +291,10 @@ export const part6 = [
 				lang: 'css',
 				code: `
 .card {
+	/* … */
+
 	/*
-	 * The second most common cause, which took a browser to find.
+	 * And the second most common cause, which took a browser to find.
 	 *
 	 * A \`position: sticky\` cell inside a horizontally scrolling container
 	 * contributes its **sticky-shifted** position to scrollable overflow, and
@@ -251,9 +302,13 @@ export const part6 = [
 	 * first column of a table that scrolls 220px sideways adds 220px of
 	 * scrollable width to the *page*, even though the table itself is correctly
 	 * clipped and nothing is visibly out of place.
+	 *
+	 * …
 	 */
 	overflow-x: clip;
 	overflow-clip-margin: 4px;
+
+	/* … */
 	overflow-y: visible;
 }`
 			},
@@ -297,7 +352,7 @@ export const part6 = [
 			{
 				type: 'why',
 				title: 'What actually found both of these',
-				text: 'A real browser at 390px, 768px and 1440px, with a check that compared `document.documentElement.scrollWidth` against `clientWidth`. Not a unit test, not a screenshot diff, not a component story. Two of the most user-visible bugs in this project were invisible to every form of testing except opening the page.'
+				text: 'A real browser at 390px, 768px and 1440px, comparing `document.documentElement.scrollWidth` against `clientWidth` by hand in the console. Not a unit test, not a screenshot diff, not a component story. Two of the most user-visible bugs in this project were invisible to everything except opening the page and looking.'
 			},
 			{
 				type: 'checkpoint',
@@ -357,6 +412,8 @@ export const part6 = [
 				lang: 'ts',
 				code: `
 /*
+ * GSAP's global defaults.
+ *
  * \`power2.out\` for almost everything: fast at the start, settling at the end.
  * That is what physical objects do, and it is what makes an interface feel
  * responsive — the movement has visibly *begun* within a frame or two of the
@@ -366,6 +423,8 @@ export const part6 = [
  * on a button press it reads as lag.
  */
 gsap.defaults({ ease: 'power2.out', duration: 0.35 });
+
+// …
 
 export const DURATION = {
 	/** A flash, a state change, a colour. Barely perceptible as motion. */
@@ -525,6 +584,8 @@ gsap.to(state, {
 	value,
 	duration: duration ?? DURATION.quick,
 	ease: 'power2.out',
+	// \`true\` rather than 'auto': there is exactly one tween per node and
+	// the newest target is always the right one.
 	overwrite: true,
 	snap: { value: 1 },
 	onUpdate: () => (node.textContent = format(state.value))
@@ -655,9 +716,12 @@ const largest = $derived(
  * render — it exists only so \`directionFor\` can compare — and making it
  * reactive would create a dependency cycle: reading it in the template makes
  * the template depend on it, and writing it during that same render
- * invalidates the template that just read it.
+ * invalidates the thing being rendered.
+ *
+ * …
  */
-const lastSeen = new Map<number, number>();`
+// …
+const lastSize = new Map<number, number>();`
 			},
 			{
 				type: 'why',
@@ -698,7 +762,7 @@ const lastSeen = new Map<number, number>();`
 				code: `
 export const setPhase = command(schema, async (input) => {
 	const viewer = requireViewer();
-	await submit(viewer, { kind: 'change_phase', ...input });
+	await submit(viewer, { kind: 'set_phase', ...input });
 
 	// Tell the console to re-read.
 	void getVenue().refresh();
@@ -731,27 +795,44 @@ export const setPhase = command(schema, async (input) => {
 				lang: 'ts',
 				code: `
 /**
- * The venue's instruments and their phases, streamed.
+ * The venue's instruments and their phases, **live**.
  *
- * A plain \`query\` plus \`refresh()\` cannot work here: \`submit\` appends a
- * *command*, and the phase does not change until the engine applies it and
- * writes the resulting event. A refresh fired straight after the command
- * re-reads the old value and reports success.
+ * ## Why this had to become a live query
  *
- * Tailing the log means the console updates when the phase *actually* changes,
- * which is both correct and — usefully — honest: an operator watching the badge
- * is watching the engine, not their own click.
+ * A plain query with a \`.refresh()\` after \`setPhase\` looked correct and was
+ * subtly wrong, in the way this whole architecture is designed to make you
+ * confront: the command is *sequenced*, not *applied*. The engine reads it a
+ * moment later and writes the \`phase_changed\` event; the refresh runs before
+ * that and re-reads the old phase.
+ *
+ * So the operator clicked "halt", the venue genuinely halted, and the badge
+ * kept saying "continuous" until somebody reloaded. The most alarming possible
+ * version of a stale read.
+ *
+ * There is no version of \`refresh()\` that fixes this, because the answer does
+ * not exist yet at the moment of the request. The honest fix is the same one
+ * the terminal uses for the book: tail the event log and yield when the answer
+ * changes.
  */
-export const getVenue = query.live(v.object({}), async function* () {
-	requireOperator();
+export const getVenue = query.live(async function* () {
+	const viewer = requireViewer();
+	requireCan(viewer, 'set_phase');
+
 	const { request } = getRequestEvent();
 
 	yield await venueSnapshot();
 
-	for await (const batch of tailEvents(db, await currentSeq(), { signal: request.signal })) {
-		if (batch.some((record) => record.kind === 'phase_changed')) {
-			yield await venueSnapshot();
-		}
+	for await (const batch of tailEvents(db, await currentSeq(), {
+		signal: request.signal,
+		idleMs: 60
+	})) {
+		// Only the two event kinds that can change this answer. A venue with a
+		// busy book would otherwise re-render the admin page on every trade.
+		const relevant = batch.some(
+			(record) => record.body.kind === 'phase_changed' || record.body.kind === 'instrument_listed'
+		);
+
+		if (relevant) yield await venueSnapshot();
 	}
 });`
 			},
@@ -778,13 +859,13 @@ export const getVenue = query.live(v.object({}), async function* () {
 			},
 			{
 				type: 'note',
-				text: 'Note that the order blotter *does* use `refresh()`, and correctly: `order_record` gets an `accepted` row from the gateway path, so there is something true to show immediately. The blotter shows "working" and then transitions when the engine\'s events land — two stages, both honest, neither pretending.'
+				text: 'Note that the order blotter *does* still call `refresh()` after placing an order — but as best-effort immediacy, not as the truth. The gateway writes no rows: the blotter\'s `working` row appears in `order_record` only when the projector applies the engine\'s `order_accepted` event, so a refresh fired in the same response can only return the list as it stood before the engine ran. The REST API states the same gap out loud — its `202` body carries `status: \'accepted\'` and tells the caller to watch the event stream for the outcome. The refresh is a cheap chance to be early; the event-driven data is what is guaranteed to be right.'
 			},
 
 			{ type: 'h3', id: 'the-test-trap', text: 'The test that could never pass' },
 			{
 				type: 'p',
-				text: 'One more trap, from testing this page in a browser:'
+				text: 'One more trap, from driving this page in a browser:'
 			},
 			{
 				type: 'code',
