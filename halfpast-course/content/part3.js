@@ -31,23 +31,52 @@ export const part3 = [
 				lang: 'ts',
 				code: `
 export default defineConfig(({ mode }) => {
+	// …
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
 	return {
 		plugins: [
 			sveltekit({
+				// …
 				paths: { origin: env.PUBLIC_ORIGIN },
+
 				compilerOptions: {
-					runes: true,
+					// Runes everywhere except node_modules, where a dependency may still be
+					// written in legacy Svelte 4 style. Removable in Svelte 6.
+					runes: ({ filename }) =>
+						filename.split(/[/\\\\]/).includes('node_modules') ? undefined : true,
+
+					// \`await\` at the top level of <script>, inside $derived, and directly in
+					// markup. Remote functions are promises; this is what lets a component
+					// await one without a load function in the middle. Default in Svelte 6.
 					experimental: { async: true }
 				},
+
 				adapter: adapter(),
-				experimental: { remoteFunctions: true },
-				prerender: { handleHttpError: 'fail', handleMissingId: 'fail' }
+
+				experimental: {
+					// \`query()\`, \`query.batch()\`, \`query.live()\`, \`command()\` and \`form()\`
+					// from \`$app/server\`. The whole data layer of this app is built on them.
+					remoteFunctions: true
+				},
+
+				prerender: {
+					// A broken internal link fails the build instead of shipping a 404.
+					handleHttpError: 'fail',
+					handleMissingId: 'fail'
+				}
 			}),
+
+			// …
 			sveltePhosphorOptimize()
 		],
-		ssr: { external: ['@libsql/client', 'libsql'] }
+
+		ssr: {
+			// …
+			external: ['@libsql/client', 'libsql']
+		},
+
+		// …
 	};
 });`
 			},
@@ -85,24 +114,42 @@ import * as v from 'valibot';
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
 
+// …
+
 export const variables = defineEnvVars({
+	/* ---------------------------------------------------------------- private */
+
 	DATABASE_URL: {
 		description:
 			'libSQL connection string. \`file:local.db\` in development, a \`libsql://…\` Turso URL in production.',
 		schema: required
 	},
 
+	// …
+
 	BETTER_AUTH_SECRET: {
-		description: 'Signs session cookies. Rotating it signs everybody out.',
-		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+		description:
+			'Signing key for session tokens. Generate with \`openssl rand -base64 32\`. See https://www.better-auth.com/docs/installation.',
+		schema: v.pipe(
+			required,
+			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+		)
 	},
 
+	/* ----------------------------------------------------------------- public */
+
 	PUBLIC_ORIGIN: {
-		description: 'Where the app is served from. Used for canonical URLs and CSRF checks.',
+		description:
+			'The public base URL used for canonical links, share URLs and structured data. No trailing slash — one is stripped for you if you leave it on.',
 		public: true,
+		// \`static\` inlines the value at build time, so it costs nothing at runtime
+		// and dead code behind it can be eliminated. Only correct because this
+		// value cannot differ between build and deploy.
 		static: true,
 		schema: origin
-	}
+	},
+
+	// …
 });`
 			},
 			{
@@ -212,7 +259,11 @@ const timeZone = v.pipe(
 import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { getRequestEvent } from '$app/server';
 import { db } from './db/index.ts';
+
+// …
 
 export const auth = betterAuth({
 	baseURL: ORIGIN,
@@ -225,20 +276,31 @@ export const auth = betterAuth({
 		// The default is 8. Length is the only password rule that reliably helps;
 		// the ones about symbols mostly teach people to append "!1".
 		minPasswordLength: 12,
-		maxPasswordLength: 256
+		maxPasswordLength: 256,
+		// …
 	},
 
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // thirty days
 		// Slide the expiry forward at most once a day, so an active user is not
 		// logged out mid-week but we are not writing a session row on every request.
-		updateAge: 60 * 60 * 24
-	}
+		updateAge: 60 * 60 * 24,
+		// …
+	},
+
+	// …
+
+	plugins: [
+		// Must be last. It reaches into SvelteKit's request event to set cookies on
+		// the response Kit is building, which only works once everything else has
+		// decided what those cookies should be.
+		sveltekitCookies(getRequestEvent)
+	]
 });`
 			},
 			{
 				type: 'p',
-				text: '`better-auth/minimal` is the smaller entry point: no social providers, no plugins, no organisation features. Importing from it rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything above still works.'
+				text: '`better-auth/minimal` is the smaller entry point: no social providers, no organisation features. It still supports the `plugins` array shown above, and this config needs exactly one: `sveltekitCookies`, which reaches into SvelteKit\'s own request event to set cookies on the response Kit is building — which only works once everything else has decided what those cookies should be, so it has to run last. Importing from `minimal` rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything else above still works.'
 			},
 			{
 				type: 'note',
@@ -251,21 +313,32 @@ export const auth = betterAuth({
 				file: 'src/hooks.server.ts',
 				lang: 'ts',
 				code: `
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { sequence } from '@sveltejs/kit/hooks';
-import type { Handle } from '@sveltejs/kit/hooks';
+import { building } from '$app/env';
+import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth } from '#lib/server/auth.ts';
+
+// …
 
 const handleAuth: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
-	event.locals.user = session?.user ?? null;
-	event.locals.session = session?.session ?? null;
+	if (session) {
+		event.locals.session = session.session;
+		event.locals.user = session.user;
+	}
 
-	return resolve(event);
+	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-// One job each, composed. \`handleHeaders\` is in chapter 34.
+// …
+
 export const handle: Handle = sequence(handleAuth, handleHeaders);`
+			},
+			{
+				type: 'p',
+				text: '`svelteKitHandler` must wrap `resolve`, because Better Auth also owns the `/api/auth/*` routes — sign-in, sign-out, session refresh — and those are not SvelteKit routes at all. It intercepts requests to that prefix itself and passes everything else through to the rest of the app.'
 			},
 			{
 				type: 'warn',
@@ -280,12 +353,17 @@ export const handle: Handle = sequence(handleAuth, handleHeaders);`
 				file: 'src/app.d.ts',
 				lang: 'ts',
 				code: `
+import type { User, Session } from 'better-auth';
+
 declare global {
 	namespace App {
 		interface Locals {
-			user: { id: string; name: string; email: string } | null;
-			session: { id: string; expiresAt: Date } | null;
+			/** Set by \`handleAuth\` in \`hooks.server.ts\`. Absent for a signed-out visitor. */
+			user?: User;
+			session?: Session;
 		}
+
+		// …
 	}
 }
 
@@ -295,7 +373,20 @@ export {};`
 			{ type: 'h3', id: 'errors', text: 'Errors that say what kind they are' },
 			{
 				type: 'p',
-				text: 'SvelteKit 3 changed the shape of `handleError`. It now receives a `kind`, and it is genuinely useful.'
+				text: 'SvelteKit 3 changed the shape of `handleError`. It now receives a `kind`, and that is the whole value of the hook — it says where the error came from:'
+			},
+			{
+				type: 'ul',
+				items: [
+					'**`app`** — we threw it ourselves with `error(404, …)`. Intentional.',
+					'**`framework`** — SvelteKit generated it, e.g. a 404. Expected.',
+					'**`validation`** — a remote function was called with arguments that failed its schema. Usually a stale client, occasionally somebody poking.',
+					'**`unknown`** — something genuinely broke. This is the only one that is a bug.'
+				]
+			},
+			{
+				type: 'p',
+				text: 'Logging all four fills the log with 404s from bots and buries the one entry that mattered. Logging only `unknown` means every line in the error log is something a person should look at.'
 			},
 			{
 				type: 'code',
@@ -303,14 +394,6 @@ export {};`
 				lang: 'ts',
 				code: `
 export const handleError: HandleServerError = ({ kind, error, event }) => {
-	/*
-	 * \`kind\` is one of 'app' | 'framework' | 'validation' | 'unknown'.
-	 *
-	 * Only 'unknown' is a surprise. An 'app' error is our own \`error(404, …)\`, a
-	 * 'validation' error is somebody sending a malformed request, and a
-	 * 'framework' error already has a sensible message. Logging those at error
-	 * level trains everybody to ignore the log.
-	 */
 	if (kind !== 'unknown') {
 		// Keep the framework's status and message; just satisfy our own \`App.Error\`.
 		return {};
@@ -338,7 +421,7 @@ export const handleError: HandleServerError = ({ kind, error, event }) => {
 			{ type: 'h3', id: 'customer-token', text: 'The customer’s bearer token' },
 			{
 				type: 'code',
-				file: 'src/lib/server/scheduling.ts',
+				file: 'src/routes/booking/[token]/manage.remote.ts',
 				lang: 'ts',
 				code: `
 const tokenSchema = v.pipe(
@@ -353,6 +436,7 @@ export const getManagedBooking = query(tokenSchema, async (token): Promise<Manag
 	const found = await loadBookingByToken(token);
 	if (!found) error(404, 'We could not find that booking.');
 
+	// … noticeMs, then the flat object below
 	return { /* … only the fields this page needs … */ };
 });`
 			},
@@ -483,19 +567,20 @@ export async function requireOwner(businessSlug: string): Promise<StaffContext> 
 				file: 'src/lib/server/guards.ts',
 				lang: 'ts',
 				code: `
-export function canManageDiaryOf(context: StaffContext, staffId: string): boolean {
-	return context.staff.role === 'owner' || context.staff.id === staffId;
+export function canManageDiaryOf(role: StaffRole, actorStaffId: string, targetStaffId: string) {
+	return role === 'owner' || actorStaffId === targetStaffId;
 }
 
-export function assertCanManageDiaryOf(context: StaffContext, staffId: string): void {
-	if (!canManageDiaryOf(context, staffId)) {
-		error(403, 'You can only change your own hours.');
+/** The throwing version, for the server. */
+export function assertCanManageDiaryOf(context: StaffContext, targetStaffId: string): void {
+	if (!canManageDiaryOf(context.staff.role, context.staff.id, targetStaffId)) {
+		error(403, 'You can only manage your own diary.');
 	}
 }`
 			},
 			{
 				type: 'p',
-				text: 'Two functions, on purpose. The boolean drives the interface — the Remove button is not rendered next to somebody else\'s shift — and the throwing one drives the server. Hiding a button is manners; the assertion is the control.'
+				text: 'Two functions, on purpose — and notice that `canManageDiaryOf` takes plain primitives, a role and two ids, rather than a `StaffContext`. That is what lets the boolean drive the interface — the Remove button is not rendered next to somebody else\'s shift — without the UI having to construct a server-side context object it does not have. The throwing version drives the server. Hiding a button is manners; the assertion is the control.'
 			},
 			{
 				type: 'note',
@@ -539,7 +624,7 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 	const now = input.now ?? Date.now();
 
 	return db.transaction(async (tx) => {
-		/* --- 1. Re-derive availability from scratch -------------------------- */
+		/* --- 1. Re-derive what was actually on offer ------------------------- */
 		// … load the business, service, staff, the pairing, the rules and the
 		// occupied cells, then run the same pure \`availableSlots\` from chapter 8.
 
@@ -556,14 +641,14 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 			throw new BookingError('slot_not_offered', 'That time is no longer available.');
 		}
 
-		/* --- 2. The customer -------------------------------------------------- */
+		/* --- 2. The customer ------------------------------------------------- */
 		// Find by (business, lowercased email) or insert.
 
-		/* --- 3. The booking row ----------------------------------------------- */
+		/* --- 3. The booking row ---------------------------------------------- */
 		const [created] = await tx.insert(booking).values({ /* … snapshots … */ }).returning();
 		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
 
-		/* --- 4. The claim. This is the part that cannot be raced. -------------- */
+		/* --- 4. The claim. This is the part that cannot be raced. ------------- */
 		const cells = slotsIn({ start: blockStart, end: blockEnd });
 
 		try {
@@ -637,9 +722,11 @@ const [rules, claims] = await Promise.all([
 				file: 'src/lib/server/scheduling.ts',
 				lang: 'ts',
 				code: `
+// …
+
 export type BookingErrorCode =
-	| 'slot_taken'          // somebody else claimed it in the last few milliseconds
-	| 'slot_not_offered'    // it stopped being offered — hours changed, day off added
+	| 'slot_taken'
+	| 'slot_not_offered'
 	| 'service_unavailable'
 	| 'staff_unavailable'
 	| 'too_soon'
@@ -657,6 +744,10 @@ export class BookingError extends Error {
 		this.code = code;
 	}
 }`
+			},
+			{
+				type: 'p',
+				text: '`slot_taken` is somebody else claiming the exact cell in the last few milliseconds; `slot_not_offered` is the slot no longer being on offer at all — hours changed, a day off was added.'
 			},
 			{
 				type: 'p',
@@ -692,14 +783,14 @@ export class BookingError extends Error {
 				file: 'src/lib/server/diary-events.ts',
 				lang: 'ts',
 				code: `
-/** One key per business per local day: \`biz_123:2026-08-14\`. */
-export function diaryKey(businessId: string, when: Date | number, zone: string): string {
-	return \`\${businessId}:\${instantToIsoDate(when, zone)}\`;
-}`
+type Listener = () => void;
+
+/** Listeners by key. A key is a business id — the unit a diary belongs to. */
+const listeners = new Map<string, Set<Listener>>();`
 			},
 			{
 				type: 'p',
-				text: 'Granularity is a judgement call. Per-business would wake every screen in the salon for a booking three weeks out. Per-appointment would be precise and useless — the dashboard wants to know about appointments it has not seen yet. Per-business-per-day is the level a human actually looks at.'
+				text: 'Granularity is a judgement call, and the key here is nothing fancier than the business\'s own id. Every live view of that salon\'s diary — however many days it has open — wakes on any change to it. That is coarser than per-appointment, which would be precise and useless: the dashboard wants to know about appointments it has not seen yet. And a salon\'s diary changes only a few times an hour, so waking every screen open on that one business costs nothing worth avoiding. It is also why `createBooking` can publish with `created.businessId` directly — the key and the id are the same string.'
 			},
 
 			{ type: 'h3', id: 'generator', text: 'The generator' },
@@ -772,13 +863,19 @@ export async function* watchDiary(
 				file: 'src/lib/server/diary-events.ts',
 				lang: 'ts',
 				code: `
+/** Tell everyone watching \`key\` that something changed. */
 export function publishDiaryChange(key: string): void {
-	for (const listener of subscribers(key)) listener();
+	const set = listeners.get(key);
+	if (!set) return;
+
+	// Copy before iterating: a listener may unsubscribe itself in response, and
+	// mutating a Set while looping over it silently skips entries.
+	for (const listener of [...set]) listener();
 }
 
-/** How many watchers a key has. Exposed for tests and health checks. */
+/** How many streams are currently watching. Used by tests and health checks. */
 export function watcherCount(key: string): number {
-	return subscribers(key).size;
+	return listeners.get(key)?.size ?? 0;
 }`
 			},
 			{
