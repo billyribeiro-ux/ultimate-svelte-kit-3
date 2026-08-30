@@ -25,11 +25,10 @@ export const part1 = [
 				file: 'packages/protocol/src/commands.ts',
 				lang: 'ts',
 				code: `
-/** Fields every command carries. */
-interface CommandMeta {
-	/** Whose command this is. Overwritten by the gateway; never trusted. */
+/** Fields every command carries, whoever sent it. */
+export interface CommandMeta {
 	readonly firmId: FirmId;
-	/** Which human or key sent it. For the audit trail. */
+	/** The human or key that issued it. Kept for the audit trail, not for auth. */
 	readonly actorId: UserId;
 }
 
@@ -37,16 +36,27 @@ export interface PlaceOrder extends CommandMeta {
 	readonly kind: 'place_order';
 	readonly accountId: AccountId;
 	readonly instrumentId: InstrumentId;
-	/** The client's own name for this order. Unique per firm. */
+	/**
+	 * The participant's own reference. Unique per firm, and the whole basis of
+	 * idempotency — a retry after a timeout carries the same one, and the venue
+	 * must treat the second copy as a duplicate rather than a second order.
+	 */
 	readonly clientOrderId: ClientOrderId;
 	readonly side: Side;
 	readonly orderType: OrderType;
-	/** Absent for a market order, which takes whatever the book offers. */
+	/**
+	 * Absent for a market order, and that is why \`exactOptionalPropertyTypes\` is
+	 * switched on: without it, \`{ price: undefined }\` type-checks against
+	 * \`{ price?: Price }\`, and a market order and a limit order with a missing
+	 * price become indistinguishable at exactly the wrong moment.
+	 */
 	readonly price?: Price;
 	readonly quantity: Quantity;
 	readonly timeInForce: TimeInForce;
 	readonly selfTradePrevention: SelfTradePrevention;
 }
+
+// …
 
 export type Command =
 	| PlaceOrder
@@ -76,31 +86,51 @@ export type Command =
 				code: `
 import * as v from 'valibot';
 
+// …
+
+const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1e15));
+const nonNegativeInteger = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1e15));
 const identifier = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(64));
-const scaledInteger = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1e15));
+const symbol = v.pipe(v.string(), v.regex(/^[A-Z][A-Z0-9.]{0,15}$/, 'Not an instrument symbol'));
 
-export const placeOrderSchema = v.object({
-	kind: v.literal('place_order'),
-	...meta,
-	accountId: identifier,
-	instrumentId: identifier,
-	clientOrderId: identifier,
-	side: v.picklist(['buy', 'sell'] as const),
-	orderType: v.picklist(['limit', 'market'] as const),
-	price: v.optional(scaledInteger),
-	quantity: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1e12)),
-	timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'] as const),
-	selfTradePrevention: v.picklist(['cancel_resting', 'cancel_aggressor', 'cancel_both'] as const)
-});
+const meta = {
+	firmId: identifier,
+	actorId: identifier
+};
 
-/**
- * Parse anything into a Command, or throw.
- *
- * The one door. Nothing becomes a \`Command\` without passing through here, so
- * "is this validated" has one answer rather than fourteen.
- */
+export const placeOrderSchema = v.pipe(
+	v.object({
+		kind: v.literal('place_order'),
+		...meta,
+		accountId: identifier,
+		instrumentId: symbol,
+		clientOrderId: identifier,
+		side: v.picklist(SIDES),
+		orderType: v.picklist(ORDER_TYPES),
+		price: v.optional(positiveInteger),
+		quantity: positiveInteger,
+		timeInForce: v.picklist(TIME_IN_FORCE),
+		selfTradePrevention: v.optional(v.picklist(SELF_TRADE_PREVENTION), 'cancel_both')
+	}),
+	/*
+	 * A cross-field rule the type system cannot express: a limit order must have
+	 * a price and a market order must not. Checking it here means the engine can
+	 * treat "limit with no price" as impossible rather than as a case to handle,
+	 * and \`v.check\` on the whole object is the only place a rule about two
+	 * fields at once can live.
+	 */
+	v.check(
+		(order) => (order.orderType === 'limit') === (order.price !== undefined),
+		'A limit order needs a price, and a market order must not have one'
+	),
+	// …
+);
+
+// …
+
+/** Parse an untrusted payload into a command, or throw with a real message. */
 export function parseCommand(input: unknown): Command {
-	return v.parse(commandSchema, input);
+	return v.parse(commandSchema, input) as Command;
 }`
 			},
 			{
@@ -115,19 +145,24 @@ export function parseCommand(input: unknown): Command {
 				lang: 'ts',
 				code: `
 /**
- * A command, plus what the venue stamped on it when it arrived.
+ * A command as it appears in the log, once the sequencer has stamped it.
  *
- * The engine reads \`receivedAt\` instead of calling a clock. That single choice
- * is what makes replay reproduce history: replaying a command from March uses
- * March's timestamp, because the timestamp travels with the command rather than
- * being read when the command is processed.
+ * Three fields are added, and each one is a deliberate transfer of a decision
+ * from the engine to the sequencer:
+ *
+ *   \`seq\`        — the position in the total order. The engine never chooses
+ *                  this; being handed it is what makes the engine a function.
+ *   \`receivedAt\` — the venue's clock reading when the command arrived. The
+ *                  engine uses this instead of calling \`Date.now()\`, which is
+ *                  what lets a replay four years later reproduce a timestamp.
+ *   \`version\`    — which rules applied. When matching logic changes, old
+ *                  commands must still replay under the rules that were in
+ *                  force when they ran, or the log stops describing what
+ *                  actually happened.
  */
 export interface Sequenced<T> {
-	/** Its position in the total order. Assigned by the sequencer, never reused. */
 	readonly seq: number;
-	/** The venue's clock reading when it arrived. */
 	readonly receivedAt: number;
-	/** Which version of the rules was in force. */
 	readonly version: number;
 	readonly body: T;
 }`
@@ -144,6 +179,13 @@ export interface Sequenced<T> {
 				file: 'packages/protocol/src/events.ts',
 				lang: 'ts',
 				code: `
+/**
+ * A trade. The only event that moves money.
+ *
+ * Both sides are named because the clearing side needs both, and because a
+ * trade is one fact rather than two — modelling it as a fill for the buyer and
+ * a separate fill for the seller invites them to disagree.
+ */
 export interface Traded {
 	readonly kind: 'traded';
 	readonly tradeId: TradeId;
@@ -167,8 +209,11 @@ export interface Traded {
 	 * the tape readable: a run of trades at the ask is buying pressure, and you
 	 * cannot see that from price alone.
 	 *
-	 * **Absent** for an auction trade, because an auction has no aggressor —
-	 * everybody crossed at one price simultaneously.
+	 * In a call auction there is no aggressor — both sides rested, and both are
+	 * charged the maker rate. Modelling that as an absent field rather than
+	 * inventing a side is the honest option: a consumer that assumes every trade
+	 * has an aggressor should fail loudly on the open rather than quietly
+	 * attributing the whole auction to whichever side we picked.
 	 */
 	readonly aggressor?: Side;
 
@@ -188,27 +233,48 @@ export interface Traded {
 				lang: 'ts',
 				code: `
 /**
- * Every reason an order can be refused.
+ * Rejection reasons, as codes rather than sentences.
  *
- * A closed list, so a client can branch on it. The free-text \`detail\` field
- * next to it is for a human and is explicitly not stable — the moment a client
- * matches on prose, a copy-edit becomes an outage at somebody else's firm.
+ * The code is for machines — an algorithmic trader retries on
+ * \`price_outside_collar\` after re-reading the reference, and gives up entirely
+ * on \`kill_switch_engaged\`. The human sentence lives next to it and can be
+ * rewritten without breaking anybody's error handling, which is the point of
+ * separating them.
  */
 export const REJECT_REASONS = [
+	/** The venue has never heard of this instrument. */
 	'unknown_instrument',
+	/** Trading is not open for this instrument right now. */
 	'instrument_not_trading',
-	'firm_stopped',
-	'price_off_tick',
-	'quantity_off_lot',
-	'quantity_too_large',
-	'price_outside_collar',
-	'notional_too_large',
-	'position_limit',
+	/** A duplicate \`clientOrderId\` — almost always a retry, and safe to ignore. */
 	'duplicate_client_order_id',
-	'no_such_order',
-	'market_order_no_liquidity',
-	'fok_not_fillable'
+	/** No resting order with that reference. Already filled, or already pulled. */
+	'unknown_order',
+	/** The price is not on the instrument's tick ladder. */
+	'price_off_tick',
+	/** The quantity is not a whole number of lots. */
+	'quantity_off_lot',
+	/** Too far from the reference price. The fat-finger guard. */
+	'price_outside_collar',
+	/** Bigger than this account is allowed to send in one order. */
+	'exceeds_max_order_size',
+	/** Would take the account past its position limit. */
+	'exceeds_position_limit',
+	/** The firm has been stopped, by itself or by the venue. */
+	'kill_switch_engaged',
+	/** Fill-or-kill, and the book could not fill all of it. */
+	'insufficient_liquidity',
+	/** Self-trade prevention refused the aggressing order. */
+	'self_trade_prevented',
+	/** A market order arrived with an empty book on the other side. */
+	'no_opposing_liquidity',
+	/** The account does not belong to the firm that sent the command. */
+	'account_not_owned'
 ] as const;`
+			},
+			{
+				type: 'p',
+				text: 'Fourteen codes. The free-text `detail` that travels beside each one is for a human and is deliberately not stable — the moment a client matches on prose, a copy-edit becomes an outage at somebody else\'s firm.'
 			},
 			{
 				type: 'checkpoint',
@@ -247,44 +313,73 @@ export const REJECT_REASONS = [
 				file: 'packages/core/src/book.ts',
 				lang: 'ts',
 				code: `
+/**
+ * An order sitting on the book.
+ *
+ * \`remaining\` is mutable and everything else is not, which is exactly the
+ * shape of the thing: an order's price, side and owner are settled the moment
+ * it is accepted, and the only thing that changes afterwards is how much of it
+ * is left.
+ */
 export interface RestingOrder {
 	readonly orderId: OrderId;
 	readonly firmId: FirmId;
 	readonly accountId: AccountId;
-	readonly clientOrderId: ClientOrderId;
 	readonly side: Side;
 	readonly price: Price;
-	readonly quantity: Quantity;
-	/** How much has traded. Never exceeds \`quantity\`. */
-	filled: Quantity;
-	/** The command that created it — this is the time in price-time priority. */
+	readonly originalQuantity: Quantity;
+	remaining: Quantity;
+	/**
+	 * The sequence number that put this order on the book.
+	 *
+	 * This *is* time priority. Not a timestamp — two orders can arrive in the
+	 * same millisecond, and then a timestamp cannot order them and something has
+	 * to break the tie, usually by accident. The sequence number is unique and
+	 * total by construction, so the queue has exactly one correct order and
+	 * anybody replaying the log arrives at the same one.
+	 */
 	readonly seq: number;
-	readonly selfTradePrevention: SelfTradePrevention;
+	/** Cancelled at the close, if \`true\`. Carried here so expiry is a book walk. */
+	readonly expiresAtClose: boolean;
 }
 
+/* … */
+
+/**
+ * Every order resting at one price, in arrival order.
+ *
+ * \`total\` is maintained alongside the queue rather than summed on demand. The
+ * depth ladder asks for it on every update and a fill-or-kill order asks for it
+ * before committing to anything, so the alternative is walking a queue that can
+ * be thousands long, thousands of times a second.
+ *
+ * A denormalised total is a promise you have to keep. Every mutation below
+ * updates it in the same statement that changes the queue, and a test asserts
+ * the invariant after every operation. Denormalisation without that test is
+ * just a bug with better performance.
+ */
 export interface PriceLevel {
 	readonly price: Price;
-	/** In arrival order. Position 0 trades first. */
 	readonly orders: RestingOrder[];
-	/**
-	 * The unfilled quantity across the whole level, kept up to date.
-	 *
-	 * Denormalised deliberately. Summing the orders on every read is O(n) and
-	 * happens on every single depth query; maintaining it here is O(1) per
-	 * change. The cost is that every mutation must remember to update it, so
-	 * every mutation goes through the two functions below and nothing touches
-	 * \`orders\` directly.
-	 */
-	total: Quantity;
+	total: number;
 }
 
+/**
+ * One instrument's book.
+ *
+ * Bids descend and asks ascend, so index 0 of each is always the best price and
+ * the most common question — "what is the top of book" — is an array lookup
+ * rather than a search.
+ */
 export interface Book {
 	readonly instrumentId: InstrumentId;
-	/** Descending: bids[0] is the best bid. */
 	readonly bids: PriceLevel[];
-	/** Ascending: asks[0] is the best ask. */
 	readonly asks: PriceLevel[];
 }`
+			},
+			{
+				type: 'note',
+				text: 'No `clientOrderId` and no instrument id on `RestingOrder` — the book *is* one instrument, and the participant\'s reference is only needed to answer a cancel. Both live on `LiveOrder`, a separate index in `packages/core/src/state.ts`, so every entry in every price level stays small.'
 			},
 			{
 				type: 'why',
@@ -299,29 +394,38 @@ export interface Book {
 				lang: 'ts',
 				code: `
 /**
- * Where a price sits, or where it would go.
+ * Where a price belongs in a side's ladder.
  *
- * A binary search, because a busy instrument has hundreds of levels and this
- * runs on every single order. Returns the index and whether it is a hit, so the
- * caller can insert at the same place it looked without searching twice.
+ * Binary search, returning either the index of the matching level or the index
+ * it should be inserted at. Ladders are kept in *priority* order rather than
+ * numeric order — descending for bids, ascending for asks — so one comparison
+ * flip handles both sides and there is no second implementation to keep in
+ * step with the first.
  *
- * The comparison flips with the side, which is the only fiddly part: bids
- * descend, asks ascend, and one function handles both so there is one place for
- * the off-by-one to be rather than two.
+ * A linear scan would be simpler and, on a real book, wrong: quiet instruments
+ * have a handful of levels and liquid ones have hundreds, and the difference
+ * only shows up on the day the volume arrives.
  */
-function locate(levels: PriceLevel[], price: Price, side: Side): { index: number; found: boolean } {
+function locate(
+	levels: readonly PriceLevel[],
+	price: Price,
+	side: Side
+): { index: number; found: boolean } {
 	let low = 0;
 	let high = levels.length;
 
 	while (low < high) {
-		const middle = (low + high) >>> 1;
-		const at = levels[middle]!.price;
+		const mid = (low + high) >>> 1;
+		const at = levels[mid]!.price;
 
-		if (at === price) return { index: middle, found: true };
+		if (at === price) return { index: mid, found: true };
 
+		// Bids are better when higher, asks when lower. This is the only line in
+		// the file that knows that, which is deliberate.
 		const before = side === 'buy' ? at > price : at < price;
-		if (before) low = middle + 1;
-		else high = middle;
+
+		if (before) low = mid + 1;
+		else high = mid;
 	}
 
 	return { index: low, found: false };
@@ -338,85 +442,109 @@ function locate(levels: PriceLevel[], price: Price, side: Side): { index: number
 				file: 'packages/core/src/book.ts',
 				lang: 'ts',
 				code: `
-/** Put an order on the book, at the back of its price level's queue. */
-export function rest(book: Book, order: RestingOrder): void {
+/**
+ * Rest an order, at the back of its price level's queue.
+ *
+ * Returns its position in that queue, which is published on the acceptance
+ * event. Price-time priority is only credible if participants can check it, and
+ * a queue position they can verify against the public event stream is a cheaper
+ * defence against accusations of favouritism than any amount of assurance.
+ */
+export function rest(book: Book, order: RestingOrder): number {
 	const levels = order.side === 'buy' ? book.bids : book.asks;
 	const { index, found } = locate(levels, order.price, order.side);
 
-	const remaining = (order.quantity - order.filled) as Quantity;
-
 	if (found) {
 		const level = levels[index]!;
-		// The back of the queue. \`push\`, never \`unshift\` — arrival order *is* the
-		// fairness rule, and putting a late order at the front is queue-jumping.
 		level.orders.push(order);
-		level.total = (level.total + remaining) as Quantity;
-		return;
+		level.total += order.remaining;
+		return level.orders.length;
 	}
 
-	levels.splice(index, 0, { price: order.price, orders: [order], total: remaining });
+	levels.splice(index, 0, { price: order.price, orders: [order], total: order.remaining });
+	return 1;
 }`
 			},
 
 			{ type: 'h3', id: 'matching', text: 'Matching' },
 			{
 				type: 'p',
-				text: 'The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first.'
+				text: 'The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A `MatchRequest` carries the side, the quantity, an optional `limitPrice` — absent for a market order — the sender\'s `firmId` and self-trade-prevention choice, and a `dryRun` flag the fill-or-kill check uses. Self-trade prevention is elided here; it gets its own chapter.'
 			},
 			{
 				type: 'code',
 				file: 'packages/core/src/book.ts (simplified)',
 				lang: 'ts',
 				code: `
+/**
+ * Whether a resting price is acceptable to an aggressor.
+ *
+ * A market order has no limit and accepts anything. A buy limit at 100 will
+ * take asks at 100 or better; a sell limit at 100 will take bids at 100 or
+ * better. "Better" flips with the side, which is why it is written once.
+ */
+function crosses(restingPrice: Price, side: Side, limitPrice: Price | undefined): boolean {
+	if (limitPrice === undefined) return true;
+	return side === 'buy' ? restingPrice <= limitPrice : restingPrice >= limitPrice;
+}
+
+/* … */
+
 export function match(book: Book, request: MatchRequest): MatchResult {
 	const opposite = request.side === 'buy' ? book.asks : book.bids;
 	const fills: Fill[] = [];
+	const pulled: Pulled[] = [];
 
-	let remaining = request.quantity;
+	let remaining: number = request.quantity;
+	let levelIndex = 0;
 
-	while (remaining > 0 && opposite.length > 0) {
-		const level = opposite[0]!;
+	// … (self-trade-prevention bookkeeping — the next chapter's subject)
 
-		// Would this level cross? A buy crosses an ask at or below its limit.
-		const crosses =
-			request.price === undefined ||
-			(request.side === 'buy' ? level.price <= request.price : level.price >= request.price);
+	outer: while (remaining > 0 && levelIndex < opposite.length) {
+		const level = opposite[levelIndex]!;
 
-		if (!crosses) break;
+		if (!crosses(level.price, request.side, request.limitPrice)) break;
 
-		while (remaining > 0 && level.orders.length > 0) {
-			const resting = level.orders[0]!;
-			const available = (resting.quantity - resting.filled) as Quantity;
-			const traded = Math.min(remaining, available) as Quantity;
+		for (let i = 0; i < level.orders.length && remaining > 0;) {
+			const resting = level.orders[i]!;
 
-			/*
-			 * The trade happens at the **resting** order's price, not the
-			 * aggressor's.
-			 *
-			 * A buy limit at £45.60 hitting an ask at £45.50 trades at £45.50 —
-			 * the buyer gets price improvement. Trading at the aggressor's price
-			 * would let anybody extract value by sending a deliberately terrible
-			 * limit, and would mean the resting order got worse than it asked for.
-			 */
-			fills.push({ resting, price: level.price, quantity: traded });
+			// … (the self-trade check lives here)
 
-			resting.filled = (resting.filled + traded) as Quantity;
-			level.total = (level.total - traded) as Quantity;
-			remaining = (remaining - traded) as Quantity;
+			const traded = Math.min(remaining, resting.remaining);
+			fills.push({ restingOrder: resting, price: level.price, quantity: traded as Quantity });
+			remaining -= traded;
 
-			if (resting.filled >= resting.quantity) level.orders.shift();
+			// … (a dry run moves on without touching anything)
+
+			resting.remaining = (resting.remaining - traded) as Quantity;
+			level.total -= traded;
+
+			if (resting.remaining === 0) level.orders.splice(i, 1);
+			else i += 1;
 		}
 
-		if (level.orders.length === 0) opposite.shift();
+		if (!request.dryRun && level.orders.length === 0) {
+			opposite.splice(levelIndex, 1);
+			// Do not advance: the next level has shifted into this index.
+			continue;
+		}
+
+		if (remaining === 0) break outer;
+		levelIndex += 1;
 	}
 
-	return { fills, remaining };
+	return {
+		fills,
+		remaining: remaining as Quantity,
+		pulled: settlePulls(),
+		aggressorCancelled: false
+	};
 }`
 			},
 			{
 				type: 'why',
 				title: 'Price improvement, and why it is not generosity',
-				text: 'The trade printing at the resting order\'s price is not a courtesy — it is what makes a limit order safe to leave on the book. If aggressors set the price, resting a bid at £45.50 would mean any seller could take it at £45.50 having offered at £45.20, and nobody would ever rest anything.'
+				text: 'Every fill happens at `level.price` — the **resting** order\'s price, never the aggressor\'s. A buy limit at £45.60 hitting an ask at £45.50 trades at £45.50, and the buyer keeps the penny. That is not a courtesy — it is what makes a limit order safe to leave on the book. If aggressors set the price, resting a bid at £45.50 would mean any seller could take it at £45.50 having offered at £45.20, and nobody would ever rest anything.'
 			},
 
 			{ type: 'h3', id: 'crossed', text: 'The invariant to check' },
@@ -426,15 +554,16 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 				lang: 'ts',
 				code: `
 /**
- * Is the best bid at or above the best ask?
+ * Whether the book is crossed — the best bid at or above the best ask.
  *
- * During continuous trading this must **never** be true. If it is, two orders
- * that should have traded are both sitting on the book — which means somebody
- * can buy from one and sell to the other for free, and the venue has printed
- * money.
+ * This must never be true after a command has been fully applied during
+ * continuous trading, because a crossed book is two participants who both agree
+ * on a price and have not been matched. It is the single most important
+ * invariant in the system and the property-based tests assert it after every
+ * generated command.
  *
- * Cheap to check, catastrophic to miss, so a property test asserts it after
- * every operation.
+ * During a call auction it is *expected* to be true — that is what an auction
+ * uncrosses.
  */
 export function isCrossed(book: Book): boolean {
 	const bid = book.bids[0];
@@ -463,18 +592,20 @@ export function isCrossed(book: Book): boolean {
 		blocks: [
 			{
 				type: 'p',
-				text: 'Here is the whole engine, as a type:'
+				text: 'Here is the whole engine, in one signature:'
 			},
 			{
 				type: 'code',
 				file: 'packages/core/src/apply.ts',
 				lang: 'ts',
 				code: `
-export function apply(state: EngineState, sequenced: Sequenced<Command>): Event[];`
+export function apply(state: EngineState, sequenced: SequencedCommand): Event[] {
+	// …
+}`
 			},
 			{
 				type: 'p',
-				text: 'Give it the current state and one command, and it returns the events that command caused. It mutates `state` in place for speed, and it touches nothing else. No `await`, because there is nothing to wait for.'
+				text: 'Give it the current state and one command, and it returns the events that command caused. (`SequencedCommand` is the protocol\'s alias for `Sequenced<Command>`.) It mutates `state` in place for speed, and it touches nothing else. No `await`, because there is nothing to wait for.'
 			},
 
 			{ type: 'h3', id: 'forbidden', text: 'What it is forbidden to do' },
@@ -499,31 +630,33 @@ export function apply(state: EngineState, sequenced: Sequenced<Command>): Event[
 				file: 'packages/core/src/apply.ts',
 				lang: 'ts',
 				code: `
-export function apply(state: EngineState, sequenced: Sequenced<Command>): Event[] {
-	// The venue's clock, taken from the command rather than read.
-	state.now = sequenced.receivedAt;
+export function apply(state: EngineState, sequenced: SequencedCommand): Event[] {
+	const { seq, receivedAt, body } = sequenced;
 
-	const command = sequenced.body;
+	// The venue's clock only ever moves forward, and only because a command told
+	// it to. Nothing in this file may call a clock of its own.
+	state.lastSeq = seq;
+	state.now = receivedAt;
 
-	switch (command.kind) {
+	switch (body.kind) {
 		case 'place_order':
-			return placeOrder(state, command, sequenced.seq);
+			return placeOrder(state, seq, body);
 		case 'cancel_order':
-			return cancelOrder(state, command, sequenced.seq);
+			return cancelOrder(state, body);
 		case 'replace_order':
-			return replaceOrder(state, command, sequenced.seq);
+			return replaceOrder(state, seq, body);
 		case 'cancel_all':
-			return cancelAll(state, command, sequenced.seq);
+			return cancelAll(state, body);
 		case 'set_risk_limits':
-			return setRiskLimits(state, command);
+			return setRiskLimits(state, body);
 		case 'set_kill_switch':
-			return setKillSwitch(state, command, sequenced.seq);
+			return setKillSwitch(state, body);
 		case 'list_instrument':
-			return listInstrument(state, command);
+			return listInstrument(state, body);
 		case 'set_phase':
-			return setPhase(state, command, sequenced.seq);
+			return setPhase(state, seq, body);
 		case 'tick':
-			return tick(state, sequenced.seq);
+			return tick(state, body);
 	}
 }`
 			},
@@ -538,39 +671,67 @@ export function apply(state: EngineState, sequenced: Sequenced<Command>): Event[
 				file: 'packages/core/src/apply.ts (abridged)',
 				lang: 'ts',
 				code: `
-function placeOrder(state: EngineState, command: PlaceOrder, seq: number): Event[] {
-	// 1. Every pre-trade check, in one place, before anything is mutated.
-	const refused = checkOrder(state, command);
-	if (refused) {
-		return [{ kind: 'order_rejected', ...refused, /* ... */ }];
+function placeOrder(
+	state: EngineState,
+	seq: number,
+	command: Extract<Command, { kind: 'place_order' }>
+): Event[] {
+	const instrument = state.instruments.get(command.instrumentId);
+
+	// … (a \`refuse\` helper wraps a Refusal in an \`order_rejected\` event)
+
+	if (findLive(state, command.firmId, command.clientOrderId)) {
+		return refuse({
+			reason: 'duplicate_client_order_id',
+			detail: \`\${command.clientOrderId} is already working\`
+		});
+	}
+
+	const failed = checkOrder(state, instrument, command);
+	if (failed) return refuse(failed);
+
+	// \`checkOrder\` proved this, but the compiler has not been told.
+	const found = instrument!;
+
+	// … (a market order outside continuous trading is refused here)
+
+	if (found.phase === 'continuous') {
+		const bookRefusal = checkAgainstBook(found.book, {
+			...command,
+			timeInForce: command.timeInForce,
+			selfTradePrevention: command.selfTradePrevention
+		});
+		if (bookRefusal) return refuse(bookRefusal);
 	}
 
 	const orderId = orderIdFor(seq);
-	const book = state.books.get(command.instrumentId)!;
+	// … (build the order; a market order gets a sentinel price that never rests)
 
-	// 2. FOK needs to know whether it *would* fill before anything moves.
-	const blocked = checkAgainstBook(state, command, book);
-	if (blocked) return [{ kind: 'order_rejected', ...blocked }];
+	const events: Event[] = [];
 
-	// 3. Match.
-	const result = match(book, { /* ... */ });
-
-	const events: Event[] = [{ kind: 'order_accepted', orderId, /* ... */ }];
-
-	// 4. Report the trades, in the order they happened.
-	result.fills.forEach((fill, index) => {
-		events.push(tradeEventFor(fill, tradeIdFor(seq, index), command, orderId));
-	});
-
-	// 5. Rest whatever is left, unless the time-in-force forbids it.
-	if (result.remaining > 0 && (command.timeInForce === 'gtc' || command.timeInForce === 'day')) {
-		rest(book, { orderId, /* ... */ });
-	} else if (result.remaining > 0) {
-		events.push({ kind: 'order_cancelled', reason: 'ioc_remainder', /* ... */ });
+	// During pre-open and auction the book accumulates and nothing matches. The
+	// book is allowed to cross, which is the one moment in its life it may.
+	if (found.phase !== 'continuous') {
+		const position = rest(found.book, order);
+		trackLive(state, order);
+		events.push(accepted(order, command, position));
+		return events;
 	}
 
-	return events;
+	const result = match(found.book, {
+		side: command.side,
+		quantity: command.quantity,
+		firmId: command.firmId,
+		selfTradePrevention: command.selfTradePrevention,
+		...(command.price !== undefined ? { limitPrice: command.price } : {})
+	});
+
+	// … (report the pulls and the fills, then rest or cancel the remainder)
 }`
+			},
+			{
+				type: 'p',
+				text: 'The duplicate check comes first, and it is idempotency rather than tidiness: a participant whose connection dropped mid-order does not know whether it arrived, so the only safe thing they can do is send it again — and the venue\'s job is to recognise the second copy rather than work it twice. Notice also where the book lives: each instrument owns its own, on `state.instruments.get(…).book`.'
 			},
 
 			{ type: 'h3', id: 'tif', text: 'Time in force' },
@@ -581,7 +742,7 @@ function placeOrder(state: EngineState, command: PlaceOrder, seq: number): Event
 			{
 				type: 'ul',
 				items: [
-					'**gtc** — good till cancelled. Rest the remainder. The default.',
+					'**gtc** — good till cancelled. Rest the remainder.',
 					'**day** — rest it, but cancel at the close.',
 					'**ioc** — immediate or cancel. Take what you can, cancel the rest. Never rests.',
 					'**fok** — fill or kill. All of it right now, or none of it. Nothing rests, and nothing partially fills.'
@@ -589,7 +750,7 @@ function placeOrder(state: EngineState, command: PlaceOrder, seq: number): Event
 			},
 			{
 				type: 'p',
-				text: '`fok` is the interesting one, because it needs an answer *before* anything moves. You cannot match and then decide you should not have.'
+				text: '`fok` is the interesting one, because it needs an answer *before* anything moves. You cannot match and then decide you should not have — so the book is walked with `dryRun` set, which fills nothing and reports what would have traded.'
 			},
 			{
 				type: 'code',
@@ -597,28 +758,53 @@ function placeOrder(state: EngineState, command: PlaceOrder, seq: number): Event
 				lang: 'ts',
 				code: `
 /**
- * A dry run, for fill-or-kill.
+ * The checks that can only be made once the book has been consulted.
  *
- * \`fillableQuantity\` walks the book and returns how much *would* trade,
- * without touching anything. If it is less than the order, the order is refused
- * and the book is exactly as it was.
- *
- * The alternative — match, notice the shortfall, undo — means writing an undo
- * for every mutation and getting it right. A read-only pass is much smaller and
- * cannot be half-applied.
+ * Separate from \`checkOrder\` because they need a dry run, and a dry run is the
+ * most expensive thing in the pre-trade path. Doing it for every order — rather
+ * than only for the two order types that need it — would put a book walk on the
+ * critical path of orders that were never going to look at the book at all.
  */
-export function checkAgainstBook(state: EngineState, command: PlaceOrder, book: Book) {
-	if (command.timeInForce === 'fok') {
-		const fillable = fillableQuantity(book, command.side, command.price);
-		if (fillable < command.quantity) {
-			return { reason: 'fok_not_fillable' as const, detail: \`Only \${fillable} available\` };
+export function checkAgainstBook(
+	book: Book,
+	check: OrderCheck & {
+		timeInForce: string;
+		selfTradePrevention: 'cancel_resting' | 'cancel_aggressing' | 'cancel_both';
+	}
+): Refusal | undefined {
+	if (check.timeInForce === 'fok') {
+		const request = {
+			side: check.side,
+			quantity: check.quantity,
+			firmId: check.firmId,
+			selfTradePrevention: check.selfTradePrevention,
+			...(check.price !== undefined ? { limitPrice: check.price } : {})
+		};
+
+		if (fillableQuantity(book, request) < check.quantity) {
+			return {
+				reason: 'insufficient_liquidity',
+				detail: 'Fill-or-kill: the book could not fill the whole order'
+			};
 		}
 	}
 
-	if (command.orderType === 'market' && depthOf(book, command.side) === 0) {
-		// A market order with nothing to buy from would otherwise rest with no
-		// price, which is not a thing an order book can hold.
-		return { reason: 'market_order_no_liquidity' as const, detail: 'The other side is empty' };
+	/*
+	 * A market order against an empty book.
+	 *
+	 * Without this it would be accepted, match nothing, and be cancelled as an
+	 * unfilled immediate-or-cancel — technically correct and useless as feedback.
+	 * "There was nothing to trade against" is a different problem from "your
+	 * order expired", and an algorithm reacts to them differently.
+	 */
+	if (check.price === undefined) {
+		const opposite = check.side === 'buy' ? book.asks : book.bids;
+		if (opposite.length === 0) {
+			return {
+				reason: 'no_opposing_liquidity',
+				detail: 'A market order needs something on the other side of the book'
+			};
+		}
 	}
 
 	return undefined;
@@ -653,25 +839,33 @@ export function checkAgainstBook(state: EngineState, command: PlaceOrder, book: 
 				lang: 'ts',
 				code: `
 /**
- * Every pre-trade check, in order.
+ * Run every pre-trade check, in order, and stop at the first refusal.
  *
- * The sequence is a design decision, not an accident:
- *
- *   1. Does the instrument exist?      — cheapest, and everything else assumes it
- *   2. Is it trading?                  — phase check
- *   3. Is the firm stopped?            — the kill switch beats everything below
- *   4. Is the price on a tick?         — pure arithmetic, no state
- *   5. Is the quantity a whole lot?    — same
- *   6. Is the quantity within limits?  — per-account, one lookup
- *   7. Is the price within the collar? — needs the reference price
- *   8. Is the notional within limits?  — needs price × quantity
- *   9. Would the position breach?      — needs the current position AND working orders
- *
- * Cheap and certain first, expensive and stateful last. A malformed order is
- * refused by arithmetic before it costs a single lookup, and the kill switch
- * sits above every business rule because "stop" must mean stop.
+ * The order is not arbitrary. Cheap and unconditional checks come first, so the
+ * common rejections cost the least; and structural problems ("no such
+ * instrument") are reported before policy ones ("too big"), because telling
+ * somebody their order exceeds a limit on an instrument that does not exist is
+ * a confusing way to say the symbol is wrong.
  */
-export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | undefined {`
+export function checkOrder(
+	state: EngineState,
+	instrument: Instrument | undefined,
+	check: OrderCheck
+): Refusal | undefined {`
+			},
+			{
+				type: 'ul',
+				items: [
+					'1. Does the instrument exist? — everything else assumes it',
+					'2. Is it in a phase that accepts orders?',
+					'3. Is the firm stopped? — the kill switch beats every business rule below',
+					'4. Is the price on the tick ladder? — pure arithmetic, no state',
+					'5. Is the quantity a whole number of lots? — same',
+					'6. Is the quantity within the account\'s order-size limit?',
+					'7. Is the price inside the collar? — needs the reference price',
+					'8. Is the notional within limits? — needs price × quantity',
+					'9. Would the position limit be breached? — needs the position AND the working orders'
+				]
 			},
 
 			{ type: 'h3', id: 'ticks', text: 'Ticks and lots' },
@@ -684,10 +878,26 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 				file: 'packages/core/src/risk.ts',
 				lang: 'ts',
 				code: `
-	if (command.price !== undefined && !isOnTick(command.price, instrument.tickSize)) {
+	/*
+	 * The grids. A price off the tick ladder or a quantity off the lot grid is
+	 * rejected rather than rounded.
+	 *
+	 * Rounding would be friendlier and is the wrong call: price-time priority
+	 * only means something if two orders "at the same price" are the same
+	 * number, and a participant who asked for 455.03 and got 455.00 has been
+	 * given a different order from the one they sent. Refusing is honest.
+	 */
+	if (check.price !== undefined && !isOnTick(check.price, instrument.tickSize)) {
 		return {
 			reason: 'price_off_tick',
-			detail: \`\${formatPrice(command.price)} is not a multiple of the \${instrument.tickSize} tick\`
+			detail: \`Price must be a multiple of \${instrument.tickSize}\`
+		};
+	}
+
+	if (check.quantity % instrument.lotSize !== 0) {
+		return {
+			reason: 'quantity_off_lot',
+			detail: \`Quantity must be a multiple of \${instrument.lotSize}\`
 		};
 	}`
 			},
@@ -708,29 +918,46 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 				lang: 'ts',
 				code: `
 	/*
-	 * The collar is anchored on the **last trade** if there has been one, and on
-	 * the listing reference price if not.
+	 * The fat-finger collar.
 	 *
-	 * Using the last trade means the band follows a genuinely moving market
-	 * rather than a stale number set at listing — an instrument that has run 30%
-	 * over a week should not have every order refused because the anchor is a
-	 * week old.
+	 * A limit price far from the reference is almost always a decimal point in
+	 * the wrong place — the classic is a price typed in pounds into a field that
+	 * wants pence. Collaring it costs a participant nothing on a normal order and
+	 * saves them from selling a hundred thousand shares at a hundredth of their
+	 * value.
+	 *
+	 * Only limit orders are collared. A market order has no price to check, which
+	 * is why a market order is a far more dangerous instruction than it looks and
+	 * why we only accept it as immediate-or-cancel.
 	 */
-	const anchor = instrument.lastTradePrice ?? instrument.referencePrice;
-	const band = Math.floor((anchor * instrument.collarBasisPoints) / 10_000);
+	if (check.price !== undefined) {
+		const distance = Math.abs(check.price - instrument.referencePrice);
+		const allowed = Math.trunc((instrument.referencePrice * limits.priceCollarBps) / 10_000);
 
-	if (command.price !== undefined && Math.abs(command.price - anchor) > band) {
-		return {
-			reason: 'price_outside_collar',
-			detail: \`\${formatPrice(command.price)} is more than \${
-				instrument.collarBasisPoints / 100
-			}% from \${formatPrice(anchor)}\`
-		};
+		if (distance > allowed) {
+			return {
+				reason: 'price_outside_collar',
+				detail: \`Price is more than \${limits.priceCollarBps / 100}% from the reference of \${instrument.referencePrice}\`
+			};
+		}
 	}`
 			},
 			{
+				type: 'p',
+				text: 'The band\'s width comes from the account\'s risk limits (`limits.priceCollarBps`), and it is anchored on `instrument.referencePrice` — which starts as the listing reference and then follows the market, because the engine moves it on every fill:'
+			},
+			{
+				type: 'code',
+				file: 'packages/core/src/apply.ts',
+				lang: 'ts',
+				code: `
+		// The reference price follows the market. Every collar from here on is
+		// measured against where the instrument actually traded.
+		found.referencePrice = fill.price;`
+			},
+			{
 				type: 'note',
-				text: 'A collar refuses *good* orders too — a genuine 20% move gets blocked until an operator widens the band or the reference catches up. That is the trade every venue makes: a few refused orders in a fast market, against one catastrophic fill. Nobody has ever regretted the collar.'
+				text: 'An anchor that moves with the market is the point: a collar fixed at yesterday\'s close would reject perfectly ordinary orders by the afternoon of a volatile day. A collar still refuses *good* orders too — a genuine 20% gap gets blocked until the limits are widened or the reference catches up. That is the trade every venue makes: a few refused orders in a fast market, against one catastrophic fill. Nobody has ever regretted the collar.'
 			},
 
 			{ type: 'h3', id: 'working-exposure', text: 'Position limits, including what is still working' },
@@ -744,25 +971,32 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 				lang: 'ts',
 				code: `
 	/*
-	 * The check includes orders that are still **working**, not just the
-	 * position.
+	 * The position limit, counting resting exposure as well as filled.
 	 *
-	 * An account at zero with 49,000 shares of resting bids is one fill away from
-	 * 49,000 long. Checking only the position would let it rest another 49,000,
-	 * and if both fill it is 98,000 long against a 50,000 limit — with every
-	 * individual order having passed the check.
+	 * The worst case is what matters: if everything this account has working on
+	 * this side filled, plus this new order, where would the position be? An
+	 * account long 40,000 with 8,000 more resting to buy has 48,000 of the 50,000
+	 * limit committed, whatever the position column says.
 	 *
-	 * This is the shape of nearly every limit bug: the limit is checked against
-	 * what has happened rather than against what has been *promised*.
+	 * Only the side that would *increase* absolute exposure is counted. An order
+	 * that reduces a position is always allowed through, because refusing
+	 * somebody the ability to flatten a position they are already over the limit
+	 * on is how a limit turns into a trap.
 	 */
-	const position = state.positions.get(positionKey(command.accountId, command.instrumentId)) ?? 0;
-	const working = workingExposure(state, command.accountId, command.instrumentId, command.side);
-	const after = position + working + signedQuantity;
+	const position = positionOf(state, check.accountId, check.instrumentId);
+	const working = workingOf(state, check.accountId, check.instrumentId);
 
-	if (Math.abs(after) > limits.maxPosition) {
+	const projected =
+		check.side === 'buy'
+			? position + working.buy + check.quantity
+			: position - working.sell - check.quantity;
+
+	const reduces = Math.abs(projected) <= Math.abs(position);
+
+	if (!reduces && Math.abs(projected) > limits.maxPositionQuantity) {
 		return {
-			reason: 'position_limit',
-			detail: \`Would take the position to \${after}, past the \${limits.maxPosition} limit\`
+			reason: 'exceeds_position_limit',
+			detail: \`Would take the position to \${projected}, past the limit of \${limits.maxPositionQuantity}\`
 		};
 	}`
 			},
@@ -777,30 +1011,43 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 				file: 'packages/core/src/apply.ts',
 				lang: 'ts',
 				code: `
-function setKillSwitch(state: EngineState, command: SetKillSwitch, seq: number): Event[] {
+/**
+ * The kill switch.
+ *
+ * Engaging it does two things at once, and both are necessary: it stops new
+ * orders, and it pulls every order the firm already has resting. Doing only the
+ * first would leave an algorithm that has already flooded the book with
+ * mispriced liquidity exposed to everyone who noticed.
+ */
+function setKillSwitch(
+	state: EngineState,
+	command: Extract<Command, { kind: 'set_kill_switch' }>
+): Event[] {
 	const events: Event[] = [];
+	let cancelled = 0;
 
 	if (command.engaged) {
 		state.killed.add(command.targetFirmId);
 
-		// Pull everything the firm has resting. All of it, atomically, before the
-		// event that says the switch was engaged.
-		for (const order of ordersOf(state, command.targetFirmId)) {
-			remove(state.books.get(order.instrumentId)!, order);
-			events.push({ kind: 'order_cancelled', reason: 'kill_switch', /* ... */ });
+		for (const live of [...state.orders.values()]) {
+			if (live.firmId !== command.targetFirmId) continue;
+			events.push(pull(state, live, 'kill_switch'));
+			cancelled += 1;
 		}
 	} else {
 		state.killed.delete(command.targetFirmId);
 	}
 
-	/*
-	 * The change is reported **after** the cancellations it caused, so a consumer
-	 * reading the stream in order sees the orders go and then learns why.
-	 *
-	 * The other order would have consumers seeing "trading stopped" followed by
-	 * a burst of cancellations they cannot attribute to it.
-	 */
-	events.push({ kind: 'kill_switch_changed', /* ... */, ordersCancelled: events.length });
+	// The change is reported *after* the cancellations it caused, so a consumer
+	// reading the stream in order sees the orders go and then learns why.
+	events.push({
+		kind: 'kill_switch_changed',
+		firmId: command.targetFirmId,
+		engaged: command.engaged,
+		reason: command.reason,
+		setBy: command.actorId,
+		ordersCancelled: cancelled
+	});
 
 	return events;
 }`
@@ -843,7 +1090,7 @@ function setKillSwitch(state: EngineState, command: SetKillSwitch, seq: number):
 				type: 'ul',
 				items: [
 					'**cancel_resting** — pull the resting order, let the aggressor continue past it',
-					'**cancel_aggressor** — refuse the incoming order, leave the book alone',
+					'**cancel_aggressing** — refuse the incoming order, leave the book alone',
 					'**cancel_both** — pull both. The safest, and the default here.'
 				]
 			},
@@ -878,11 +1125,11 @@ if (resting.firmId === request.firmId) {
 			},
 			{
 				type: 'p',
-				text: 'Now consider what has already happened by the time we reach it. The aggressive order may have walked through **two other price levels** first, trading against genuine counterparties, and `match` mutated the book as it went — `resting.filled` was incremented, `level.total` was reduced, exhausted orders were shifted off.'
+				text: 'Now consider what has already happened by the time we reach it. The aggressive order may have walked through **two other price levels** first, trading against genuine counterparties, and `match` mutated the book as it went — `resting.remaining` was decremented, `level.total` was reduced, exhausted orders were spliced out.'
 			},
 			{
 				type: 'warn',
-				text: 'So the book has changed, real trades have occurred, and the function returns an empty list of fills. The engine emits no `traded` events for them. Quantity has vanished: shares left the book and nobody was told. The ledger balances, the book looks fine, and two firms\' positions are silently wrong.'
+				text: 'So the book has changed, real trades have occurred, and the function returns an empty list of fills. The engine emits no `traded` events for them: the venue has consumed liquidity without reporting a trade for it, and the book and the participants\' records disagree from that moment on — silently, forever.'
 			},
 
 			{ type: 'h3', id: 'how-found', text: 'How it was found' },
@@ -892,35 +1139,36 @@ if (resting.firmId === request.firmId) {
 			},
 			{
 				type: 'p',
-				text: 'It was found by a property test that generates random order sequences and asserts an invariant after every one:'
+				text: 'It was found by a property test that generates whole random sessions — places, cancels, kill switches, phase changes — runs each one through `apply`, and then asserts that quantity was conserved:'
 			},
 			{
 				type: 'code',
 				file: 'packages/core/src/invariants.spec.ts',
 				lang: 'ts',
 				code: `
-it('conserves quantity', () => {
+it('conserves quantity: every share bought was sold by somebody', () => {
 	fc.assert(
-		fc.property(fc.array(orderArbitrary, { maxLength: 40 }), (orders) => {
-			const state = freshVenue();
-			let traded = 0;
+		fc.property(arbSession, (steps) => {
+			const { state, events } = run(steps);
 
-			for (const [index, order] of orders.entries()) {
-				for (const event of apply(state, sequence(order, index))) {
-					if (event.kind === 'traded') traded += event.quantity;
-				}
-			}
+			// Positions are signed, so the whole venue must net to zero. If it
+			// does not, the engine has created or destroyed shares.
+			const total = [...state.positions.values()].reduce((sum, n) => sum + n, 0);
+			expect(total).toBe(0);
 
-			/*
-			 * Everything that entered the venue is either resting, filled, or
-			 * cancelled. Nothing simply stops existing.
-			 */
-			expect(restingQuantity(state) + traded + cancelledQuantity)
-				.toBe(submittedQuantity(orders));
+			// And the same total reached from the other direction: the sum of
+			// traded quantity has to match what the positions say changed.
+			const traded = trades(events).reduce((sum, t) => sum + t.quantity, 0);
+			const longs = [...state.positions.values()].filter((n) => n > 0).reduce((a, b) => a + b, 0);
+			expect(longs).toBeLessThanOrEqual(traded);
 		}),
 		{ numRuns: 400 }
 	);
 });`
+			},
+			{
+				type: 'note',
+				text: '`arbSession` generates up to 120 weighted random commands; `run` feeds them through `apply` one `seq` at a time and collects every event, exactly as the log would. The same file asserts five more properties over every generated session: an uncrossed book during continuous trading, no negative or over-filled orders, the index and the book agreeing, working exposure matching what is resting, and byte-identical replay.'
 			},
 			{
 				type: 'p',
@@ -929,17 +1177,26 @@ it('conserves quantity', () => {
 
 			{ type: 'h3', id: 'the-fix', text: 'The fix, and the shape it took' },
 			{
+				type: 'p',
+				text: 'The fix has two parts: every branch now returns the `fills` it has actually applied, and the pulls are settled through a single exit point. The shipped code keeps a comment on the branch — returning `fills: []` "was a genuine bug and a nasty one", found by property-based testing "in about four seconds".'
+			},
+			{
 				type: 'code',
 				file: 'packages/core/src/book.ts',
 				lang: 'ts',
 				code: `
 /**
- * Pull the orders self-trade prevention marked, once, on the way out.
+ * Take the collected self-trade-prevention cancels off the book.
  *
- * A single exit point, and it exists because the first version removed orders
- * at each of the three branches — which meant \`dryRun\` was honoured in two of
- * them and forgotten in the third, and the reported "pulled" list did not match
- * what had actually been removed.
+ * Every exit from the walk goes through here, and that is the point. An
+ * earlier version returned directly from the \`cancel_both\` branch and skipped
+ * the removal — so the result said the resting order had been pulled while it
+ * was still sitting on the book, happily matchable. The event stream would
+ * have announced a cancellation that never happened, and the book and the
+ * ledger would have disagreed from that moment on.
+ *
+ * A single exit point is not stylistic here. It is the difference between the
+ * report and the reality being the same thing.
  */
 const settlePulls = (): Pulled[] => {
 	if (request.dryRun) return [];
@@ -952,10 +1209,16 @@ const settlePulls = (): Pulled[] => {
 	return pulled;
 };
 
-// ...and every STP branch now returns the fills it has actually applied:
-case 'cancel_both':
-	toPull.push(resting);
-	return { fills, remaining, pulled: settlePulls(), aggressorCancelled: true };`
+// …
+
+		case 'cancel_both':
+			toPull.push(resting);
+			return {
+				fills,
+				remaining: remaining as Quantity,
+				pulled: settlePulls(),
+				aggressorCancelled: true
+			};`
 			},
 			{
 				type: 'why',
@@ -1000,68 +1263,117 @@ case 'cancel_both':
 				lang: 'ts',
 				code: `
 /**
- * The auction price: four rules, applied in order.
+ * The auction price.
  *
- * 1. **Maximum executable volume.** The price that trades the most shares. That
- *    is the point of an auction — it exists to clear as much as possible.
+ * Four rules, applied in order, each one only reached when the previous left a
+ * tie:
  *
- * 2. **Minimum imbalance.** If several prices trade the same volume, prefer the
- *    one leaving the least unfilled. A price that clears 10,000 with 500 left
- *    over is better than one that clears 10,000 with 4,000 left over.
+ *   1. **Maximum executable volume.** The auction exists to trade as much as
+ *      possible; the price that does that is the price the market wants.
  *
- * 3. **Surplus direction.** Still tied? If the remaining imbalance is on the buy
- *    side, take the higher price; if on the sell side, the lower. The unfilled
- *    pressure is telling you which way the market wants to go.
+ *   2. **Minimum imbalance.** Between two prices that trade the same amount,
+ *      prefer the one that leaves the least unsatisfied. Fewer participants go
+ *      home holding an order they could not fill.
  *
- * 4. **Nearest the reference.** Still tied? The price closest to the previous
- *    close. The most conservative answer, and the one nobody can accuse you of
- *    choosing.
+ *   3. **Which way the surplus leans.** If every remaining candidate has
+ *      leftover *buyers*, take the highest — unfilled demand means the price
+ *      should be higher, and settling lower would be a gift to the buyers who
+ *      did get filled. Mirror it for leftover sellers.
  *
- * Real venues use exactly this cascade. It is not arbitrary — each rule is what
- * you reach for when the one above it does not discriminate.
+ *   4. **Closest to the reference price.** When the surplus changes sign across
+ *      the remaining candidates, the market has genuinely bracketed the price,
+ *      and the least arbitrary answer is the one nearest to where the
+ *      instrument was before the auction.
+ *
+ * Every one of these is a fairness rule with a constituency, which is why they
+ * are spelled out rather than collapsed into a comparator nobody can read.
  */
-export function findAuctionPrice(book: Book, reference: Price): AuctionPrice | undefined {`
+export function findAuctionPrice(book: Book, referencePrice: Price): Candidate | undefined {`
 			},
 			{
 				type: 'p',
-				text: 'The candidate prices are just the distinct prices already on the book. There is no point evaluating a price nobody bid or offered at — it would trade nothing.'
+				text: 'Where do the candidates come from? Only from prices somebody actually quoted, and only inside the crossed region — a price nobody named cannot be the auction price, and a price outside the cross cannot trade. When the book is not crossed at all, the list is empty and there is nothing to do. Each candidate is then priced by `evaluate`: everything bid at or above it against everything offered at or below, trading the smaller of the two.'
 			},
 			{
 				type: 'code',
 				file: 'packages/core/src/auction.ts',
 				lang: 'ts',
 				code: `
-	const candidates = [...new Set([...book.bids, ...book.asks].map((l) => l.price))].sort(
-		(a, b) => a - b
-	);
+interface Candidate {
+	readonly price: Price;
+	readonly executable: number;
+	readonly imbalance: number;
+}
 
-	let best: AuctionPrice | undefined;
+// …
 
-	for (const candidate of candidates) {
-		// How much would trade here? Everything bid at or above, matched against
-		// everything offered at or below.
-		const demand = quantityAtOrBetter(book.bids, candidate, 'buy');
-		const supply = quantityAtOrBetter(book.asks, candidate, 'sell');
-		const volume = Math.min(demand, supply);
+/**
+ * Every price worth considering.
+ *
+ * Only prices that somebody actually quoted can be auction prices — clearing at
+ * a price nobody named would fill orders at a level no participant chose. And
+ * only prices inside the crossed region can produce a trade, so the search is
+ * bounded by the best bid above and the best ask below.
+ *
+ * The candidate set is therefore small: on a typical open it is a handful of
+ * levels, not a scan of the whole ladder.
+ */
+function candidatePrices(book: Book): Price[] {
+	const bestBid = book.bids[0];
+	const bestAsk = book.asks[0];
+	if (!bestBid || !bestAsk || bestBid.price < bestAsk.price) return [];
 
-		if (volume === 0) continue;
+	const inRange = (level: PriceLevel) =>
+		level.price >= bestAsk.price && level.price <= bestBid.price;
 
-		const imbalance = Math.abs(demand - supply);
-		const surplus: Side | undefined =
-			demand > supply ? 'buy' : supply > demand ? 'sell' : undefined;
+	const prices = new Set<number>();
+	for (const level of book.bids) if (inRange(level)) prices.add(level.price);
+	for (const level of book.asks) if (inRange(level)) prices.add(level.price);
 
-		if (best === undefined || better({ candidate, volume, imbalance, surplus }, best, reference)) {
-			best = { price: candidate as Price, volume, imbalance, surplus };
-		}
-	}
+	return [...prices].sort((a, b) => a - b) as Price[];
+}
 
-	return best;`
+// …
+
+export function findAuctionPrice(book: Book, referencePrice: Price): Candidate | undefined {
+	const candidates = candidatePrices(book).map((price) => evaluate(book, price));
+	const tradeable = candidates.filter((candidate) => candidate.executable > 0);
+
+	if (tradeable.length === 0) return undefined;
+
+	// 1. Maximum executable volume.
+	const maxVolume = Math.max(...tradeable.map((c) => c.executable));
+	let short = tradeable.filter((c) => c.executable === maxVolume);
+	if (short.length === 1) return short[0];
+
+	// 2. Minimum absolute imbalance.
+	const minImbalance = Math.min(...short.map((c) => Math.abs(c.imbalance)));
+	short = short.filter((c) => Math.abs(c.imbalance) === minImbalance);
+	if (short.length === 1) return short[0];
+
+	// 3. Which way the surplus leans, if it leans one way for all of them.
+	const allBuySurplus = short.every((c) => c.imbalance > 0);
+	const allSellSurplus = short.every((c) => c.imbalance < 0);
+
+	if (allBuySurplus) return short.reduce((a, b) => (b.price > a.price ? b : a));
+	if (allSellSurplus) return short.reduce((a, b) => (b.price < a.price ? b : a));
+
+	// 4. Closest to the reference. Ties inside this go to the lower price, so
+	//    the rule is total and a replay cannot pick differently.
+	return short.reduce((best, candidate) => {
+		const closer =
+			Math.abs(candidate.price - referencePrice) - Math.abs(best.price - referencePrice);
+		if (closer < 0) return candidate;
+		if (closer > 0) return best;
+		return candidate.price < best.price ? candidate : best;
+	});
+}`
 			},
 
 			{ type: 'h3', id: 'uncross', text: 'Uncrossing' },
 			{
 				type: 'p',
-				text: 'Once you have the price, every order that can trade does, at that price. A bid at £46.00 in an auction that clears at £45.50 gets filled at £45.50 — better than it asked for. That is the same price-improvement principle as continuous trading, applied to everybody at once.'
+				text: 'Once you have the price, every order that can trade does, at that price. Everybody trades at the auction price regardless of what they quoted — a bid at £46.00 in an auction that clears at £45.50 pays £45.50 along with everyone else. Note that this is the *opposite* of the continuous rule, where the resting order\'s price wins: here there is no resting side and no aggressing side, just one price and every participant on the right side of it.'
 			},
 			{
 				type: 'note',
@@ -1089,52 +1401,80 @@ for (const fill of uncrossed.fills) {
 			},
 			{
 				type: 'p',
-				text: 'Reasonable-looking. And wrong whenever an auction produces more than one trade involving the same account, because `tradeEventFor` looks the order up in the live registry to build the event — and the previous iteration had just removed it.'
+				text: 'Reasonable-looking. And wrong whenever the same resting order appears in more than one of the auction\'s trades — which happens every time one order fills against two counterparties. The uncross has already decremented every order\'s `remaining` before this loop runs, so the bookkeeping sat inside the reporting: the first trade that saw an order finished untracked it, and the next trade naming the same order failed its lookup and was silently skipped.'
 			},
 			{
 				type: 'p',
-				text: 'The second trade\'s lookup failed, and the fill was silently dropped.'
+				text: 'The shares still moved — the uncross had already done that. They would simply never have been reported, and the venue\'s own event stream would understate the volume of its own opening auction.'
 			},
 			{
 				type: 'code',
 				file: 'packages/core/src/apply.ts',
 				lang: 'ts',
 				code: `
-/*
- * Collect first, untrack after.
- *
- * Every trade is reported while every order is still findable, and the
- * bookkeeping happens once the reporting is finished. Interleaving them means
- * a later step depends on state an earlier step has already destroyed.
- */
-const touched = new Set<RestingOrder>();
+	/*
+	 * Bookkeeping happens after every trade has been reported, not during.
+	 *
+	 * \`uncross\` has already decremented every order's \`remaining\` — it clears the
+	 * whole book in one pass — so a single resting order can appear in several of
+	 * the trades below with a final remaining of zero. Untracking it the first
+	 * time zero is seen removes it from the index, and every later trade that
+	 * names it then fails its lookup and is skipped.
+	 *
+	 * The shares still moved: \`uncross\` did that. They would simply never have
+	 * been reported, and the venue's own event stream would understate the
+	 * volume of its own opening auction. A property test found this; no example
+	 * test would have, because it needs one order filling against two others in
+	 * a single auction.
+	 */
+	const touched = new Set<LiveOrder>();
 
-for (const fill of uncrossed.fills) {
-	events.push(tradeEventFor(fill));
-	touched.add(fill.resting);
-}
+	let index = 0;
+	for (const trade of result.trades) {
+		const buy = state.orders.get(trade.buy.orderId);
+		const sell = state.orders.get(trade.sell.orderId);
+		if (!buy || !sell) continue;
 
-for (const order of touched) {
-	if (order.filled >= order.quantity) untrackLive(state, order);
-}`
+		events.push(
+			tradeOf(state, {
+				seq,
+				index,
+				instrumentId: instrument.instrumentId,
+				price: result.price,
+				quantity: trade.quantity,
+				buyOrder: buy,
+				sellOrder: sell
+			})
+		);
+		index += 1;
+
+		reduceWorking(state, buy, trade.quantity);
+		reduceWorking(state, sell, trade.quantity);
+		touched.add(buy);
+		touched.add(sell);
+	}
+
+	for (const order of touched) {
+		if (order.remaining === 0) untrackLive(state, order);
+	}`
 			},
 			{
 				type: 'p',
-				text: 'Found by the same quantity-conservation property test. An example test with one buyer and one seller can never produce two trades for one account, so it could not have found it.'
+				text: 'Found by the same quantity-conservation property. An example test with one buyer and one seller cannot produce one order filling against two others in a single auction, so it could not have found it.'
 			},
 
 			{ type: 'h3', id: 'bug-two', text: 'Bug found: continuous trading began on a crossed book' },
 			{
 				type: 'p',
-				text: 'The phase handler ran the uncross when leaving an auction:'
+				text: 'The phase handler ran the uncross when leaving an auction (`from` is a local — the phase the instrument was in when the command arrived):'
 			},
 			{
 				type: 'code',
 				file: 'the wrong version',
 				lang: 'ts',
 				code: `
-if (command.from === 'auction') {
-	events.push(...runAuction(state, instrument, seq));
+if (from === 'auction') {
+	events.push(...runAuction(state, seq, instrument));
 }`
 			},
 			{
@@ -1146,20 +1486,34 @@ if (command.from === 'auction') {
 				file: 'packages/core/src/apply.ts',
 				lang: 'ts',
 				code: `
-/*
- * Uncross whenever we are **entering trading from a phase that accumulated
- * orders**, not only when leaving an auction.
- *
- * The rule to state is the invariant — "continuous trading never begins on a
- * crossed book" — rather than the happy path, "uncross when the auction ends".
- * The first is true of every transition; the second is true of one of them.
- */
-const wasAccumulating = command.from === 'pre_open' || command.from === 'auction';
-const opensTrading = command.phase === 'continuous';
+	const from = instrument.phase;
+	// …
 
-if (command.from === 'auction' || (wasAccumulating && opensTrading)) {
-	events.push(...runAuction(state, instrument, seq));
-}`
+	/*
+	 * When the book has to be cleared before trading resumes.
+	 *
+	 * Two cases, and the second one was missing until a property test opened
+	 * trading on a crossed book and the "never crossed during continuous"
+	 * invariant caught it.
+	 *
+	 *   - **The auction phase ending.** That is what an auction is for.
+	 *   - **Going straight from pre-open to continuous.** Orders accumulate in
+	 *     pre-open without matching, so the book is very likely crossed. A venue
+	 *     that opened continuous trading on a crossed book would hand the first
+	 *     participant to send anything a free trade against every order that
+	 *     should already have been matched.
+	 *
+	 * The real lesson is about where the rule lives. "Uncross when the auction
+	 * ends" describes the intended path; "never begin continuous trading with a
+	 * crossed book" describes the *invariant*, and only the second one is still
+	 * true when somebody adds a phase transition nobody had thought about.
+	 */
+	const wasAccumulating = from === 'pre_open' || from === 'auction';
+	const opensTrading = command.phase === 'continuous';
+
+	if (from === 'auction' || (wasAccumulating && opensTrading)) {
+		events.push(...runAuction(state, seq, instrument));
+	}`
 			},
 			{
 				type: 'why',
