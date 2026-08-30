@@ -43,23 +43,38 @@ export function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise<Motion | null> | null = null;
 
+/**
+ * Load GSAP, or resolve to \`null\` if motion should not happen.
+ *
+ * \`null\` rather than throwing, because "this visitor does not want animation" is
+ * not an error and every call site would have to wrap it in a try/catch that
+ * does nothing. A caller writes:
+ *
+ *     const motion = await loadMotion();
+ *     if (!motion) return;
+ *
+ * and that early return is the entire accessibility story.
+ *
+ * The promise is memoised, so twenty components mounting at once produce one
+ * network request rather than twenty.
+ */
 export function loadMotion(): Promise<Motion | null> {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
 
-	// Memoised, so twenty components mounting at once produce one network
-	// request rather than twenty.
 	pending ??= (async () => {
 		try {
 			const [{ gsap }, { Flip }] = await Promise.all([import('gsap'), import('gsap/Flip')]);
 
 			gsap.registerPlugin(Flip);
 
-			// GSAP's default is a gentle ease-out over half a second: reasonable for
-			// a marketing page, too slow for a tool somebody uses forty times a day.
-			// These match the CSS tokens so a GSAP transition and a CSS one feel
-			// like the same system.
+			// GSAP's default is a gentle ease-out over half a second, which is a
+			// reasonable default for a marketing page and too slow for a tool
+			// somebody uses forty times a day. These match the CSS tokens so a
+			// GSAP transition and a CSS one feel like the same system.
 			gsap.defaults({ duration: 0.35, ease: 'power3.out' });
 
 			return { gsap, Flip };
@@ -116,12 +131,21 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 				});
 			};
 
-			observer = new IntersectionObserver(/* … play once, then disconnect … */);
+			observer = new IntersectionObserver(
+				(entries) => {
+					for (const entry of entries) {
+						if (!entry.isIntersecting) continue;
+						observer?.disconnect();
+						play();
+					}
+				},
+				{ threshold, rootMargin: '0px 0px -8% 0px' }
+			);
+
 			observer.observe(node);
 		});
 
 		return () => {
-			// The element may be removed while GSAP is still loading.
 			cancelled = true;
 			observer?.disconnect();
 		};
@@ -130,10 +154,10 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			},
 			{
 				type: 'code',
-				file: 'using it',
+				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-<section class="details" {@attach reveal({ y: 16 })}>`
+<section class="step details" {@attach reveal({ y: 14 })}>`
 			},
 			{
 				type: 'p',
@@ -181,62 +205,111 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			{ type: 'h3', id: 'no-breakpoints', text: 'Most layouts need no breakpoint at all' },
 			{
 				type: 'code',
-				file: 'the grid of times',
+				file: 'src/lib/components/booking/SlotGrid.svelte',
 				lang: 'css',
 				code: `
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+	/*
+	 * \`auto-fill\`, not \`auto-fit\`. With \`auto-fit\` a row containing three slots
+	 * stretches them across the full width, so the same 11:00 button is a
+	 * different size depending on how many neighbours it has — which looks like
+	 * a bug. \`auto-fill\` keeps the empty tracks, so every slot is the same size
+	 * whether the day is full or nearly empty.
+	 */
+	grid-template-columns: repeat(auto-fill, minmax(min(5.5rem, 100%), 1fr));
 	gap: var(--space-2);
 }`
 			},
 			{
 				type: 'code',
-				file: 'the service list',
+				file: 'src/lib/styles/utilities.css',
 				lang: 'css',
 				code: `
-.services {
+/**
+ * A grid that decides its own column count.
+ *
+ * \`auto-fit\` plus \`minmax\` means: fit as many columns as will be at least
+ * \`--col-min\` wide, and share the leftover space between them. No breakpoints,
+ * no media queries, and it is correct at every width including the ones nobody
+ * tested. \`min()\` stops it overflowing when the container is narrower than
+ * \`--col-min\` itself — the one case the classic version of this trick gets wrong.
+ */
+.auto-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-	gap: var(--space-4);
+	gap: var(--grid-gap, var(--space-5));
+	grid-template-columns: repeat(auto-fit, minmax(min(var(--col-min, 16rem), 100%), 1fr));
 }`
 			},
 			{
 				type: 'p',
-				text: 'Both are fully responsive with no media query. `min(100%, 18rem)` is the detail worth stealing: without it, a card with an 18rem minimum overflows a 375px phone, because `minmax` honours the minimum even when there is not room. Capping it at 100% lets it shrink when it must.'
+				text: 'Both are fully responsive with no media query, and both wrap their minimum in `min(…, 100%)` — the detail worth stealing. Without the cap, a track with a 16rem minimum overflows a 375px phone, because `minmax` honours its minimum even when there is not room. Capping it at 100% lets the column shrink when it must.'
+			},
+			{
+				type: 'p',
+				text: 'And sometimes the responsive answer is no grid at all. The service list on the booking page is one card per row at every width, so its whole layout is a flex column:'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/book/[slug]/+page.svelte',
+				lang: 'css',
+				code: `
+.services {
+	list-style: none;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}`
+			},
+			{
+				type: 'p',
+				text: 'Reaching for `auto-fit` here would have been solving a problem the design does not have. Pick the simplest layout that matches the content, and it tends to be the one that needs no breakpoint.'
 			},
 
 			{ type: 'h3', id: 'breakpoints', text: 'And when you do need one' },
 			{
 				type: 'code',
-				file: 'src/lib/styles/tokens.css',
+				file: 'src/lib/styles/utilities.css',
 				lang: 'css',
 				code: `
-/* utilities.css — the only min-width query in the app. */
-@media (min-width: 48rem) {
-	.split {
-		grid-template-columns: 1fr 1fr;
-	}
+/** Vertical rhythm between major page sections. */
+.section {
+	padding-block: var(--space-7);
 }
 
-/* DateStrip.svelte — the only max-width one: below 26rem the day
-   labels stop fitting and shorten to their first two letters. */
+@media (min-width: 48rem) {
+	.section {
+		padding-block: var(--space-8);
+	}
+}`
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/booking/DateStrip.svelte',
+				lang: 'css',
+				code: `
+/* On the narrowest phones the weekday initial is enough; the number carries
+ * the meaning and seven three-letter labels would wrap. */
 @media (max-width: 26rem) {
-	.day .name {
-		font-size: var(--text-xs);
+	.weekday {
+		font-size: 0.6rem;
+	}
+	.day {
+		padding-inline: 0;
 	}
 }`
 			},
 			{
 				type: 'p',
-				text: 'Two media queries in the entire application, and neither came from a table of phone sizes — both were written at the width where the content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.'
+				text: 'Six width queries in the entire application: these two, a `min-width: 30rem` that lets the landing page\'s buttons stop being full-width, and three small `max-width` ones that tighten a component on narrow phones — the header drops the brand word at 22rem, a confirmation detail row collapses to one column at 26rem, and the diary\'s cancel button drops onto its own row at 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.'
 			},
 
 			{ type: 'h3', id: 'touch', text: 'Thumbs, not cursors' },
 			{
 				type: 'ul',
 				items: [
-					'**44px minimum** on anything tappable — `min-block-size: 2.75rem`. The slot grid, the day strip, every icon button.',
+					'**44px minimum** on anything tappable — `min-height: 2.75rem`. The slot grid, the buttons, the header links.',
 					'**Spacing between targets**, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.',
 					'**Primary actions at the bottom** on a phone. The top of a 6.7-inch screen needs a hand shuffle.',
 					'**`inputmode` and `autocomplete`** on every field. `autocomplete="email"` plus `inputmode="email"` is the difference between two taps and thirty.'
@@ -246,12 +319,13 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			{ type: 'h3', id: 'dvh', text: 'The viewport unit that does not lie' },
 			{
 				type: 'code',
-				file: 'css',
+				file: 'src/routes/+layout.svelte',
 				lang: 'css',
 				code: `
-.screen {
-	/* Not 100vh. */
-	min-block-size: 100dvh;
+.shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100dvh;
 }`
 			},
 			{
@@ -267,7 +341,13 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 				code: `
 projects: [
 	{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-	{ name: 'mobile', use: { ...devices['Pixel 7'] } }
+	{
+		// A real phone profile, not a narrow desktop window. Touch targets,
+		// device pixel ratio and viewport all differ, and this app is used
+		// standing up more often than sitting down.
+		name: 'mobile',
+		use: { ...devices['Pixel 7'] }
+	}
 ]`
 			},
 			{
@@ -304,33 +384,25 @@ projects: [
 				file: 'src/lib/time/availability.spec.ts',
 				lang: 'ts',
 				code: `
-it('does not offer a slot whose tidy-up time runs past closing', () => {
-	const slots = availableSlots({
-		timeZone: LONDON,
-		from: '2026-08-17',
-		to: '2026-08-17',
-		rules: [{ weekday: 1, startMinute: 9 * 60, endMinute: 17 * 60 }],
-		service: {
-			durationMinutes: 45,
-			bufferBeforeMinutes: 0,
-			bufferAfterMinutes: 10,
-			slotIntervalMinutes: 15
-		},
-		occupied: new Set(),
-		now: wallClockToInstant('2026-08-17', 0, LONDON),
-		minNoticeMinutes: 0,
-		maxAdvanceDays: 30
-	});
+const cutAndFinish: ServiceShape = {
+	durationMinutes: 45,
+	bufferBeforeMinutes: 0,
+	bufferAfterMinutes: 15,
+	slotIntervalMinutes: 15
+};
 
-	const last = slots.at(-1)!;
+// …
 
-	// 45 + 10 = 55 minutes of window needed, so the last start is 16:05.
-	expect(instantToMinuteOfDay(last.start, LONDON)).toBe(16 * 60 + 5);
+it('stops early enough that the buffer still fits before closing', () => {
+	// 45 minutes of chair time plus 15 minutes of tidying must end by 17:00,
+	// so the last bookable start is 16:00 — not 16:15.
+	const slots = availableSlots(query());
+	expect(asLocalTimes(slots).at(-1)).toBe('16:00');
 });`
 			},
 			{
 				type: 'p',
-				text: 'The name states the rule. The comment states the arithmetic. The assertion states the answer. Somebody reading this in a year learns the business rule from the test rather than having to reconstruct it from the implementation.'
+				text: 'The name states the rule. The comment states the arithmetic. The assertion states the answer. Two small helpers do the housekeeping: `query()` merges a test\'s overrides into a standard day — Monday, nine to five, this service — so each test states only the thing it is about, and `asLocalTimes` turns slot starts back into clock readings, which is how a human checks them. Somebody reading this in a year learns the business rule from the test rather than having to reconstruct it from the implementation.'
 			},
 
 			{ type: 'h3', id: 'concurrency', text: 'The most valuable test in the project' },
@@ -339,25 +411,40 @@ it('does not offer a slot whose tidy-up time runs past closing', () => {
 				file: 'src/lib/server/scheduling.spec.ts',
 				lang: 'ts',
 				code: `
-it('lets exactly one of ten simultaneous requests win', async () => {
-	const attempts = Array.from({ length: 10 }, (_, index) =>
-		createBooking({ ...base, customerName: \`Racer \${index}\` })
-	);
+/*
+ * The tests this whole schema exists for.
+ *
+ * \`Promise.all\` over N calls to \`createBooking\` is not a simulation of a race —
+ * it is a race. Each call opens its own transaction against the same file, and
+ * the only thing standing between them and a double-booked chair is the
+ * composite primary key on \`slot_claim\`.
+ */
+describe('createBooking under concurrency', () => {
+	it('lets exactly one of ten simultaneous requests win the same slot', async () => {
+		const attempts = Array.from({ length: 10 }, (_, index) =>
+			createBooking(
+				bookingInput({
+					start: at(11 * 60),
+					customerName: \`Customer \${index}\`,
+					customerEmail: \`customer\${index}@example.test\`
+				})
+			)
+		);
 
-	const results = await Promise.allSettled(attempts);
+		const results = await Promise.allSettled(attempts);
 
-	expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+		const won = results.filter((result) => result.status === 'fulfilled');
+		const lost = results.filter((result) => result.status === 'rejected');
 
-	for (const failure of results.filter((r) => r.status === 'rejected')) {
-		expect((failure.reason as BookingError).code).toBe('slot_taken');
-	}
+		expect(won).toHaveLength(1);
+		expect(lost).toHaveLength(9);
 
-	// Nothing half-written survived the nine rollbacks.
-	const bookings = await db.select().from(booking);
-	const claims = await db.select().from(slotClaim);
+		// And the diary agrees: one booking, twelve claims, no orphans.
+		expect(await db.select().from(booking)).toHaveLength(1);
+		expect(await db.select().from(slotClaim)).toHaveLength(12);
+	});
 
-	expect(bookings).toHaveLength(1);
-	expect(new Set(claims.map((c) => c.bookingId))).toEqual(new Set([bookings[0]!.id]));
+	// …
 });`
 			},
 			{
@@ -366,7 +453,11 @@ it('lets exactly one of ten simultaneous requests win', async () => {
 			},
 			{
 				type: 'p',
-				text: 'The last two assertions are the ones people leave out. "Exactly one winner" can be true while the database is full of orphaned claims from the rolled-back transactions. Checking that every claim belongs to the surviving booking is what proves the rollback rolled back.'
+				text: 'The last two assertions are the ones people leave out. "Exactly one winner" can be true while the database is full of leftovers from the nine rolled-back transactions. Counting the rows directly — one booking, and exactly the twelve five-minute claim cells of the winner\'s hour-long block, nothing more — is what proves the rollback rolled back.'
+			},
+			{
+				type: 'p',
+				text: 'The test after this one sends five losers to the same slot and accepts either `slot_taken` or `slot_not_offered` as the reason: sometimes the pre-flight availability check catches the collision before the claim does, and both are honest answers. What matters, as its comment says, is that neither is a 500.'
 			},
 
 			{ type: 'h3', id: 'when-wrong', text: 'When the test is the thing that is wrong' },
@@ -389,18 +480,24 @@ it('lets exactly one of ten simultaneous requests win', async () => {
 				file: 'don’t',
 				lang: 'ts',
 				code: `
-expect(formatCompactMoney(5600)).toBe('£5.60K');`
+const compact = new Intl.NumberFormat('en-GB', {
+	style: 'currency',
+	currency: 'GBP',
+	notation: 'compact'
+});
+
+expect(compact.format(5600)).toBe('£5.60K');`
 			},
 			{
 				type: 'code',
 				file: 'do',
 				lang: 'ts',
 				code: `
-expect(formatCompactMoney(5600)).toMatch(/^£5\\.60?K$/);`
+expect(compact.format(5600)).toMatch(/^£5\\.60?K$/);`
 			},
 			{
 				type: 'p',
-				text: '`Intl` output depends on the runtime\'s ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from `£5.60K` to `£5.6K`. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it.'
+				text: '`Intl` output depends on the runtime\'s ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from `£5.60K` to `£5.6K`. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast\'s own `formatMoney` is a thin wrapper around `Intl.NumberFormat`, so its tests face exactly this trap.'
 			},
 			{
 				type: 'p',
@@ -414,8 +511,10 @@ expect(formatCompactMoney(5600)).toMatch(/^£5\\.60?K$/);`
 				lang: 'ts',
 				code: `
 test: {
-	// A test with no assertions is a test that passes by accident.
-	expect: { requireAssertions: true }
+	// A test that asserts nothing is a test that cannot fail. Vitest will now
+	// treat one as an error rather than a pass.
+	expect: { requireAssertions: true },
+	// …
 }`
 			},
 			{
@@ -448,16 +547,47 @@ test: {
 				file: 'playwright.config.ts',
 				lang: 'ts',
 				code: `
+const PORT = 4173;
+const ORIGIN = \`http://localhost:\${PORT}\`;
+
+// …
+
 webServer: {
 	command: 'npm run build && node build/index.js',
-	port: 4173,
-	reuseExistingServer: !process.env.CI
+	port: PORT,
+	env: {
+		DATABASE_URL: 'file:e2e.db',
+		ORIGIN,
+		PUBLIC_ORIGIN: ORIGIN,
+		PUBLIC_DEFAULT_TIME_ZONE: 'Europe/London',
+		BETTER_AUTH_SECRET: 'e2e-secret-not-used-for-anything-real-0000',
+		PORT: String(PORT)
+	},
+	/*
+	 * Never reuse a server that is already running.
+	 *
+	 * It is tempting — it saves fifteen seconds — and it means a suite can pass
+	 * against a build from twenty minutes ago while the code under test has
+	 * changed underneath it. That happened in the previous project in this
+	 * series and cost an hour of confusion.
+	 */
+	reuseExistingServer: false,
+	timeout: 120_000,
+
+	// …
 },
-workers: 1`
+
+// …
+
+workers: 1,`
 			},
 			{
 				type: 'p',
 				text: 'The dev server and the built app differ in ways that matter: bundling, SSR, environment substitution, and how modules are externalised. Two of the worst bugs in this project — the missing libSQL native module and the CSRF origin mismatch — **only exist in the build**. A suite that runs against `vite dev` would have shipped both.'
+			},
+			{
+				type: 'p',
+				text: 'Two settings here are deliberate refusals of the usual convenience. `reuseExistingServer` is `false` unconditionally — not the `!process.env.CI` most configs ship — because a reused server means testing a build from twenty minutes ago while the code has changed underneath it; the comment records the hour that cost. And the `env` block pins `ORIGIN` and `PUBLIC_ORIGIN` to the same address the tests drive: point the server at one port and drive it on another, and every form POST is a 403 from the CSRF protection doing its job.'
 			},
 
 			{ type: 'h3', id: 'fixtures', text: 'A fixture that cannot be forgotten' },
@@ -467,11 +597,20 @@ workers: 1`
 				lang: 'ts',
 				code: `
 export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>({
+	// …
+
 	emptyDiary: [
+		// eslint-disable-next-line no-empty-pattern -- Playwright requires the destructure
 		async ({}, use) => {
-			// A full re-seed, not just a diary wipe. The dashboard tests change
-			// prices, hide services and rewrite shifts, so the studio itself has
-			// to go back to its known shape.
+			/*
+			 * A full re-seed, not just a diary wipe.
+			 *
+			 * The dashboard tests change prices, hide services and rewrite shifts, so
+			 * "empty the bookings" is no longer enough to make a test independent —
+			 * the studio itself has to go back to its known shape.
+			 *
+			 * …
+			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
 				env: { ...process.env, DATABASE_URL: 'file:e2e.db' }
@@ -508,19 +647,22 @@ reportBrowserErrors: [
 			if (message.type() === 'error') console.error('[browser]', message.text());
 		});
 
-		// 4xx responses are expected — several tests assert on them. A 5xx never is.
+		// 4xx responses are expected — several tests assert on them. A 5xx never
+		// is, so surface it with its body rather than leaving a bare status code.
 		page.on('response', (response) => {
 			if (response.status() < 500) return;
 			void response
 				.text()
-				.then((body) => console.error('[http]', response.status(), response.url(), body.slice(0, 300)))
+				.then((body) =>
+					console.error('[http]', response.status(), response.url(), body.slice(0, 300))
+				)
 				.catch(() => {});
 		});
 
 		await use();
 	},
 	{ auto: true }
-]`
+],`
 			},
 			{
 				type: 'p',
@@ -565,8 +707,10 @@ for (const section of ['services', 'team', 'settings']) {
 }
 
 test('cannot see another studio s diary', async ({ page }) => {
-	// A 404, not a 403. Confirming that /manage/other-studio exists but is not
-	// yours leaks the platform's customer list one guess at a time.
+	/*
+	 * A 404, not a 403. Confirming that \`/manage/other-studio\` exists but is
+	 * not yours leaks the platform's customer list one guess at a time.
+	 */
 	const response = await page.goto('/manage/some-other-studio');
 	expect(response?.status()).toBe(404);
 });`
@@ -621,7 +765,7 @@ test('cannot see another studio s diary', async ({ page }) => {
 			{ type: 'h3', id: 'inputs', text: '2. Every input, at the boundary' },
 			{
 				type: 'p',
-				text: 'Every remote function has a schema. Not one takes a bare string. The check worth running on your own project:'
+				text: 'Every remote function that accepts input validates it with a schema at the boundary. The one function without a schema is `signOut`, which takes no argument at all — there is nothing to validate. A first pass worth running on your own project: count the declarations, then count the ones with a schema visibly in place.'
 			},
 			{
 				type: 'terminal',
@@ -630,7 +774,7 @@ grep -rn "export const .* = \\(query\\|command\\|form\\)(v\\.\\|export const .* 
 			},
 			{
 				type: 'p',
-				text: 'If those two numbers differ, something takes an unvalidated argument.'
+				text: 'On this codebase those print 18 and 10 — and not one of the eight gaps is a missing schema. Five declarations wrap, so the schema sits on the next line where the grep cannot see it; two schemas are named `cancelArgs` and `noteArgs` rather than `…Schema`; and `signOut` genuinely takes nothing. That is what a naive grep is: a prompt for an audit, not a verdict. Run it, then chase every difference to its reason — the pass is finished when each gap has an explanation, and the explanation is never "we forgot".'
 			},
 
 			{ type: 'h3', id: 'enumeration', text: '3. What the errors give away' },
@@ -785,11 +929,16 @@ return response;`
 				lang: 'json',
 				code: `
 "scripts": {
+	…
 	"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+	…
 	"lint": "prettier --check . && eslint .",
+	…
 	"test:unit": "vitest",
+	…
 	"test:e2e": "node scripts/prepare-e2e-db.js && playwright test",
-	"verify": "pnpm run check && pnpm run lint && pnpm run test:unit -- --run && pnpm run build && pnpm run test:e2e"
+	"verify": "npm run check && npm run lint && npm run test:unit -- --run && npm run build && npm run test:e2e",
+	…
 }`
 			},
 			{
@@ -808,8 +957,10 @@ return response;`
 				lang: 'ts',
 				code: `
 sveltekit({
-	paths: { origin: env.PUBLIC_ORIGIN }
-})`
+	// …
+	paths: { origin: env.PUBLIC_ORIGIN },
+	// …
+}),`
 			},
 			{
 				type: 'p',
@@ -827,9 +978,11 @@ sveltekit({
 				lang: 'json',
 				code: `
 "dependencies": {
+	…
 	"@libsql/client": "^0.17.4",
 	"better-auth": "^1.7.2",
-	"drizzle-orm": "^0.45.2"
+	"drizzle-orm": "^0.45.2",
+	…
 }`
 			},
 			{
@@ -837,7 +990,10 @@ sveltekit({
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `
-ssr: { external: ['@libsql/client', 'libsql'] }`
+ssr: {
+	// …
+	external: ['@libsql/client', 'libsql']
+},`
 			},
 			{
 				type: 'p',
@@ -850,8 +1006,10 @@ ssr: { external: ['@libsql/client', 'libsql'] }`
 				file: 'package.json',
 				lang: 'json',
 				code: `
-"engines": { "node": ">=24.0.0" },
-"packageManager": "pnpm@11.24.0"`
+"engines": {
+	"node": ">=24.20.0"
+},
+"packageManager": "pnpm@11.24.0",`
 			},
 			{
 				type: 'code',
