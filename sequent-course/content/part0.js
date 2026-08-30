@@ -267,7 +267,9 @@ packages:
 
 # Keep the lockfile honest about what each package actually uses, rather than
 # letting a transitive dependency satisfy an undeclared import.
-linkWorkspacePackages: true`
+linkWorkspacePackages: true
+
+# …`
 			},
 
 			{ type: 'h3', id: 'the-six', text: 'The six packages' },
@@ -304,27 +306,42 @@ linkWorkspacePackages: true`
 				lang: 'json',
 				code: `
 {
+	"$schema": "https://json.schemastore.org/tsconfig",
 	"compilerOptions": {
-		"target": "esnext",
+		"target": "es2024",
+		"lib": ["es2024"],
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
+
+		/*
+		 * Strict, and then some.
+		 *
+		 * \`strict\` alone still lets two things through that matter here.
+		 * \`noUncheckedIndexedAccess\` makes \`book.levels[i]\` a \`Level | undefined\`,
+		 * which is the truth — and in a matching engine, an off-by-one that reads
+		 * past the end of a price ladder is exactly the bug you want the compiler
+		 * to find rather than the market.
+		 * \`exactOptionalPropertyTypes\` stops \`{ price?: number }\` from silently
+		 * accepting \`{ price: undefined }\`, which is how a market order ends up
+		 * indistinguishable from a limit order with a missing price.
+		 */
 		"strict": true,
-
-		// \`array[0]\` is \`T | undefined\`. Half this codebase asks "what is the best
-		// bid", and the honest answer is often "there isn't one".
 		"noUncheckedIndexedAccess": true,
-
-		// \`{ a?: string }\` and \`{ a: string | undefined }\` become different types.
-		// Fiddly, and it is what catches "I passed undefined where the field was
-		// supposed to be absent" — which matters on the wire.
 		"exactOptionalPropertyTypes": true,
-
 		"noImplicitOverride": true,
 		"noFallthroughCasesInSwitch": true,
+		"noPropertyAccessFromIndexSignature": true,
+
+		/* Node 24 runs TypeScript directly, so we type-check and never emit. */
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
 		"verbatimModuleSyntax": true,
 		"isolatedModules": true,
+
+		// …
 		"skipLibCheck": true,
-		"noEmit": true
+		"resolveJsonModule": true
 	}
 }`
 			},
@@ -381,11 +398,13 @@ export class Sequencer {
 				lang: 'ts',
 				code: `
 /**
- * The scale.
+ * How many integer price units make up one unit of currency.
  *
- * £45.505 is 455050. Four decimal places, which is more precision than any
- * exchange quotes in and enough that a fee of three basis points on a small
- * trade does not round to nothing.
+ * 10,000 means the smallest representable amount is 1/100th of a penny, which
+ * is finer than any venue we are modelling quotes in — deliberately, so that
+ * fee arithmetic has somewhere to round *to* rather than rounding a price.
+ *
+ * £45.50 is therefore \`455_000\`.
  */
 export const SCALE = 10_000;`
 			},
@@ -400,26 +419,59 @@ export const SCALE = 10_000;`
 				file: 'packages/protocol/src/money.ts',
 				lang: 'ts',
 				code: `
-declare const brand: unique symbol;
+/**
+ * The largest value we allow through the door.
+ *
+ * JavaScript integers are exact up to 2^53 − 1 (about 9.007e15). A price times
+ * a quantity has to stay inside that, and so does the sum of every posting in
+ * the ledger. Capping a single value at 1e15 leaves nine orders of magnitude of
+ * headroom for aggregation, which is a margin nobody will exhaust and a limit
+ * that turns a silent precision loss into a loud rejection.
+ *
+ * Silent is the enemy. \`2 ** 53 + 1 === 2 ** 53\` is \`true\`, and no exception is
+ * thrown when your balance stops being the number you think it is.
+ */
+export const MAX_MAGNITUDE = 1e15;
+
+// …
 
 /**
- * A scaled price. Structurally a number; nominally its own type.
+ * A price, in units of 1/\`SCALE\` of the instrument's currency.
  *
- * The \`brand\` property does not exist at runtime — it is erased along with
- * every other type. What it buys is that \`Price\` and \`Quantity\` stop being
- * interchangeable at compile time, so \`notional(quantity, price)\` with the
- * arguments the wrong way round is an error rather than a very wrong number.
+ * Branded so that a quantity cannot be passed where a price is expected. The
+ * brand exists only in the type system — at runtime this is a plain number, and
+ * the tag costs nothing.
  */
-export type Price = number & { readonly [brand]: 'Price' };
-export type Quantity = number & { readonly [brand]: 'Quantity' };
-export type Amount = number & { readonly [brand]: 'Amount' };
+export type Price = number & { readonly __brand: 'Price' };
 
-export const price = (value: number): Price => {
-	if (!Number.isSafeInteger(value)) {
-		throw new TypeError(\`A price must be a safe integer in scaled units, got \${value}\`);
+/** A quantity, in whole tradeable units. Shares, contracts, lots. */
+export type Quantity = number & { readonly __brand: 'Quantity' };
+
+// …
+
+/**
+ * Assert a value is a safe integer of the right magnitude, and brand it.
+ *
+ * Every one of these throws rather than returning a result type. That is the
+ * right trade at this layer: a non-integer price is not a business outcome the
+ * caller should handle, it is a programming error, and the earliest possible
+ * loud failure is the cheapest one. Untrusted input is validated by a schema
+ * long before it reaches here.
+ */
+function integer(value: number, what: string): number {
+	if (!Number.isInteger(value)) {
+		throw new TypeError(\`\${what} must be an integer, got \${value}\`);
 	}
-	return value as Price;
-};`
+	if (Math.abs(value) > MAX_MAGNITUDE) {
+		throw new RangeError(\`\${what} is out of range: \${value}\`);
+	}
+	return value;
+}
+
+export function price(value: number): Price {
+	if (value <= 0) throw new RangeError(\`price must be positive, got \${value}\`);
+	return integer(value, 'price') as Price;
+}`
 			},
 			{
 				type: 'note',
@@ -440,20 +492,40 @@ export const price = (value: number): Price => {
 				file: 'packages/protocol/src/money.ts',
 				lang: 'ts',
 				code: `
-/** What a trade is worth: price × quantity, still in scaled units. */
-export const notional = (unitPrice: Price, howMany: Quantity): Amount =>
-	(unitPrice * howMany) as Amount;
+/**
+ * What a fill is worth: price × quantity, as an \`Amount\`.
+ *
+ * Both operands are integers and so is the product, so this is exact — which is
+ * the entire reason for the integer discipline above. The result is in the same
+ * 1/\`SCALE\` units as the price, so it can be posted to the ledger without
+ * conversion.
+ */
+export function notional(p: Price, q: Quantity): Amount {
+	return amount(p * q);
+}
 
 /**
- * A fee in basis points, truncated **toward zero**.
+ * A fee in basis points, rounded **towards zero**.
  *
- * Truncation rather than rounding, and the direction is deliberate: a fee that
- * rounds up takes a fraction of a penny more than it should from every trade,
- * and across a million trades that is real money taken by an arithmetic
- * decision nobody made on purpose.
+ * The rounding direction is a real decision, not a default. Rounding a fee down
+ * means the venue collects fractionally less than the published rate, and the
+ * remainder stays with the participant. Rounding up would mean the venue takes
+ * a fraction of a unit more than it advertised, several million times a day,
+ * which is the sort of thing regulators write letters about.
+ *
+ * The rounding is also why \`SCALE\` is finer than any price we quote: a fee on a
+ * penny-priced trade still has room to be represented rather than vanishing.
+ *
+ * The remainder does not disappear. \`feeSplit\` below returns it, and the ledger
+ * posts it, because an amount that is neither charged nor refunded is an amount
+ * that stops the books balancing.
  */
-export const feeOf = (value: Amount, basisPoints: number): Amount =>
-	Math.trunc((value * basisPoints) / 10_000) as Amount;`
+export function feeOf(value: Amount, basisPoints: number): Amount {
+	if (!Number.isInteger(basisPoints) || basisPoints < 0) {
+		throw new RangeError(\`basis points must be a non-negative integer, got \${basisPoints}\`);
+	}
+	return amount(Math.trunc((value * basisPoints) / 10_000));
+}`
 			},
 
 			{ type: 'h3', id: 'parsing', text: 'Parsing a price, without ever touching a float' },
@@ -482,29 +554,23 @@ const scaled = Math.round(Number(text) * SCALE);`
 				file: 'packages/protocol/src/money.ts',
 				lang: 'ts',
 				code: `
-/**
- * Turn "45.505" into 455050, using string arithmetic.
- *
- * No \`Number(text) * SCALE\` anywhere: that would build a float first and
- * inherit its error. Splitting the string and padding the fractional part
- * cannot lose precision, because it never leaves the integers.
- */
+/** Parse a human's decimal string into an exact integer price. */
 export function parsePrice(text: string): Price {
-	const trimmed = text.trim();
-
-	if (!/^-?\\d+(\\.\\d+)?$/.test(trimmed)) {
-		throw new TypeError(\`Not a price: \${text}\`);
+	const trimmed = text.trim().replace(/[,\\s]/g, '');
+	if (!/^\\d+(\\.\\d{1,4})?$/.test(trimmed)) {
+		throw new RangeError(\`not a price: \${text}\`);
 	}
 
-	const negative = trimmed.startsWith('-');
-	const [whole = '0', fraction = ''] = trimmed.replace('-', '').split('.');
-
-	// Four decimal places, padded or truncated. Truncated rather than rounded,
-	// for the same reason fees truncate: never take more than was typed.
-	const padded = (fraction + '0000').slice(0, 4);
-	const scaled = Number(whole) * SCALE + Number(padded);
-
-	return price(negative ? -scaled : scaled);
+	/*
+	 * String arithmetic, not \`Number(text) * SCALE\`.
+	 *
+	 * \`45.55 * 10_000\` is \`455499.99999999994\` — the multiplication reintroduces
+	 * exactly the error the integer discipline exists to avoid, on the very last
+	 * step before the value becomes trusted. Padding the fractional digits and
+	 * concatenating keeps it exact.
+	 */
+	const [whole = '0', fraction = ''] = trimmed.split('.');
+	return price(Number(whole + fraction.padEnd(4, '0')));
 }`
 			},
 
@@ -515,23 +581,18 @@ export function parsePrice(text: string): Price {
 				lang: 'ts',
 				code: `
 /**
- * A scaled integer as something a person reads.
+ * Format for a human. The only place a fraction is allowed to appear.
  *
- * The division happens **here**, at the very edge, for display only. Every
- * amount that travels or is stored stays an integer — the moment a float
- * touches money it starts losing pennies in ways that take an auditor to find.
+ * Note that this divides at the very last moment, into a string, and the result
+ * never travels back inwards. A formatted price is output, not a value.
  */
-export function formatPrice(value: Price, currency = 'GBP'): string {
-	const symbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : '';
-	const units = Math.abs(value) / SCALE;
-
-	// Up to four decimals, but no trailing zeros: £45.50, not £45.5000.
-	const text = units.toLocaleString('en-GB', {
+export function formatPrice(p: Price, currency = 'GBP', locale = 'en-GB'): string {
+	return new Intl.NumberFormat(locale, {
+		style: 'currency',
+		currency,
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 4
-	});
-
-	return \`\${value < 0 ? '−' : ''}\${symbol}\${text}\`;
+	}).format(p / SCALE);
 }`
 			},
 			{
@@ -572,40 +633,66 @@ export function formatPrice(value: Price, currency = 'GBP'): string {
 				file: 'packages/protocol/src/ids.ts',
 				lang: 'ts',
 				code: `
-/**
- * An order id, derived from the command that created it.
- *
- * \`O-0000000000001834\` — the sequence number, zero-padded so ids sort
- * lexicographically in the same order they were created. That padding is worth
- * the ugliness: it means \`ORDER BY order_id\` and \`ORDER BY seq\` agree, and a
- * directory listing or a log file sorts correctly by accident.
- *
- * Deterministic, so replay produces the same ids. Self-describing, so
- * "where did this order come from" is answered by reading it rather than by a
- * join.
- */
-export function orderIdFor(seq: number): OrderId {
-	return \`O-\${String(seq).padStart(16, '0')}\` as OrderId;
+function tag<T extends string>(value: string): T {
+	return value as T;
 }
 
+// …
+
 /**
- * A trade id: the sequence number, plus which trade this was within the command.
+ * The identifier for a trade, derived from where it happened in the log.
  *
- * One aggressive order can produce several trades as it eats through a level,
- * so the sequence number alone is not unique. The index disambiguates, and
- * keeps them in the order they occurred.
+ * \`T-0000000000001834-002\` is the third trade produced by command 1,834. A
+ * single aggressive order can sweep several price levels and produce several
+ * trades from one command, which is what the suffix is for.
  *
- *   T-0000000000001834-002
- *     └ the command       └ the third trade it produced
+ * Two properties fall out of this for free, and both are worth more than they
+ * cost:
+ *
+ *   - **Reproducible.** Replay the log and every trade gets the same id it had
+ *     the first time. An auditor's query written a year ago still joins.
+ *   - **Self-locating.** Given a trade id you can find the command that caused
+ *     it without a lookup — the sequence number is right there in the string.
+ *     During an incident that is the difference between a minute and an hour.
+ *
+ * The sequence number is zero-padded to sixteen digits so that lexicographic
+ * order matches chronological order. That is the same reason ISO 8601 dates are
+ * written most-significant-first, and it means a plain \`ORDER BY trade_id\`
+ * sorts the tape correctly with no index on anything else.
  */
 export function tradeIdFor(seq: number, index: number): TradeId {
-	return \`T-\${String(seq).padStart(16, '0')}-\${String(index).padStart(3, '0')}\` as TradeId;
+	if (!Number.isInteger(seq) || seq < 0) throw new RangeError(\`bad sequence: \${seq}\`);
+	if (!Number.isInteger(index) || index < 0) throw new RangeError(\`bad index: \${index}\`);
+
+	return tag<TradeId>(\`T-\${String(seq).padStart(16, '0')}-\${String(index).padStart(3, '0')}\`);
 }
 
-/** And back, because an id that cannot be read is only half an id. */
+/** Recover the sequence number a trade id was minted at. */
 export function seqOfTrade(id: TradeId): number {
-	return Number(id.slice(2, 18));
-}`
+	const [, seq] = id.split('-');
+	if (seq === undefined) throw new RangeError(\`not a trade id: \${id}\`);
+	return Number(seq);
+}
+
+/**
+ * The venue's identifier for an order, derived from the command that placed it.
+ *
+ * One \`place_order\` command produces at most one order, so the sequence number
+ * is already a unique name for it and inventing a second one would only create
+ * something else to keep in step.
+ *
+ * The gateway could have assigned this before the log — that was the first
+ * design — but deriving it here is strictly better: the engine no longer has to
+ * trust an identifier it did not produce, two commands cannot arrive claiming
+ * the same order id, and a replay reconstructs every id exactly. The gateway
+ * learns the id from the acceptance event, which it was waiting for anyway.
+ */
+export function orderIdFor(seq: number): OrderId {
+	if (!Number.isInteger(seq) || seq < 0) throw new RangeError(\`bad sequence: \${seq}\`);
+	return tag<OrderId>(\`O-\${String(seq).padStart(16, '0')}\`);
+}
+
+// …`
 			},
 			{
 				type: 'why',
@@ -624,18 +711,78 @@ export function seqOfTrade(id: TradeId): number {
 				lang: 'ts',
 				code: `
 /**
- * Random identifiers, at a separate subpath.
+ * Identifier generation. Server side only, and enforced by the module graph.
  *
- * This file is exported as \`@sequent/protocol/generate\`, not from the package
- * root. The engine imports \`@sequent/protocol\` and gets the whole vocabulary
- * *except* the one function that would make it non-deterministic.
+ * This file is deliberately **not** re-exported from \`index.ts\`. It is reached
+ * as \`@sequent/protocol/generate\`, which means:
  *
- * The separation is the point. A comment saying "do not use this in the engine"
- * is advice; a module the engine does not import is a guarantee.
+ *   - the browser bundle cannot pull it in, because importing it would drag
+ *     \`node:crypto\` into a client build and the bundler would refuse;
+ *   - \`@sequent/core\` — the matching engine — cannot reach it either, because
+ *     the engine imports the package root and nothing else.
+ *
+ * That second point is the one that matters. The engine must be a pure function
+ * of its input log, and a single \`newId()\` call inside it would break replay in
+ * a way no test would notice: the books would match, the trade identifiers
+ * would not, and every downstream join would silently start returning nothing.
+ *
+ * A comment saying "don't call this from the engine" would be a wish. A module
+ * the engine cannot import is a rule.
  */
-import { randomBytes } from 'node:crypto';
 
-export const newId = (): string => randomBytes(12).toString('base64url');`
+import { randomFillSync } from 'node:crypto';
+
+/**
+ * Crockford's Base32 alphabet.
+ *
+ * Thirty-two characters with \`I\`, \`L\`, \`O\` and \`U\` removed. The first three go
+ * because they are indistinguishable from \`1\`, \`1\` and \`0\` when somebody reads
+ * an identifier off a screen and types it into a support ticket; \`U\` goes
+ * because its absence means the encoding cannot accidentally spell anything
+ * unfortunate.
+ */
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/**
+ * A fresh, sortable, unguessable identifier.
+ *
+ * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
+ * randomness, encoded as 26 characters of Base32.
+ *
+ * …
+ */
+export function newId(now: number = Date.now()): string {
+	if (!Number.isInteger(now) || now < 0) {
+		throw new RangeError(\`timestamp must be a non-negative integer, got \${now}\`);
+	}
+
+	const bytes = randomFillSync(new Uint8Array(10));
+
+	// 48 bits of timestamp → 10 characters.
+	let timestamp = now;
+	let out = '';
+	for (let i = 0; i < 10; i += 1) {
+		out = CROCKFORD[timestamp % 32]! + out;
+		timestamp = Math.floor(timestamp / 32);
+	}
+
+	// …
+
+	let carry = 0n;
+	for (const byte of bytes) carry = (carry << 8n) | BigInt(byte);
+
+	let random = '';
+	for (let i = 0; i < 16; i += 1) {
+		random = CROCKFORD[Number(carry & 31n)]! + random;
+		carry >>= 5n;
+	}
+
+	return out + random;
+}`
+			},
+			{
+				type: 'note',
+				text: 'The 26-character shape is not incidental: `packages/protocol/src/ids.ts` defines `const ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/` and exports `isGeneratedId()`, so anything claiming to be a server-minted id can be checked against the pattern rather than merely trusted.'
 			},
 			{
 				type: 'code',
@@ -644,10 +791,12 @@ export const newId = (): string => randomBytes(12).toString('base64url');`
 				code: `
 {
 	"name": "@sequent/protocol",
+	// …
 	"exports": {
 		".": "./src/index.ts",
 		"./generate": "./src/generate.ts"
 	}
+	// …
 }`
 			},
 
@@ -658,17 +807,29 @@ export const newId = (): string => randomBytes(12).toString('base64url');`
 				lang: 'ts',
 				code: `
 /**
- * A client's own name for an order is unique **per firm**, not globally.
+ * The key an order is filed under while it is live.
  *
- * Two firms may both have an order called \`ORD-1\`, and both are entitled to.
- * Every lookup by client order id therefore takes the firm too — and building
- * the key here rather than at each call site means nobody can forget.
+ * A \`clientOrderId\` is only unique **within a firm** — two participants
+ * choosing \`ORDER-1\` is not a collision, it is Tuesday. Every lookup by client
+ * reference therefore has to carry the firm, and building that key in one place
+ * means no call site can forget and accidentally let one firm cancel another's
+ * order.
  */
-export const clientKey = (firmId: FirmId, clientOrderId: ClientOrderId): string =>
-	\`\${firmId}:\${clientOrderId}\`;
+export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
+	return \`\${firmId}\\0\${clientOrderId}\`;
+}
 
-export const positionKey = (accountId: AccountId, instrumentId: InstrumentId): string =>
-	\`\${accountId}:\${instrumentId}\`;`
+/**
+ * The key a position is filed under.
+ *
+ * Positions are per account per instrument. The null byte is a separator that
+ * cannot appear in either identifier, so \`("A", "B.C")\` and \`("A.B", "C")\`
+ * cannot collide — the sort of thing that never happens until an instrument is
+ * listed with a dot in its symbol, which is most of them.
+ */
+export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
+	return \`\${accountId}\\0\${instrumentId}\`;
+}`
 			},
 			{
 				type: 'checkpoint',
