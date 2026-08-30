@@ -43,15 +43,28 @@ export const part4 = [
 				file: 'src/lib/motion/config.ts',
 				lang: 'ts',
 				code: `export const easePath = {
-	// Extremely fast start, very long tail. The house curve.
+	/**
+	 * The house ease. Extremely fast start, very long tail.
+	 *
+	 * Reads as: the object was already moving and is now settling into place. This is
+	 * the curve doing most of the work in making the site feel expensive.
+	 */
 	out: 'M0,0 C0.12,0.82 0.16,1 1,1',
 
-	// Symmetrical — for things that both enter and leave.
+	/**
+	 * For elements that both enter and leave — drawers, modals.
+	 * Symmetrical, so the exit mirrors the entrance.
+	 */
 	inOut: 'M0,0 C0.76,0 0.24,1 1,1',
 
-	// Slight overshoot then settle. Use once per page, at most.
+	/**
+	 * A restrained overshoot. Travels slightly past the target and settles back.
+	 *
+	 * Use sparingly — on one hero element, or a success state. Everywhere at once and
+	 * the page looks bouncy, which reads as playful rather than premium.
+	 */
 	overshoot: 'M0,0 C0.16,0.9 0.28,1.06 1,1'
-};`
+} as const;`
 			},
 			{
 				type: 'note',
@@ -102,7 +115,7 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');`
 			},
 			{
 				type: 'warn',
-				text: 'The most common failure is animating *everything*. If every heading, card, icon and divider performs on entry, the page becomes exhausting and nothing stands out — which defeats the purpose, since the point of motion is to direct attention. In this project the headline reveal is used on three headings out of dozens.'
+				text: 'The most common failure is animating *everything*. If every heading, card, icon and divider performs on entry, the page becomes exhausting and nothing stands out — which defeats the purpose, since the point of motion is to direct attention. In this project the headline reveal is used on three headings on the home page — seven across the whole site — out of dozens.'
 			},
 			{ type: 'h3', id: 'performance', text: 'The performance rule you cannot break' },
 			{
@@ -201,6 +214,10 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');`
 	transform: translate3d(0, 28px, 0);
 }
 
+/* … */
+
+/* Hero parts are choreographed by \`motion/hero.ts\`, which sets its own start
+   positions. They just need to be invisible until it does. */
 .motion-pending [data-hero] {
 	opacity: 0;
 }
@@ -225,24 +242,42 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');`
 			{ type: 'h3', id: 'ordering', text: 'The ordering that removes the flicker' },
 			{
 				type: 'p',
-				text: 'When GSAP does arrive, the order of two lines matters enormously:'
+				text: 'When GSAP does arrive, the order matters enormously. First apply the hidden state as an **inline style**; only then release the CSS gate; only then animate:'
 			},
 			{
 				type: 'code',
 				file: 'src/lib/motion/reveal.ts',
 				lang: 'ts',
-				code: `// 1. Apply the hidden state as an INLINE style first
-gsap.set(targets, { opacity: 0, y: 28, force3D: true });
+				code: `gsap.set(targets, {
+	opacity: 0,
+	...offset,
+	...(scale ? { scale: 0.97 } : {}),
+	/* … */
+	force3D: true
+});
 
-// 2. Only then release the CSS gate
 releaseMotionGate();
 
-// 3. Now animate
-gsap.to(targets, { opacity: 1, y: 0, /* ... */ });`
+gsap.to(targets, {
+	opacity: 1,
+	y: 0,
+	x: 0,
+	scale: 1,
+	duration: dur,
+	delay,
+	stagger: items ? staggerAmount : 0,
+	// …
+	clearProps: 'transform',
+	scrollTrigger: {
+		trigger: node,
+		start,
+		toggleActions: repeat ? 'play reverse play reverse' : 'play none none none'
+	}
+});`
 			},
 			{
 				type: 'warn',
-				text: 'Swap lines 1 and 2 and you get a one-frame flash of fully-visible content on every page load. The element must never be un-hidden between the CSS gate letting go and the inline style taking over.'
+				text: 'Swap `gsap.set` and `releaseMotionGate()` and you get a one-frame flash of fully-visible content on every page load. The element must never be un-hidden between the CSS gate letting go and the inline style taking over.'
 			},
 			{ type: 'h3', id: 'reduced-motion', text: 'Reduced motion is not optional' },
 			{
@@ -298,15 +333,32 @@ gsap.to(targets, { opacity: 1, y: 0, /* ... */ });`
 
 			const { gsap } = motion;
 
+			// …
+
 			context = gsap.context(() => {
-				gsap.set(targets, { opacity: 0, y: distance, force3D: true });
+				gsap.set(targets, {
+					opacity: 0,
+					...offset,
+					...(scale ? { scale: 0.97 } : {}),
+					force3D: true
+				});
+
 				releaseMotionGate();
 
 				gsap.to(targets, {
 					opacity: 1,
 					y: 0,
+					x: 0,
+					scale: 1,
+					duration: dur,
+					delay,
+					stagger: items ? staggerAmount : 0,
 					clearProps: 'transform',
-					scrollTrigger: { trigger: node, start: 'top 85%' }
+					scrollTrigger: {
+						trigger: node,
+						start,
+						toggleActions: repeat ? 'play reverse play reverse' : 'play none none none'
+					}
 				});
 			}, node);
 		});
@@ -365,23 +417,28 @@ gsap.to(targets, { opacity: 1, y: 0, /* ... */ });`
 				file: 'src/lib/motion/headline.ts',
 				lang: 'ts',
 				code: `split = new SplitText(node, {
-	type: 'lines',
-	mask: 'lines',          // GSAP creates the overflow:hidden wrapper for us
+	type: by,
+	mask: by,
 	linesClass: 'split-line',
-	autoSplit: true,        // re-split when the element resizes
-	aria: 'auto'            // <- read the warning below
+	/* … */
+	autoSplit: true,
+	/* … */
+	aria: 'auto'
 });
 
-const lines = split.lines;
+const targets = by === 'lines' ? split.lines : split.words;
 
-gsap.set(lines, { yPercent: 115, opacity: 0 });
+gsap.set(targets, { yPercent: 115, opacity: 0, rotate, force3D: true });
 releaseMotionGate();
 
-gsap.to(lines, {
+gsap.to(targets, {
 	yPercent: 0,
 	opacity: 1,
-	duration: 1.05,
-	stagger: 0.075
+	rotate: 0,
+	duration: dur,
+	delay,
+	stagger: staggerAmount,
+	/* … */
 });`
 			},
 			{
@@ -398,7 +455,8 @@ gsap.to(lines, {
 				lang: 'css',
 				code: `.split-line {
 	padding-bottom: 0.12em;
-	margin-bottom: -0.12em;   /* undo it, so line spacing is unchanged */
+	/* Undoes the padding so the visual line spacing is unchanged. */
+	margin-bottom: -0.12em;
 }`
 			},
 			{
@@ -416,25 +474,66 @@ gsap.to(lines, {
 				file: 'src/lib/motion/hero.ts',
 				lang: 'ts',
 				code: `const timeline = gsap.timeline({
-	// A short beat before anything moves. Starting on the very first frame
-	// reads as a page still loading; a pause reads as deliberate.
+	// …
 	delay: 0.12,
 	defaults: { ease: 'sf.out' }
 });
 
-timeline.to(badge, { opacity: 1, y: 0, scale: 1, duration: 0.7 });
+if (badge) {
+	timeline.to(badge, {
+		opacity: 1,
+		y: 0,
+		scale: 1,
+		duration: duration.base
+	});
+}
 
-timeline.to(lines, {
-	yPercent: 0, opacity: 1, duration: 1.35, stagger: 0.075
-}, '-=0.45');          // overlaps the badge — one gesture, not two
+if (lines.length) {
+	timeline.to(
+		lines,
+		{
+			yPercent: 0,
+			opacity: 1,
+			duration: duration.cinematic,
+			stagger: stagger.base
+		},
+		// …
+		'-=0.45'
+	);
+}
 
-timeline.to(panel, {
-	opacity: 1, y: 0, scale: 1,
-	duration: 1.5      // slower: a large object should feel heavier
-}, '<0.3');            // starts just after the headline begins
+if (panel) {
+	timeline.to(
+		panel,
+		{
+			opacity: 1,
+			y: 0,
+			scale: 1,
+			// …
+			duration: duration.cinematic + 0.15
+		},
+		// …
+		'<0.3'
+	);
+}
 
-timeline.to(lede,    { opacity: 1, y: 0, duration: 0.7 }, '-=0.85');
-timeline.to(buttons, { opacity: 1, y: 0, stagger: 0.045 }, '-=0.5');`
+if (lede) {
+	timeline.to(lede, { opacity: 1, y: 0, duration: duration.base }, '-=0.85');
+}
+
+if (actions?.children.length) {
+	timeline.to(
+		actions.children,
+		{
+			opacity: 1,
+			y: 0,
+			duration: duration.base,
+			stagger: stagger.tight,
+			clearProps: 'transform' // so \`magnetic\` can take over cleanly
+		},
+		'-=0.5'
+	);
+}`
 			},
 			{
 				type: 'why',
@@ -479,26 +578,30 @@ timeline.to(buttons, { opacity: 1, y: 0, stagger: 0.045 }, '-=0.5');`
 				type: 'code',
 				file: 'src/lib/motion/magnetic.ts',
 				lang: 'ts',
-				code: `const hasFinePointer =
-	window.matchMedia('(pointer: fine) and (hover: hover)').matches;
-if (!hasFinePointer) return;   // no cursor on a touchscreen
+				code: `const hasFinePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+if (!hasFinePointer) return;
 
 const moveX = gsap.quickTo(node, 'x', { duration: 0.45, ease: 'power3.out' });
 const moveY = gsap.quickTo(node, 'y', { duration: 0.45, ease: 'power3.out' });
 
 function handleMove(event: PointerEvent) {
 	const rect = node.getBoundingClientRect();
+
+	// …
 	const offsetX = event.clientX - (rect.left + rect.width / 2);
 	const offsetY = event.clientY - (rect.top + rect.height / 2);
 
+	// …
 	const normalX = offsetX / (rect.width / 2 + radius);
 	const normalY = offsetY / (rect.height / 2 + radius);
 
+	// …
 	moveX(gsap.utils.clamp(-1, 1, normalX) * strength);
 	moveY(gsap.utils.clamp(-1, 1, normalY) * strength);
 }
 
 function handleLeave() {
+	// …
 	gsap.to(node, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.45)' });
 }`
 			},
@@ -533,21 +636,21 @@ function handleLeave() {
 				type: 'code',
 				file: 'src/lib/motion/counter.ts',
 				lang: 'ts',
-				code: `// Two layers: the real value for assistive tech, a clone for the eyes
+				code: `/* … */
 const accessible = document.createElement('span');
 accessible.className = 'visually-hidden';
-accessible.textContent = raw;               // "<250ms" from the first frame
+accessible.textContent = raw;
 
 const visual = document.createElement('span');
-visual.setAttribute('aria-hidden', 'true'); // never announced
-visual.textContent = prefix + format(0, decimals) + suffix;
+visual.setAttribute('aria-hidden', 'true');
+visual.textContent = \`\${parsed.prefix}\${format(0, parsed.decimals)}\${parsed.suffix}\`;
 
 node.textContent = '';
 node.append(accessible, visual);`
 			},
 			{
 				type: 'p',
-				text: 'The DOM holds the truth from the first frame; only the pixels are lying. There is a second detail too — our values are strings like `"<250ms"` and `"1.4M"`, so the counter splits each into prefix, number and suffix, animates only the middle, and reassembles on every frame.'
+				text: 'Two layers make this safe: a visually-hidden span carries the real value for assistive tech from the very first frame, and a second span, marked `aria-hidden` so it is never announced, is the one that actually counts up. Only the pixels are lying. There is a second detail too — our values are strings like `"<250ms"` and `"1.4M"`, so the counter splits each into prefix, number and suffix, animates only the middle, and reassembles on every frame.'
 			},
 			{
 				type: 'note',
@@ -560,12 +663,12 @@ node.append(accessible, visual);`
 				lang: 'ts',
 				code: `gsap.to(node, {
 	yPercent: speed * 100,
-	ease: 'none',              // parallax tracks scroll, not time
+	ease: 'none', // parallax must be linear — it tracks scroll, not time
 	scrollTrigger: {
 		trigger: node.parentElement ?? node,
 		start: 'top top',
 		end: 'bottom top',
-		scrub: true            // tied directly to scroll position
+		scrub: true
 	}
 });`
 			},
@@ -606,12 +709,14 @@ node.append(accessible, visual);`
 				type: 'code',
 				file: 'src/lib/styles/motion.css',
 				lang: 'css',
-				code: `::view-transition-old(root) {
-	animation: vt-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
-}
+				code: `@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: vt-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+	}
 
-::view-transition-new(root) {
-	animation: vt-fade-in 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+	::view-transition-new(root) {
+		animation: vt-fade-in 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+	}
 }`
 			},
 			{
