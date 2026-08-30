@@ -1,9 +1,11 @@
 /**
- * Chapters 18–27: pages, lead capture, content, tests, and shipping.
+ * Chapters 24–30 and 35–37: pages, lead capture, content, tests, and shipping.
+ * (Global numbering — the motion chapters, 31–34 in part 4, slot in between the
+ * building chapters and the testing chapters; see content/index.js.)
  */
 
 export const part3 = [
-	/* ============================================================ 18 */
+	/* ============================================================ 24 */
 	{
 		slug: 'the-home-page',
 		title: 'The home page',
@@ -17,7 +19,14 @@ export const part3 = [
 				lang: 'svelte',
 				code: `<script lang="ts">
 	import { resolve } from '$app/paths';
-	import { ArrowRightIcon, LightningIcon, ShieldCheckIcon } from 'phosphor-svelte';
+	import {
+		ArrowRightIcon,
+		LightningIcon,
+		ShieldCheckIcon,
+		DatabaseIcon,
+		BroadcastIcon,
+		StrategyIcon
+	} from 'phosphor-svelte';
 
 	import Seo from '#lib/seo/Seo.svelte';
 	import { softwareApplicationSchema } from '#lib/seo/schema.ts';
@@ -30,6 +39,7 @@ export const part3 = [
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	// …the motion imports (heroSequence, parallax, reveal, revealGroup) are built in part 4…
 
 	const stats = [
 		{ value: '<250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
@@ -37,6 +47,8 @@ export const part3 = [
 		{ value: '1.4M', label: 'Prints per session', note: 'Peak, classified in real time' },
 		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
 	];
+
+	// …the \`steps\` data for the how-it-works section…
 </script>
 
 <Seo
@@ -50,22 +62,29 @@ export const part3 = [
 				type: 'code',
 				file: 'src/routes/+page.svelte',
 				lang: 'svelte',
-				code: `<section class="hero">
+				code: `<section class="hero" {@attach heroSequence()}>
+	<!-- … -->
+	<div class="hero__glow" aria-hidden="true" {@attach parallax(0.12)}></div>
+
 	<div class="container container--wide">
 		<div class="hero__grid">
 			<div class="hero__copy">
-				<Badge tone="brand">Live options flow</Badge>
+				<span data-hero="badge">
+					<Badge tone="brand">Live options flow</Badge>
+				</span>
 
-				<h1 class="hero__title">Read institutional options flow as it prints</h1>
+				<!-- … -->
+				<h1 class="hero__title" data-hero="headline">
+					Read institutional options flow as it prints
+				</h1>
 
-				<p class="hero__lede">
-					StrikeFlow streams the entire US options tape — sweeps, blocks, dark pool prints
-					and dealer gamma — in under 250 milliseconds. Stop reconstructing what happened
-					an hour ago.
+				<p class="hero__lede" data-hero="lede">
+					StrikeFlow streams the entire US options tape — sweeps, blocks, dark pool prints and
+					dealer gamma — in under 250 milliseconds. Stop reconstructing what happened an hour ago.
 				</p>
 
-				<div class="hero__actions">
-					<Button href={resolve('/guide')} size="lg">
+				<div class="hero__actions" data-hero="actions">
+					<Button href={resolve('/guide')} size="lg" pull>
 						Get the free guide
 						{#snippet iconTrailing()}<ArrowRightIcon />{/snippet}
 					</Button>
@@ -73,16 +92,33 @@ export const part3 = [
 						See how it works
 					</Button>
 				</div>
+
+				<ul class="hero__assurances" role="list" data-hero="assurances">
+					<li>
+						<LightningIcon size={16} weight="fill" aria-hidden="true" />
+						<span>7-day free trial</span>
+					</li>
+					<li>
+						<ShieldCheckIcon size={16} weight="fill" aria-hidden="true" />
+						<span>Never connects to your broker</span>
+					</li>
+				</ul>
 			</div>
 
-			<div class="hero__chart">
+			<div class="hero__chart" data-hero="panel">
 				<FlowChart height={320} symbol="SPY" />
 			</div>
 		</div>
 
-		<div class="hero__stats"><StatStrip {stats} /></div>
+		<div class="hero__stats" data-reveal {@attach reveal({ delay: 0.1 })}>
+			<StatStrip {stats} animated />
+		</div>
 	</div>
 </section>`
+			},
+			{
+				type: 'note',
+				text: 'The `{@attach heroSequence()}` and `{@attach reveal(…)}` attributes, the `data-hero`/`data-reveal` markers, the `pull` prop on the primary button and the `animated` flag on `StatStrip` are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the markup matches the finished project; everything else on this page works without them.'
 			},
 			{
 				type: 'why',
@@ -99,30 +135,80 @@ export const part3 = [
 				file: 'src/routes/+page.svelte',
 				lang: 'css',
 				code: `.hero {
-	/* Extra top padding clears the sticky header, which overlaps the page */
+	position: relative;
+	/* Extra top padding clears the sticky header, which overlaps the page. */
 	padding-block: calc(var(--header-height) + var(--space-8)) var(--section-y);
-
-	/* A brand glow, in pure CSS — no image request to delay LCP */
-	background:
-		radial-gradient(80% 60% at 50% -10%,
-			color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 70%),
-		var(--bg-root);
+	background-color: var(--bg-root);
+	/* The glow layer is taller than the hero and moves; without this it would
+	   paint over the section below as it parallaxes. */
+	overflow: hidden;
 }
 
-/* Base: stacked, buttons full-width */
-.hero__grid   { display: flex; flex-direction: column; gap: var(--space-10); }
-.hero__actions { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
+/*
+ * The glow lives on its own element so it can be transformed independently.
+ * Animating a \`background\` gradient is a paint operation on every frame;
+ * animating a positioned element is a compositor operation. Same visual, an
+ * order of magnitude cheaper.
+ */
+.hero__glow {
+	position: absolute;
+	inset-block-start: -20%;
+	inset-inline: 0;
+	/* Taller than its container, so parallax never exposes an edge. */
+	height: 140%;
+	pointer-events: none;
+	z-index: 0;
+	background: radial-gradient(
+		80% 60% at 50% 10%,
+		color-mix(in srgb, var(--brand-500) 16%, transparent),
+		transparent 70%
+	);
+}
 
-/* From 30em there is room for side-by-side buttons */
+/* … */
+
+.hero__grid {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-10);
+}
+
+/* … */
+
+.hero__actions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	width: 100%;
+}
+
+/* … */
+
+/* From 30em there's room for side-by-side buttons. Below that they stack
+   full-width, which is both easier to tap and the conventional mobile pattern. */
 @media (min-width: 30em) {
-	.hero__actions { flex-direction: row; flex-wrap: wrap; width: auto; }
+	.hero__actions {
+		flex-direction: row;
+		flex-wrap: wrap;
+		width: auto;
+	}
 }
 
-/* From 64em, copy and chart sit alongside each other */
 @media (min-width: 64em) {
-	.hero__grid  { flex-direction: row; align-items: center; gap: var(--space-16); }
-	.hero__copy  { flex: 1 1 46%; }
-	.hero__chart { flex: 1 1 54%; min-width: 0; }
+	.hero__grid {
+		flex-direction: row;
+		align-items: center;
+		gap: var(--space-16);
+	}
+
+	.hero__copy {
+		flex: 1 1 46%;
+	}
+
+	.hero__chart {
+		flex: 1 1 54%;
+		min-width: 0; /* lets the chart shrink inside flex instead of overflowing */
+	}
 }`
 			},
 			{
@@ -140,7 +226,7 @@ export const part3 = [
 		]
 	},
 
-	/* ============================================================ 19 */
+	/* ============================================================ 25 */
 	{
 		slug: 'the-other-pages',
 		title: 'Features, pricing, about and contact',
@@ -271,7 +357,7 @@ export const part3 = [
 		]
 	},
 
-	/* ============================================================ 20 */
+	/* ============================================================ 26 */
 	{
 		slug: 'lead-capture-server',
 		title: 'Lead capture: the server side',
@@ -339,15 +425,41 @@ export const leadStore: LeadStore = new FileLeadStore();`
 				code: `import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
+// …
 const secret: string = EBOOK_TOKEN_SECRET ?? randomBytes(32).toString('hex');
 
+// …a boot-time console.warn if EBOOK_TOKEN_SECRET is unset…
+
+/** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-function encode(value: string) { return Buffer.from(value, 'utf8').toString('base64url'); }
-function sign(payload: string)  { return createHmac('sha256', secret).update(payload).digest('base64url'); }
+interface TokenPayload {
+	/** Who it was issued to. Lets us attribute a download without a database lookup. */
+	email: string;
+	/** Expiry, as epoch milliseconds. */
+	exp: number;
+}
 
+// …
+function encode(value: string): string {
+	return Buffer.from(value, 'utf8').toString('base64url');
+}
+
+function decode(value: string): string {
+	return Buffer.from(value, 'base64url').toString('utf8');
+}
+
+function sign(payload: string): string {
+	return createHmac('sha256', secret).update(payload).digest('base64url');
+}
+
+/** Issue a token for an email address. */
 export function createDownloadToken(email: string): string {
-	const payload = { email, exp: Date.now() + TTL_MS };
+	const payload: TokenPayload = {
+		email,
+		exp: Date.now() + TTL_MS
+	};
+
 	const encoded = encode(JSON.stringify(payload));
 	return \`\${encoded}.\${sign(encoded)}\`;
 }`
@@ -370,7 +482,10 @@ export function createDownloadToken(email: string): string {
 	const [encoded, signature] = parts;
 	if (!encoded || !signature) return { valid: false, reason: 'malformed' };
 
-	const expectedBuffer = Buffer.from(sign(encoded));
+	const expected = sign(encoded);
+
+	/* …why timingSafeEqual and the length pre-check — see the warning below… */
+	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
 
 	if (expectedBuffer.length !== providedBuffer.length) {
@@ -381,9 +496,21 @@ export function createDownloadToken(email: string): string {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only NOW, with the signature proven, do we trust the payload contents.
-	const payload = JSON.parse(decode(encoded));
-	if (Date.now() > payload.exp) return { valid: false, reason: 'expired' };
+	// Only now, with the signature proven, do we trust the payload's contents.
+	let payload: TokenPayload;
+	try {
+		payload = JSON.parse(decode(encoded)) as TokenPayload;
+	} catch {
+		return { valid: false, reason: 'malformed' };
+	}
+
+	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
+		return { valid: false, reason: 'malformed' };
+	}
+
+	if (Date.now() > payload.exp) {
+		return { valid: false, reason: 'expired' };
+	}
 
 	return { valid: true, email: payload.email };
 }`
@@ -405,13 +532,22 @@ export function createDownloadToken(email: string): string {
 				type: 'code',
 				file: 'src/lib/server/rate-limit.ts',
 				lang: 'ts',
-				code: `const buckets = new Map<string, { count: number; resetAt: number }>();
+				code: `interface Bucket {
+	count: number;
+	/** Epoch ms when this window ends. */
+	resetAt: number;
+}
+
+const buckets = new Map<string, Bucket>();
+
+// …the sweep() helper that deletes expired buckets…
 
 export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimitResult {
 	const { limit = 5, windowMs = 60_000 } = options;
 	const now = Date.now();
 
-	// Cheap probabilistic cleanup — avoids keeping a setInterval alive forever
+	// Cheap probabilistic cleanup: sweep on roughly 1 in 50 calls rather than
+	// running a timer. Avoids keeping a \`setInterval\` alive for the process lifetime.
 	if (Math.random() < 0.02) sweep(now);
 
 	const existing = buckets.get(key);
@@ -422,8 +558,8 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 	}
 
 	existing.count += 1;
-	const allowed = existing.count <= limit;
 
+	const allowed = existing.count <= limit;
 	return {
 		allowed,
 		remaining: Math.max(0, limit - existing.count),
@@ -446,7 +582,7 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 		]
 	},
 
-	/* ============================================================ 21 */
+	/* ============================================================ 27 */
 	{
 		slug: 'the-remote-form',
 		title: 'The remote form',
@@ -524,41 +660,55 @@ const guideSchema = v.object({
 				file: 'src/routes/guide/guide.remote.ts',
 				lang: 'ts',
 				code: `export const requestGuide = form(guideSchema, async (data, issue) => {
+	// …
 	const event = getRequestEvent();
 
-	/* 1. Rate limit */
+	/* ---- 1. Rate limit -------------------------------------------------- */
 	const limit = rateLimit(\`guide:\${event.getClientAddress()}\`, {
 		limit: 5,
 		windowMs: 60_000
 	});
 
 	if (!limit.allowed) {
-		invalid(issue.email(
-			\`Too many attempts. Please wait \${limit.retryAfterSeconds} seconds and try again.\`
-		));
+		// Attached to the email field so it renders next to the input the user is
+		// looking at, rather than in a form-level error block they might miss.
+		invalid(
+			issue.email(
+				\`Too many attempts. Please wait \${limit.retryAfterSeconds} seconds and try again.\`
+			)
+		);
 	}
 
-	/* 2. Honeypot — note what we do NOT do: tell them */
+	/* ---- 2. Honeypot ---------------------------------------------------- */
+	// …
 	const isBot = data._company.trim().length > 0;
 
 	const email = normaliseEmail(data.email);
 
-	/* 3. Persist */
+	/* ---- 3. Persist ----------------------------------------------------- */
 	if (!isBot) {
 		const alreadyKnown = await leadStore.has(email);
+
 		if (!alreadyKnown) {
-			await leadStore.save({
+			const lead: Lead = {
 				email,
 				experience: data.experience,
 				consentedToMarketing: data.consent,
 				capturedAt: new Date().toISOString(),
 				source: 'guide-landing'
-			});
+			};
+
+			await leadStore.save(lead);
 		}
+
+		// A real deployment sends the welcome email here — and does it via a queue,
+		// not inline, so a slow mail provider can't hold the user's request open.
 	}
 
-	/* 4. Issue a signed link and redirect */
+	/* ---- 4. Issue a signed download link -------------------------------- */
 	const token = createDownloadToken(email);
+
+	// …
 	redirect(303, \`/guide/thank-you?t=\${encodeURIComponent(token)}\`);
 });`
 			},
@@ -587,7 +737,7 @@ const guideSchema = v.object({
 		]
 	},
 
-	/* ============================================================ 22 */
+	/* ============================================================ 28 */
 	{
 		slug: 'the-capture-page',
 		title: 'The capture page',
@@ -600,12 +750,18 @@ const guideSchema = v.object({
 				file: 'src/routes/guide/+page.svelte',
 				lang: 'svelte',
 				code: `<script lang="ts">
+	import { ArrowRightIcon, CheckIcon, LockSimpleIcon } from 'phosphor-svelte';
+	// …
 	import { requestGuide } from './guide.remote.ts';
+	// …
 </script>
 
+<!-- …the hero copy column, then: -->
 <form {...requestGuide} class="signup" aria-labelledby="signup-heading">
 	<h2 id="signup-heading" class="signup__title">Get the guide</h2>
+	<p class="signup__sub">Enter your email and we'll send you straight to the download.</p>
 
+	<!-- Email -->
 	<div class="field">
 		<label class="field__label" for="guide-email">Email address</label>
 		<input
@@ -614,9 +770,12 @@ const guideSchema = v.object({
 			placeholder="you@example.com"
 			autocomplete="email"
 			{...requestGuide.fields.email.as('email')}
-			aria-describedby={requestGuide.fields.email.issues() ? 'guide-email-error' : undefined}
+			aria-describedby={requestGuide.fields.email.issues()
+				? 'guide-email-error'
+				: undefined}
 		/>
 		{#if requestGuide.fields.email.issues()}
+			<!-- … -->
 			<p class="field__error" id="guide-email-error" role="alert">
 				{#each requestGuide.fields.email.issues() ?? [] as issue (issue.message)}
 					{issue.message}
@@ -625,9 +784,20 @@ const guideSchema = v.object({
 		{/if}
 	</div>
 
+	<!-- …the experience <select> and the consent checkbox repeat the same field pattern… -->
+
+	<!-- …the honeypot — shown in the next section… -->
+
 	<button class="signup__submit" type="submit" disabled={requestGuide.pending > 0}>
-		{#if requestGuide.pending > 0}Sending…{:else}Send me the guide{/if}
+		{#if requestGuide.pending > 0}
+			Sending…
+		{:else}
+			Send me the guide
+			<ArrowRightIcon size={18} aria-hidden="true" />
+		{/if}
 	</button>
+
+	<!-- …the privacy reassurance line (LockSimpleIcon + a link to the policy)… -->
 </form>`
 			},
 			{ type: 'h3', id: 'spread', text: 'What the spreads do' },
@@ -728,7 +898,7 @@ const guideSchema = v.object({
 		]
 	},
 
-	/* ============================================================ 23 */
+	/* ============================================================ 29 */
 	{
 		slug: 'gated-download',
 		title: 'The gated download',
@@ -786,22 +956,35 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 	join('private', 'ebook', 'strikeflow-options-flow-guide.pdf')
 );
 
+const FILENAME = 'StrikeFlow-How-To-Read-Options-Flow.pdf';
+
 export const GET: RequestHandler = async ({ url }) => {
 	const result = verifyDownloadToken(url.searchParams.get('t'));
 
 	if (!result.valid) {
-		error(403, result.reason === 'expired'
-			? 'This download link has expired'
-			: 'Invalid download link');
+		/* …403, not 404 — the caller just isn't allowed it… */
+		error(
+			403,
+			result.reason === 'expired' ? 'This download link has expired' : 'Invalid download link'
+		);
 	}
 
-	const file = await readFile(EBOOK_PATH);
+	let file: Buffer;
+	try {
+		file = await readFile(EBOOK_PATH);
+	} catch {
+		// A missing build artefact is our fault, not the user's — hence 500, and a
+		// message that tells the operator what to run.
+		error(500, 'The guide is temporarily unavailable. Please try again shortly.');
+	}
 
 	return new Response(new Uint8Array(file), {
 		headers: {
 			'Content-Type': 'application/pdf',
+			// …
 			'Content-Disposition': \`attachment; filename="\${FILENAME}"\`,
 			'Content-Length': String(file.byteLength),
+			// …
 			'Cache-Control': 'private, no-store',
 			'X-Robots-Tag': 'noindex, nofollow'
 		}
@@ -832,29 +1015,41 @@ export const GET: RequestHandler = async ({ url }) => {
 				lang: 'js',
 				code: `import { chromium } from 'playwright';
 
-const browser = await chromium.launch();
+// …renderHtml() builds the document from ebook-content.js, then:
+
+// …CHROMIUM_PATH lets CI or Docker point at a system Chromium instead of downloading one…
+const executablePath = process.env.CHROMIUM_PATH;
+
+const browser = await chromium.launch(executablePath ? { executablePath } : {});
 try {
 	const page = await browser.newPage();
+
+	// …
 	await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
 
 	await page.pdf({
 		path: outFile,
 		format: 'A4',
-		// Chromium's own margins zeroed so the stylesheet's @page rule is the
-		// only thing controlling layout. Two competing margin systems reliably
-		// produce a document that looks fine on screen and wrong on paper.
+		// Chromium's own margins set to zero so the stylesheet's @page rule is the
+		// only thing controlling layout. Two competing margin systems is a
+		// reliable way to produce a document that looks fine on screen and wrong
+		// on paper.
 		margin: { top: '0', bottom: '0', left: '0', right: '0' },
-		// Without this, Chromium strips background colours when printing —
-		// which would silently remove every callout box.
+		// Without this, Chromium strips background colours when printing — which
+		// would silently remove every callout box.
 		printBackground: true,
 		displayHeaderFooter: true,
 		headerTemplate: '<div></div>',
-		footerTemplate: \`<div style="width:100%;font-size:8pt;padding:0 20mm;
-			display:flex;justify-content:space-between;">
-			<span>StrikeFlow</span><span class="pageNumber"></span></div>\`
+		footerTemplate: \`
+			<div style="width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;">
+				<span>StrikeFlow — How to read options flow</span>
+				<span class="pageNumber"></span>
+			</div>\`
 	});
+
+	// …
 } finally {
-	// finally, so a failed render still closes the browser. Leaked Chromium
+	// \`finally\` so a failed render still closes the browser. Leaked Chromium
 	// processes are a classic way to exhaust CI memory.
 	await browser.close();
 }`
@@ -886,7 +1081,7 @@ p           { orphans: 2; widows: 2; } /* never leave one line alone */`
 		]
 	},
 
-	/* ============================================================ 24 */
+	/* ============================================================ 30 */
 	{
 		slug: 'blog-and-legal',
 		title: 'The blog and the legal pages',
@@ -905,19 +1100,29 @@ p           { orphans: 2; widows: 2; } /* never leave one line alone */`
 				lang: 'ts',
 				code: `import { error } from '@sveltejs/kit';
 import type { PageLoad, EntryGenerator } from './$types';
-import { getPost, posts } from '#lib/data/posts.ts';
+import { getPost } from '#lib/data/posts.ts';
 import { getPerson } from '#lib/data/team.ts';
+import { posts } from '#lib/data/posts.ts';
 
+// …
 export const entries: EntryGenerator = () => {
 	return posts.map((post) => ({ slug: post.slug }));
 };
 
 export const load: PageLoad = ({ params }) => {
 	const post = getPost(params.slug);
-	if (!post) error(404, \`No article found at /blog/\${params.slug}\`);
+
+	if (!post) {
+		// …
+		error(404, \`No article found at /blog/\${params.slug}\`);
+	}
 
 	const author = getPerson(post.authorId);
-	if (!author) error(500, \`Post "\${post.slug}" references unknown author\`);
+
+	if (!author) {
+		// …
+		error(500, \`Post "\${post.slug}" references unknown author "\${post.authorId}"\`);
+	}
 
 	return { post, author };
 };`
@@ -1026,7 +1231,7 @@ export const load: PageLoad = ({ params }) => {
 		]
 	},
 
-	/* ============================================================ 25 */
+	/* ============================================================ 35 */
 	{
 		slug: 'unit-tests',
 		title: 'Unit tests with Vitest',
@@ -1078,16 +1283,30 @@ describe('addTax', () => {
 				type: 'code',
 				file: 'vite.config.ts',
 				lang: 'ts',
-				code: `import { defineConfig } from 'vitest/config';   // <- note: vitest/config
+				code: `import { defineConfig } from 'vitest/config';
+// …
 
 export default defineConfig({
-	plugins: [ sveltekit({ /* ... */ }) ],
+	plugins: [
+		sveltekit({
+			// …
+		}),
+
+		/* …the ordering story from chapter 19: this must come after sveltekit()… */
+		sveltePhosphorOptimize()
+	],
 
 	test: {
 		expect: { requireAssertions: true },
-		projects: [ /* ... */ ]
+		projects: [
+			// …
+		]
 	}
 });`
+			},
+			{
+				type: 'note',
+				text: 'The import comes from `vitest/config`, not `vite` — the same `defineConfig`, but its types know about the `test` block.'
 			},
 			{
 				type: 'why',
@@ -1223,19 +1442,30 @@ export default defineConfig({
 	const a = mulberry32(42);
 	const b = mulberry32(42);
 
-	expect(Array.from({ length: 20 }, () => a()))
-		.toEqual(Array.from({ length: 20 }, () => b()));
+	const first = Array.from({ length: 20 }, () => a());
+	const second = Array.from({ length: 20 }, () => b());
+
+	expect(first).toEqual(second);
 });
+
+// …
 
 it('produces strictly increasing, evenly spaced timestamps', () => {
 	const { price } = generateSeries({ bars: 30, interval: 300 });
 
 	for (let i = 1; i < price.length; i += 1) {
-		expect(price[i]!.time - price[i - 1]!.time).toBe(300);
+		const previous = price[i - 1];
+		const current = price[i];
+		expect(previous).toBeDefined();
+		expect(current).toBeDefined();
+		// Lightweight Charts silently misbehaves on out-of-order data, so this
+		// invariant matters more than it looks.
+		expect(current!.time - previous!.time).toBe(300);
 	}
 });
 
 it('never produces a non-positive price', () => {
+	// A random walk can wander below zero without the guard in generateSeries.
 	for (const seed of [1, 500, 12345, 987654]) {
 		for (const point of generateSeries({ seed, bars: 400 }).price) {
 			expect(point.value).toBeGreaterThan(0);
@@ -1251,11 +1481,21 @@ it('never produces a non-positive price', () => {
 			{ type: 'h3', id: 'wrong-test', text: 'When the test is wrong' },
 			{
 				type: 'p',
-				text: 'While writing this project I asserted `formatCompactUsd(5_600)` returns `"$5.6K"`. It returns `"$5.60K"` — `Intl` compact **currency** formatting keeps the currency\'s minimum fraction digits, unlike plain compact number formatting.'
+				text: 'While writing this project I asserted `formatCompactUsd(5_600)` returns exactly `"$5.60K"` — and the assertion broke when the project moved from Node 22 to Node 24. `Intl` is implemented by ICU, the Unicode library Node bundles, and its output is a moving target: compact **currency** formatting used to keep the currency\'s minimum fraction digits (`$5.60K` on Node 22\'s ICU 78.2), and ICU 78.3, which Node 24 ships, trims them to `$5.6K`. Same code, different text, depending on which Node is installed.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/utils/market-data.spec.ts',
+				lang: 'ts',
+				code: `it('formats a value with a trailing zero, whichever ICU is installed', () => {
+	/* …a long comment in the source explains: DELIBERATELY A PATTERN, NOT AN EXACT STRING… */
+	expect(formatCompactUsd(5_600)).toMatch(/^\\$5\\.60?K$/);
+	expect(formatCompactUsd(1_000)).toMatch(/^\\$1(\\.00)?K$/);
+});`
 			},
 			{
 				type: 'note',
-				text: 'The code was right; my expectation was wrong. That is a normal and useful outcome — the test taught me something about an API I thought I knew. Fix the expectation, and leave a comment explaining why the surprising output is correct, or the next person will "fix" it back.'
+				text: 'A byte-exact assertion here is not a test of `formatCompactUsd` — it is a test of which Node version is installed, and it fails on upgrade for a reason that has nothing to do with the code under test. What the app actually needs is the right symbol, the right magnitude suffix and no more than two decimals, so the test asserts a pattern — and carries a comment explaining why, or the next person will "fix" it back to an exact string.'
 			},
 			{ type: 'h3', id: 'running', text: 'Running them' },
 			{
@@ -1275,6 +1515,7 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		]
 	},
 
+	/* ============================================================ 36 */
 	{
 		slug: 'e2e-tests',
 		title: 'End-to-end tests, and the two bugs they found',
@@ -1292,18 +1533,56 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 				lang: 'ts',
 				code: `export default defineConfig({
 	testMatch: '**/*.e2e.{ts,js}',
+
 	webServer: {
 		command: 'npm run build && npm run preview',
 		port: 4173,
+		// Building takes a moment; the default 60s is tight on a cold cache.
 		timeout: 180_000,
-		reuseExistingServer: !process.env.CI
+
+		/*
+		 * Deliberately NOT \`reuseExistingServer: !process.env.CI\`, which is the
+		 * common default.
+		 *
+		 * Reusing a server you happen to have running is faster, and it means the
+		 * suite can silently test a build from twenty minutes ago. That bit me while
+		 * writing this project: a motion test failed, I spent time diagnosing the
+		 * code, and the code was fine — the server was stale.
+		 *
+		 * A test suite that can pass or fail against the wrong build is worse than a
+		 * slow one, because it makes every result untrustworthy. Always build fresh.
+		 */
+		reuseExistingServer: false
 	},
-	use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+
+	use: {
+		baseURL: 'http://localhost:4173',
+		// Only kept for failures — traces are large and mostly uninteresting when green.
+		trace: 'retain-on-failure'
+	},
+
+	/* … */
 	projects: [
-		{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-		{ name: 'mobile',  use: { ...devices['Pixel 7'] } }
-	]
+		{
+			name: 'desktop',
+			use: { ...devices['Desktop Chrome'] }
+		},
+		{
+			name: 'mobile',
+			use: { ...devices['Pixel 7'] }
+		}
+	],
+
+	// A failing e2e test is almost never flaky in this project — fail fast rather
+	// than retrying and hiding a real bug.
+	retries: process.env.CI ? 1 : 0,
+	reporter: process.env.CI ? 'github' : 'list'
 });`
+			},
+			{
+				type: 'why',
+				title: 'Why not reuse a server you already have running?',
+				text: 'Nearly every Playwright example ships `reuseExistingServer: !process.env.CI` — locally, attach to whatever server happens to be up; in CI, build fresh. It is faster, and it means the suite can silently test a build from twenty minutes ago. That bit me while writing this project: a motion test failed, I spent time diagnosing the code, and the code was fine — the server was stale. A test suite that can pass or fail against the wrong build is worse than a slow one, because it makes every result untrustworthy. So this config always builds fresh, everywhere.'
 			},
 			{
 				type: 'why',
@@ -1321,25 +1600,43 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 				lang: 'ts',
 				code: `for (const path of INDEXABLE_PAGES) {
 	test(\`\${path} has complete, valid metadata\`, async ({ page }) => {
-		await page.goto(path);
+		const response = await page.goto(path);
+		expect(response?.status()).toBe(200);
 
+		// --- Title ---
 		const title = await page.title();
 		expect(title.length).toBeGreaterThan(10);
-		expect(title.length).toBeLessThanOrEqual(70);   // Google truncates ~60
+		// Google truncates around 60 characters. Longer isn't an error, but it
+		// means the end of your title is invisible in the results page.
+		expect(title.length).toBeLessThanOrEqual(70);
 
-		// Exactly one canonical, absolute, matching this path
+		// …the meta description: present, 50–200 characters…
+
+		// --- Canonical: exactly one, absolute, matching this path ---
 		const canonicals = page.locator('head link[rel="canonical"]');
 		await expect(canonicals).toHaveCount(1);
-		expect(new URL(await canonicals.getAttribute('href') ?? '').pathname).toBe(path);
+		const canonical = await canonicals.getAttribute('href');
+		expect(canonical).toMatch(/^https?:\\/\\//);
+		expect(new URL(canonical ?? '').pathname).toBe(path);
 
-		// Exactly one h1
+		// --- Exactly one h1 ---
+		// …
 		await expect(page.locator('h1')).toHaveCount(1);
 
-		// Structured data parses and is a graph
+		// …robots: contains index, never noindex, plus max-image-preview:large…
+		// …Open Graph: og:title, og:description, og:image, og:url, og:type all present…
+
+		// --- Structured data parses and is a graph ---
 		const ldJson = await page.locator('head script[type="application/ld+json"]').textContent();
+		expect(ldJson).toBeTruthy();
 		const graph = JSON.parse(ldJson ?? '{}');
 		expect(graph['@context']).toBe('https://schema.org');
 		expect(Array.isArray(graph['@graph'])).toBe(true);
+		// Organization and WebSite appear on every page, cross-referenced by @id.
+		const types = graph['@graph'].map((node: { '@type': string }) => node['@type']);
+		expect(types).toContain('Organization');
+		expect(types).toContain('WebSite');
+		expect(types).toContain('WebPage');
 	});
 }`
 			},
@@ -1349,9 +1646,13 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 				lang: 'ts',
 				code: `test('every sitemap URL returns 200', async ({ request }) => {
 	const body = await request.get('/sitemap.xml').then((r) => r.text());
-	const locs = [...body.matchAll(/<loc>([^<]+)<\\/loc>/g)].map((m) => m[1] ?? '');
+	const locs = [...body.matchAll(/<loc>([^<]+)<\\/loc>/g)].map((match) => match[1] ?? '');
+
+	expect(locs.length).toBeGreaterThanOrEqual(13);
 
 	for (const loc of locs) {
+		// Compare by path — the sitemap carries the configured production origin,
+		// which is not the origin this test server runs on.
 		const response = await request.get(new URL(loc).pathname);
 		expect(response.status(), \`\${loc} should return 200\`).toBe(200);
 	}
@@ -1359,7 +1660,7 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 			},
 			{
 				type: 'note',
-				text: 'That last test caught a wrong XML namespace in my sitemap — a single wrong word that would have made every crawler reject the file as "not a sitemap".'
+				text: 'A companion test asserts the sitemap declares the correct XML namespace, verbatim: `xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"`. A wrong namespace is a single-word typo that makes every crawler reject the file as "not a sitemap" — which is exactly why it gets its own dedicated test rather than being assumed.'
 			},
 			{ type: 'h3', id: 'nojs', text: 'The test that justifies the architecture' },
 			{
@@ -1408,15 +1709,27 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 				type: 'code',
 				file: 'scripts/measure-font-metrics.js',
 				lang: 'js',
-				code: `await page.evaluate(() => document.fonts.ready);   // without this you measure the fallback
+				code: `// Without this the measurement races the font load and silently measures the
+// fallback against itself, producing a perfect 100% that is completely wrong.
+await page.evaluate(() => document.fonts.ready);
 
-const width = (family, weight) => { /* render at 100px, read the box */ };
+// …then, inside page.evaluate, for each target font versus the Arial fallback…
+const targetWidth = width(target.family, target.weight);
+const fallbackWidth = width(fallback, target.weight);
+const metrics = vertical(target.family, target.weight);
 
-const sizeAdjust = width(targetFamily, weight) / width('Arial', weight);
+const sizeAdjust = targetWidth / fallbackWidth;
 
-// Overrides are relative to the ALREADY-SIZE-ADJUSTED em
-const ascentOverride  = realAscent  / sizeAdjust;
-const descentOverride = realDescent / sizeAdjust;`
+return {
+	label: target.label,
+	sizeAdjust,
+	// Overrides are relative to the already-size-adjusted em, so each
+	// real metric is divided by the size adjustment.
+	ascentOverride: metrics.ascent / sizeAdjust,
+	descentOverride: metrics.descent / sizeAdjust,
+	rawAscent: metrics.ascent,
+	rawDescent: metrics.descent
+};`
 			},
 			{ type: 'terminal', code: 'pnpm run fonts:measure' },
 			{ type: 'p', text: 'Shift after the fix: **0 pixels**.' },
@@ -1451,7 +1764,7 @@ const descentOverride = realDescent / sizeAdjust;`
 		]
 	},
 
-	/* ============================================================ 27 */
+	/* ============================================================ 37 */
 	{
 		slug: 'ship-it',
 		title: 'Ship it',
@@ -1470,7 +1783,7 @@ pnpm run build`
 			},
 			{
 				type: 'p',
-				text: 'All five should be clean. On the finished project that is 0 type errors, 0 lint errors, 29 unit tests and 54 end-to-end tests across two device profiles.'
+				text: 'All five should be clean. On the finished project that is 0 type errors, 0 lint errors, 30 unit tests, and 35 end-to-end tests that each run on both device profiles — 70 e2e results in all.'
 			},
 			{
 				type: 'note',
