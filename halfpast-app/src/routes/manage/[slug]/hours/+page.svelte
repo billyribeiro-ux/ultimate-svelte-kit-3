@@ -30,7 +30,15 @@
 
 	/** New-shift form state, kept per weekday so several can be filled at once. */
 	let draft = $state<{ staffId: string; weekday: number; start: string; end: string }>({
-		staffId: '',
+		// Default to the viewer, which is right for a member and a sensible start
+		// for an owner. An initial value, not an `$effect` that backfills one:
+		// nothing ever resets this field, so an effect writing state here would
+		// run exactly once to do what the initializer can do — the pattern the
+		// docs (and the autofixer) warn effects away from. Capturing the initial
+		// value is the point, hence the ignore: a draft must not change under
+		// the person filling it in.
+		// svelte-ignore state_referenced_locally
+		staffId: data.viewer.staffId,
 		weekday: 1,
 		start: '09:00',
 		end: '17:00'
@@ -38,12 +46,6 @@
 
 	const hours = $derived(await getHours({ slug: data.slug }));
 	const team = $derived(await getTeam(data.slug));
-
-	// Default to the viewer, which is right for a member and a sensible start for
-	// an owner. `??` rather than `||` so a legitimately empty string is respected.
-	$effect(() => {
-		if (draft.staffId === '') draft.staffId = data.viewer.staffId;
-	});
 
 	/** `09:30` → 570. The input gives us wall-clock text; the API wants minutes. */
 	function toMinutes(value: string): number {

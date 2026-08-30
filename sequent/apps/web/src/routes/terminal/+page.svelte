@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import DepthLadder from '#lib/components/DepthLadder.svelte';
-	import { count, reveal, revealChildren, sweep } from '#lib/motion/motion.ts';
+	import { count, reveal, revealChildren, sweep } from '#lib/motion/motion.svelte.ts';
 	import {
 		cancelOrder,
 		getInstruments,
@@ -38,8 +38,16 @@
 	/** Whether the order ticket is open, on phones where it is a sheet. */
 	let ticketOpen = $state(false);
 
-	/** The phase we last saw, so a change can be announced rather than just shown. */
-	let seenPhase = $state<string | null>(null);
+	/*
+	 * The phase we last saw, so a change can be announced rather than just shown.
+	 *
+	 * A plain variable, deliberately not `$state`: nothing renders it — it exists
+	 * only so the effect below can compare this run against the last. Making it
+	 * reactive would mean the effect writes state it also reads, which re-runs it
+	 * once more per change and is exactly the pattern the docs warn effects away
+	 * from. Same idea as the non-reactive `lastSize` Map in DepthLadder.
+	 */
+	let seenPhase: string | null = null;
 
 	const instruments = $derived(await getInstruments());
 
@@ -141,8 +149,7 @@
 	}
 
 	/** Scaled integer units to a price string. Never a float, anywhere. */
-	const priceLabel = (units: number) =>
-		`£${(units / 10_000).toFixed(2)}${String(units % 100).padStart(2, '0') === '00' ? '' : ''}`;
+	const priceLabel = (units: number) => `£${(units / 10_000).toFixed(2)}`;
 </script>
 
 <div class="container terminal">
@@ -169,13 +176,20 @@
 						text content. Every other number on the screen snaps, because a
 						price somebody is about to type into an order must never be
 						mid-animation when they read it.
+
+						`@const` rather than reaching through `market.last` inside the
+						getter: the narrowing from the `#if` does not survive into a
+						closure that runs later, and the checker is right to say so.
+						The const is scoped to this block, so it can only exist while
+						`last` does.
 					-->
+					{@const last = market.last}
 					<span
 						class="mono last"
-						use:count={{ value: market.last.price, format: priceLabel }}
+						{@attach count(() => ({ value: last.price, format: priceLabel }))}
 						aria-live="off"
 					></span>
-					<span class="faint mono">× {market.last.quantity.toLocaleString('en-GB')}</span>
+					<span class="faint mono">× {last.quantity.toLocaleString('en-GB')}</span>
 				{:else}
 					<span class="faint">no trades yet</span>
 				{/if}
@@ -185,7 +199,7 @@
 
 	<div class="grid">
 		{#if market}
-			<div class="book" use:reveal={{ delay: 0.04 }}>
+			<div class="book" {@attach reveal({ delay: 0.04 })}>
 				<DepthLadder bids={market.bids} asks={market.asks} onPick={useLevel} />
 			</div>
 		{/if}
@@ -197,7 +211,7 @@
 			give a screen reader two of everything.
 		-->
 		<!--
-			No `use:reveal` here, and that is deliberate.
+			No reveal on this panel, and that is deliberate.
 
 			Everything else on this page fades in; the order ticket does not. It is
 			the one control somebody might need to reach in the first half second,
@@ -269,9 +283,9 @@
 			</button>
 		</section>
 
-		<section class="card tape" use:reveal={{ delay: 0.08 }}>
+		<section class="card tape" {@attach reveal({ delay: 0.08 })}>
 			<h3>Tape</h3>
-			<ul role="list" use:revealChildren={{ selector: 'li', distance: -8 }}>
+			<ul role="list" {@attach revealChildren({ selector: 'li', distance: -8 })}>
 				{#each market?.tape ?? [] as trade (trade.tradeId)}
 					<li class="row small">
 						<span
@@ -291,7 +305,7 @@
 		</section>
 	</div>
 
-	<section class="card" use:reveal={{ delay: 0.12 }}>
+	<section class="card" {@attach reveal({ delay: 0.12 })}>
 		<h3>Your orders</h3>
 
 		<!--
@@ -355,7 +369,7 @@
 		</div>
 	</section>
 
-	<section class="card" use:reveal={{ delay: 0.16 }}>
+	<section class="card" {@attach reveal({ delay: 0.16 })}>
 		<h3>Positions</h3>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">

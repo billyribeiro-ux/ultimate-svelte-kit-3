@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { reveal, sweep } from '#lib/motion/motion.ts';
+	import { reveal, sweep } from '#lib/motion/motion.svelte.ts';
 	import { getExposure, getTrialBalance, setKillSwitch } from './risk.remote.ts';
 
 	let { data }: { data: { canStop: boolean; canSeeLedger: boolean } } = $props();
@@ -79,7 +79,7 @@
 	{/if}
 
 	{#if data.canStop}
-		<section class="card stack halt" class:armed={confirming} use:reveal>
+		<section class="card stack halt" class:armed={confirming} {@attach reveal()}>
 			<header class="row">
 				<h3>Trading</h3>
 				<span class="badge" class:stopped={exposure.stopped}>
@@ -136,7 +136,7 @@
 		</section>
 	{/if}
 
-	<section class="card" use:reveal={{ delay: 0.05 }}>
+	<section class="card" {@attach reveal({ delay: 0.05 })}>
 		<h3>Exposure</h3>
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div class="scroller" tabindex="0" role="region" aria-label="Exposure, scrollable">
@@ -167,7 +167,7 @@
 		</div>
 	</section>
 
-	<section class="card" use:reveal={{ delay: 0.09 }}>
+	<section class="card" {@attach reveal({ delay: 0.09 })}>
 		<h3>Working orders</h3>
 		<ul role="list" class="small working">
 			{#each exposure.working as row (row.accountId + row.side)}
@@ -183,7 +183,7 @@
 	</section>
 
 	{#if books}
-		<section class="card" use:reveal={{ delay: 0.13 }}>
+		<section class="card" {@attach reveal({ delay: 0.13 })}>
 			<h3>Books</h3>
 			<p class="small muted">
 				Every ledger transaction sums to zero by construction, so this total is zero or something

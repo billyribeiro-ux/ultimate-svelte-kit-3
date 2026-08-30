@@ -353,7 +353,7 @@ export const part6 = [
 			},
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 /*
@@ -394,39 +394,39 @@ export const DURATION = {
 			},
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 const REVEAL_BUDGET = 0.45;
 
-export function reveal(node: HTMLElement, options: RevealOptions = {}) {
-	const { distance = 10 } = options;
+export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
+	return (node) => {
+		const { distance = 10 } = options;
 
-	// Delay and duration are clamped together, so adding a seventh panel to a
-	// staggered page cannot quietly push the last one past the budget.
-	const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
-	const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
+		// Delay and duration are clamped together, so adding a seventh panel to a
+		// staggered page cannot quietly push the last one past the budget.
+		const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
+		const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
 
-	if (prefersReducedMotion()) {
-		// Nothing to do: the element is already where it should be, and it has no
-		// starting style to undo, because \`from\` sets that rather than the CSS.
-		return {};
-	}
+		if (prefersReducedMotion()) {
+			// Nothing to do: the element is already where it should be, and it has no
+			// starting style to undo, because \`from\` sets that rather than the CSS.
+			return;
+		}
 
-	const tween = gsap.from(node, {
-		opacity: 0,
-		y: distance,
-		duration,
-		delay,
-		clearProps: 'transform,opacity,willChange',
-		onStart: () => (node.style.willChange = 'transform, opacity')
-	});
+		const tween = gsap.from(node, {
+			opacity: 0,
+			y: distance,
+			duration,
+			delay,
+			clearProps: 'transform,opacity,willChange',
+			onStart: () => (node.style.willChange = 'transform, opacity')
+		});
 
-	return {
-		destroy() {
+		return () => {
 			tween.kill();
 			node.style.willChange = '';
-		}
+		};
 	};
 }`
 			},
@@ -439,10 +439,25 @@ export function reveal(node: HTMLElement, options: RevealOptions = {}) {
 				]
 			},
 
+			{ type: 'h3', id: 'attachments', text: 'Why these are attachments, not actions' },
+			{
+				type: 'p',
+				text: 'An earlier version of this file exported Svelte *actions* returning `{ update, destroy }`. The official `use:` docs now mark that return shape as legacy — "prior to the `$effect` rune, actions could return an object with `update` and `destroy` methods; using effects is preferred" — and recommend attachments outright for 5.29 and newer. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why `reveal` above ends with `return () => …` instead of a `destroy` method.'
+			},
+			{
+				type: 'p',
+				text: 'Used from the template as `{@attach reveal({ delay: 0.05 })}` instead of `use:reveal={{ delay: 0.05 }}`. The file is `motion.svelte.ts` rather than `motion.ts` for the same reason: the `.svelte.ts` suffix is what lets a shared module use runes.'
+			},
+			{
+				type: 'why',
+				title: 'The getter pattern, for the two that react',
+				text: 'Attachments are fully reactive: `{@attach flash(directionFor(level))}` would read `level` while the expression is evaluated, and the docs are explicit that the attachment is then torn down and recreated on every change — killing the tween continuity the flash exists for. The documented fix is to pass the value **as a function** and read it inside a child `$effect`: `{@attach flash(() => directionFor(level))}`. The per-node setup runs once; only the effect re-runs when the level changes. `flash`, `count` and the ladder\'s `bar` all use this shape.'
+			},
+
 			{ type: 'h3', id: 'reduced-motion', text: 'What "reduce" actually means' },
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 export function prefersReducedMotion(): boolean {
@@ -456,7 +471,7 @@ export function prefersReducedMotion(): boolean {
 			},
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 if (prefersReducedMotion()) {
@@ -482,7 +497,7 @@ if (prefersReducedMotion()) {
 			{ type: 'h3', id: 'two-details', text: 'Two details worth stealing' },
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 gsap.fromTo(
@@ -503,12 +518,12 @@ gsap.fromTo(
 			},
 			{
 				type: 'code',
-				file: 'apps/web/src/lib/motion/motion.ts',
+				file: 'apps/web/src/lib/motion/motion.svelte.ts',
 				lang: 'ts',
 				code: `
 gsap.to(state, {
-	value: next.value,
-	duration: next.duration ?? DURATION.quick,
+	value,
+	duration: duration ?? DURATION.quick,
 	ease: 'power2.out',
 	overwrite: true,
 	snap: { value: 1 },

@@ -50,6 +50,7 @@
  */
 
 import { gsap } from 'gsap';
+import type { Attachment } from 'svelte/attachments';
 
 /* -------------------------------------------------------------------------- */
 /* Reduced motion                                                              */
@@ -119,21 +120,35 @@ export const DURATION = {
 export { gsap };
 
 /* -------------------------------------------------------------------------- */
-/* Actions                                                                     */
+/* Attachments                                                                 */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Svelte actions, which is the right shape for this and worth saying why.
+ * Svelte attachments, which is the right shape for this and worth saying why.
  *
- * An action is a function that receives a DOM node when it mounts and returns
- * `destroy` and `update`. That gives us three things a component wrapper would
- * not: the animation code never appears in the markup, it runs **only in the
- * browser** (actions do not run during SSR, so there is no `typeof window`
- * check anywhere below), and cleanup is structural rather than remembered.
+ * An attachment is a function that runs in an effect when its element mounts,
+ * and may return a cleanup function. That gives us three things a component
+ * wrapper would not: the animation code never appears in the markup, it runs
+ * **only in the browser** (effects do not run during server rendering, so
+ * there is no `typeof window` check anywhere below), and cleanup is structural
+ * rather than remembered.
  *
  * That last point matters more than it sounds. Every animation here holds a
- * reference to a DOM node; without a `destroy` that kills the tween, a page
- * with a live-updating list leaks one tween per row per update, forever.
+ * reference to a DOM node; without a cleanup that kills the tween, a page with
+ * a live-updating list leaks one tween per row per update, forever.
+ *
+ * ## Why not actions
+ *
+ * This file used to export Svelte *actions* returning `{ update, destroy }`.
+ * The official docs now mark that return shape as legacy — "prior to the
+ * `$effect` rune, actions could return an object with `update` and `destroy`
+ * methods … using effects is preferred" — and recommend attachments outright
+ * for 5.29+. The two that genuinely react to changing values (`flash` and
+ * `count`) use the documented pattern for controlling re-runs: the value
+ * arrives as a **getter** and is read inside a child `$effect`, so the
+ * per-node setup runs once and only the update logic re-runs. This is also why
+ * the file is `motion.svelte.ts` — the `.svelte.ts` suffix is what lets a
+ * shared module use runes.
  */
 
 export interface RevealOptions {
@@ -179,35 +194,39 @@ const REVEAL_BUDGET = 0.45;
  * `will-change` is set for the duration and removed after. Leaving it on
  * permanently promotes the element to its own compositor layer forever, which
  * on a page with forty of them costs more memory than the animation ever saved.
+ *
+ * The options are plain values, not a getter: an entrance runs once, so there
+ * is nothing for it to react to. The attachment body reads no reactive state,
+ * which per the docs means it never re-runs.
  */
-export function reveal(node: HTMLElement, options: RevealOptions = {}) {
-	const { distance = 10 } = options;
+export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
+	return (node) => {
+		const { distance = 10 } = options;
 
-	// Delay and duration are clamped together, so adding a seventh panel to a
-	// staggered page cannot quietly push the last one past the budget.
-	const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
-	const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
+		// Delay and duration are clamped together, so adding a seventh panel to a
+		// staggered page cannot quietly push the last one past the budget.
+		const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
+		const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
 
-	if (prefersReducedMotion()) {
-		// Nothing to do: the element is already where it should be, and it has no
-		// starting style to undo, because `from` sets that rather than the CSS.
-		return {};
-	}
+		if (prefersReducedMotion()) {
+			// Nothing to do: the element is already where it should be, and it has no
+			// starting style to undo, because `from` sets that rather than the CSS.
+			return;
+		}
 
-	const tween = gsap.from(node, {
-		opacity: 0,
-		y: distance,
-		duration,
-		delay,
-		clearProps: 'transform,opacity,willChange',
-		onStart: () => (node.style.willChange = 'transform, opacity')
-	});
+		const tween = gsap.from(node, {
+			opacity: 0,
+			y: distance,
+			duration,
+			delay,
+			clearProps: 'transform,opacity,willChange',
+			onStart: () => (node.style.willChange = 'transform, opacity')
+		});
 
-	return {
-		destroy() {
+		return () => {
 			tween.kill();
 			node.style.willChange = '';
-		}
+		};
 	};
 }
 
@@ -219,25 +238,26 @@ export function reveal(node: HTMLElement, options: RevealOptions = {}) {
  * `requestAnimationFrame` handler instead of forty.
  */
 export function revealChildren(
-	node: HTMLElement,
 	options: RevealOptions & { selector?: string } = {}
-) {
-	const { selector = ':scope > *', distance = 10, duration = DURATION.quick } = options;
+): Attachment<HTMLElement> {
+	return (node) => {
+		const { selector = ':scope > *', distance = 10, duration = DURATION.quick } = options;
 
-	if (prefersReducedMotion()) return {};
+		if (prefersReducedMotion()) return;
 
-	const tween = gsap.from(node.querySelectorAll(selector), {
-		opacity: 0,
-		y: distance,
-		duration,
-		// Capped total: a long list must not take three seconds to appear just
-		// because it is long. `amount` spreads the whole stagger across a fixed
-		// window rather than adding a fixed gap per item.
-		stagger: { amount: Math.min(0.4, 0.05 * node.children.length) },
-		clearProps: 'transform,opacity'
-	});
+		const tween = gsap.from(node.querySelectorAll(selector), {
+			opacity: 0,
+			y: distance,
+			duration,
+			// Capped total: a long list must not take three seconds to appear just
+			// because it is long. `amount` spreads the whole stagger across a fixed
+			// window rather than adding a fixed gap per item.
+			stagger: { amount: Math.min(0.4, 0.05 * node.children.length) },
+			clearProps: 'transform,opacity'
+		});
 
-	return { destroy: () => tween.kill() };
+		return () => tween.kill();
+	};
 }
 
 /* -------------------------------------------------------------------------- */
@@ -263,8 +283,17 @@ export type Direction = 'up' | 'down' | 'neutral';
  *
  * `overwrite: 'auto'` makes the new tween take over from wherever the old one
  * was, so rapid ticks blend into a sustained glow rather than a strobe.
+ *
+ * ## Why the direction arrives as a getter
+ *
+ * `{@attach flash(directionFor(level))}` would read `level` while the
+ * attachment expression is evaluated, and the docs are explicit about what
+ * that means: the attachment is torn down and recreated on every change.
+ * Passing `() => directionFor(level)` and reading it inside a child `$effect`
+ * is the documented alternative — the node-level setup runs once, and only
+ * this effect re-runs when the level changes.
  */
-export function flash(node: HTMLElement, direction: Direction) {
+export function flash(getDirection: () => Direction): Attachment<HTMLElement> {
 	const colourFor = (value: Direction) =>
 		value === 'up'
 			? 'var(--bid-soft)'
@@ -272,48 +301,56 @@ export function flash(node: HTMLElement, direction: Direction) {
 				? 'var(--ask-soft)'
 				: 'var(--surface-raised)';
 
-	let previous = direction;
+	return (node) => {
+		// Plain variables, not $state: nothing renders these, they exist so one
+		// run of the effect can compare against the last. Making them reactive
+		// would re-run the effect once more per change for nobody's benefit.
+		let previous: Direction | undefined;
 
-	function run(value: Direction) {
-		if (value === 'neutral') return;
+		function run(value: Direction) {
+			if (value === 'neutral') return;
 
-		if (prefersReducedMotion()) {
-			/*
-			 * The signal survives; the movement does not.
-			 *
-			 * Somebody who asked for reduced motion still needs to know the price
-			 * moved. Removing the flash entirely would remove *information* under
-			 * the guise of removing animation, which is the usual way this
-			 * preference gets implemented badly.
-			 */
-			node.style.backgroundColor = colourFor(value);
-			setTimeout(() => (node.style.backgroundColor = ''), 900);
-			return;
-		}
-
-		gsap.fromTo(
-			node,
-			{ backgroundColor: colourFor(value) },
-			{
-				backgroundColor: 'rgba(0,0,0,0)',
-				duration: 0.9,
-				ease: 'power1.out',
-				overwrite: 'auto',
-				clearProps: 'backgroundColor'
+			if (prefersReducedMotion()) {
+				/*
+				 * The signal survives; the movement does not.
+				 *
+				 * Somebody who asked for reduced motion still needs to know the price
+				 * moved. Removing the flash entirely would remove *information* under
+				 * the guise of removing animation, which is the usual way this
+				 * preference gets implemented badly.
+				 */
+				node.style.backgroundColor = colourFor(value);
+				setTimeout(() => (node.style.backgroundColor = ''), 900);
+				return;
 			}
-		);
-	}
 
-	// Deliberately not run on mount. A page that loads with forty prices flashing
-	// says "forty things just happened", and nothing happened at all.
-	return {
-		update(value: Direction) {
-			if (value !== previous || value !== 'neutral') run(value);
-			previous = value;
-		},
-		destroy() {
-			gsap.killTweensOf(node);
+			gsap.fromTo(
+				node,
+				{ backgroundColor: colourFor(value) },
+				{
+					backgroundColor: 'rgba(0,0,0,0)',
+					duration: 0.9,
+					ease: 'power1.out',
+					overwrite: 'auto',
+					clearProps: 'backgroundColor'
+				}
+			);
 		}
+
+		$effect(() => {
+			const value = getDirection();
+
+			// Deliberately nothing on the first run. A page that loads with forty
+			// prices flashing says "forty things just happened", and nothing
+			// happened at all.
+			if (previous !== undefined && (value !== previous || value !== 'neutral')) {
+				run(value);
+			}
+
+			previous = value;
+		});
+
+		return () => gsap.killTweensOf(node);
 	};
 }
 
@@ -342,35 +379,39 @@ export interface CountOptions {
  * price mid-roll showing 455032.7 is not a price, and money that renders a
  * fractional minor unit for four frames looks broken in a way that erodes
  * confidence in everything else on the screen.
+ *
+ * Same getter pattern as `flash`, for the same documented reason.
  */
-export function count(node: HTMLElement, options: CountOptions) {
-	const state = { value: options.value };
-	let format = options.format;
+export function count(getOptions: () => CountOptions): Attachment<HTMLElement> {
+	return (node) => {
+		const state = { value: 0 };
+		let mounted = false;
 
-	node.textContent = format(state.value);
+		$effect(() => {
+			const { value, format, duration } = getOptions();
 
-	return {
-		update(next: CountOptions) {
-			format = next.format;
-
-			if (prefersReducedMotion() || next.value === state.value) {
-				state.value = next.value;
-				node.textContent = format(state.value);
+			if (!mounted || prefersReducedMotion() || value === state.value) {
+				// First paint, or nothing to roll: write the text directly. This
+				// branch also catches a format change with an unchanged value.
+				mounted = true;
+				state.value = value;
+				node.textContent = format(value);
 				return;
 			}
 
 			gsap.to(state, {
-				value: next.value,
-				duration: next.duration ?? DURATION.quick,
+				value,
+				duration: duration ?? DURATION.quick,
 				ease: 'power2.out',
+				// `true` rather than 'auto': there is exactly one tween per node and
+				// the newest target is always the right one.
 				overwrite: true,
 				snap: { value: 1 },
 				onUpdate: () => (node.textContent = format(state.value))
 			});
-		},
-		destroy() {
-			gsap.killTweensOf(state);
-		}
+		});
+
+		return () => gsap.killTweensOf(state);
 	};
 }
 
@@ -392,6 +433,9 @@ export function count(node: HTMLElement, options: CountOptions) {
  *
  * `pointer-events: none` throughout: a trader who is mid-click when the market
  * opens must not have their click swallowed by a decoration.
+ *
+ * Not an attachment, because it is not attached to anything — it is an event,
+ * fired from an effect when the phase changes, and it owns its own elements.
  */
 export function sweep(tone: 'open' | 'halt'): void {
 	if (typeof document === 'undefined') return;
@@ -444,9 +488,12 @@ export function sweep(tone: 'open' | 'halt'): void {
  * Note the overlap offsets (`-=0.4`). Sequential animations feel like a slide
  * deck; overlapping ones feel like one movement with internal structure, which
  * is the difference between a transition and a title sequence.
+ *
+ * An attachment already has the right shape when it takes no options, so this
+ * one is used bare: `{@attach signInEntrance}`.
  */
-export function signInEntrance(node: HTMLElement) {
-	if (prefersReducedMotion()) return {};
+export const signInEntrance: Attachment<HTMLElement> = (node) => {
+	if (prefersReducedMotion()) return;
 
 	const card = node.querySelector('[data-motion="card"]');
 	const rule = node.querySelector('[data-motion="rule"]');
@@ -461,5 +508,5 @@ export function signInEntrance(node: HTMLElement) {
 		timeline.from(fields, { opacity: 0, y: 10, duration: 0.45, stagger: 0.07 }, '-=0.35');
 	}
 
-	return { destroy: () => timeline.kill() };
-}
+	return () => timeline.kill();
+};

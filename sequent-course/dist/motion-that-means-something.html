@@ -49,7 +49,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -81,48 +81,56 @@ export const DURATION = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const REVEAL_BUDGET = 0.45;
 
-export function reveal(node: HTMLElement, options: RevealOptions = {}) {
-	const { distance = 10 } = options;
+export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
+	return (node) =&gt; {
+		const { distance = 10 } = options;
 
-	// Delay and duration are clamped together, so adding a seventh panel to a
-	// staggered page cannot quietly push the last one past the budget.
-	const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
-	const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
+		// Delay and duration are clamped together, so adding a seventh panel to a
+		// staggered page cannot quietly push the last one past the budget.
+		const delay = Math.min(options.delay ?? 0, REVEAL_BUDGET * 0.5);
+		const duration = Math.min(options.duration ?? DURATION.quick, REVEAL_BUDGET - delay);
 
-	if (prefersReducedMotion()) {
-		// Nothing to do: the element is already where it should be, and it has no
-		// starting style to undo, because `from` sets that rather than the CSS.
-		return {};
-	}
+		if (prefersReducedMotion()) {
+			// Nothing to do: the element is already where it should be, and it has no
+			// starting style to undo, because `from` sets that rather than the CSS.
+			return;
+		}
 
-	const tween = gsap.from(node, {
-		opacity: 0,
-		y: distance,
-		duration,
-		delay,
-		clearProps: 'transform,opacity,willChange',
-		onStart: () =&gt; (node.style.willChange = 'transform, opacity')
-	});
+		const tween = gsap.from(node, {
+			opacity: 0,
+			y: distance,
+			duration,
+			delay,
+			clearProps: 'transform,opacity,willChange',
+			onStart: () =&gt; (node.style.willChange = 'transform, opacity')
+		});
 
-	return {
-		destroy() {
+		return () =&gt; {
 			tween.kill();
 			node.style.willChange = '';
-		}
+		};
 	};
 }</code></pre>
 </figure>
 <ul><li><strong>The budget is enforced in code, not in a comment.</strong> <code>delay + duration</code> can never exceed 450ms, so a future person adding a seventh panel cannot quietly break the guarantee.</li><li><strong>The order ticket has no reveal at all.</strong> Not a shorter one — none. It is the one control somebody might need to reach in the first half-second.</li><li><strong><code>will-change</code> is set for the duration and removed after.</strong> Leaving it on permanently promotes the element to its own compositor layer forever, which on a page with forty of them costs more memory than the animation ever saved.</li></ul>
+<h3 id="attachments">Why these are attachments, not actions</h3>
+<p>An earlier version of this file exported Svelte *actions* returning <code>{ update, destroy }</code>. The official <code>use:</code> docs now mark that return shape as legacy — &quot;prior to the <code>$effect</code> rune, actions could return an object with <code>update</code> and <code>destroy</code> methods; using effects is preferred&quot; — and recommend attachments outright for 5.29 and newer. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why <code>reveal</code> above ends with <code>return () =&gt; …</code> instead of a <code>destroy</code> method.</p>
+<p>Used from the template as <code>{@attach reveal({ delay: 0.05 })}</code> instead of <code>use:reveal={{ delay: 0.05 }}</code>. The file is <code>motion.svelte.ts</code> rather than <code>motion.ts</code> for the same reason: the <code>.svelte.ts</code> suffix is what lets a shared module use runes.</p>
+
+<aside class="callout callout--why">
+	<h4>The getter pattern, for the two that react</h4>
+	<p>Attachments are fully reactive: <code>{@attach flash(directionFor(level))}</code> would read <code>level</code> while the expression is evaluated, and the docs are explicit that the attachment is then torn down and recreated on every change — killing the tween continuity the flash exists for. The documented fix is to pass the value <strong>as a function</strong> and read it inside a child <code>$effect</code>: <code>{@attach flash(() =&gt; directionFor(level))}</code>. The per-node setup runs once; only the effect re-runs when the level changes. <code>flash</code>, <code>count</code> and the ladder's <code>bar</code> all use this shape.</p>
+</aside>
 <h3 id="reduced-motion">What &quot;reduce&quot; actually means</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function prefersReducedMotion(): boolean {
@@ -134,7 +142,7 @@ export function reveal(node: HTMLElement, options: RevealOptions = {}) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">if (prefersReducedMotion()) {
@@ -160,7 +168,7 @@ export function reveal(node: HTMLElement, options: RevealOptions = {}) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">gsap.fromTo(
@@ -179,12 +187,12 @@ export function reveal(node: HTMLElement, options: RevealOptions = {}) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/motion/motion.ts</span>
+		<span class="code__file">apps/web/src/lib/motion/motion.svelte.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">gsap.to(state, {
-	value: next.value,
-	duration: next.duration ?? DURATION.quick,
+	value,
+	duration: duration ?? DURATION.quick,
 	ease: 'power2.out',
 	overwrite: true,
 	snap: { value: 1 },

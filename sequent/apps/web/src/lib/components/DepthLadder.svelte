@@ -1,6 +1,7 @@
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
 	import type { DepthLevel } from '../../routes/terminal/market.remote.ts';
-	import { flash, gsap, prefersReducedMotion, type Direction } from '#lib/motion/motion.ts';
+	import { flash, gsap, prefersReducedMotion, type Direction } from '#lib/motion/motion.svelte.ts';
 
 	/**
 	 * The depth ladder.
@@ -110,22 +111,36 @@
 	 * `overwrite: 'auto'` again, and for the same reason as the flash: on a busy
 	 * instrument the next update arrives before this tween finishes, and it must
 	 * continue from wherever the bar got to rather than snapping back to start.
+	 *
+	 * An attachment, with the fill arriving as a getter read inside a child
+	 * `$effect` — the documented way to keep per-node setup from re-running when
+	 * the value changes. The `mounted` flag is what separates "first paint" (set
+	 * the length instantly; a book appearing is not liquidity arriving) from
+	 * "the level changed" (ease to the new length).
 	 */
-	function bar(node: HTMLElement, fill: number) {
-		if (prefersReducedMotion()) {
-			node.style.transform = `scaleX(${fill})`;
-			return {
-				update: (next: number) => (node.style.transform = `scaleX(${next})`)
-			};
-		}
+	function bar(getFill: () => number): Attachment<HTMLElement> {
+		return (node) => {
+			let mounted = false;
 
-		gsap.set(node, { scaleX: fill });
+			$effect(() => {
+				const fill = getFill();
 
-		return {
-			update(next: number) {
-				gsap.to(node, { scaleX: next, duration: 0.22, ease: 'power2.out', overwrite: 'auto' });
-			},
-			destroy: () => gsap.killTweensOf(node)
+				if (prefersReducedMotion()) {
+					mounted = true;
+					node.style.transform = `scaleX(${fill})`;
+					return;
+				}
+
+				if (!mounted) {
+					mounted = true;
+					gsap.set(node, { scaleX: fill });
+					return;
+				}
+
+				gsap.to(node, { scaleX: fill, duration: 0.22, ease: 'power2.out', overwrite: 'auto' });
+			});
+
+			return () => gsap.killTweensOf(node);
 		};
 	}
 </script>
@@ -153,7 +168,7 @@
 				</thead>
 				<tbody>
 					{#each column.levels as level (level.price)}
-						<tr class={column.side} use:flash={directionFor(level)}>
+						<tr class={column.side} {@attach flash(() => directionFor(level))}>
 							<td class="cell">
 								<!--
 									The depth bar sits behind the row rather than beside it, so a
@@ -161,7 +176,8 @@
 									deep it is. A bar that pushes the numbers around is a bar you
 									cannot read a price off while it moves.
 								-->
-								<span class="bar" use:bar={level.quantity / largest} aria-hidden="true"></span>
+								<span class="bar" {@attach bar(() => level.quantity / largest)} aria-hidden="true"
+								></span>
 								<button
 									type="button"
 									class="price mono"

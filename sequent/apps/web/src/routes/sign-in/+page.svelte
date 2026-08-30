@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { signInEntrance } from '#lib/motion/motion.ts';
+	import { signInEntrance } from '#lib/motion/motion.svelte.ts';
 	import { signIn } from './auth.remote.ts';
 
 	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/terminal');
@@ -17,7 +17,7 @@
 	It also works because it is the only one. The restraint everywhere else is
 	what gives this its weight.
 -->
-<div class="container narrow" use:signInEntrance>
+<div class="container narrow" {@attach signInEntrance}>
 	<div class="card stack" data-motion="card">
 		<header class="stack tight">
 			<h1>Sequent</h1>

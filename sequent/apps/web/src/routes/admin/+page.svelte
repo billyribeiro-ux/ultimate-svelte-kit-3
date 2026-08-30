@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { reveal, sweep } from '#lib/motion/motion.ts';
+	import { reveal, sweep } from '#lib/motion/motion.svelte.ts';
 	import {
 		addWebhook,
 		createKey,
@@ -177,7 +177,7 @@
 
 	<!-- ------------------------------------------------------------------ -->
 	{#if data.canRunVenue && venue}
-		<section class="card stack" use:reveal>
+		<section class="card stack" {@attach reveal()}>
 			<h2>The market</h2>
 			<p class="small muted">
 				Phases are not labels. <strong>pre-open</strong> accumulates orders without matching,
@@ -219,7 +219,7 @@
 			</div>
 		</section>
 
-		<section class="card stack" use:reveal={{ delay: 0.05 }}>
+		<section class="card stack" {@attach reveal({ delay: 0.05 })}>
 			<h2>List an instrument</h2>
 			<form {...listInstrument} class="stack">
 				{#if listInstrument.fields.allIssues()?.length}
@@ -276,7 +276,7 @@
 
 	<!-- ------------------------------------------------------------------ -->
 	{#if data.canSeeLedger && billing}
-		<section class="card stack" use:reveal={{ delay: 0.07 }}>
+		<section class="card stack" {@attach reveal({ delay: 0.07 })}>
 			<header class="row">
 				<h2>Billing</h2>
 				<span class="badge">{billing.plan.name}</span>
@@ -360,7 +360,7 @@
 
 	<!-- ------------------------------------------------------------------ -->
 	{#if data.canManageKeys && keys}
-		<section class="card stack" use:reveal={{ delay: 0.09 }}>
+		<section class="card stack" {@attach reveal({ delay: 0.09 })}>
 			<h2>API keys</h2>
 
 			{#if mintedKey}
@@ -458,7 +458,7 @@
 
 		<!-- -------------------------------------------------------------- -->
 		{#if hooks}
-			<section class="card stack" use:reveal={{ delay: 0.13 }}>
+			<section class="card stack" {@attach reveal({ delay: 0.13 })}>
 				<h2>Webhooks</h2>
 				<p class="small muted">
 					Every delivery is signed <code class="mono">t=…,v1=…</code> over
@@ -572,7 +572,7 @@
 
 	<!-- ------------------------------------------------------------------ -->
 	{#if data.canSeeQueue && ops}
-		<section class="card stack" use:reveal={{ delay: 0.15 }}>
+		<section class="card stack" {@attach reveal({ delay: 0.15 })}>
 			<header class="row">
 				<h2>Health</h2>
 				<span class="badge level" data-level={ops.verdict.level}>{ops.verdict.level}</span>
@@ -665,7 +665,7 @@
 
 	<!-- ------------------------------------------------------------------ -->
 	{#if data.canSeeQueue && queue}
-		<section class="card stack" use:reveal={{ delay: 0.17 }}>
+		<section class="card stack" {@attach reveal({ delay: 0.17 })}>
 			<h2>The queue</h2>
 
 			<div class="stats">
