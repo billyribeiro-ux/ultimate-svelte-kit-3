@@ -91,7 +91,7 @@ export const part1 = [
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` prints 22.17 or higher, and `pnpm -v` prints 10 or higher. That is all you need. Next we scaffold the project.'
+				text: '`node -v` prints 24.20.0 or newer, and `pnpm -v` prints 10 or higher. That is all you need. Next we scaffold the project.'
 			}
 		]
 	},
@@ -210,10 +210,11 @@ import { sveltekit } from '@sveltejs/kit/vite';
 export default defineConfig({
 	plugins: [
 		sveltekit({
-			adapter: adapter(),
 			compilerOptions: {
+				// …
 				experimental: { async: true }
 			},
+			adapter: adapter(),
 			experimental: {
 				remoteFunctions: true
 			}
@@ -319,7 +320,7 @@ await refreshAll();`
 		slug: 'typescript-strictness',
 		title: 'TypeScript, tightened',
 		summary:
-			'Two extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.',
+			'Four extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.',
 		goal: 'Your `tsconfig.json` is stricter than the default and `pnpm run check` passes.',
 		blocks: [
 			{
@@ -340,7 +341,7 @@ await refreshAll();`
 			},
 			{
 				type: 'p',
-				text: "`strict: true` is doing a lot of work — it turns on `strictNullChecks`, `noImplicitAny` and half a dozen others. We're going to add three more, and one required section."
+				text: "`strict: true` is doing a lot of work — it turns on `strictNullChecks`, `noImplicitAny` and half a dozen others. We're going to add four more, and one required section."
 			},
 			{
 				type: 'code',
@@ -467,11 +468,14 @@ for (const font of FONTS) {
 	const source = join(root, 'node_modules', font.from);
 	if (!existsSync(source)) {
 		console.error(\`[sync-fonts] missing: \${font.from}\`);
+		console.error('[sync-fonts] did you run \`pnpm install\`?');
 		process.exit(1);
 	}
 	copyFileSync(source, join(outDir, font.to));
 	console.log(\`[sync-fonts] \${font.to}\`);
-}`
+}
+
+// …`
 			},
 			{
 				type: 'p',
@@ -646,29 +650,37 @@ for (const font of FONTS) {
 				file: 'src/lib/styles/tokens.css',
 				lang: 'css',
 				code: `:root {
-	/* Neutrals — cool-tinted near-blacks, not pure grey */
+	/* Neutrals. A trading product lives in the dark; these are cool-tinted
+	   near-blacks rather than pure grey, which reads as more deliberate. */
 	--ink-950: #05070c;
 	--ink-900: #080b12;
 	--ink-850: #0b0f18;
 	--ink-800: #10151f;
+	/* … */
 	--ink-700: #171d2a;
 	--ink-600: #202839;
 	--ink-500: #2b3549;
 	--ink-400: #3a465e;
 
 	--paper-50: #f4f7fc;
+	/* … */
 	--paper-300: #b9c3d6;
 	--paper-400: #7f8ba3;
 
-	/* Brand — blue. Deliberately NOT green and NOT red. */
+	/* Brand. Deliberately blue/indigo — NOT green and NOT red.
+	   In a trading product green and red already mean something (up and down).
+	   If the brand colour were green, every button would look like a buy signal. */
 	--brand-300: #9db4ff;
 	--brand-400: #6e93ff;
 	--brand-500: #4f7dff;
 	--brand-600: #3b63e8;
+	/* … */
 
-	/* Market semantics — these encode data, never decoration */
+	/* Market semantics. These encode data, never decoration. */
 	--bull-500: #16c784;
+	/* … */
 	--bear-500: #ea3943;
+	/* … */
 	--warn-500: #f0b90b;
 }`
 			},
@@ -687,20 +699,29 @@ for (const font of FONTS) {
 				file: 'src/lib/styles/tokens.css',
 				lang: 'css',
 				code: `	--bg-root: var(--ink-950);
+	/* … */
 	--surface: var(--ink-850);
 	--surface-raised: var(--ink-800);
+	/* … */
 
 	--border: color-mix(in srgb, var(--ink-500) 60%, transparent);
 	--border-strong: var(--ink-400);
+	/* … */
 
 	--text-primary: var(--paper-50);
 	--text-secondary: var(--paper-300);
 	--text-muted: var(--paper-400);
+	/* … */
 
 	--accent: var(--brand-500);
 	--accent-hover: var(--brand-400);
+	/* … */
 	--accent-contrast: #ffffff;
 
+	/* … */
+
+	/* Focus ring. One ring, used by everything, never removed without a
+	   replacement. Keyboard users navigate by this. */
 	--focus-ring: 0 0 0 2px var(--bg-root), 0 0 0 4px var(--brand-400);`
 			},
 			{ type: 'h3', id: 'type', text: 'A fluid type scale' },
@@ -710,15 +731,34 @@ for (const font of FONTS) {
 				lang: 'css',
 				code: `	--font-heading: 'Montserrat Variable', 'Montserrat Fallback', system-ui, sans-serif;
 	--font-body: 'Sofia Sans Variable', 'Sofia Sans Fallback', system-ui, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
 
-	--fs-sm:   clamp(0.875rem, 0.855rem + 0.10vw, 0.9375rem);
+	--fs-xs:   clamp(0.75rem,  0.735rem + 0.08vw, 0.8125rem);
+	--fs-sm:   clamp(0.875rem, 0.855rem + 0.1vw,  0.9375rem);
 	--fs-base: clamp(1rem,     0.965rem + 0.18vw, 1.0625rem);
 	--fs-md:   clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem);
 	--fs-lg:   clamp(1.25rem,   1.16rem + 0.45vw, 1.5rem);
 	--fs-xl:   clamp(1.5rem,    1.35rem + 0.75vw, 1.9375rem);
 	--fs-2xl:  clamp(1.875rem,  1.62rem + 1.25vw, 2.5rem);
-	--fs-3xl:  clamp(2.25rem,   1.83rem + 2.10vw, 3.25rem);
-	--fs-4xl:  clamp(2.625rem,  1.95rem + 3.40vw, 4.25rem);`
+	--fs-3xl:  clamp(2.25rem,   1.83rem + 2.1vw,  3.25rem);
+	--fs-4xl:  clamp(2.625rem,  1.95rem + 3.4vw,  4.25rem);
+
+	--lh-tight: 1.08;
+	--lh-snug: 1.22;
+	--lh-normal: 1.4;
+	--lh-relaxed: 1.65;
+
+	--tracking-tight: -0.022em;
+	--tracking-snug: -0.012em;
+	--tracking-normal: 0;
+	--tracking-wide: 0.06em;
+	--tracking-caps: 0.11em;
+
+	--weight-regular: 400;
+	--weight-medium: 500;
+	--weight-semibold: 600;
+	--weight-bold: 700;
+	--weight-black: 800;`
 			},
 			{
 				type: 'p',
@@ -738,23 +778,28 @@ for (const font of FONTS) {
 	--space-4: 1rem;     --space-5: 1.25rem;  --space-6: 1.5rem;
 	--space-8: 2rem;     --space-10: 2.5rem;  --space-12: 3rem;
 	--space-16: 4rem;    --space-20: 5rem;    --space-24: 6rem;
+	/* … */
 
-	/* Fluid vertical rhythm between page sections */
+	/* Vertical rhythm between page sections — fluid, so mobile isn't wastefully airy. */
 	--section-y: clamp(3.5rem, 2.4rem + 5.5vw, 7rem);
 
 	--container-max: 75rem;
 	--container-narrow: 46rem;
+	/* … */
 	--gutter: clamp(1rem, 0.55rem + 2.2vw, 2rem);
 	--header-height: 4rem;
 
 	--radius-sm: 0.375rem; --radius-md: 0.625rem;
 	--radius-lg: 0.875rem; --radius-xl: 1.25rem;
 	--radius-full: 9999px;
+	/* … */
 
 	--dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 320ms;
 	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+	/* … */
 
-	/* Named layers. If you ever type z-index: 9999, you have lost. */
+	/* Named z-indexes. If you ever type \`z-index: 9999\`, you've lost. */
+	/* … */
 	--z-header: 200; --z-drawer: 300; --z-modal: 400; --z-skip-link: 600;`
 			},
 			{
@@ -793,6 +838,8 @@ body {
 	min-height: 100svh;
 	line-height: var(--lh-relaxed);
 	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
 }
 
 img, picture, video, canvas, svg {
@@ -803,6 +850,7 @@ img, picture, video, canvas, svg {
 input, button, textarea, select {
 	font: inherit;
 	color: inherit;
+	letter-spacing: inherit;
 }
 
 button {
@@ -814,7 +862,7 @@ button {
 	appearance: none;
 }
 
-p, h1, h2, h3, h4, h5, h6, li { overflow-wrap: break-word; }
+p, h1, h2, h3, h4, h5, h6, li, dd, dt { overflow-wrap: break-word; }
 
 ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 
@@ -822,6 +870,10 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 	outline: none;
 	box-shadow: var(--focus-ring);
 	border-radius: var(--radius-sm);
+}
+
+#svelte-app {
+	isolation: isolate;
 }`
 			},
 			{
@@ -872,6 +924,7 @@ body {
 	color: var(--text-secondary);
 	font-family: var(--font-body);
 	font-size: var(--fs-base);
+	font-weight: var(--weight-regular);
 	font-synthesis-weight: none;
 }
 
@@ -884,13 +937,26 @@ h1, h2, h3, h4, h5, h6 {
 	text-wrap: balance;
 }
 
-h1 { font-size: var(--fs-3xl); font-weight: var(--weight-black); }
-h2 { font-size: var(--fs-2xl); }
+h1 {
+	font-size: var(--fs-3xl);
+	font-weight: var(--weight-black);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+}
+
+h2 {
+	font-size: var(--fs-2xl);
+	font-weight: var(--weight-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+}
+
 h3 { font-size: var(--fs-xl); }
 
 p { text-wrap: pretty; }
 
-/* ~70 characters — the range typographers consider most readable */
+/* \`ch\` units measure character width, so this caps a paragraph at roughly
+   70 characters — the range typographers consider most readable. */
 p, li { max-width: 70ch; }`
 			},
 			{
@@ -920,10 +986,13 @@ p, li { max-width: 70ch; }`
 
 .section { padding-block: var(--section-y); }
 
-/* The owl selector: space BETWEEN children, no trailing margin */
+/* \`> * + *\` reads as "every child that follows another child". It adds space
+   *between* items without adding a trailing margin after the last one, which is
+   what you actually want and what \`margin-bottom\` on every child gets wrong. */
 .stack > * + * { margin-block-start: var(--stack-space, var(--space-4)); }
 
-/* Responsive columns with no media queries at all */
+/* \`auto-fit\` + \`minmax()\` lets the grid decide how many columns fit. On a phone
+   … */
 .auto-grid {
 	display: grid;
 	gap: var(--grid-gap, var(--space-6));
@@ -947,7 +1016,8 @@ p, li { max-width: 70ch; }`
 				type: 'code',
 				file: 'src/lib/styles/utilities.css (continued)',
 				lang: 'css',
-				code: `/* Hidden visually, still announced by screen readers */
+				code: `/* Do NOT use \`display: none\` or \`visibility: hidden\` for this — both remove the
+   … */
 .visually-hidden:not(:focus):not(:active) {
 	position: absolute;
 	width: 1px;
@@ -960,7 +1030,8 @@ p, li { max-width: 70ch; }`
 	border: 0;
 }
 
-/* The first focusable thing on the page */
+/* Skip link — the first focusable thing on the page.
+   … */
 .skip-link {
 	position: absolute;
 	top: var(--space-2);
@@ -969,6 +1040,8 @@ p, li { max-width: 70ch; }`
 	padding: var(--space-3) var(--space-5);
 	background-color: var(--accent);
 	color: var(--accent-contrast);
+	font-family: var(--font-heading);
+	font-weight: var(--weight-semibold);
 	border-radius: var(--radius-md);
 	text-decoration: none;
 	transform: translateY(-200%);
@@ -998,7 +1071,7 @@ p, li { max-width: 70ch; }`
 			},
 			{
 				type: 'checkpoint',
-				text: "Five files in `src/lib/styles/`. Nothing renders differently yet — we haven't imported `app.css` anywhere. That happens in chapter 21."
+				text: "Six files in `src/lib/styles/` — the five sheets plus `app.css` tying them together. Nothing renders differently yet — we haven't imported `app.css` anywhere. That happens in chapter 21. (A seventh file, `motion.css`, joins the import list in a later chapter.)"
 			}
 		]
 	}
