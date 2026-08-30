@@ -97,11 +97,14 @@ for (const font of FONTS) {
 	const source = join(root, 'node_modules', font.from);
 	if (!existsSync(source)) {
 		console.error(`[sync-fonts] missing: ${font.from}`);
+		console.error('[sync-fonts] did you run `pnpm install`?');
 		process.exit(1);
 	}
 	copyFileSync(source, join(outDir, font.to));
 	console.log(`[sync-fonts] ${font.to}`);
-}</code></pre>
+}
+
+// …</code></pre>
 </figure>
 <p>Wire it into <code>package.json</code> so it runs on every install and nobody has to remember it:</p>
 

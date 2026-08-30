@@ -41,7 +41,7 @@
 <ul><li><code>/manage/[slug]</code> → <code>requireStaff(slug)</code> checks membership, not just sign-in.</li><li><code>removeHours({ ruleId })</code> → loads the rule, checks its staff member belongs to <strong>this</strong> business, then checks the viewer may manage that person. Three checks, because a rule id alone proves nothing.</li><li><code>setStaffService</code> → <code>requireOwner</code>, and the staff and service ids are both re-scoped to the owner's business.</li><li><code>/booking/[token]</code> → the token *is* the credential; nothing else is trusted.</li></ul>
 <aside class="callout callout--warn"><p>The pattern to look for in your own code: any handler that takes an id and trusts it. &quot;The client sent us this id, so the client must be allowed to have it&quot; is the whole bug, and it reads as perfectly reasonable code.</p></aside>
 <h3 id="inputs">2. Every input, at the boundary</h3>
-<p>Every remote function has a schema. Not one takes a bare string. The check worth running on your own project:</p>
+<p>Every remote function that accepts input validates it with a schema at the boundary. The one function without a schema is <code>signOut</code>, which takes no argument at all — there is nothing to validate. A first pass worth running on your own project: count the declarations, then count the ones with a schema visibly in place.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -51,7 +51,7 @@
 	<pre><code>grep -rn &quot;export const .* = \(query\|command\|form\)(&quot; src/ | wc -l
 grep -rn &quot;export const .* = \(query\|command\|form\)(v\.\|export const .* = \(query\|command\|form\)([a-zA-Z]*Schema&quot; src/ | wc -l</code></pre>
 </figure>
-<p>If those two numbers differ, something takes an unvalidated argument.</p>
+<p>On this codebase those print 18 and 10 — and not one of the eight gaps is a missing schema. Five declarations wrap, so the schema sits on the next line where the grep cannot see it; two schemas are named <code>cancelArgs</code> and <code>noteArgs</code> rather than <code>…Schema</code>; and <code>signOut</code> genuinely takes nothing. That is what a naive grep is: a prompt for an audit, not a verdict. Run it, then chase every difference to its reason — the pass is finished when each gap has an explanation, and the explanation is never &quot;we forgot&quot;.</p>
 <h3 id="enumeration">3. What the errors give away</h3>
 <ul><li>Wrong password and unknown email produce the <strong>identical</strong> message. Distinguishing them turns the sign-in form into a tool for discovering which of your customers have accounts. Two end-to-end tests assert this.</li><li>&quot;You do not work here&quot; is a 404, so <code>/manage/&lt;guess&gt;</code> cannot be used to enumerate the platform's businesses.</li><li>A malformed manage token is rejected on shape before it becomes a query — no timing difference between &quot;badly formed&quot; and &quot;not found&quot;.</li></ul>
 <h3 id="redirects">4. The open redirect</h3>

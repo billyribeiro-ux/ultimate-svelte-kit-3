@@ -51,6 +51,8 @@
 -- because the sequencer owns it. Letting SQLite choose would mean the ordering
 -- authority lived in two places, and the day they disagree is the day replay
 -- stops reproducing history.
+--
+-- …
 CREATE TABLE IF NOT EXISTS command_log (
 	seq INTEGER PRIMARY KEY,
 
@@ -59,7 +61,8 @@ CREATE TABLE IF NOT EXISTS command_log (
 	received_at INTEGER NOT NULL,
 
 	-- Which rules version was in force. Replay dispatches on this rather than on
-	-- whatever the engine happens to have compiled in.
+	-- whatever the engine happens to have compiled in, so a change to matching
+	-- logic does not rewrite what happened last March.
 	version INTEGER NOT NULL,
 
 	kind TEXT NOT NULL,
@@ -71,10 +74,14 @@ CREATE TABLE IF NOT EXISTS command_log (
 	body TEXT NOT NULL
 ) STRICT;
 
+-- …
+
 -- Events, in the order the engine produced them.
 --
 -- `caused_by` points at the command that produced this event. It is the single
--- most useful column in the database during an incident.
+-- most useful column in the database during an incident: every event knows its
+-- cause, and every derived identifier contains its own sequence number, so
+-- &quot;why did this happen&quot; is a lookup rather than an investigation.
 CREATE TABLE IF NOT EXISTS event_log (
 	seq INTEGER PRIMARY KEY AUTOINCREMENT,
 	caused_by INTEGER NOT NULL REFERENCES command_log (seq),
@@ -134,7 +141,6 @@ END;</code></pre>
 await client.execute('PRAGMA journal_mode = WAL');
 await client.execute('PRAGMA busy_timeout = 5000');
 await client.execute('PRAGMA foreign_keys = ON');
-
 /*
  * `synchronous = FULL` rather than the WAL default of `NORMAL`.
  *

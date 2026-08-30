@@ -111,17 +111,18 @@
 		<span class="code__file">src/lib/server/guards.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function canManageDiaryOf(context: StaffContext, staffId: string): boolean {
-	return context.staff.role === 'owner' || context.staff.id === staffId;
+	<pre><code class="lang-ts">export function canManageDiaryOf(role: StaffRole, actorStaffId: string, targetStaffId: string) {
+	return role === 'owner' || actorStaffId === targetStaffId;
 }
 
-export function assertCanManageDiaryOf(context: StaffContext, staffId: string): void {
-	if (!canManageDiaryOf(context, staffId)) {
-		error(403, 'You can only change your own hours.');
+/** The throwing version, for the server. */
+export function assertCanManageDiaryOf(context: StaffContext, targetStaffId: string): void {
+	if (!canManageDiaryOf(context.staff.role, context.staff.id, targetStaffId)) {
+		error(403, 'You can only manage your own diary.');
 	}
 }</code></pre>
 </figure>
-<p>Two functions, on purpose. The boolean drives the interface — the Remove button is not rendered next to somebody else's shift — and the throwing one drives the server. Hiding a button is manners; the assertion is the control.</p>
+<p>Two functions, on purpose — and notice that <code>canManageDiaryOf</code> takes plain primitives, a role and two ids, rather than a <code>StaffContext</code>. That is what lets the boolean drive the interface — the Remove button is not rendered next to somebody else's shift — without the UI having to construct a server-side context object it does not have. The throwing version drives the server. Hiding a button is manners; the assertion is the control.</p>
 <aside class="callout callout--note"><p>Our end-to-end suite tests both halves separately: one test checks the button is absent, another types the URL directly and expects a 403. If only the first existed, deleting the server check would leave the suite green.</p></aside>
 
 <aside class="callout callout--check">

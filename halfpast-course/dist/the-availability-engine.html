@@ -51,7 +51,10 @@
 	readonly to: IsoDate;
 	readonly rules: readonly WeeklyRule[];
 	readonly service: ServiceShape;
-	/** Occupied grid cells, as start instants. */
+	/**
+	 * Occupied grid cells, as start instants. Comes straight from a range query
+	 * against `slot_claim`, plus any time off expanded onto the same grid.
+	 */
 	readonly occupied: ReadonlySet&lt;number&gt;;
 	/** Now, as an instant. Passed in so tests can choose it. */
 	readonly now: number;
@@ -105,6 +108,8 @@
 			end: wallClockToInstant(day, rule.endMinute, zone)
 		}));
 
+	// Two rows that touch or overlap become one window, so an appointment may sit
+	// across the seam between them.
 	return mergeIntervals(windows);
 }</code></pre>
 </figure>
@@ -137,16 +142,24 @@
 		<span class="code__file">src/lib/time/availability.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function assertServiceFitsGrid(service: ServiceShape): void {
-	for (const [name, minutes] of [
-		['duration', service.durationMinutes],
-		['buffer before', service.bufferBeforeMinutes],
-		['buffer after', service.bufferAfterMinutes],
-		['slot interval', service.slotIntervalMinutes]
-	] as const) {
-		if (!isWholeSlots(minutes)) {
-			throw new Error(`${name} must be a multiple of ${SLOT_MINUTES} minutes, got ${minutes}`);
-		}
+	<pre><code class="lang-ts">function assertServiceFitsGrid(service: ServiceShape): void {
+	const problems: string[] = [];
+
+	if (!isWholeSlots(service.durationMinutes)) problems.push(`duration ${service.durationMinutes}`);
+	if (!isWholeSlots(service.bufferBeforeMinutes))
+		problems.push(`buffer before ${service.bufferBeforeMinutes}`);
+	if (!isWholeSlots(service.bufferAfterMinutes))
+		problems.push(`buffer after ${service.bufferAfterMinutes}`);
+	if (!isWholeSlots(service.slotIntervalMinutes))
+		problems.push(`slot interval ${service.slotIntervalMinutes}`);
+	if (service.durationMinutes &lt;= 0) problems.push('duration must be positive');
+	if (service.slotIntervalMinutes &lt;= 0) problems.push('slot interval must be positive');
+
+	if (problems.length &gt; 0) {
+		throw new Error(
+			`Service does not fit the 5-minute grid: ${problems.join(', ')}. ` +
+				'Durations, buffers and intervals must be positive multiples of 5 minutes.'
+		);
 	}
 }</code></pre>
 </figure>

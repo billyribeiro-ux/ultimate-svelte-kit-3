@@ -64,11 +64,16 @@ import { createClient } from '@libsql/client';
 import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
+// …
 const client = createClient({
 	url: DATABASE_URL,
-	authToken: DATABASE_AUTH_TOKEN
+	// libSQL rejects `authToken: undefined` on some versions, so only pass the key
+	// when we actually have one. Spreading a conditional object is the tidiest way
+	// to say &quot;this property may not exist at all&quot;.
+	...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
 });
 
+// …
 export const db = drizzle(client, { schema });</code></pre>
 </figure>
 <p>Passing <code>{ schema }</code> is what turns on the relational query builder — <code>db.query.booking.findMany({ with: { customer: true } })</code> — and gives every result its proper type. Without it you still get SQL, but you lose the part that makes Drizzle worth using.</p>
@@ -82,7 +87,10 @@ export const db = drizzle(client, { schema });</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">void (async () =&gt; {
 	try {
+		// Persisted in the database file, so this is idempotent; running it every
+		// boot simply guarantees no deployment is ever missing it.
 		await client.execute('PRAGMA journal_mode = WAL');
+		// Per-connection, so this one genuinely must run at every startup.
 		await client.execute('PRAGMA busy_timeout = 5000');
 	} catch (error) {
 		console.warn('[db] could not apply pragmas; continuing with defaults', error);

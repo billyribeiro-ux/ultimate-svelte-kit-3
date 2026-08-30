@@ -51,23 +51,38 @@ export function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise&lt;Motion | null&gt; | null = null;
 
+/**
+ * Load GSAP, or resolve to `null` if motion should not happen.
+ *
+ * `null` rather than throwing, because &quot;this visitor does not want animation&quot; is
+ * not an error and every call site would have to wrap it in a try/catch that
+ * does nothing. A caller writes:
+ *
+ *     const motion = await loadMotion();
+ *     if (!motion) return;
+ *
+ * and that early return is the entire accessibility story.
+ *
+ * The promise is memoised, so twenty components mounting at once produce one
+ * network request rather than twenty.
+ */
 export function loadMotion(): Promise&lt;Motion | null&gt; {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
 
-	// Memoised, so twenty components mounting at once produce one network
-	// request rather than twenty.
 	pending ??= (async () =&gt; {
 		try {
 			const [{ gsap }, { Flip }] = await Promise.all([import('gsap'), import('gsap/Flip')]);
 
 			gsap.registerPlugin(Flip);
 
-			// GSAP's default is a gentle ease-out over half a second: reasonable for
-			// a marketing page, too slow for a tool somebody uses forty times a day.
-			// These match the CSS tokens so a GSAP transition and a CSS one feel
-			// like the same system.
+			// GSAP's default is a gentle ease-out over half a second, which is a
+			// reasonable default for a marketing page and too slow for a tool
+			// somebody uses forty times a day. These match the CSS tokens so a
+			// GSAP transition and a CSS one feel like the same system.
 			gsap.defaults({ duration: 0.35, ease: 'power3.out' });
 
 			return { gsap, Flip };
@@ -118,12 +133,21 @@ export function loadMotion(): Promise&lt;Motion | null&gt; {
 				});
 			};
 
-			observer = new IntersectionObserver(/* … play once, then disconnect … */);
+			observer = new IntersectionObserver(
+				(entries) =&gt; {
+					for (const entry of entries) {
+						if (!entry.isIntersecting) continue;
+						observer?.disconnect();
+						play();
+					}
+				},
+				{ threshold, rootMargin: '0px 0px -8% 0px' }
+			);
+
 			observer.observe(node);
 		});
 
 		return () =&gt; {
-			// The element may be removed while GSAP is still loading.
 			cancelled = true;
 			observer?.disconnect();
 		};
@@ -133,10 +157,10 @@ export function loadMotion(): Promise&lt;Motion | null&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">using it</span>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;section class=&quot;details&quot; {@attach reveal({ y: 16 })}&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;section class=&quot;step details&quot; {@attach reveal({ y: 14 })}&gt;</code></pre>
 </figure>
 <p><code>{@attach}</code> replaces <code>use:</code>. The difference that matters here: an attachment is a plain function you can compose, parameterise and return from another function, and its teardown is just the returned closure.</p>
 <p>Two details in that code are the difference between an animation and a bug. <code>gsap.from</code> animates <strong>towards</strong> the DOM's real state, so if the tween never runs — blocked script, failed chunk, reduced motion — the element is already where it belongs. The opposite pattern (hide it in CSS, reveal it with JavaScript) means a failed script leaves a blank page. And <code>clearProps</code> hands layout back to CSS at the end, rather than leaving the element pinned by an inline matrix that a later resize cannot move.</p>

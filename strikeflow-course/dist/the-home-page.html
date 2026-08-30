@@ -43,7 +43,14 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { resolve } from '$app/paths';
-	import { ArrowRightIcon, LightningIcon, ShieldCheckIcon } from 'phosphor-svelte';
+	import {
+		ArrowRightIcon,
+		LightningIcon,
+		ShieldCheckIcon,
+		DatabaseIcon,
+		BroadcastIcon,
+		StrategyIcon
+	} from 'phosphor-svelte';
 
 	import Seo from '#lib/seo/Seo.svelte';
 	import { softwareApplicationSchema } from '#lib/seo/schema.ts';
@@ -56,6 +63,7 @@
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
+	// …the motion imports (heroSequence, parallax, reveal, revealGroup) are built in part 4…
 
 	const stats = [
 		{ value: '&lt;250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
@@ -63,6 +71,8 @@
 		{ value: '1.4M', label: 'Prints per session', note: 'Peak, classified in real time' },
 		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
 	];
+
+	// …the `steps` data for the how-it-works section…
 &lt;/script&gt;
 
 &lt;Seo
@@ -78,22 +88,29 @@
 		<span class="code__file">src/routes/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;section class=&quot;hero&quot;&gt;
+	<pre><code class="lang-svelte">&lt;section class=&quot;hero&quot; {@attach heroSequence()}&gt;
+	&lt;!-- … --&gt;
+	&lt;div class=&quot;hero__glow&quot; aria-hidden=&quot;true&quot; {@attach parallax(0.12)}&gt;&lt;/div&gt;
+
 	&lt;div class=&quot;container container--wide&quot;&gt;
 		&lt;div class=&quot;hero__grid&quot;&gt;
 			&lt;div class=&quot;hero__copy&quot;&gt;
-				&lt;Badge tone=&quot;brand&quot;&gt;Live options flow&lt;/Badge&gt;
+				&lt;span data-hero=&quot;badge&quot;&gt;
+					&lt;Badge tone=&quot;brand&quot;&gt;Live options flow&lt;/Badge&gt;
+				&lt;/span&gt;
 
-				&lt;h1 class=&quot;hero__title&quot;&gt;Read institutional options flow as it prints&lt;/h1&gt;
+				&lt;!-- … --&gt;
+				&lt;h1 class=&quot;hero__title&quot; data-hero=&quot;headline&quot;&gt;
+					Read institutional options flow as it prints
+				&lt;/h1&gt;
 
-				&lt;p class=&quot;hero__lede&quot;&gt;
-					StrikeFlow streams the entire US options tape — sweeps, blocks, dark pool prints
-					and dealer gamma — in under 250 milliseconds. Stop reconstructing what happened
-					an hour ago.
+				&lt;p class=&quot;hero__lede&quot; data-hero=&quot;lede&quot;&gt;
+					StrikeFlow streams the entire US options tape — sweeps, blocks, dark pool prints and
+					dealer gamma — in under 250 milliseconds. Stop reconstructing what happened an hour ago.
 				&lt;/p&gt;
 
-				&lt;div class=&quot;hero__actions&quot;&gt;
-					&lt;Button href={resolve('/guide')} size=&quot;lg&quot;&gt;
+				&lt;div class=&quot;hero__actions&quot; data-hero=&quot;actions&quot;&gt;
+					&lt;Button href={resolve('/guide')} size=&quot;lg&quot; pull&gt;
 						Get the free guide
 						{#snippet iconTrailing()}&lt;ArrowRightIcon /&gt;{/snippet}
 					&lt;/Button&gt;
@@ -101,17 +118,31 @@
 						See how it works
 					&lt;/Button&gt;
 				&lt;/div&gt;
+
+				&lt;ul class=&quot;hero__assurances&quot; role=&quot;list&quot; data-hero=&quot;assurances&quot;&gt;
+					&lt;li&gt;
+						&lt;LightningIcon size={16} weight=&quot;fill&quot; aria-hidden=&quot;true&quot; /&gt;
+						&lt;span&gt;7-day free trial&lt;/span&gt;
+					&lt;/li&gt;
+					&lt;li&gt;
+						&lt;ShieldCheckIcon size={16} weight=&quot;fill&quot; aria-hidden=&quot;true&quot; /&gt;
+						&lt;span&gt;Never connects to your broker&lt;/span&gt;
+					&lt;/li&gt;
+				&lt;/ul&gt;
 			&lt;/div&gt;
 
-			&lt;div class=&quot;hero__chart&quot;&gt;
+			&lt;div class=&quot;hero__chart&quot; data-hero=&quot;panel&quot;&gt;
 				&lt;FlowChart height={320} symbol=&quot;SPY&quot; /&gt;
 			&lt;/div&gt;
 		&lt;/div&gt;
 
-		&lt;div class=&quot;hero__stats&quot;&gt;&lt;StatStrip {stats} /&gt;&lt;/div&gt;
+		&lt;div class=&quot;hero__stats&quot; data-reveal {@attach reveal({ delay: 0.1 })}&gt;
+			&lt;StatStrip {stats} animated /&gt;
+		&lt;/div&gt;
 	&lt;/div&gt;
 &lt;/section&gt;</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The <code>{@attach heroSequence()}</code> and <code>{@attach reveal(…)}</code> attributes, the <code>data-hero</code>/<code>data-reveal</code> markers, the <code>pull</code> prop on the primary button and the <code>animated</code> flag on <code>StatStrip</code> are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the markup matches the finished project; everything else on this page works without them.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>About that headline</h4>
@@ -126,30 +157,80 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.hero {
-	/* Extra top padding clears the sticky header, which overlaps the page */
+	position: relative;
+	/* Extra top padding clears the sticky header, which overlaps the page. */
 	padding-block: calc(var(--header-height) + var(--space-8)) var(--section-y);
-
-	/* A brand glow, in pure CSS — no image request to delay LCP */
-	background:
-		radial-gradient(80% 60% at 50% -10%,
-			color-mix(in srgb, var(--brand-500) 16%, transparent), transparent 70%),
-		var(--bg-root);
+	background-color: var(--bg-root);
+	/* The glow layer is taller than the hero and moves; without this it would
+	   paint over the section below as it parallaxes. */
+	overflow: hidden;
 }
 
-/* Base: stacked, buttons full-width */
-.hero__grid   { display: flex; flex-direction: column; gap: var(--space-10); }
-.hero__actions { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
+/*
+ * The glow lives on its own element so it can be transformed independently.
+ * Animating a `background` gradient is a paint operation on every frame;
+ * animating a positioned element is a compositor operation. Same visual, an
+ * order of magnitude cheaper.
+ */
+.hero__glow {
+	position: absolute;
+	inset-block-start: -20%;
+	inset-inline: 0;
+	/* Taller than its container, so parallax never exposes an edge. */
+	height: 140%;
+	pointer-events: none;
+	z-index: 0;
+	background: radial-gradient(
+		80% 60% at 50% 10%,
+		color-mix(in srgb, var(--brand-500) 16%, transparent),
+		transparent 70%
+	);
+}
 
-/* From 30em there is room for side-by-side buttons */
+/* … */
+
+.hero__grid {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-10);
+}
+
+/* … */
+
+.hero__actions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+	width: 100%;
+}
+
+/* … */
+
+/* From 30em there's room for side-by-side buttons. Below that they stack
+   full-width, which is both easier to tap and the conventional mobile pattern. */
 @media (min-width: 30em) {
-	.hero__actions { flex-direction: row; flex-wrap: wrap; width: auto; }
+	.hero__actions {
+		flex-direction: row;
+		flex-wrap: wrap;
+		width: auto;
+	}
 }
 
-/* From 64em, copy and chart sit alongside each other */
 @media (min-width: 64em) {
-	.hero__grid  { flex-direction: row; align-items: center; gap: var(--space-16); }
-	.hero__copy  { flex: 1 1 46%; }
-	.hero__chart { flex: 1 1 54%; min-width: 0; }
+	.hero__grid {
+		flex-direction: row;
+		align-items: center;
+		gap: var(--space-16);
+	}
+
+	.hero__copy {
+		flex: 1 1 46%;
+	}
+
+	.hero__chart {
+		flex: 1 1 54%;
+		min-width: 0; /* lets the chart shrink inside flex instead of overflowing */
+	}
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>min-width: 0</code> on the chart column is not optional. Flex items default to <code>min-width: auto</code>, which means they refuse to shrink below their content size. A chart canvas will happily blow out of its column without it. This is the single most common flexbox overflow bug.</p></aside>

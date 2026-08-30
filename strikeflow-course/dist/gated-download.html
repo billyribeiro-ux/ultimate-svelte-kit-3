@@ -86,22 +86,35 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 	join('private', 'ebook', 'strikeflow-options-flow-guide.pdf')
 );
 
+const FILENAME = 'StrikeFlow-How-To-Read-Options-Flow.pdf';
+
 export const GET: RequestHandler = async ({ url }) =&gt; {
 	const result = verifyDownloadToken(url.searchParams.get('t'));
 
 	if (!result.valid) {
-		error(403, result.reason === 'expired'
-			? 'This download link has expired'
-			: 'Invalid download link');
+		/* …403, not 404 — the caller just isn't allowed it… */
+		error(
+			403,
+			result.reason === 'expired' ? 'This download link has expired' : 'Invalid download link'
+		);
 	}
 
-	const file = await readFile(EBOOK_PATH);
+	let file: Buffer;
+	try {
+		file = await readFile(EBOOK_PATH);
+	} catch {
+		// A missing build artefact is our fault, not the user's — hence 500, and a
+		// message that tells the operator what to run.
+		error(500, 'The guide is temporarily unavailable. Please try again shortly.');
+	}
 
 	return new Response(new Uint8Array(file), {
 		headers: {
 			'Content-Type': 'application/pdf',
+			// …
 			'Content-Disposition': `attachment; filename=&quot;${FILENAME}&quot;`,
 			'Content-Length': String(file.byteLength),
+			// …
 			'Cache-Control': 'private, no-store',
 			'X-Robots-Tag': 'noindex, nofollow'
 		}
@@ -125,29 +138,41 @@ export const GET: RequestHandler = async ({ url }) =&gt; {
 	</figcaption>
 	<pre><code class="lang-js">import { chromium } from 'playwright';
 
-const browser = await chromium.launch();
+// …renderHtml() builds the document from ebook-content.js, then:
+
+// …CHROMIUM_PATH lets CI or Docker point at a system Chromium instead of downloading one…
+const executablePath = process.env.CHROMIUM_PATH;
+
+const browser = await chromium.launch(executablePath ? { executablePath } : {});
 try {
 	const page = await browser.newPage();
+
+	// …
 	await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
 
 	await page.pdf({
 		path: outFile,
 		format: 'A4',
-		// Chromium's own margins zeroed so the stylesheet's @page rule is the
-		// only thing controlling layout. Two competing margin systems reliably
-		// produce a document that looks fine on screen and wrong on paper.
+		// Chromium's own margins set to zero so the stylesheet's @page rule is the
+		// only thing controlling layout. Two competing margin systems is a
+		// reliable way to produce a document that looks fine on screen and wrong
+		// on paper.
 		margin: { top: '0', bottom: '0', left: '0', right: '0' },
-		// Without this, Chromium strips background colours when printing —
-		// which would silently remove every callout box.
+		// Without this, Chromium strips background colours when printing — which
+		// would silently remove every callout box.
 		printBackground: true,
 		displayHeaderFooter: true,
 		headerTemplate: '&lt;div&gt;&lt;/div&gt;',
-		footerTemplate: `&lt;div style=&quot;width:100%;font-size:8pt;padding:0 20mm;
-			display:flex;justify-content:space-between;&quot;&gt;
-			&lt;span&gt;StrikeFlow&lt;/span&gt;&lt;span class=&quot;pageNumber&quot;&gt;&lt;/span&gt;&lt;/div&gt;`
+		footerTemplate: `
+			&lt;div style=&quot;width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;&quot;&gt;
+				&lt;span&gt;StrikeFlow — How to read options flow&lt;/span&gt;
+				&lt;span class=&quot;pageNumber&quot;&gt;&lt;/span&gt;
+			&lt;/div&gt;`
 	});
+
+	// …
 } finally {
-	// finally, so a failed render still closes the browser. Leaked Chromium
+	// `finally` so a failed render still closes the browser. Leaked Chromium
 	// processes are a classic way to exhaust CI memory.
 	await browser.close();
 }</code></pre>

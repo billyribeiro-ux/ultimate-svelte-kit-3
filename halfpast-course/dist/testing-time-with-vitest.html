@@ -45,20 +45,29 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
-	// A test with no assertions is a test that passes by accident.
+	// A test that asserts nothing is a test that cannot fail. Vitest will now
+	// treat one as an error rather than a pass.
 	expect: { requireAssertions: true },
 	projects: [
 		{
+			// Component tests — a real Chromium, not a DOM emulator. jsdom quietly
+			// lies about layout, focus and `matchMedia`, which are exactly the things
+			// a booking UI needs to get right.
 			extends: './vite.config.ts',
 			test: {
 				name: 'client',
-				environment: 'browser',
-				browser: { enabled: true, provider: 'playwright', instances: [{ browser: 'chromium' }] },
+				browser: {
+					enabled: true,
+					provider: playwright(),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
 				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-				setupFiles: ['./vitest-setup-client.ts']
+				exclude: ['src/lib/server/**']
 			}
 		},
 		{
+			// Pure logic — plain Node, no browser, fast. The time engine and the
+			// booking rules live here, and they are the tests that matter most.
 			extends: './vite.config.ts',
 			test: {
 				name: 'server',
@@ -70,7 +79,7 @@
 	]
 }</code></pre>
 </figure>
-<ul><li>The <strong>client</strong> project runs in a real Chromium via Playwright, not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.</li><li>The <strong>server</strong> project is plain Node and starts instantly. All our time tests live here.</li><li>The naming convention does the routing: <code>foo.svelte.spec.ts</code> is a component test, <code>foo.spec.ts</code> is a server one.</li></ul>
+<ul><li>The <strong>client</strong> project runs in a real, headless Chromium — <code>provider: playwright()</code>, a function imported from <code>@vitest/browser-playwright</code> — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.</li><li>The <strong>server</strong> project is plain Node and starts instantly. All our time tests live here.</li><li>The naming convention does the routing: <code>foo.svelte.spec.ts</code> is a component test, <code>foo.spec.ts</code> is a server one.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>requireAssertions</h4>
@@ -85,43 +94,84 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
-import { SLOT_MS, isFree, slotsIn } from './grid.ts';
+import {
+	SLOT_MS,
+	ceilToSlot,
+	floorToSlot,
+	isFree,
+	isSlotAligned,
+	isWholeSlots,
+	mergeIntervals,
+	slotCount,
+	slotsIn
+} from './grid.ts';
+
+/** A readable instant builder: `at('2026-08-14T09:00Z')`. */
+const at = (iso: string) =&gt; new Date(iso).getTime();
+
+// …
 
 describe('slotsIn', () =&gt; {
-	it('is half-open: an interval ending on a boundary does not claim the next cell', () =&gt; {
-		const start = 0;
-		const end = 3 * SLOT_MS;
-
-		expect(slotsIn({ start, end })).toEqual([0, SLOT_MS, 2 * SLOT_MS]);
+	it('covers a clean 45-minute appointment with nine cells', () =&gt; {
+		const cells = slotsIn({ start: at('2026-08-14T09:00Z'), end: at('2026-08-14T09:45Z') });
+		expect(cells).toHaveLength(9);
+		expect(cells[0]).toBe(at('2026-08-14T09:00Z'));
+		expect(cells.at(-1)).toBe(at('2026-08-14T09:40Z'));
 	});
 
-	it('widens outwards, because half a cell is unusable', () =&gt; {
-		// 09:02 to 09:38, on a grid anchored at 09:00.
-		const start = 2 * 60_000;
-		const end = 38 * 60_000;
+	it('is half-open: back-to-back appointments share no cell', () =&gt; {
+		const first = slotsIn({ start: at('2026-08-14T09:00Z'), end: at('2026-08-14T09:45Z') });
+		const second = slotsIn({ start: at('2026-08-14T09:45Z'), end: at('2026-08-14T10:30Z') });
+		const overlap = first.filter((cell) =&gt; second.includes(cell));
+		expect(overlap).toEqual([]);
+	});
 
-		const cells = slotsIn({ start, end });
-
-		expect(cells[0]).toBe(0);                    // the 09:00 cell is consumed
-		expect(cells.at(-1)).toBe(35 * 60_000);      // and the 09:35 one
+	it('widens a ragged interval outwards to whole cells', () =&gt; {
+		// 12:22 to 13:08 — neither end is on the grid.
+		const cells = slotsIn({ start: at('2026-08-14T12:22Z'), end: at('2026-08-14T13:08Z') });
+		expect(cells[0]).toBe(at('2026-08-14T12:20Z'));
+		expect(cells.at(-1)).toBe(at('2026-08-14T13:05Z'));
 	});
 
 	it('returns nothing for an empty or backwards interval', () =&gt; {
-		expect(slotsIn({ start: 100, end: 100 })).toEqual([]);
-		expect(slotsIn({ start: 500, end: 100 })).toEqual([]);
+		const t = at('2026-08-14T09:00Z');
+		expect(slotsIn({ start: t, end: t })).toEqual([]);
+		expect(slotsIn({ start: t, end: t - SLOT_MS })).toEqual([]);
 	});
+
+	// …
 });
 
 describe('isFree', () =&gt; {
-	it('rejects an interval touching a single taken cell', () =&gt; {
-		const occupied = new Set([5 * SLOT_MS]);
+	const occupied = new Set(
+		slotsIn({ start: at('2026-08-14T10:00Z'), end: at('2026-08-14T10:30Z') })
+	);
 
-		expect(isFree({ start: 0, end: 5 * SLOT_MS }, occupied)).toBe(true);
-		expect(isFree({ start: 0, end: 5 * SLOT_MS + 1 }, occupied)).toBe(false);
+	it('is true for an interval that ends exactly where a booking begins', () =&gt; {
+		expect(isFree({ start: at('2026-08-14T09:30Z'), end: at('2026-08-14T10:00Z') }, occupied)).toBe(
+			true
+		);
 	});
+
+	it('is true for an interval that begins exactly where a booking ends', () =&gt; {
+		expect(isFree({ start: at('2026-08-14T10:30Z'), end: at('2026-08-14T11:00Z') }, occupied)).toBe(
+			true
+		);
+	});
+
+	it('is false for a single overlapping minute at either edge', () =&gt; {
+		expect(isFree({ start: at('2026-08-14T09:30Z'), end: at('2026-08-14T10:01Z') }, occupied)).toBe(
+			false
+		);
+		expect(isFree({ start: at('2026-08-14T10:29Z'), end: at('2026-08-14T11:00Z') }, occupied)).toBe(
+			false
+		);
+	});
+
+	// …
 });</code></pre>
 </figure>
-<p>That last test is the half-open rule stated as an executable sentence. An interval ending exactly on the boundary of a taken cell is fine; one millisecond further and it is not.</p>
+<p>Those last three tests are the half-open rule stated as executable sentences. An interval that ends exactly where a booking begins — or begins exactly where it ends — is fine; overlap it by a single minute at either edge and it is not.</p>
 <h3 id="dst">The tests that matter</h3>
 <p>Now the ones you cannot write without a pure function.</p>
 
@@ -132,13 +182,18 @@ describe('isFree', () =&gt; {
 	</figcaption>
 	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
 import {
+	// …
 	hoursInLocalDay,
+	instantToIsoDate,
 	instantToMinuteOfDay,
+	// …
 	wallClockToInstant,
+	weekdayOf,
 	zoneAbbreviation
 } from './zone.ts';
 
 const LONDON = 'Europe/London';
+// …
 const iso = (instant: number) =&gt; new Date(instant).toISOString();
 
 describe('wallClockToInstant — the mornings clocks move', () =&gt; {
@@ -179,6 +234,8 @@ describe('wallClockToInstant — the mornings clocks move', () =&gt; {
 	it('can refuse an ambiguous time outright when a human must decide', () =&gt; {
 		expect(() =&gt; wallClockToInstant('2026-10-25', 90, LONDON, 'reject')).toThrow();
 	});
+
+	// …
 });</code></pre>
 </figure>
 <p>Read the third test carefully, because it is the sharpest one. <code>01:30</code> on 29 March does not exist, and the function does not throw and does not return <code>01:30</code> — it returns the instant that reads <strong>02:30</strong> on a London clock. The assertion checks both the instant and the local reading, so a change in policy cannot slip past.</p>
@@ -192,6 +249,8 @@ describe('wallClockToInstant — the mornings clocks move', () =&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const KATHMANDU = 'Asia/Kathmandu'; // UTC+05:45, and no DST — a useful oddity.
+
+// …
 
 it('handles a zone with a 45-minute offset', () =&gt; {
 	expect(iso(wallClockToInstant('2026-08-14', 9 * 60, KATHMANDU))).toBe(

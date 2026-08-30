@@ -44,45 +44,71 @@
 		<span class="code__file">packages/core/src/book.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export interface RestingOrder {
+	<pre><code class="lang-ts">/**
+ * An order sitting on the book.
+ *
+ * `remaining` is mutable and everything else is not, which is exactly the
+ * shape of the thing: an order's price, side and owner are settled the moment
+ * it is accepted, and the only thing that changes afterwards is how much of it
+ * is left.
+ */
+export interface RestingOrder {
 	readonly orderId: OrderId;
 	readonly firmId: FirmId;
 	readonly accountId: AccountId;
-	readonly clientOrderId: ClientOrderId;
 	readonly side: Side;
 	readonly price: Price;
-	readonly quantity: Quantity;
-	/** How much has traded. Never exceeds `quantity`. */
-	filled: Quantity;
-	/** The command that created it — this is the time in price-time priority. */
+	readonly originalQuantity: Quantity;
+	remaining: Quantity;
+	/**
+	 * The sequence number that put this order on the book.
+	 *
+	 * This *is* time priority. Not a timestamp — two orders can arrive in the
+	 * same millisecond, and then a timestamp cannot order them and something has
+	 * to break the tie, usually by accident. The sequence number is unique and
+	 * total by construction, so the queue has exactly one correct order and
+	 * anybody replaying the log arrives at the same one.
+	 */
 	readonly seq: number;
-	readonly selfTradePrevention: SelfTradePrevention;
+	/** Cancelled at the close, if `true`. Carried here so expiry is a book walk. */
+	readonly expiresAtClose: boolean;
 }
 
+/* … */
+
+/**
+ * Every order resting at one price, in arrival order.
+ *
+ * `total` is maintained alongside the queue rather than summed on demand. The
+ * depth ladder asks for it on every update and a fill-or-kill order asks for it
+ * before committing to anything, so the alternative is walking a queue that can
+ * be thousands long, thousands of times a second.
+ *
+ * A denormalised total is a promise you have to keep. Every mutation below
+ * updates it in the same statement that changes the queue, and a test asserts
+ * the invariant after every operation. Denormalisation without that test is
+ * just a bug with better performance.
+ */
 export interface PriceLevel {
 	readonly price: Price;
-	/** In arrival order. Position 0 trades first. */
 	readonly orders: RestingOrder[];
-	/**
-	 * The unfilled quantity across the whole level, kept up to date.
-	 *
-	 * Denormalised deliberately. Summing the orders on every read is O(n) and
-	 * happens on every single depth query; maintaining it here is O(1) per
-	 * change. The cost is that every mutation must remember to update it, so
-	 * every mutation goes through the two functions below and nothing touches
-	 * `orders` directly.
-	 */
-	total: Quantity;
+	total: number;
 }
 
+/**
+ * One instrument's book.
+ *
+ * Bids descend and asks ascend, so index 0 of each is always the best price and
+ * the most common question — &quot;what is the top of book&quot; — is an array lookup
+ * rather than a search.
+ */
 export interface Book {
 	readonly instrumentId: InstrumentId;
-	/** Descending: bids[0] is the best bid. */
 	readonly bids: PriceLevel[];
-	/** Ascending: asks[0] is the best ask. */
 	readonly asks: PriceLevel[];
 }</code></pre>
 </figure>
+<aside class="callout callout--note"><p>No <code>clientOrderId</code> and no instrument id on <code>RestingOrder</code> — the book *is* one instrument, and the participant's reference is only needed to answer a cancel. Both live on <code>LiveOrder</code>, a separate index in <code>packages/core/src/state.ts</code>, so every entry in every price level stays small.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>The two invariants</h4>
@@ -96,29 +122,38 @@ export interface Book {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Where a price sits, or where it would go.
+ * Where a price belongs in a side's ladder.
  *
- * A binary search, because a busy instrument has hundreds of levels and this
- * runs on every single order. Returns the index and whether it is a hit, so the
- * caller can insert at the same place it looked without searching twice.
+ * Binary search, returning either the index of the matching level or the index
+ * it should be inserted at. Ladders are kept in *priority* order rather than
+ * numeric order — descending for bids, ascending for asks — so one comparison
+ * flip handles both sides and there is no second implementation to keep in
+ * step with the first.
  *
- * The comparison flips with the side, which is the only fiddly part: bids
- * descend, asks ascend, and one function handles both so there is one place for
- * the off-by-one to be rather than two.
+ * A linear scan would be simpler and, on a real book, wrong: quiet instruments
+ * have a handful of levels and liquid ones have hundreds, and the difference
+ * only shows up on the day the volume arrives.
  */
-function locate(levels: PriceLevel[], price: Price, side: Side): { index: number; found: boolean } {
+function locate(
+	levels: readonly PriceLevel[],
+	price: Price,
+	side: Side
+): { index: number; found: boolean } {
 	let low = 0;
 	let high = levels.length;
 
 	while (low &lt; high) {
-		const middle = (low + high) &gt;&gt;&gt; 1;
-		const at = levels[middle]!.price;
+		const mid = (low + high) &gt;&gt;&gt; 1;
+		const at = levels[mid]!.price;
 
-		if (at === price) return { index: middle, found: true };
+		if (at === price) return { index: mid, found: true };
 
+		// Bids are better when higher, asks when lower. This is the only line in
+		// the file that knows that, which is deliberate.
 		const before = side === 'buy' ? at &gt; price : at &lt; price;
-		if (before) low = middle + 1;
-		else high = middle;
+
+		if (before) low = mid + 1;
+		else high = mid;
 	}
 
 	return { index: low, found: false };
@@ -132,82 +167,106 @@ function locate(levels: PriceLevel[], price: Price, side: Side): { index: number
 		<span class="code__file">packages/core/src/book.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** Put an order on the book, at the back of its price level's queue. */
-export function rest(book: Book, order: RestingOrder): void {
+	<pre><code class="lang-ts">/**
+ * Rest an order, at the back of its price level's queue.
+ *
+ * Returns its position in that queue, which is published on the acceptance
+ * event. Price-time priority is only credible if participants can check it, and
+ * a queue position they can verify against the public event stream is a cheaper
+ * defence against accusations of favouritism than any amount of assurance.
+ */
+export function rest(book: Book, order: RestingOrder): number {
 	const levels = order.side === 'buy' ? book.bids : book.asks;
 	const { index, found } = locate(levels, order.price, order.side);
 
-	const remaining = (order.quantity - order.filled) as Quantity;
-
 	if (found) {
 		const level = levels[index]!;
-		// The back of the queue. `push`, never `unshift` — arrival order *is* the
-		// fairness rule, and putting a late order at the front is queue-jumping.
 		level.orders.push(order);
-		level.total = (level.total + remaining) as Quantity;
-		return;
+		level.total += order.remaining;
+		return level.orders.length;
 	}
 
-	levels.splice(index, 0, { price: order.price, orders: [order], total: remaining });
+	levels.splice(index, 0, { price: order.price, orders: [order], total: order.remaining });
+	return 1;
 }</code></pre>
 </figure>
 <h3 id="matching">Matching</h3>
-<p>The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first.</p>
+<p>The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A <code>MatchRequest</code> carries the side, the quantity, an optional <code>limitPrice</code> — absent for a market order — the sender's <code>firmId</code> and self-trade-prevention choice, and a <code>dryRun</code> flag the fill-or-kill check uses. Self-trade prevention is elided here; it gets its own chapter.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/core/src/book.ts (simplified)</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function match(book: Book, request: MatchRequest): MatchResult {
+	<pre><code class="lang-ts">/**
+ * Whether a resting price is acceptable to an aggressor.
+ *
+ * A market order has no limit and accepts anything. A buy limit at 100 will
+ * take asks at 100 or better; a sell limit at 100 will take bids at 100 or
+ * better. &quot;Better&quot; flips with the side, which is why it is written once.
+ */
+function crosses(restingPrice: Price, side: Side, limitPrice: Price | undefined): boolean {
+	if (limitPrice === undefined) return true;
+	return side === 'buy' ? restingPrice &lt;= limitPrice : restingPrice &gt;= limitPrice;
+}
+
+/* … */
+
+export function match(book: Book, request: MatchRequest): MatchResult {
 	const opposite = request.side === 'buy' ? book.asks : book.bids;
 	const fills: Fill[] = [];
+	const pulled: Pulled[] = [];
 
-	let remaining = request.quantity;
+	let remaining: number = request.quantity;
+	let levelIndex = 0;
 
-	while (remaining &gt; 0 &amp;&amp; opposite.length &gt; 0) {
-		const level = opposite[0]!;
+	// … (self-trade-prevention bookkeeping — the next chapter's subject)
 
-		// Would this level cross? A buy crosses an ask at or below its limit.
-		const crosses =
-			request.price === undefined ||
-			(request.side === 'buy' ? level.price &lt;= request.price : level.price &gt;= request.price);
+	outer: while (remaining &gt; 0 &amp;&amp; levelIndex &lt; opposite.length) {
+		const level = opposite[levelIndex]!;
 
-		if (!crosses) break;
+		if (!crosses(level.price, request.side, request.limitPrice)) break;
 
-		while (remaining &gt; 0 &amp;&amp; level.orders.length &gt; 0) {
-			const resting = level.orders[0]!;
-			const available = (resting.quantity - resting.filled) as Quantity;
-			const traded = Math.min(remaining, available) as Quantity;
+		for (let i = 0; i &lt; level.orders.length &amp;&amp; remaining &gt; 0;) {
+			const resting = level.orders[i]!;
 
-			/*
-			 * The trade happens at the **resting** order's price, not the
-			 * aggressor's.
-			 *
-			 * A buy limit at £45.60 hitting an ask at £45.50 trades at £45.50 —
-			 * the buyer gets price improvement. Trading at the aggressor's price
-			 * would let anybody extract value by sending a deliberately terrible
-			 * limit, and would mean the resting order got worse than it asked for.
-			 */
-			fills.push({ resting, price: level.price, quantity: traded });
+			// … (the self-trade check lives here)
 
-			resting.filled = (resting.filled + traded) as Quantity;
-			level.total = (level.total - traded) as Quantity;
-			remaining = (remaining - traded) as Quantity;
+			const traded = Math.min(remaining, resting.remaining);
+			fills.push({ restingOrder: resting, price: level.price, quantity: traded as Quantity });
+			remaining -= traded;
 
-			if (resting.filled &gt;= resting.quantity) level.orders.shift();
+			// … (a dry run moves on without touching anything)
+
+			resting.remaining = (resting.remaining - traded) as Quantity;
+			level.total -= traded;
+
+			if (resting.remaining === 0) level.orders.splice(i, 1);
+			else i += 1;
 		}
 
-		if (level.orders.length === 0) opposite.shift();
+		if (!request.dryRun &amp;&amp; level.orders.length === 0) {
+			opposite.splice(levelIndex, 1);
+			// Do not advance: the next level has shifted into this index.
+			continue;
+		}
+
+		if (remaining === 0) break outer;
+		levelIndex += 1;
 	}
 
-	return { fills, remaining };
+	return {
+		fills,
+		remaining: remaining as Quantity,
+		pulled: settlePulls(),
+		aggressorCancelled: false
+	};
 }</code></pre>
 </figure>
 
 <aside class="callout callout--why">
 	<h4>Price improvement, and why it is not generosity</h4>
-	<p>The trade printing at the resting order's price is not a courtesy — it is what makes a limit order safe to leave on the book. If aggressors set the price, resting a bid at £45.50 would mean any seller could take it at £45.50 having offered at £45.20, and nobody would ever rest anything.</p>
+	<p>Every fill happens at <code>level.price</code> — the <strong>resting</strong> order's price, never the aggressor's. A buy limit at £45.60 hitting an ask at £45.50 trades at £45.50, and the buyer keeps the penny. That is not a courtesy — it is what makes a limit order safe to leave on the book. If aggressors set the price, resting a bid at £45.50 would mean any seller could take it at £45.50 having offered at £45.20, and nobody would ever rest anything.</p>
 </aside>
 <h3 id="crossed">The invariant to check</h3>
 
@@ -217,15 +276,16 @@ export function rest(book: Book, order: RestingOrder): void {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Is the best bid at or above the best ask?
+ * Whether the book is crossed — the best bid at or above the best ask.
  *
- * During continuous trading this must **never** be true. If it is, two orders
- * that should have traded are both sitting on the book — which means somebody
- * can buy from one and sell to the other for free, and the venue has printed
- * money.
+ * This must never be true after a command has been fully applied during
+ * continuous trading, because a crossed book is two participants who both agree
+ * on a price and have not been matched. It is the single most important
+ * invariant in the system and the property-based tests assert it after every
+ * generated command.
  *
- * Cheap to check, catastrophic to miss, so a property test asserts it after
- * every operation.
+ * During a call auction it is *expected* to be true — that is what an auction
+ * uncrosses.
  */
 export function isCrossed(book: Book): boolean {
 	const bid = book.bids[0];

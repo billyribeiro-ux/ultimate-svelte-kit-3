@@ -49,12 +49,17 @@
 	import { afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { scrollY } from 'svelte/reactivity/window';
-	import { ListIcon, XIcon } from 'phosphor-svelte';
-	import { primaryNav, type StaticRoute } from '#lib/data/nav.ts';
+	import { ListIcon, XIcon, ArrowRightIcon } from 'phosphor-svelte';
 
+	import { primaryNav, type StaticRoute } from '#lib/data/nav.ts';
+	import Logo from '#lib/components/ui/Logo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+
+	// …
 	let drawer = $state&lt;HTMLDialogElement | null&gt;(null);
 	let isOpen = $state(false);
 
+	// …
 	const isScrolled = $derived((scrollY.current ?? 0) &gt; 8);
 
 	function openDrawer() {
@@ -66,18 +71,26 @@
 		drawer?.close();
 	}
 
-	/* The dialog fires 'close' however it was closed — our button, Escape, or
-	   a backdrop click. Syncing state here means we cannot get out of sync. */
+	/**
+	 * The dialog fires `close` however it was closed — our button, the Escape key,
+	 * or a backdrop click. Syncing state here rather than in `closeDrawer` means we
+	 * can't get out of sync when the browser closes it behind our back.
+	 */
 	function handleClose() {
 		isOpen = false;
 	}
 
-	/* The browser has no idea a client-side route changed. Without this, tapping
-	   a link changes the page underneath while the drawer stays open on top. */
+	/**
+	 * Close on navigation.
+	 *
+	 * Without this, tapping a link in the drawer changes the page underneath while
+	 * the drawer stays open on top of it — a classic SPA bug.
+	 */
 	afterNavigate(() =&gt; {
 		if (drawer?.open) drawer.close();
 	});
 
+	// …
 	function isCurrent(href: StaticRoute): boolean {
 		const target = resolve(href);
 		const here = page.url.pathname;
@@ -100,6 +113,7 @@
 			&lt;Logo size={1.5} /&gt;
 		&lt;/a&gt;
 
+		&lt;!-- … --&gt;
 		&lt;nav class=&quot;header__nav&quot; aria-label=&quot;Main&quot;&gt;
 			&lt;ul class=&quot;header__nav-list&quot; role=&quot;list&quot;&gt;
 				{#each primaryNav as link (link.href)}
@@ -109,27 +123,39 @@
 							class:is-current={isCurrent(link.href)}
 							href={resolve(link.href)}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}
-						&gt;{link.label}&lt;/a&gt;
+						&gt;
+							{link.label}
+						&lt;/a&gt;
 					&lt;/li&gt;
 				{/each}
 			&lt;/ul&gt;
 		&lt;/nav&gt;
 
-		&lt;button
-			class=&quot;header__toggle&quot;
-			type=&quot;button&quot;
-			onclick={openDrawer}
-			aria-expanded={isOpen}
-			aria-haspopup=&quot;dialog&quot;
-			aria-label=&quot;Open navigation menu&quot;
-		&gt;
-			&lt;ListIcon size={24} aria-hidden=&quot;true&quot; /&gt;
-		&lt;/button&gt;
+		&lt;div class=&quot;header__actions&quot;&gt;
+			&lt;div class=&quot;header__cta&quot;&gt;
+				&lt;Button href={resolve('/guide')} variant=&quot;primary&quot; size=&quot;sm&quot;&gt;
+					Free guide
+					{#snippet iconTrailing()}&lt;ArrowRightIcon /&gt;{/snippet}
+				&lt;/Button&gt;
+			&lt;/div&gt;
+
+			&lt;button
+				class=&quot;header__toggle&quot;
+				type=&quot;button&quot;
+				onclick={openDrawer}
+				aria-expanded={isOpen}
+				aria-haspopup=&quot;dialog&quot;
+				aria-label=&quot;Open navigation menu&quot;
+			&gt;
+				&lt;ListIcon size={24} aria-hidden=&quot;true&quot; /&gt;
+			&lt;/button&gt;
+		&lt;/div&gt;
 	&lt;/div&gt;
 &lt;/header&gt;
 
+&lt;!-- … --&gt;
 &lt;dialog bind:this={drawer} class=&quot;drawer&quot; onclose={handleClose} aria-label=&quot;Navigation menu&quot;&gt;
-	&lt;!-- drawer contents --&gt;
+	&lt;!-- … --&gt;
 &lt;/dialog&gt;</code></pre>
 </figure>
 
@@ -146,14 +172,17 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.drawer {
-	margin: 0 0 0 auto;        /* pin to the right edge */
+	margin: 0 0 0 auto; /* pin to the right edge */
 	padding: 0;
 	border: none;
 	width: min(22rem, 88vw);
+	max-width: none;
 	height: 100%;
 	max-height: 100%;
 	background-color: var(--surface);
 	border-left: 1px solid var(--border);
+	color: var(--text-secondary);
+	overflow: hidden;
 }
 
 .drawer::backdrop {
@@ -161,16 +190,31 @@
 	backdrop-filter: blur(2px);
 }
 
-/* [open] is set by the browser, so we animate without tracking state */
-.drawer[open] { animation: slide-in var(--dur-slow) var(--ease-out); }
-
-@keyframes slide-in {
-	from { transform: translateX(100%); }
-	to   { transform: translateX(0); }
+/* `[open]` is set by the browser, so we get the animation without tracking state. */
+.drawer[open] {
+	animation: slide-in var(--dur-slow) var(--ease-out);
 }
 
+.drawer[open]::backdrop {
+	animation: fade-in var(--dur-base) var(--ease-out);
+}
+
+@keyframes slide-in {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+/* … */
+
 .drawer__panel {
-	/* Respects the iOS home indicator and notch */
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	/* Respects the iOS home indicator and notch. */
 	padding: var(--space-4) var(--space-5) max(var(--space-5), env(safe-area-inset-bottom));
 	overflow-y: auto;
 	overscroll-behavior: contain;

@@ -44,12 +44,12 @@
 		<span class="code__file">src/lib/server/diary-events.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** One key per business per local day: `biz_123:2026-08-14`. */
-export function diaryKey(businessId: string, when: Date | number, zone: string): string {
-	return `${businessId}:${instantToIsoDate(when, zone)}`;
-}</code></pre>
+	<pre><code class="lang-ts">type Listener = () =&gt; void;
+
+/** Listeners by key. A key is a business id — the unit a diary belongs to. */
+const listeners = new Map&lt;string, Set&lt;Listener&gt;&gt;();</code></pre>
 </figure>
-<p>Granularity is a judgement call. Per-business would wake every screen in the salon for a booking three weeks out. Per-appointment would be precise and useless — the dashboard wants to know about appointments it has not seen yet. Per-business-per-day is the level a human actually looks at.</p>
+<p>Granularity is a judgement call, and the key here is nothing fancier than the business's own id. Every live view of that salon's diary — however many days it has open — wakes on any change to it. That is coarser than per-appointment, which would be precise and useless: the dashboard wants to know about appointments it has not seen yet. And a salon's diary changes only a few times an hour, so waking every screen open on that one business costs nothing worth avoiding. It is also why <code>createBooking</code> can publish with <code>created.businessId</code> directly — the key and the id are the same string.</p>
 <h3 id="generator">The generator</h3>
 
 <figure class="code">
@@ -110,13 +110,19 @@ export function diaryKey(businessId: string, when: Date | number, zone: string):
 		<span class="code__file">src/lib/server/diary-events.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function publishDiaryChange(key: string): void {
-	for (const listener of subscribers(key)) listener();
+	<pre><code class="lang-ts">/** Tell everyone watching `key` that something changed. */
+export function publishDiaryChange(key: string): void {
+	const set = listeners.get(key);
+	if (!set) return;
+
+	// Copy before iterating: a listener may unsubscribe itself in response, and
+	// mutating a Set while looping over it silently skips entries.
+	for (const listener of [...set]) listener();
 }
 
-/** How many watchers a key has. Exposed for tests and health checks. */
+/** How many streams are currently watching. Used by tests and health checks. */
 export function watcherCount(key: string): number {
-	return subscribers(key).size;
+	return listeners.get(key)?.size ?? 0;
 }</code></pre>
 </figure>
 <p><code>watcherCount</code> exists so a test can assert the leak does not happen: start a watcher, abort it, assert the count is back to zero. Leaks are invisible until production has been up for a week, so the only sensible time to check is now.</p>

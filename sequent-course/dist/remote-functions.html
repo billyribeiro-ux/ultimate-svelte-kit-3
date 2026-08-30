@@ -44,20 +44,25 @@
 		<span class="code__file">apps/web/src/routes/terminal/market.remote.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { query } from '$app/server';
+	<pre><code class="lang-ts">// …
+import type { Row } from '@libsql/client';
+// …
+import { command, getRequestEvent, query } from '$app/server';
+
+// …
 
 export const getMyOrders = query(async () =&gt; {
 	const viewer = requireViewer();
 	requireCan(viewer, 'view_orders');
 
 	const result = await db.execute({
-		sql: `SELECT order_id, client_order_id, instrument_id, side, price, quantity,
-		             filled, time_in_force, status, cancel_reason, updated_at
-		      FROM order_record WHERE firm_id = ? ORDER BY seq DESC LIMIT 100`,
+		sql: `SELECT order_id, client_order_id, instrument_id, side, price, quantity, filled,
+					 time_in_force, status, cancel_reason, updated_at
+			  FROM order_record WHERE firm_id = ? ORDER BY seq DESC LIMIT 100`,
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row) =&gt; ({ /* … */ }));
+	return result.rows.map((row: Row) =&gt; ({ /* … */ }));
 });</code></pre>
 </figure>
 
@@ -106,11 +111,11 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 		accountId: v.pipe(v.string(), v.minLength(1)),
 		instrumentId: symbol,
 		clientOrderId: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
-		side: v.picklist(['buy', 'sell']),
-		orderType: v.picklist(['limit', 'market']),
+		side: v.picklist(['buy', 'sell'] as const),
+		orderType: v.picklist(['limit', 'market'] as const),
 		price: v.optional(positiveInteger),
 		quantity: positiveInteger,
-		timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'])
+		timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'] as const)
 	}),
 	async (input) =&gt; {
 		const viewer = requireViewer();
@@ -177,26 +182,25 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 		requireViewer();
 		const { request } = getRequestEvent();
 
-		// 1. Yield the current answer immediately, so the page has something to draw.
 		yield await snapshotOf(args.instrumentId, args.depth);
 
-		// 2. Wait for a reason to look again.
 		for await (const batch of tailEvents(db, await currentSeq(), {
 			signal: request.signal,
 			idleMs: 40
 		})) {
+			// Only wake for events about this instrument. A quiet instrument on a
+			// busy venue should cost nothing.
 			const relevant = batch.some((record) =&gt; {
-				const body = record.body;
+				const body = record.body as { instrumentId?: string };
 				return body.instrumentId === args.instrumentId;
 			});
 
-			// 3. Yield the new answer.
 			if (relevant) yield await snapshotOf(args.instrumentId, args.depth);
 		}
 	}
 );</code></pre>
 </figure>
-<p>Three steps, always the same three: yield now, wait, yield again. The interesting decisions are in the waiting.</p>
+<p>The shape is always the same three steps: yield the current answer immediately, so the page has something to draw; wait for a reason to look again; yield the new answer. The interesting decisions are in the waiting.</p>
 
 <aside class="callout callout--why">
 	<h4>Coalescing is not an optimisation</h4>

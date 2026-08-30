@@ -36,7 +36,7 @@
 			<p class="lede">Wire up the global stylesheet, add the skip link and main landmark, and put the single most valuable performance tag in the document head.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>The site finally looks like something, and loads fast.</p></aside>
 			<h3 id="layout">The root layout</h3>
-<p><code>src/routes/+layout.svelte</code> wraps every page. Three jobs, and nothing else — layouts that accumulate logic become the hardest file in the codebase to reason about.</p>
+<p><code>src/routes/+layout.svelte</code> wraps every page. It does exactly four things — imports the one global stylesheet, sets the favicon, renders the shell (skip link, header, main landmark, footer), and registers the cross-page view transition we flesh out in part 4 — and nothing else. Layouts that accumulate logic become the hardest file in the codebase to reason about.</p>
 
 <figure class="code">
 	<figcaption>
@@ -45,29 +45,50 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import '#lib/styles/app.css';
+	import { onNavigate } from '$app/navigation';
 
 	import favicon from '#lib/assets/favicon.svg';
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
+	import { prefersReducedMotion } from '#lib/motion/index.ts';
 
 	let { children } = $props();
+
+	// …
+	onNavigate((navigation) =&gt; {
+		// Not supported in every browser, and correctly skipped for reduced motion.
+		// Returning nothing lets SvelteKit navigate normally.
+		if (!document.startViewTransition || prefersReducedMotion()) return;
+
+		return new Promise((resolve) =&gt; {
+			document.startViewTransition(async () =&gt; {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 &lt;/script&gt;
 
 &lt;svelte:head&gt;
 	&lt;link rel=&quot;icon&quot; href={favicon} /&gt;
 &lt;/svelte:head&gt;
 
+&lt;!-- … --&gt;
 &lt;a class=&quot;skip-link&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
 
 &lt;div class=&quot;app-shell&quot;&gt;
 	&lt;SiteHeader /&gt;
+
+	&lt;!-- … --&gt;
 	&lt;main id=&quot;main&quot; tabindex=&quot;-1&quot;&gt;
 		{@render children()}
 	&lt;/main&gt;
+
 	&lt;SiteFooter /&gt;
 &lt;/div&gt;</code></pre>
 </figure>
 <p>That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.</p>
+<aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>The skip link and tabindex=&quot;-1&quot;</h4>
@@ -85,8 +106,15 @@
 	min-height: 100svh;
 }
 
-main { flex: 1; }
-main:focus { outline: none; }</code></pre>
+main {
+	flex: 1;
+}
+
+/* The programmatic focus from the skip link shouldn't paint a ring around the
+   whole page — the scroll position is feedback enough. */
+main:focus {
+	outline: none;
+}</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -119,17 +147,50 @@ export const trailingSlash = 'never';</code></pre>
 		&lt;meta charset=&quot;utf-8&quot; /&gt;
 		&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot; /&gt;
 
-		&lt;link rel=&quot;preload&quot; href=&quot;/fonts/montserrat-latin-wght-normal.woff2&quot;
-		      as=&quot;font&quot; type=&quot;font/woff2&quot; crossorigin /&gt;
-		&lt;link rel=&quot;preload&quot; href=&quot;/fonts/sofia-sans-latin-wght-normal.woff2&quot;
-		      as=&quot;font&quot; type=&quot;font/woff2&quot; crossorigin /&gt;
+		&lt;!-- … --&gt;
+		&lt;link
+			rel=&quot;preload&quot;
+			href=&quot;/fonts/montserrat-latin-wght-normal.woff2&quot;
+			as=&quot;font&quot;
+			type=&quot;font/woff2&quot;
+			crossorigin
+		/&gt;
+		&lt;link
+			rel=&quot;preload&quot;
+			href=&quot;/fonts/sofia-sans-latin-wght-normal.woff2&quot;
+			as=&quot;font&quot;
+			type=&quot;font/woff2&quot;
+			crossorigin
+		/&gt;
 
+		&lt;!-- … --&gt;
 		&lt;meta name=&quot;theme-color&quot; content=&quot;#05070c&quot; /&gt;
+
+		&lt;!-- … --&gt;
 		&lt;meta name=&quot;color-scheme&quot; content=&quot;dark&quot; /&gt;
+
+		&lt;!-- … the MOTION GATE comment — see the note below … --&gt;
+		&lt;script&gt;
+			(function () {
+				var root = document.documentElement;
+				try {
+					var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+					if (!reduced) {
+						root.classList.add('motion-pending');
+						setTimeout(function () {
+							root.classList.remove('motion-pending');
+						}, 2500);
+					}
+				} catch (error) {
+					root.classList.remove('motion-pending');
+				}
+			})();
+		&lt;/script&gt;
 
 		%sveltekit.head%
 	&lt;/head&gt;
 	&lt;body data-sveltekit-preload-data=&quot;hover&quot;&gt;
+		&lt;!-- … --&gt;
 		&lt;div style=&quot;display: contents&quot;&gt;%sveltekit.body%&lt;/div&gt;
 	&lt;/body&gt;
 &lt;/html&gt;</code></pre>
@@ -142,6 +203,7 @@ export const trailingSlash = 'never';</code></pre>
 <aside class="callout callout--warn"><p><code>crossorigin</code> is <strong>required</strong> even for same-origin fonts. Font requests are always made in CORS mode; omit it and the browser downloads the file <strong>twice</strong> — once for the preload, once for the real request. Your preload then makes the page slower, which is a genuinely nasty bug to notice.</p></aside>
 <aside class="callout callout--note"><p>Only preload what is critical. Preloading everything makes every resource high priority, which is the same as making none of them high priority.</p></aside>
 <p><code>data-sveltekit-preload-data=&quot;hover&quot;</code> on <code>&lt;body&gt;</code> makes SvelteKit start loading a route's code and data when the pointer enters a link — roughly 200ms before the click lands. On touch devices it falls back to <code>touchstart</code>. Navigation then feels instant.</p>
+<aside class="callout callout--note"><p>That <code>&lt;script&gt;</code> in the head is the <strong>motion gate</strong> — the only inline script on the site. It adds a <code>motion-pending</code> class to <code>&lt;html&gt;</code> before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all <code>catch</code>) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles <code>motion-pending</code> yet.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -50,6 +50,8 @@
 		continue;
 	}
 
+	// …
+
 	for (const record of batch) {
 		if (signal.aborted) break;
 
@@ -64,10 +66,20 @@
 		 * command, the rule is simple — either a command's events are in the log
 		 * or the command has not happened yet.
 		 */
-		await appendEvents(client, ENGINE_CONSUMER, record.seq, record.receivedAt, record.version, produced);
+		await appendEvents(
+			client,
+			ENGINE_CONSUMER,
+			record.seq,
+			record.receivedAt,
+			record.version,
+			produced
+		);
 
 		cursor = record.seq;
+		// …
 	}
+
+	// …
 }</code></pre>
 </figure>
 <h3 id="resume">Where to resume from</h3>
@@ -81,12 +93,13 @@
 let cursor = Math.min(checkpoint, state.lastSeq);
 
 /*
- * If the checkpoint is behind the recovered state, the state has seen commands
- * whose events were never committed. The state is the thing that is wrong, so
- * rebuild it up to the checkpoint and go from there.
+ * If the checkpoint is behind the recovered state, the state has seen
+ * commands whose events were never committed. The state is the thing that is
+ * wrong, so rebuild it up to the checkpoint and go from there.
  */
 if (checkpoint &lt; state.lastSeq) {
-	Object.assign(state, await recoverTo(client, checkpoint));
+	const rebuilt = await recoverTo(client, checkpoint);
+	Object.assign(state, rebuilt);
 	cursor = checkpoint;
 }</code></pre>
 </figure>
@@ -101,6 +114,9 @@ if (checkpoint &lt; state.lastSeq) {
 	<pre><code class="lang-ts">for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 	process.on(signal, () =&gt; {
 		if (shuttingDown) {
+			// A second signal means somebody is impatient and the graceful path is
+			// stuck. Honour it — but say so, because the checkpoint may now be
+			// behind and the next start will replay.
 			console.error('[engine] second signal, exiting immediately');
 			process.exit(130);
 		}
@@ -138,7 +154,7 @@ after 3000 transactions: 6033
 after 4000 transactions: 8033</code></pre>
 </figure>
 <p><code>@libsql/client</code>'s <code>client.transaction()</code> opens a <strong>second connection</strong> to the database, and never releases it. Not on <code>commit()</code>. Not on <code>rollback()</code>. Not on an explicit <code>close()</code>. Two descriptors per transaction, forever.</p>
-<p>The engine opens one transaction per command, so at the default limit of 20,000 it dies after about ten thousand orders. A venue would have run for a few minutes of real trading.</p>
+<p>The engine opens one transaction per command, so at the default file-descriptor limit it dies after about ten thousand orders. A venue would have run for a few minutes of real trading.</p>
 <p>Two alternatives were measured, and both are flat:</p>
 
 <figure class="code code--terminal">
@@ -164,10 +180,12 @@ after 500: 1033</code></pre>
 	<pre><code class="lang-ts">/**
  * Run a function inside a transaction, on **this** connection.
  *
- * `BEGIN IMMEDIATE` rather than `client.transaction()`. It is also *more*
- * correct for our purposes: `IMMEDIATE` takes the write lock at the start
- * rather than upgrading half way through, so a busy venue gets a clean wait on
- * `busy_timeout` instead of `SQLITE_BUSY` mid-transaction.
+ * …
+ *
+ * `BEGIN IMMEDIATE` on the existing connection has none of that. It is also
+ * *more* correct for our purposes: `IMMEDIATE` takes the write lock at the
+ * start rather than upgrading half way through, so a busy venue gets a clean
+ * wait on `busy_timeout` instead of `SQLITE_BUSY` mid-transaction.
  */
 export async function withTransaction&lt;T&gt;(
 	client: Executor,
@@ -183,18 +201,26 @@ export async function withTransaction&lt;T&gt;(
 			await client.execute('COMMIT');
 			return result;
 		} catch (thrown) {
+			/* … */
 			try {
 				await client.execute('ROLLBACK');
 			} catch {
 				// The original error is the one worth having.
 			}
+
 			throw thrown;
 		}
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
 	// transaction would block every later one on this connection forever.
-	chains.set(client, run.then(() =&gt; undefined, () =&gt; undefined));
+	chains.set(
+		client,
+		run.then(
+			() =&gt; undefined,
+			() =&gt; undefined
+		)
+	);
 
 	return run;
 }</code></pre>

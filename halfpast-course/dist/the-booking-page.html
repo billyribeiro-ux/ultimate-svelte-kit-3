@@ -45,6 +45,8 @@
 	</figcaption>
 	<pre><code class="lang-ts">const serviceSlug = $derived(page.url.searchParams.get('service'));
 
+// …
+
 function pickService(slug: string | null) {
 	/*
 	 * `page.url` is a `ReadonlyURL` in SvelteKit 3 — its `searchParams` has no
@@ -75,10 +77,10 @@ function pickService(slug: string | null) {
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if chosenSlot}
-	&lt;section class=&quot;details&quot; {@attach reveal({ y: 16 })}&gt;
-		&lt;h2&gt;Your details&lt;/h2&gt;
-		&lt;!-- name, email, phone, note --&gt;
+	<pre><code class="lang-svelte">{#if selectedStart !== null}
+	&lt;section class=&quot;step details&quot; {@attach reveal({ y: 14 })}&gt;
+		&lt;h3&gt;Your details&lt;/h3&gt;
+		&lt;!-- … name, email, phone, note … --&gt;
 	&lt;/section&gt;
 {/if}</code></pre>
 </figure>
@@ -90,11 +92,23 @@ function pickService(slug: string | null) {
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if offeredBy.length &gt; 1}
-	&lt;fieldset class=&quot;who&quot;&gt;
-		&lt;legend&gt;Choose who with&lt;/legend&gt;
-		&lt;!-- radio per person, plus &quot;anyone&quot; --&gt;
-	&lt;/fieldset&gt;
+	<pre><code class="lang-svelte">{#if service.staffIds.length &gt; 1}
+	&lt;section class=&quot;step&quot;&gt;
+		&lt;h3&gt;Who with?&lt;/h3&gt;
+		&lt;div class=&quot;who&quot; role=&quot;radiogroup&quot; aria-label=&quot;Choose who with&quot;&gt;
+			&lt;button
+				type=&quot;button&quot;
+				role=&quot;radio&quot;
+				aria-checked={staffId === null}
+				class=&quot;who-option&quot;
+				class:selected={staffId === null}
+				onclick={() =&gt; (staffId = null)}
+			&gt;
+				Anyone
+			&lt;/button&gt;
+			&lt;!-- … one button per person who offers this service … --&gt;
+		&lt;/div&gt;
+	&lt;/section&gt;
 {/if}</code></pre>
 </figure>
 <p>If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.</p>
@@ -126,13 +140,13 @@ function pickService(slug: string | null) {
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if book.fields.allIssues()?.length}
-	&lt;Alert tone=&quot;error&quot; title=&quot;We could not book that&quot;&gt;
-		&lt;p&gt;{book.fields.allIssues()?.[0]?.message}&lt;/p&gt;
+	<pre><code class="lang-svelte">{#if book.result === undefined &amp;&amp; book.fields.allIssues()?.length}
+	&lt;Alert tone=&quot;error&quot; title=&quot;Please check the form&quot;&gt;
+		&lt;p&gt;Some details need another look.&lt;/p&gt;
 	&lt;/Alert&gt;
 {/if}</code></pre>
 </figure>
-<p>The message the customer sees for a lost race is &quot;Sorry — that time was just taken. Please choose another.&quot; — and because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.</p>
+<p>For a lost race the message comes from the server: &quot;That time was just taken.&quot; — or, when the race is lost at the claim itself, &quot;Sorry — that time was booked moments ago.&quot; And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

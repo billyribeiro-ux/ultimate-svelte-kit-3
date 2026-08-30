@@ -78,15 +78,30 @@ export const staticSitemapEntries: readonly SitemapEntry[] = [
 	</figcaption>
 	<pre><code class="lang-ts">import type { RequestHandler } from './$types';
 import { absoluteUrl } from '#lib/data/site.ts';
-import { staticSitemapEntries } from '#lib/seo/routes.ts';
+import { staticSitemapEntries, type SitemapEntry } from '#lib/seo/routes.ts';
 import { postsByDate } from '#lib/data/posts.ts';
 
 export const prerender = true;
 
+/**
+ * Escape the five XML predefined entities.
+ *
+ * A single raw `&amp;` in a URL makes the entire sitemap a parse error, and the crawler
+ * discards the whole file rather than the offending line. Cheap insurance.
+ */
 function escapeXml(value: string): string {
 	return value
-		.replace(/&amp;/g, '&amp;amp;').replace(/&lt;/g, '&amp;lt;').replace(/&gt;/g, '&amp;gt;')
-		.replace(/&quot;/g, '&amp;quot;').replace(/'/g, '&amp;apos;');
+		.replace(/&amp;/g, '&amp;amp;')
+		.replace(/&lt;/g, '&amp;lt;')
+		.replace(/&gt;/g, '&amp;gt;')
+		.replace(/&quot;/g, '&amp;quot;')
+		.replace(/'/g, '&amp;apos;');
+}
+
+function toUrlElement(entry: SitemapEntry | { path: string; lastmod?: string }): string {
+	const loc = escapeXml(absoluteUrl(entry.path));
+	const lastmod = entry.lastmod ? `\n\t\t&lt;lastmod&gt;${entry.lastmod}&lt;/lastmod&gt;` : '';
+	return `\t&lt;url&gt;\n\t\t&lt;loc&gt;${loc}&lt;/loc&gt;${lastmod}\n\t&lt;/url&gt;`;
 }
 
 export const GET: RequestHandler = () =&gt; {
@@ -95,14 +110,10 @@ export const GET: RequestHandler = () =&gt; {
 		lastmod: post.updated ?? post.published
 	}));
 
-	const urls = [...staticSitemapEntries, ...blogEntries]
-		.map((entry) =&gt; {
-			const loc = escapeXml(absoluteUrl(entry.path));
-			const lastmod = entry.lastmod ? `\n\t\t&lt;lastmod&gt;${entry.lastmod}&lt;/lastmod&gt;` : '';
-			return `\t&lt;url&gt;\n\t\t&lt;loc&gt;${loc}&lt;/loc&gt;${lastmod}\n\t&lt;/url&gt;`;
-		})
-		.join('\n');
+	const urls = [...staticSitemapEntries, ...blogEntries].map(toUrlElement).join('\n');
 
+	// The namespace must be exactly this. A wrong or missing xmlns means the file
+	// parses as generic XML and every crawler rejects it as &quot;not a sitemap&quot;.
 	const xml = `&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;urlset xmlns=&quot;http://www.sitemaps.org/schemas/sitemap/0.9&quot;&gt;
 ${urls}
@@ -111,7 +122,10 @@ ${urls}
 	return new Response(xml, {
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
+			// One hour at the CDN, with a day of stale-while-revalidate. A sitemap that
+			// is an hour out of date has never harmed anyone; an origin hit per crawl has.
 			'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+			// The sitemap itself should never appear as a search result.
 			'X-Robots-Tag': 'noindex'
 		}
 	});
@@ -134,22 +148,32 @@ ${urls}
 	<pre><code class="lang-ts">export const prerender = true;
 
 export const GET: RequestHandler = () =&gt; {
-	const body = `User-agent: *
+	const body = `# https://www.robotstxt.org/robotstxt.html
+# Crawling is allowed. See the &lt;meta name=&quot;robots&quot;&gt; tag on individual pages
+# for indexing directives — that's the mechanism that actually controls the index.
+
+User-agent: *
 Allow: /
 
-# Internal asset directory — nothing here is a page
+# SvelteKit's internal asset directory. Nothing here is a page; letting crawlers
+# walk it just burns crawl budget on hashed JS chunks.
 Disallow: /_app/
 
-# Gated pages. The noindex meta tag is what keeps these out of the index;
-# these lines just save the crawl budget.
+# Gated confirmation page. Also carries a noindex meta tag, which is what actually
+# keeps it out of the index — this line just saves the crawl.
 Disallow: /guide/thank-you
+
+# Signed, single-use download links. Never useful to a crawler.
 Disallow: /guide/download
 
 Sitemap: ${absoluteUrl('/sitemap.xml')}
 `;
 
 	return new Response(body, {
-		headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+		headers: {
+			'Content-Type': 'text/plain; charset=utf-8',
+			'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
+		}
 	});
 };</code></pre>
 </figure>

@@ -64,6 +64,7 @@
 	 */
 	#tail: Promise&lt;unknown&gt; = Promise.resolve();
 
+	/** How many tasks are queued or running. Useful in tests and health checks. */
 	#depth = 0;
 
 	get depth(): number {
@@ -91,6 +92,12 @@
 	}
 }
 
+/**
+ * The one queue every write in the app goes through.
+ *
+ * A module-level singleton, which is the right shape here: it is guarding a
+ * process-wide resource, so having two of them would guard nothing.
+ */
 export const writeQueue = new WriteQueue();</code></pre>
 </figure>
 <p>Read <code>this.#tail.then(task, task)</code> — the same function passed as both handlers. That is deliberate: the next task must run whether its predecessor resolved or threw. Passing it only as the success handler builds a queue that stops forever the first time anything fails.</p>
@@ -110,33 +117,32 @@ export const writeQueue = new WriteQueue();</code></pre>
 		<span class="code__file">src/lib/server/scheduling.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('lets exactly one of ten simultaneous requests win', async () =&gt; {
+	<pre><code class="lang-ts">it('lets exactly one of ten simultaneous requests win the same slot', async () =&gt; {
 	const attempts = Array.from({ length: 10 }, (_, index) =&gt;
-		createBooking({ ...base, customerName: `Racer ${index}` })
+		createBooking(
+			bookingInput({
+				start: at(11 * 60),
+				customerName: `Customer ${index}`,
+				customerEmail: `customer${index}@example.test`
+			})
+		)
 	);
 
 	const results = await Promise.allSettled(attempts);
 
-	const won = results.filter((r) =&gt; r.status === 'fulfilled');
-	const lost = results.filter((r) =&gt; r.status === 'rejected');
+	const won = results.filter((result) =&gt; result.status === 'fulfilled');
+	const lost = results.filter((result) =&gt; result.status === 'rejected');
 
 	expect(won).toHaveLength(1);
 	expect(lost).toHaveLength(9);
 
-	// Every loser got the right refusal, not a lock error or a stack trace.
-	for (const failure of lost) {
-		expect((failure.reason as BookingError).code).toBe('slot_taken');
-	}
-
-	// And nothing half-written survived: one booking, and claims only for it.
-	const bookings = await db.select().from(booking);
-	const claims = await db.select().from(slotClaim);
-
-	expect(bookings).toHaveLength(1);
-	expect(new Set(claims.map((c) =&gt; c.bookingId))).toEqual(new Set([bookings[0]!.id]));
+	// And the diary agrees: one booking, twelve claims, no orphans.
+	expect(await db.select().from(booking)).toHaveLength(1);
+	expect(await db.select().from(slotClaim)).toHaveLength(12);
 });</code></pre>
 </figure>
-<p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Checking that every claim belongs to the surviving booking is what proves the rollback actually rolled back.</p>
+<p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Counting exactly twelve claims — the winner's block on the grid and nobody else's — is what proves the rollback actually rolled back.</p>
+<p>What the losers were *told* is checked in a separate test, and it deliberately accepts either <code>slot_taken</code> or <code>slot_not_offered</code>. Depending on timing, the pre-flight availability check may catch the clash before the claim does — the slot was already gone by the time that request read the diary. Both are honest answers; what matters is that no loser sees a 500.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

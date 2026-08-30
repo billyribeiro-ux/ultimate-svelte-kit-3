@@ -42,10 +42,14 @@
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;form {...book}&gt;
-	&lt;input {...book.fields.name.as('text')} /&gt;
-	&lt;input {...book.fields.email.as('email')} /&gt;
-	&lt;button type=&quot;submit&quot;&gt;Book this time&lt;/button&gt;
+	<pre><code class="lang-svelte">&lt;form {...book} class=&quot;stack stack-lg&quot;&gt;
+	&lt;!-- … --&gt;
+	&lt;input {...book.fields.name.as('text')} … /&gt;
+	&lt;!-- … --&gt;
+	&lt;input {...book.fields.email.as('email')} … /&gt;
+	&lt;!-- … --&gt;
+	&lt;Button type=&quot;submit&quot; size=&quot;lg&quot; full loading={book.pending &gt; 0}&gt;Book this time&lt;/Button&gt;
+	&lt;!-- … --&gt;
 &lt;/form&gt;</code></pre>
 </figure>
 <p>With JavaScript off this is an ordinary HTML form: it posts, the server validates, and the page comes back with errors filled in. With JavaScript on, SvelteKit intercepts, posts in the background, and updates in place. Same code, same handler, same validation.</p>
@@ -128,12 +132,16 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each services as entry (entry.id)}
+	&lt;!-- … --&gt;
 	{@const editForm = saveService.for(entry.id)}
-
-	&lt;form {...editForm}&gt;
-		&lt;input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} /&gt;
+	&lt;!-- … --&gt;
+	&lt;form {...editForm} class=&quot;edit stack&quot;&gt;
+		&lt;!-- … --&gt;
+		&lt;input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} … /&gt;
+		&lt;!-- … --&gt;
 		&lt;Button type=&quot;submit&quot; loading={editForm.pending &gt; 0}&gt;Save changes&lt;/Button&gt;
 	&lt;/form&gt;
+	&lt;!-- … --&gt;
 {/each}</code></pre>
 </figure>
 <p><code>form.for(id)</code> gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.</p>

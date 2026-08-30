@@ -98,24 +98,40 @@ function toClock(minutes: number): string {
 		<span class="code__file">src/routes/manage/[slug]/studio.remote.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export const setStaffService = command(pairSchema, async ({ slug, staffId, serviceId, offers }) =&gt; {
-	const context = await requireOwner(slug);
+	<pre><code class="lang-ts">export const setStaffService = command(
+	v.object({
+		slug: slugSchema,
+		staffId: idSchema,
+		serviceId: idSchema,
+		offers: v.boolean()
+	}),
+	async ({ slug, staffId, serviceId, offers }) =&gt; {
+		const context = await requireOwner(slug);
 
-	if (offers) {
-		await db
-			.insert(staffService)
-			.values({ staffId, serviceId })
-			// Ticking an already-ticked box is not an error, it is a no-op.
-			.onConflictDoNothing();
-	} else {
-		await db
-			.delete(staffService)
-			.where(and(eq(staffService.staffId, staffId), eq(staffService.serviceId, serviceId)));
+		// … both staffId and serviceId are looked up scoped to
+		// context.business.id first, and a 404 stops an owner of one studio
+		// wiring their staff to another studio's services by id …
+
+		if (offers) {
+			/*
+			 * `onConflictDoNothing` makes this idempotent. Two quick clicks would
+			 * otherwise race and the second would fail on the composite primary key —
+			 * a red error for an action that already succeeded.
+			 */
+			await db.insert(staffService).values({ staffId, serviceId }).onConflictDoNothing();
+		} else {
+			await db
+				.delete(staffService)
+				.where(and(eq(staffService.staffId, staffId), eq(staffService.serviceId, serviceId)));
+		}
+
+		void getTeam(slug).refresh();
+		void getServices(slug).refresh();
+		publishDiaryChange(context.business.id);
+
+		return { offers };
 	}
-
-	void getTeam(slug).refresh();
-	return { ok: true };
-});</code></pre>
+);</code></pre>
 </figure>
 <p><code>onConflictDoNothing()</code> makes the command <strong>idempotent</strong>. A double-click, a retried request, a flaky connection — all of them end with the box ticked once. Without it, the second one is a unique-constraint error shown to somebody who did nothing wrong.</p>
 <h3 id="settings">Settings: validating against reality</h3>

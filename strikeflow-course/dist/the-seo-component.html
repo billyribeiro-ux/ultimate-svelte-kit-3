@@ -49,19 +49,26 @@
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { page } from '$app/state';
 	import { site, absoluteUrl } from '#lib/data/site.ts';
+	// …
 
 	interface Props {
 		/** Page title WITHOUT the brand suffix — this component adds it. */
 		title: string;
 		/** ~155 characters. Longer gets truncated in the results page. */
 		description: string;
-		/** Defaults to the current pathname. Override only for genuine duplicates. */
+		/**
+		 * Root-relative canonical path. Defaults to the current pathname, which is
+		 * correct for virtually every page. Override it only when two routes
+		 * legitimately serve the same content.
+		 */
 		canonicalPath?: string;
 		type?: 'website' | 'article';
+		/** Root-relative or absolute social share image. */
 		image?: string;
 		imageAlt?: string;
-		/** Keep a page out of the index. For thank-you and gated pages. */
+		/** Keep a page out of the index. Use for thank-you and gated pages. */
 		noindex?: boolean;
+		/** Extra JSON-LD nodes. Organization, WebSite and WebPage are added for you. */
 		schema?: readonly SchemaNode[];
 		article?: ArticleMeta;
 	}
@@ -77,6 +84,8 @@
 		schema = [],
 		article
 	}: Props = $props();
+
+	// …
 &lt;/script&gt;</code></pre>
 </figure>
 <aside class="callout callout--note"><p><code>$props()</code> is the Svelte 5 rune that replaces <code>export let</code>. Destructure it, give defaults inline, and type it with an interface. There is no separate props declaration.</p></aside>
@@ -101,9 +110,7 @@
 		<span class="code__file">src/lib/seo/Seo.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">const fullTitle = $derived(
-	title === site.name ? title : `${title} | ${site.titleSuffix}`
-);</code></pre>
+	<pre><code class="lang-ts">const fullTitle = $derived(title === site.name ? title : `${title} | ${site.titleSuffix}`);</code></pre>
 </figure>
 <p>The home page uses its title verbatim; every other page gets &quot; | StrikeFlow&quot; appended. Suffixing the home page too would give you &quot;StrikeFlow | StrikeFlow&quot;.</p>
 <aside class="callout callout--warn"><p>Keep the whole thing under about <strong>60 characters</strong>. Beyond that Google truncates, and a title cut mid-word looks broken in the one place it is meant to persuade someone to click. Our blog headlines are longer than that on purpose, so they get a separate shorter <code>seoTitle</code> — see chapter 30.</p></aside>
@@ -135,7 +142,7 @@
 	&lt;link rel=&quot;canonical&quot; href={canonical} /&gt;
 	&lt;meta name=&quot;robots&quot; content={robots} /&gt;
 
-	&lt;!-- Open Graph: LinkedIn, Facebook, Slack, Discord, iMessage --&gt;
+	&lt;!-- Open Graph: read by LinkedIn, Facebook, Slack, Discord, iMessage and others. --&gt;
 	&lt;meta property=&quot;og:type&quot; content={type} /&gt;
 	&lt;meta property=&quot;og:url&quot; content={canonical} /&gt;
 	&lt;meta property=&quot;og:title&quot; content={fullTitle} /&gt;
@@ -145,8 +152,13 @@
 	&lt;meta property=&quot;og:image&quot; content={ogImageUrl} /&gt;
 	&lt;meta property=&quot;og:image:width&quot; content={String(site.ogImageWidth)} /&gt;
 	&lt;meta property=&quot;og:image:height&quot; content={String(site.ogImageHeight)} /&gt;
+	&lt;!-- Alt text on a share image is an accessibility requirement, not decoration. --&gt;
 	&lt;meta property=&quot;og:image:alt&quot; content={imageAlt ?? `${site.name} — ${site.tagline}`} /&gt;
 
+	&lt;!--
+		Article-specific Open Graph. Only emitted for articles, because claiming a
+		publish date on a pricing page is noise at best and misleading at worst.
+	--&gt;
 	{#if type === 'article' &amp;&amp; article}
 		&lt;meta property=&quot;article:published_time&quot; content={article.published} /&gt;
 		{#if article.modified}
@@ -158,14 +170,18 @@
 		{/each}
 	{/if}
 
-	&lt;!-- X / Twitter --&gt;
+	&lt;!-- X / Twitter cards. `summary_large_image` is the full-width variant. --&gt;
 	&lt;meta name=&quot;twitter:card&quot; content=&quot;summary_large_image&quot; /&gt;
 	&lt;meta name=&quot;twitter:title&quot; content={fullTitle} /&gt;
 	&lt;meta name=&quot;twitter:description&quot; content={description} /&gt;
 	&lt;meta name=&quot;twitter:image&quot; content={ogImageUrl} /&gt;
 	&lt;meta name=&quot;twitter:image:alt&quot; content={imageAlt ?? `${site.name} — ${site.tagline}`} /&gt;
+	&lt;meta name=&quot;twitter:site&quot; content=&quot;@strikeflow&quot; /&gt;
 
+	&lt;!-- Colours the browser chrome on mobile. Small touch, feels native. --&gt;
 	&lt;meta name=&quot;theme-color&quot; content=&quot;#05070c&quot; /&gt;
+
+	&lt;!-- … --&gt;
 &lt;/svelte:head&gt;</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Alt text on a share image (<code>og:image:alt</code>) is an accessibility requirement, not decoration — screen readers announce it when a link is shared into a chat. Almost nobody sets it.</p></aside>

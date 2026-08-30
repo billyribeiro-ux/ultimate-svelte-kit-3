@@ -52,7 +52,13 @@
 		<span class="code__file">src/lib/utils/market-data.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** Mulberry32 — a tiny, fast, seeded PRNG. Not cryptographic; not trying to be. */
+	<pre><code class="lang-ts">/**
+ * Mulberry32 — a tiny, fast, seeded PRNG.
+ *
+ * Not cryptographically secure and not trying to be. It's about 8 lines, has a
+ * period of 2^32, and passes enough statistical tests to look convincingly random
+ * to a human eye. Perfect for this; useless for security.
+ */
 export function mulberry32(seed: number): () =&gt; number {
 	let a = seed &gt;&gt;&gt; 0;
 	return function next(): number {
@@ -71,11 +77,15 @@ export function mulberry32(seed: number): () =&gt; number {
 		<span class="code__file">src/lib/utils/market-data.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">		const shock = (random() - 0.5) * 1.6;      // the random tick
-		const reversion = (anchor - value) * 0.045; // pull back toward the anchor
-		const drift = 0.028;                        // gentle overall trend
+	<pre><code class="lang-ts">	// Three components, which together read as &quot;a market&quot;:
+	//   shock     — the random tick
+	//   reversion — a pull back toward the anchor
+	//   drift     — a gentle overall trend, so the chart has a direction
+	const shock = (random() - 0.5) * 1.6;
+	const reversion = (anchor - value) * 0.045;
+	const drift = 0.028;
 
-		value = Math.max(1, value + shock + reversion + drift);</code></pre>
+	value = Math.max(1, value + shock + reversion + drift);</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Import <code>UTCTimestamp</code> from the chart library as a <strong>type-only</strong> import. It is a *branded* type — <code>number &amp; { … }</code> — which exists so you cannot hand the library a millisecond timestamp where it wants seconds. That mix-up renders your chart in 1970 and is the most common Lightweight Charts bug. <code>import type</code> is erased at build time, so you get the safety without pulling 48kB into a utility module.</p></aside>
 <h3 id="attach">The component: {@attach}</h3>
@@ -89,33 +99,73 @@ export function mulberry32(seed: number): () =&gt; number {
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import type { Attachment } from 'svelte/attachments';
 	import { prefersReducedMotion } from 'svelte/motion';
-	import { generateSeries, nextPoint, mulberry32, formatUsd } from '#lib/utils/market-data.ts';
+	import {
+		generateSeries,
+		nextPoint,
+		mulberry32,
+		formatUsd,
+		type PricePoint
+	} from '#lib/utils/market-data.ts';
 
-	let { height = 300, symbol = 'SPY', live = true, seed = 20260814 } = $props();
+	interface Props {
+		/** Chart height in pixels. Kept short on phones by the caller. */
+		height?: number;
+		/** Ticker shown in the header strip. */
+		symbol?: string;
+		/** Append a new bar on a timer. Automatically disabled for reduced-motion users. */
+		live?: boolean;
+		/** Change for a different deterministic shape. */
+		seed?: number;
+	}
 
+	let { height = 300, symbol = 'SPY', live = true, seed = 20260814 }: Props = $props();
+
+	// …
 	const initial = $derived(generateSeries({ seed }));
 
+	// …
 	let tick = $state&lt;{ last: number; changeAbs: number; changePct: number } | null&gt;(null);
 
 	const last = $derived(tick?.last ?? initial.last);
 	const changeAbs = $derived(tick?.changeAbs ?? initial.changeAbs);
+	const changePct = $derived(tick?.changePct ?? initial.changePct);
+
 	const isUp = $derived(changeAbs &gt;= 0);
 
-	/* A chart that animates forever is an accessibility problem — WCAG 2.2.2
-	   requires moving content lasting over five seconds be pausable. Honouring
-	   the OS setting satisfies that without a pause button nobody finds. */
+	/*
+	 * `prefersReducedMotion` from `svelte/motion` is a ready-made reactive media
+	 * query. `.current` is `false` during SSR and updates in the browser. Reading it
+	 * inside `$derived` means the chart stops ticking the moment a user changes the
+	 * setting — no reload needed.
+	 *
+	 * A chart that animates forever is a genuine accessibility problem: WCAG 2.2.2
+	 * requires that moving content lasting more than five seconds can be paused.
+	 * Honouring the OS setting satisfies that without a pause button nobody finds.
+	 */
 	const shouldAnimate = $derived(live &amp;&amp; !prefersReducedMotion.current);
 
+	/**
+	 * The chart attachment.
+	 *
+	 * It reads `shouldAnimate` and `height`, so Svelte re-runs it (tearing down the
+	 * old chart first, via the returned cleanup) whenever either changes.
+	 */
 	const chart: Attachment&lt;HTMLDivElement&gt; = (node) =&gt; {
+		// Guards the async gap: if the component unmounts while the dynamic import is
+		// still in flight, we must not go on to create a chart in a detached node.
 		let disposed = false;
 		let teardown: (() =&gt; void) | undefined;
 
-		const data = initial;       // snapshot once — reading it in the timer
-		const animate = shouldAnimate; // would make the effect re-run in a loop
+		// Snapshot the derived data ONCE, at attachment time. Reading `initial` again
+		// inside the timer would make the effect depend on it and re-run in a loop.
+		const data = initial;
+		const animate = shouldAnimate;
+
+		// A fresh chart means a fresh tail.
 		tick = null;
 
 		void (async () =&gt; {
-			const { createChart, AreaSeries, HistogramSeries, ColorType } =
+			const { createChart, AreaSeries, HistogramSeries, ColorType, CrosshairMode, LineStyle } =
 				await import('lightweight-charts');
 
 			if (disposed) return;
@@ -123,20 +173,53 @@ export function mulberry32(seed: number): () =&gt; number {
 			const api = createChart(node, {
 				autoSize: true,
 				height,
-				layout: { background: { type: ColorType.Solid, color: 'transparent' } }
-				/* …more options… */
+				layout: {
+					background: { type: ColorType.Solid, color: 'transparent' },
+					textColor: '#7f8ba3',
+					fontFamily: &quot;'Sofia Sans Variable', system-ui, sans-serif&quot;,
+					attributionLogo: false
+				},
+				// …grid, price-scale, time-scale and crosshair options…
+				handleScroll: false,
+				handleScale: false
 			});
 
-			const priceSeries = api.addSeries(AreaSeries, { lineColor: '#4f7dff', lineWidth: 2 });
+			const priceSeries = api.addSeries(AreaSeries, {
+				lineColor: '#4f7dff',
+				lineWidth: 2,
+				topColor: 'rgba(79, 125, 255, 0.28)',
+				bottomColor: 'rgba(79, 125, 255, 0.01)',
+				priceLineVisible: false,
+				lastValueVisible: false
+			});
+
+			const volumeSeries = api.addSeries(HistogramSeries, {
+				priceFormat: { type: 'volume' },
+				// An empty priceScaleId makes this an overlay with its own invisible
+				// scale, so volume bars sit under the price line instead of squashing it.
+				priceScaleId: ''
+			});
+
+			volumeSeries.priceScale().applyOptions({
+				scaleMargins: { top: 0.78, bottom: 0 }
+			});
+
+			// `slice()` because `setData` wants a mutable array and our source arrays
+			// are `readonly` — a copy is cheaper than weakening the type.
 			priceSeries.setData(data.price.slice());
+			volumeSeries.setData(data.volume.slice());
 			api.timeScale().fitContent();
 
 			let timer: ReturnType&lt;typeof setInterval&gt; | undefined;
+
 			if (animate) { /* …append a bar every 1600ms… */ }
 
 			teardown = () =&gt; {
 				if (timer) clearInterval(timer);
-				api.remove();   // disposes canvas, ResizeObserver and listeners
+				// `remove()` disposes the canvas, the ResizeObserver and every internal
+				// listener. Skip it and you leak a full chart instance on every
+				// navigation — which on a SPA compounds until the tab dies.
+				api.remove();
 			};
 		})();
 
@@ -147,7 +230,13 @@ export function mulberry32(seed: number): () =&gt; number {
 	};
 &lt;/script&gt;
 
-&lt;div class=&quot;chart__canvas&quot; style=&quot;min-height: {height}px&quot; aria-hidden=&quot;true&quot; {@attach chart}&gt;&lt;/div&gt;</code></pre>
+&lt;!-- … --&gt;
+&lt;div
+	class=&quot;chart__canvas&quot;
+	style=&quot;min-height: {height}px&quot;
+	aria-hidden=&quot;true&quot;
+	{@attach chart}
+&gt;&lt;/div&gt;</code></pre>
 </figure>
 <h3 id="three-things">Three things worth understanding</h3>
 

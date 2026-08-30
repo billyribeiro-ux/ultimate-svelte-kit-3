@@ -50,29 +50,28 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * A hash of the whole engine state.
+ * A short, order-independent hash of the venue's state.
  *
- * Not for security — FNV-1a is not a cryptographic hash and does not need to
- * be. It is for **comparison**: &quot;did replaying from genesis produce the same
- * state as loading the snapshot?&quot; is a question you want to answer with one
- * number rather than a deep equality over a hundred thousand orders.
+ * Used to prove that a recovered engine arrived at the same place as the one it
+ * replaced. Comparing two states field by field would work and would need
+ * updating every time the state grows a field — and the version that forgets to
+ * compare the new field is the version that passes while being wrong.
  *
- * Every test in the fault-injection suite ends with a fingerprint comparison,
- * because &quot;roughly the same book&quot; is not a property — it is the absence of one.
+ * FNV-1a over the canonical JSON. Not a cryptographic hash: nobody is attacking
+ * this, and 32 bits of &quot;did these two runs agree&quot; is exactly the question.
  */
 export function fingerprint(state: EngineState): string {
-	let hash = 0x811c9dc5;
+	const canonical = JSON.stringify(serialise(state));
 
-	// Deterministic order, or the fingerprint means nothing: two identical
-	// states that happened to be built in a different order must hash the same.
-	for (const line of canonicalLines(state)) {
-		for (let index = 0; index &lt; line.length; index += 1) {
-			hash ^= line.charCodeAt(index);
-			hash = Math.imul(hash, 0x01000193);
-		}
+	let hash = 0x811c9dc5;
+	for (let i = 0; i &lt; canonical.length; i += 1) {
+		hash ^= canonical.charCodeAt(i);
+		// The FNV prime, by shift-and-add, because `hash * 16777619` loses
+		// precision the moment the product passes 2^53.
+		hash = (hash + ((hash &lt;&lt; 1) + (hash &lt;&lt; 4) + (hash &lt;&lt; 7) + (hash &lt;&lt; 8) + (hash &lt;&lt; 24))) &gt;&gt;&gt; 0;
 	}
 
-	return (hash &gt;&gt;&gt; 0).toString(16).padStart(8, '0');
+	return hash.toString(16).padStart(8, '0');
 }</code></pre>
 </figure>
 <h3 id="deserialise">Rebuilding the book from a snapshot</h3>
@@ -84,12 +83,26 @@ export function fingerprint(state: EngineState): string {
 		<span class="code__file">apps/engine/src/snapshot.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	// Sorted by seq before resting, so price-time priority is reconstructed
-	// exactly — an order that was in front stays in front.
-	for (const record of [...body.orders].sort((a, b) =&gt; a.seq - b.seq)) {
-		const order = toRestingOrder(record);
+	<pre><code class="lang-ts">	for (const record of body.orders) {
+		const instrument = state.instruments.get(record.instrumentId as InstrumentId);
+		if (!instrument) continue;
+
+		const order: LiveOrder = {
+			orderId: record.orderId as OrderId,
+			firmId: record.firmId as LiveOrder['firmId'],
+			accountId: record.accountId as LiveOrder['accountId'],
+			instrumentId: record.instrumentId as InstrumentId,
+			clientOrderId: record.clientOrderId as LiveOrder['clientOrderId'],
+			side: record.side,
+			price: record.price as Price,
+			originalQuantity: record.originalQuantity as Quantity,
+			remaining: record.remaining as Quantity,
+			seq: record.seq,
+			expiresAtClose: record.expiresAtClose
+		};
+
+		rest(instrument.book, order);
 		trackLive(state, order);
-		if (order.filled &lt; order.quantity) rest(state.books.get(order.instrumentId)!, order);
 	}</code></pre>
 </figure>
 <h3 id="bug">Bug found: a corrupt snapshot took the venue down</h3>
@@ -117,6 +130,8 @@ TypeError: body.instruments is not iterable
 	</figcaption>
 	<pre><code class="lang-ts">	/*
 	 * A snapshot that will not parse is treated as **absent**, not as an error.
+	 *
+	 * …
 	 *
 	 * Returning `undefined` makes recovery fall back to replaying from genesis,
 	 * which is slower and correct. That is the trade the whole architecture was
@@ -152,9 +167,11 @@ TypeError: body.instruments is not iterable
 
 	/*
 	 * Without this, the two tests above pass trivially: if the engine never
-	 * wrote a snapshot, &quot;recovers without one&quot; and &quot;recovers from a corrupt one&quot;
-	 * are both testing the same empty path, and the suite is green while proving
-	 * nothing.
+	 * wrote a snapshot, &quot;recovers without one&quot; and &quot;recovers from a corrupt
+	 * one&quot; are both testing the same empty path, and the suite is green while
+	 * proving nothing.
+	 *
+	 * `runEngine` writes one on clean shutdown, so there must be one here.
 	 */
 	const snapshot = await loadSnapshot(client);
 

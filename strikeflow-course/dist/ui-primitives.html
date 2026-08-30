@@ -58,26 +58,55 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import type { Snippet } from 'svelte';
+	import { magnetic } from '#lib/motion/index.ts';
+
+	type Variant = 'primary' | 'secondary' | 'ghost';
+	type Size = 'sm' | 'md' | 'lg';
 
 	interface Props {
-		variant?: 'primary' | 'secondary' | 'ghost';
-		size?: 'sm' | 'md' | 'lg';
+		variant?: Variant;
+		size?: Size;
 		/** Provide this and you get an &lt;a&gt;. Omit it and you get a &lt;button&gt;. */
 		href?: string;
+		/** Opens in a new tab with the correct rel attributes. */
 		external?: boolean;
+		/** Stretches to fill its container — the right default on narrow screens. */
 		fullWidth?: boolean;
 		disabled?: boolean;
+		/** Only meaningful for &lt;button&gt;. */
 		type?: 'button' | 'submit' | 'reset';
+		/** Optional label for screen readers when the visible text isn't enough. */
+		ariaLabel?: string;
 		onclick?: (event: MouseEvent) =&gt; void;
 		children: Snippet;
+		/** Optional leading icon, rendered before the label. */
 		icon?: Snippet;
+		/** Optional trailing icon, rendered after the label. */
 		iconTrailing?: Snippet;
+		/**
+		 * Lean slightly toward the cursor on approach.
+		 *
+		 * Reserve this for primary calls to action. If every button on the page is
+		 * magnetic the effect stops reading as premium and starts reading as unstable.
+		 * It is automatically inert on touch devices and under reduced motion.
+		 */
+		pull?: boolean;
 	}
 
 	let {
-		variant = 'primary', size = 'md', href, external = false,
-		fullWidth = false, disabled = false, type = 'button',
-		onclick, children, icon, iconTrailing
+		variant = 'primary',
+		size = 'md',
+		href,
+		external = false,
+		fullWidth = false,
+		disabled = false,
+		type = 'button',
+		ariaLabel,
+		onclick,
+		children,
+		icon,
+		iconTrailing,
+		pull = false
 	}: Props = $props();
 
 	const tag = $derived(href ? 'a' : 'button');
@@ -87,19 +116,30 @@
 	this={tag}
 	class=&quot;btn btn--{variant} btn--{size}&quot;
 	class:btn--full={fullWidth}
+	class:btn--disabled={disabled}
 	{href}
 	{onclick}
+	aria-label={ariaLabel}
+	role={href ? undefined : 'button'}
 	target={external ? '_blank' : undefined}
 	rel={external ? 'noopener noreferrer' : undefined}
 	type={href ? undefined : type}
 	disabled={href ? undefined : disabled}
+	aria-disabled={href &amp;&amp; disabled ? 'true' : undefined}
+	tabindex={href &amp;&amp; disabled ? -1 : undefined}
+	{@attach pull &amp;&amp; !disabled ? magnetic() : undefined}
 &gt;
-	{#if icon}&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render icon()}&lt;/span&gt;{/if}
+	{#if icon}
+		&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render icon()}&lt;/span&gt;
+	{/if}
 	&lt;span class=&quot;btn__label&quot;&gt;{@render children()}&lt;/span&gt;
-	{#if iconTrailing}&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render iconTrailing()}&lt;/span&gt;{/if}
+	{#if iconTrailing}
+		&lt;span class=&quot;btn__icon&quot; aria-hidden=&quot;true&quot;&gt;{@render iconTrailing()}&lt;/span&gt;
+	{/if}
 &lt;/svelte:element&gt;</code></pre>
 </figure>
 <aside class="callout callout--note"><p><code>Snippet</code> is the Svelte 5 replacement for slots. A snippet prop is a chunk of markup the parent passes in, rendered with <code>{@render …}</code>. Unlike slots, snippets are ordinary values: typed, passable, and usable in <code>{#if}</code>.</p></aside>
+<aside class="callout callout--note"><p>The <code>magnetic</code> import and the <code>pull</code> prop reach forward to the motion system we build in part 4 — a magnetic button leans slightly toward the cursor on approach. This is the finished file; if you are building strictly chapter by chapter, leave those two pieces out until part 4. Either way <code>{@attach undefined}</code> is a no-op, so a button without <code>pull</code> behaves as though the attachment were never there.</p></aside>
 <h3 id="touch">Two CSS details that matter on phones</h3>
 
 <figure class="code">
@@ -108,20 +148,44 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.btn {
-	/* 44px minimum touch target — Apple's and Google's guidelines,
-	   and WCAG 2.2 Success Criterion 2.5.8 */
+	/* … */
+
+	/*
+	 * 44px is the minimum touch target recommended by both Apple's and Google's
+	 * guidelines, and it's WCAG 2.2 Success Criterion 2.5.8. Smaller buttons get
+	 * mis-tapped, and on a marketing site a mis-tapped CTA is a lost conversion.
+	 */
 	min-height: 2.75rem;
 
-	/* Stops a double-tap zooming on iOS, and kills the 300ms tap delay */
+	/* Stop a double-tap from zooming on iOS, and kill the 300ms tap delay. */
 	touch-action: manipulation;
 	-webkit-tap-highlight-color: transparent;
+
+	/* … */
 }
 
-/* Hover styles ONLY on devices with a real pointer */
+/* … */
+
 @media (hover: hover) {
+	/*
+	 * NOTE: no `transform` here. The magnetic attachment owns this element's
+	 * transform, and a CSS hover transform would be overwritten by GSAP's inline
+	 * style mid-hover — producing a visible fight between the two. Where two
+	 * systems can write the same property, exactly one of them must own it.
+	 */
 	.btn--primary:hover:not(.btn--disabled) {
 		background-color: var(--accent-hover);
-		transform: translateY(-1px);
+		box-shadow: var(--shadow-md);
+	}
+
+	.btn--secondary:hover:not(.btn--disabled) {
+		background-color: var(--surface-overlay);
+		border-color: var(--border-strong);
+	}
+
+	.btn--ghost:hover:not(.btn--disabled) {
+		background-color: var(--surface-raised);
+		color: var(--text-primary);
 	}
 }</code></pre>
 </figure>
@@ -129,6 +193,11 @@
 <aside class="callout callout--why">
 	<h4>Why hover styles need a media query</h4>
 	<p>On a touchscreen there is no hover — but browsers fake one on tap, and it <strong>sticks</strong> until you tap elsewhere. So a phone user taps your button and it stays lit up afterwards, looking broken. <code>@media (hover: hover)</code> means those styles only apply to devices with a real pointer. Almost nobody does this, and it is one line.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>Why there is deliberately no transform in the hover rule</h4>
+	<p>Almost every button tutorial nudges the button up a pixel on hover. Ours does not, and the NOTE comment in the source is the whole lesson: in part 4 this element gets the magnetic attachment, and GSAP drives it by writing an inline <code>transform</code>. If a CSS hover rule also wrote <code>transform</code>, the two would overwrite each other mid-hover — a visible fight. Where two systems can write the same property, exactly one of them must own it. So hover gets <code>background-color</code> and <code>box-shadow</code>; the attachment owns <code>transform</code>.</p>
 </aside>
 <h3 id="icons">The icon registry</h3>
 <p>Our data files store icons as strings. Here is the bridge from string to component:</p>
@@ -139,15 +208,24 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import {
-	PulseIcon, CrosshairIcon, FunctionIcon,
-	EyeIcon, BellRingingIcon, RewindIcon
+	PulseIcon,
+	CrosshairIcon,
+	FunctionIcon,
+	EyeIcon,
+	BellRingingIcon,
+	RewindIcon
 } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
+/* … */
 export const featureIcons: Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt; = {
-	PulseIcon, CrosshairIcon, FunctionIcon,
-	EyeIcon, BellRingingIcon, RewindIcon
+	PulseIcon,
+	CrosshairIcon,
+	FunctionIcon,
+	EyeIcon,
+	BellRingingIcon,
+	RewindIcon
 } as Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt;;</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Typing it as a full <code>Record&lt;IconName, …&gt;</code> is the point: add a name to the <code>IconName</code> union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production.</p></aside>

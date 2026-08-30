@@ -86,7 +86,7 @@
 <p>Why allow <code>minuteOfDay</code> to be bigger than a day? Because a bar open until 2am closes on <strong>Friday</strong>, not on Saturday. Storing that as &quot;Friday, minute 1560&quot; keeps Friday night as one row. The alternative — two rows, Friday 20:00–24:00 and Saturday 00:00–02:00 — means every piece of code downstream has to know how to stitch them back together, and one of them eventually will not.</p>
 <p>The first two lines handle it: <code>Math.floor(1560 / 1440)</code> is 1, so we add a day to the calendar date and take minute 120 of it. The rule stays one row; the maths comes out right.</p>
 <h3 id="disambiguation">The four policies</h3>
-<p>Here is the decision the last chapter promised. <code>toZoned</code> takes a fourth argument saying what to do when the wall-clock reading has no instant or two.</p>
+<p>Here is the decision the last chapter promised. <code>toZoned</code> takes a third argument saying what to do when the wall-clock reading has no instant or two.</p>
 
 <figure class="code">
 	<figcaption>

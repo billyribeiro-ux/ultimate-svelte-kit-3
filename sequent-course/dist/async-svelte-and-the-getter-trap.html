@@ -66,10 +66,10 @@ const positions = $derived(await getMyPositions());</code></pre>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>TypeError: Cannot read properties of undefined (reading 'side')
-    at Module.$$render (+page.svelte:214:31)</code></pre>
+	<pre><code>TypeError: Cannot read properties of undefined (reading 'price')
+    at Module.$$render (+page.svelte:257:28)</code></pre>
 </figure>
-<p>Line 214 is a <code>bind:group={ticket.side}</code> on the buy/sell toggle. <code>ticket</code> is a <code>$state</code> object declared further down the script. On the client everything worked perfectly. Only server rendering died.</p>
+<p>The line it points at is the <code>bind:value={ticket.price}</code> on the ticket's price input. <code>ticket</code> is a <code>$state</code> object declared further down the script. On the client everything worked perfectly. Only server rendering died.</p>
 
 <aside class="callout callout--why">
 	<h4>What is actually happening</h4>
@@ -93,14 +93,14 @@ const positions = $derived(await getMyPositions());</code></pre>
  * which is what makes it so easy to walk into.
  */
 let ticket = $state({
-	side: 'buy',
+	side: 'buy' as 'buy' | 'sell',
 	price: '',
 	quantity: '100',
-	timeInForce: 'gtc'
+	timeInForce: 'gtc' as 'gtc' | 'day' | 'ioc' | 'fok'
 });
 
 let sending = $state(false);
-let lastError = $state(null);
+let lastError = $state&lt;string | null&gt;(null);
 
 // …only now the awaited deriveds
 const instruments = $derived(await getInstruments());</code></pre>
@@ -118,12 +118,12 @@ const instruments = $derived(await getInstruments());</code></pre>
 	<pre><code class="lang-svelte">/*
  * Announce a phase change with the venue's one dramatic gesture.
  *
- * $effect and not a derived, because this *does something to the world*
+ * `$effect` and not a derived, because this *does something to the world*
  * rather than computing a value. A derived that fired an animation would run
  * again on every unrelated re-read, which is the difference between &quot;when
  * this changes&quot; and &quot;whenever anybody looks&quot;.
  *
- * The guard on seenPhase being non-null is what stops the sweep firing on
+ * The guard on `seenPhase` being non-null is what stops the sweep firing on
  * first load: arriving at an open market is not the market opening.
  */
 $effect(() =&gt; {

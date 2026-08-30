@@ -46,63 +46,112 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * The auction price: four rules, applied in order.
+ * The auction price.
  *
- * 1. **Maximum executable volume.** The price that trades the most shares. That
- *    is the point of an auction — it exists to clear as much as possible.
+ * Four rules, applied in order, each one only reached when the previous left a
+ * tie:
  *
- * 2. **Minimum imbalance.** If several prices trade the same volume, prefer the
- *    one leaving the least unfilled. A price that clears 10,000 with 500 left
- *    over is better than one that clears 10,000 with 4,000 left over.
+ *   1. **Maximum executable volume.** The auction exists to trade as much as
+ *      possible; the price that does that is the price the market wants.
  *
- * 3. **Surplus direction.** Still tied? If the remaining imbalance is on the buy
- *    side, take the higher price; if on the sell side, the lower. The unfilled
- *    pressure is telling you which way the market wants to go.
+ *   2. **Minimum imbalance.** Between two prices that trade the same amount,
+ *      prefer the one that leaves the least unsatisfied. Fewer participants go
+ *      home holding an order they could not fill.
  *
- * 4. **Nearest the reference.** Still tied? The price closest to the previous
- *    close. The most conservative answer, and the one nobody can accuse you of
- *    choosing.
+ *   3. **Which way the surplus leans.** If every remaining candidate has
+ *      leftover *buyers*, take the highest — unfilled demand means the price
+ *      should be higher, and settling lower would be a gift to the buyers who
+ *      did get filled. Mirror it for leftover sellers.
  *
- * Real venues use exactly this cascade. It is not arbitrary — each rule is what
- * you reach for when the one above it does not discriminate.
+ *   4. **Closest to the reference price.** When the surplus changes sign across
+ *      the remaining candidates, the market has genuinely bracketed the price,
+ *      and the least arbitrary answer is the one nearest to where the
+ *      instrument was before the auction.
+ *
+ * Every one of these is a fairness rule with a constituency, which is why they
+ * are spelled out rather than collapsed into a comparator nobody can read.
  */
-export function findAuctionPrice(book: Book, reference: Price): AuctionPrice | undefined {</code></pre>
+export function findAuctionPrice(book: Book, referencePrice: Price): Candidate | undefined {</code></pre>
 </figure>
-<p>The candidate prices are just the distinct prices already on the book. There is no point evaluating a price nobody bid or offered at — it would trade nothing.</p>
+<p>Where do the candidates come from? Only from prices somebody actually quoted, and only inside the crossed region — a price nobody named cannot be the auction price, and a price outside the cross cannot trade. When the book is not crossed at all, the list is empty and there is nothing to do. Each candidate is then priced by <code>evaluate</code>: everything bid at or above it against everything offered at or below, trading the smaller of the two.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/core/src/auction.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	const candidates = [...new Set([...book.bids, ...book.asks].map((l) =&gt; l.price))].sort(
-		(a, b) =&gt; a - b
-	);
+	<pre><code class="lang-ts">interface Candidate {
+	readonly price: Price;
+	readonly executable: number;
+	readonly imbalance: number;
+}
 
-	let best: AuctionPrice | undefined;
+// …
 
-	for (const candidate of candidates) {
-		// How much would trade here? Everything bid at or above, matched against
-		// everything offered at or below.
-		const demand = quantityAtOrBetter(book.bids, candidate, 'buy');
-		const supply = quantityAtOrBetter(book.asks, candidate, 'sell');
-		const volume = Math.min(demand, supply);
+/**
+ * Every price worth considering.
+ *
+ * Only prices that somebody actually quoted can be auction prices — clearing at
+ * a price nobody named would fill orders at a level no participant chose. And
+ * only prices inside the crossed region can produce a trade, so the search is
+ * bounded by the best bid above and the best ask below.
+ *
+ * The candidate set is therefore small: on a typical open it is a handful of
+ * levels, not a scan of the whole ladder.
+ */
+function candidatePrices(book: Book): Price[] {
+	const bestBid = book.bids[0];
+	const bestAsk = book.asks[0];
+	if (!bestBid || !bestAsk || bestBid.price &lt; bestAsk.price) return [];
 
-		if (volume === 0) continue;
+	const inRange = (level: PriceLevel) =&gt;
+		level.price &gt;= bestAsk.price &amp;&amp; level.price &lt;= bestBid.price;
 
-		const imbalance = Math.abs(demand - supply);
-		const surplus: Side | undefined =
-			demand &gt; supply ? 'buy' : supply &gt; demand ? 'sell' : undefined;
+	const prices = new Set&lt;number&gt;();
+	for (const level of book.bids) if (inRange(level)) prices.add(level.price);
+	for (const level of book.asks) if (inRange(level)) prices.add(level.price);
 
-		if (best === undefined || better({ candidate, volume, imbalance, surplus }, best, reference)) {
-			best = { price: candidate as Price, volume, imbalance, surplus };
-		}
-	}
+	return [...prices].sort((a, b) =&gt; a - b) as Price[];
+}
 
-	return best;</code></pre>
+// …
+
+export function findAuctionPrice(book: Book, referencePrice: Price): Candidate | undefined {
+	const candidates = candidatePrices(book).map((price) =&gt; evaluate(book, price));
+	const tradeable = candidates.filter((candidate) =&gt; candidate.executable &gt; 0);
+
+	if (tradeable.length === 0) return undefined;
+
+	// 1. Maximum executable volume.
+	const maxVolume = Math.max(...tradeable.map((c) =&gt; c.executable));
+	let short = tradeable.filter((c) =&gt; c.executable === maxVolume);
+	if (short.length === 1) return short[0];
+
+	// 2. Minimum absolute imbalance.
+	const minImbalance = Math.min(...short.map((c) =&gt; Math.abs(c.imbalance)));
+	short = short.filter((c) =&gt; Math.abs(c.imbalance) === minImbalance);
+	if (short.length === 1) return short[0];
+
+	// 3. Which way the surplus leans, if it leans one way for all of them.
+	const allBuySurplus = short.every((c) =&gt; c.imbalance &gt; 0);
+	const allSellSurplus = short.every((c) =&gt; c.imbalance &lt; 0);
+
+	if (allBuySurplus) return short.reduce((a, b) =&gt; (b.price &gt; a.price ? b : a));
+	if (allSellSurplus) return short.reduce((a, b) =&gt; (b.price &lt; a.price ? b : a));
+
+	// 4. Closest to the reference. Ties inside this go to the lower price, so
+	//    the rule is total and a replay cannot pick differently.
+	return short.reduce((best, candidate) =&gt; {
+		const closer =
+			Math.abs(candidate.price - referencePrice) - Math.abs(best.price - referencePrice);
+		if (closer &lt; 0) return candidate;
+		if (closer &gt; 0) return best;
+		return candidate.price &lt; best.price ? candidate : best;
+	});
+}</code></pre>
 </figure>
 <h3 id="uncross">Uncrossing</h3>
-<p>Once you have the price, every order that can trade does, at that price. A bid at £46.00 in an auction that clears at £45.50 gets filled at £45.50 — better than it asked for. That is the same price-improvement principle as continuous trading, applied to everybody at once.</p>
+<p>Once you have the price, every order that can trade does, at that price. Everybody trades at the auction price regardless of what they quoted — a bid at £46.00 in an auction that clears at £45.50 pays £45.50 along with everyone else. Note that this is the *opposite* of the continuous rule, where the resting order's price wins: here there is no resting side and no aggressing side, just one price and every participant on the right side of it.</p>
 <aside class="callout callout--note"><p>Auction trades have <strong>no aggressor</strong>. Nobody crossed the spread; everybody met in the middle simultaneously. That is why <code>Traded.aggressor</code> is optional, and why the fee for an auction trade is a single symmetric rate rather than a taker charge and a maker rebate.</p></aside>
 <h3 id="bug-one">Bug found: the auction dropped trades</h3>
 <p>The first <code>runAuction</code> looked like this:</p>
@@ -121,43 +170,71 @@ export function findAuctionPrice(book: Book, reference: Price): AuctionPrice | u
 	}
 }</code></pre>
 </figure>
-<p>Reasonable-looking. And wrong whenever an auction produces more than one trade involving the same account, because <code>tradeEventFor</code> looks the order up in the live registry to build the event — and the previous iteration had just removed it.</p>
-<p>The second trade's lookup failed, and the fill was silently dropped.</p>
+<p>Reasonable-looking. And wrong whenever the same resting order appears in more than one of the auction's trades — which happens every time one order fills against two counterparties. The uncross has already decremented every order's <code>remaining</code> before this loop runs, so the bookkeeping sat inside the reporting: the first trade that saw an order finished untracked it, and the next trade naming the same order failed its lookup and was silently skipped.</p>
+<p>The shares still moved — the uncross had already done that. They would simply never have been reported, and the venue's own event stream would understate the volume of its own opening auction.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/core/src/apply.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
- * Collect first, untrack after.
- *
- * Every trade is reported while every order is still findable, and the
- * bookkeeping happens once the reporting is finished. Interleaving them means
- * a later step depends on state an earlier step has already destroyed.
- */
-const touched = new Set&lt;RestingOrder&gt;();
+	<pre><code class="lang-ts">	/*
+	 * Bookkeeping happens after every trade has been reported, not during.
+	 *
+	 * `uncross` has already decremented every order's `remaining` — it clears the
+	 * whole book in one pass — so a single resting order can appear in several of
+	 * the trades below with a final remaining of zero. Untracking it the first
+	 * time zero is seen removes it from the index, and every later trade that
+	 * names it then fails its lookup and is skipped.
+	 *
+	 * The shares still moved: `uncross` did that. They would simply never have
+	 * been reported, and the venue's own event stream would understate the
+	 * volume of its own opening auction. A property test found this; no example
+	 * test would have, because it needs one order filling against two others in
+	 * a single auction.
+	 */
+	const touched = new Set&lt;LiveOrder&gt;();
 
-for (const fill of uncrossed.fills) {
-	events.push(tradeEventFor(fill));
-	touched.add(fill.resting);
-}
+	let index = 0;
+	for (const trade of result.trades) {
+		const buy = state.orders.get(trade.buy.orderId);
+		const sell = state.orders.get(trade.sell.orderId);
+		if (!buy || !sell) continue;
 
-for (const order of touched) {
-	if (order.filled &gt;= order.quantity) untrackLive(state, order);
-}</code></pre>
+		events.push(
+			tradeOf(state, {
+				seq,
+				index,
+				instrumentId: instrument.instrumentId,
+				price: result.price,
+				quantity: trade.quantity,
+				buyOrder: buy,
+				sellOrder: sell
+			})
+		);
+		index += 1;
+
+		reduceWorking(state, buy, trade.quantity);
+		reduceWorking(state, sell, trade.quantity);
+		touched.add(buy);
+		touched.add(sell);
+	}
+
+	for (const order of touched) {
+		if (order.remaining === 0) untrackLive(state, order);
+	}</code></pre>
 </figure>
-<p>Found by the same quantity-conservation property test. An example test with one buyer and one seller can never produce two trades for one account, so it could not have found it.</p>
+<p>Found by the same quantity-conservation property. An example test with one buyer and one seller cannot produce one order filling against two others in a single auction, so it could not have found it.</p>
 <h3 id="bug-two">Bug found: continuous trading began on a crossed book</h3>
-<p>The phase handler ran the uncross when leaving an auction:</p>
+<p>The phase handler ran the uncross when leaving an auction (<code>from</code> is a local — the phase the instrument was in when the command arrived):</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">the wrong version</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">if (command.from === 'auction') {
-	events.push(...runAuction(state, instrument, seq));
+	<pre><code class="lang-ts">if (from === 'auction') {
+	events.push(...runAuction(state, seq, instrument));
 }</code></pre>
 </figure>
 <p>Which is correct for the sequence the tests used: <code>pre_open → auction → continuous</code>. And wrong for <code>pre_open → continuous</code>, which an operator can perfectly well do — orders accumulated in pre-open without matching, and continuous trading began with a crossed book sitting there. Free money for whoever noticed first.</p>
@@ -167,20 +244,34 @@ for (const order of touched) {
 		<span class="code__file">packages/core/src/apply.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
- * Uncross whenever we are **entering trading from a phase that accumulated
- * orders**, not only when leaving an auction.
- *
- * The rule to state is the invariant — &quot;continuous trading never begins on a
- * crossed book&quot; — rather than the happy path, &quot;uncross when the auction ends&quot;.
- * The first is true of every transition; the second is true of one of them.
- */
-const wasAccumulating = command.from === 'pre_open' || command.from === 'auction';
-const opensTrading = command.phase === 'continuous';
+	<pre><code class="lang-ts">	const from = instrument.phase;
+	// …
 
-if (command.from === 'auction' || (wasAccumulating &amp;&amp; opensTrading)) {
-	events.push(...runAuction(state, instrument, seq));
-}</code></pre>
+	/*
+	 * When the book has to be cleared before trading resumes.
+	 *
+	 * Two cases, and the second one was missing until a property test opened
+	 * trading on a crossed book and the &quot;never crossed during continuous&quot;
+	 * invariant caught it.
+	 *
+	 *   - **The auction phase ending.** That is what an auction is for.
+	 *   - **Going straight from pre-open to continuous.** Orders accumulate in
+	 *     pre-open without matching, so the book is very likely crossed. A venue
+	 *     that opened continuous trading on a crossed book would hand the first
+	 *     participant to send anything a free trade against every order that
+	 *     should already have been matched.
+	 *
+	 * The real lesson is about where the rule lives. &quot;Uncross when the auction
+	 * ends&quot; describes the intended path; &quot;never begin continuous trading with a
+	 * crossed book&quot; describes the *invariant*, and only the second one is still
+	 * true when somebody adds a phase transition nobody had thought about.
+	 */
+	const wasAccumulating = from === 'pre_open' || from === 'auction';
+	const opensTrading = command.phase === 'continuous';
+
+	if (from === 'auction' || (wasAccumulating &amp;&amp; opensTrading)) {
+		events.push(...runAuction(state, seq, instrument));
+	}</code></pre>
 </figure>
 
 <aside class="callout callout--why">

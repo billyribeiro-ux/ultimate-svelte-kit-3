@@ -43,11 +43,20 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">sveltekit({
+	// …
 	compilerOptions: {
-		runes: true,
+		// Runes everywhere except node_modules, where a dependency may still be
+		// written in legacy Svelte 4 style. Removable in Svelte 6.
+		runes: ({ filename }) =&gt;
+			filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
+
+		// `await` at the top level of &lt;script&gt;, inside $derived, and directly in
+		// markup. Remote functions are promises; this is what lets a component
+		// await one without a load function in the middle. Default in Svelte 6.
 		experimental: { async: true }
-	}
-})</code></pre>
+	},
+	// …
+}),</code></pre>
 </figure>
 <h3 id="boundaries">Boundaries</h3>
 <p>An awaiting component needs somewhere for its loading and error states to live. That is <code>&lt;svelte:boundary&gt;</code>.</p>
@@ -61,10 +70,15 @@
 	{@render children()}
 
 	{#snippet failed(error, reset)}
-		&lt;Alert tone=&quot;error&quot; title=&quot;Something went wrong&quot;&gt;
-			&lt;p&gt;{messageFrom(error, 'We could not load this page.')}&lt;/p&gt;
-			&lt;Button onclick={reset}&gt;Try again&lt;/Button&gt;
-		&lt;/Alert&gt;
+		&lt;div class=&quot;container-narrow section&quot;&gt;
+			&lt;div class=&quot;failure&quot; role=&quot;alert&quot;&gt;
+				&lt;h1&gt;Something went wrong&lt;/h1&gt;
+				&lt;p&gt;
+					{messageFrom(error, 'We could not load this page.')}
+				&lt;/p&gt;
+				&lt;button type=&quot;button&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
@@ -75,7 +89,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">twelve lines that reproduce it</span>
+		<span class="code__file">nine lines that reproduce it</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -154,7 +168,7 @@ $effect(() =&gt; {
 	const availability = $derived(await getAvailability(args));
 &lt;/script&gt;
 
-&lt;SlotGrid {availability} /&gt;</code></pre>
+&lt;AvailabilityGrid {availability} /&gt;</code></pre>
 </figure>
 <p>The loading and error states did not disappear — they moved to a boundary, where they are written once for a whole region instead of once per await. Multiply that across a dozen components and it is a different codebase.</p>
 

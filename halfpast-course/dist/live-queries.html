@@ -76,11 +76,22 @@
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">const availability = $derived(
-	await getAvailability({ slug, serviceId, staffId, from: day, days: 14 })
-);</code></pre>
+	<pre><code class="lang-svelte">const availabilityQuery = $derived(
+	service
+		? getAvailability({
+				slug: data.slug,
+				serviceId: service.id,
+				staffId: staffId ?? undefined,
+				from: weekFrom,
+				days: 7
+			})
+		: null
+);
+
+// …
+const availability = $derived(availabilityQuery ? await availabilityQuery : null);</code></pre>
 </figure>
-<p>No subscription to manage, no cleanup to write, no <code>onDestroy</code>. The <code>$derived</code> re-runs when the arguments change and the component re-renders when a new value arrives. The generator on the server and the <code>await</code> in the component are the entire API.</p>
+<p>Two <code>$derived</code>s, on purpose. <code>availabilityQuery</code> is the resource — recreated whenever a different service, week or person is chosen, and it carries <code>.connected</code>, which is how the page knows whether to show its &quot;Live&quot; badge. <code>availability</code> is the value, re-awaited every time the server pushes a new one down the stream. No subscription to manage, no cleanup to write, no <code>onDestroy</code> — the generator on the server and the <code>await</code> in the component are the entire API.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

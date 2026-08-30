@@ -65,12 +65,35 @@ if (status.outboxDead &gt; 0) {
 		<span class="code__file">apps/web/src/routes/healthz/+server.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// 503 only for `down`. A `degraded` venue is slow, not broken — and pulling a
-// slow machine out of the load balancer removes capacity from a system that is
-// already struggling to keep up, which is how a degradation becomes an outage.
-const status = verdict(await health(db));
-return Response.json(status, { status: status.level === 'down' ? 503 : 200 });</code></pre>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ url }) =&gt; {
+	const status = await health(db);
+	const result = verdict(status);
+
+	const body = {
+		status: result.level,
+		summary: result.summary,
+		lag: {
+			engine: status.engineLag,
+			projector: status.projectorLag,
+			outboxAgeMs: status.outboxAgeMs
+		},
+		// A boolean, not the amount. The amount is the venue's business; whether
+		// the books balance is the only part an outsider needs.
+		booksBalance: status.trialBalance === 0,
+		...(url.searchParams.get('verbose') === '1' ? { problems: result.problems } : {})
+	};
+
+	return Response.json(body, {
+		status: result.level === 'down' ? 503 : 200,
+		headers: {
+			// Never cached. A health check served from a CDN is a health check that
+			// reports the state of a minute ago, forever.
+			'cache-control': 'no-store'
+		}
+	});
+};</code></pre>
 </figure>
+<p>A load balancer reads the status code and nothing else, so only <code>down</code> answers <strong>503</strong> — which takes the instance out of rotation. A <code>degraded</code> venue answers 200: it is slow, not broken, and pulling a slow machine out of the load balancer removes capacity from a system that is already struggling to keep up, which is how a degradation becomes an outage.</p>
 <p>Three levels, and the middle one is the important one. A health check with only &quot;up&quot; and &quot;down&quot; forces you to pick a threshold at which a slow venue gets killed, and that threshold is always wrong in one direction or the other.</p>
 <h3 id="logs">Logs somebody can grep</h3>
 
@@ -101,9 +124,11 @@ if (/secret|password|token|authorization|cookie|key_hash/i.test(key)) {
 	</figcaption>
 	<pre><code>$ pnpm dev
 
-[web]    ➜ http://localhost:5173
-[engine] engine: applied 0, projected 0, waiting
-[worker] worker: 0 pending, 0 dead</code></pre>
+[web]       ➜ http://localhost:5173
+[engine]    starting against file:venue.db
+[engine]    resuming from seq 48213
+[projector] resuming from seq 48210
+[worker]    12 pending, 0 dead on arrival</code></pre>
 </figure>
 <ul><li><strong>web</strong> — accepts commands, serves screens, never decides anything.</li><li><strong>engine</strong> — the only process that applies commands and writes events. One writer, by design.</li><li><strong>worker</strong> — drains the outbox. Can be killed at any moment; the leases sort it out.</li></ul>
 <p>Each handles <code>SIGINT</code> and <code>SIGTERM</code> by finishing its current batch and writing its checkpoint. Nothing is lost by a restart, because the checkpoint is written in the same transaction as the work it describes — the single most important line in the whole system, and it is a one-line ordering decision.</p>

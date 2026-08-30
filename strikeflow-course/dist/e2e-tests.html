@@ -44,19 +44,57 @@
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig({
 	testMatch: '**/*.e2e.{ts,js}',
+
 	webServer: {
 		command: 'npm run build &amp;&amp; npm run preview',
 		port: 4173,
+		// Building takes a moment; the default 60s is tight on a cold cache.
 		timeout: 180_000,
-		reuseExistingServer: !process.env.CI
+
+		/*
+		 * Deliberately NOT `reuseExistingServer: !process.env.CI`, which is the
+		 * common default.
+		 *
+		 * Reusing a server you happen to have running is faster, and it means the
+		 * suite can silently test a build from twenty minutes ago. That bit me while
+		 * writing this project: a motion test failed, I spent time diagnosing the
+		 * code, and the code was fine — the server was stale.
+		 *
+		 * A test suite that can pass or fail against the wrong build is worse than a
+		 * slow one, because it makes every result untrustworthy. Always build fresh.
+		 */
+		reuseExistingServer: false
 	},
-	use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+
+	use: {
+		baseURL: 'http://localhost:4173',
+		// Only kept for failures — traces are large and mostly uninteresting when green.
+		trace: 'retain-on-failure'
+	},
+
+	/* … */
 	projects: [
-		{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-		{ name: 'mobile',  use: { ...devices['Pixel 7'] } }
-	]
+		{
+			name: 'desktop',
+			use: { ...devices['Desktop Chrome'] }
+		},
+		{
+			name: 'mobile',
+			use: { ...devices['Pixel 7'] }
+		}
+	],
+
+	// A failing e2e test is almost never flaky in this project — fail fast rather
+	// than retrying and hiding a real bug.
+	retries: process.env.CI ? 1 : 0,
+	reporter: process.env.CI ? 'github' : 'list'
 });</code></pre>
 </figure>
+
+<aside class="callout callout--why">
+	<h4>Why not reuse a server you already have running?</h4>
+	<p>Nearly every Playwright example ships <code>reuseExistingServer: !process.env.CI</code> — locally, attach to whatever server happens to be up; in CI, build fresh. It is faster, and it means the suite can silently test a build from twenty minutes ago. That bit me while writing this project: a motion test failed, I spent time diagnosing the code, and the code was fine — the server was stale. A test suite that can pass or fail against the wrong build is worse than a slow one, because it makes every result untrustworthy. So this config always builds fresh, everywhere.</p>
+</aside>
 
 <aside class="callout callout--why">
 	<h4>Why two device projects</h4>
@@ -72,25 +110,43 @@
 	</figcaption>
 	<pre><code class="lang-ts">for (const path of INDEXABLE_PAGES) {
 	test(`${path} has complete, valid metadata`, async ({ page }) =&gt; {
-		await page.goto(path);
+		const response = await page.goto(path);
+		expect(response?.status()).toBe(200);
 
+		// --- Title ---
 		const title = await page.title();
 		expect(title.length).toBeGreaterThan(10);
-		expect(title.length).toBeLessThanOrEqual(70);   // Google truncates ~60
+		// Google truncates around 60 characters. Longer isn't an error, but it
+		// means the end of your title is invisible in the results page.
+		expect(title.length).toBeLessThanOrEqual(70);
 
-		// Exactly one canonical, absolute, matching this path
+		// …the meta description: present, 50–200 characters…
+
+		// --- Canonical: exactly one, absolute, matching this path ---
 		const canonicals = page.locator('head link[rel=&quot;canonical&quot;]');
 		await expect(canonicals).toHaveCount(1);
-		expect(new URL(await canonicals.getAttribute('href') ?? '').pathname).toBe(path);
+		const canonical = await canonicals.getAttribute('href');
+		expect(canonical).toMatch(/^https?:\/\//);
+		expect(new URL(canonical ?? '').pathname).toBe(path);
 
-		// Exactly one h1
+		// --- Exactly one h1 ---
+		// …
 		await expect(page.locator('h1')).toHaveCount(1);
 
-		// Structured data parses and is a graph
+		// …robots: contains index, never noindex, plus max-image-preview:large…
+		// …Open Graph: og:title, og:description, og:image, og:url, og:type all present…
+
+		// --- Structured data parses and is a graph ---
 		const ldJson = await page.locator('head script[type=&quot;application/ld+json&quot;]').textContent();
+		expect(ldJson).toBeTruthy();
 		const graph = JSON.parse(ldJson ?? '{}');
 		expect(graph['@context']).toBe('https://schema.org');
 		expect(Array.isArray(graph['@graph'])).toBe(true);
+		// Organization and WebSite appear on every page, cross-referenced by @id.
+		const types = graph['@graph'].map((node: { '@type': string }) =&gt; node['@type']);
+		expect(types).toContain('Organization');
+		expect(types).toContain('WebSite');
+		expect(types).toContain('WebPage');
 	});
 }</code></pre>
 </figure>
@@ -102,15 +158,19 @@
 	</figcaption>
 	<pre><code class="lang-ts">test('every sitemap URL returns 200', async ({ request }) =&gt; {
 	const body = await request.get('/sitemap.xml').then((r) =&gt; r.text());
-	const locs = [...body.matchAll(/&lt;loc&gt;([^&lt;]+)&lt;\/loc&gt;/g)].map((m) =&gt; m[1] ?? '');
+	const locs = [...body.matchAll(/&lt;loc&gt;([^&lt;]+)&lt;\/loc&gt;/g)].map((match) =&gt; match[1] ?? '');
+
+	expect(locs.length).toBeGreaterThanOrEqual(13);
 
 	for (const loc of locs) {
+		// Compare by path — the sitemap carries the configured production origin,
+		// which is not the origin this test server runs on.
 		const response = await request.get(new URL(loc).pathname);
 		expect(response.status(), `${loc} should return 200`).toBe(200);
 	}
 });</code></pre>
 </figure>
-<aside class="callout callout--note"><p>That last test caught a wrong XML namespace in my sitemap — a single wrong word that would have made every crawler reject the file as &quot;not a sitemap&quot;.</p></aside>
+<aside class="callout callout--note"><p>A companion test asserts the sitemap declares the correct XML namespace, verbatim: <code>xmlns=&quot;http://www.sitemaps.org/schemas/sitemap/0.9&quot;</code>. A wrong namespace is a single-word typo that makes every crawler reject the file as &quot;not a sitemap&quot; — which is exactly why it gets its own dedicated test rather than being assumed.</p></aside>
 <h3 id="nojs">The test that justifies the architecture</h3>
 
 <figure class="code">
@@ -150,15 +210,27 @@
 		<span class="code__file">scripts/measure-font-metrics.js</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-js">await page.evaluate(() =&gt; document.fonts.ready);   // without this you measure the fallback
+	<pre><code class="lang-js">// Without this the measurement races the font load and silently measures the
+// fallback against itself, producing a perfect 100% that is completely wrong.
+await page.evaluate(() =&gt; document.fonts.ready);
 
-const width = (family, weight) =&gt; { /* render at 100px, read the box */ };
+// …then, inside page.evaluate, for each target font versus the Arial fallback…
+const targetWidth = width(target.family, target.weight);
+const fallbackWidth = width(fallback, target.weight);
+const metrics = vertical(target.family, target.weight);
 
-const sizeAdjust = width(targetFamily, weight) / width('Arial', weight);
+const sizeAdjust = targetWidth / fallbackWidth;
 
-// Overrides are relative to the ALREADY-SIZE-ADJUSTED em
-const ascentOverride  = realAscent  / sizeAdjust;
-const descentOverride = realDescent / sizeAdjust;</code></pre>
+return {
+	label: target.label,
+	sizeAdjust,
+	// Overrides are relative to the already-size-adjusted em, so each
+	// real metric is divided by the size adjustment.
+	ascentOverride: metrics.ascent / sizeAdjust,
+	descentOverride: metrics.descent / sizeAdjust,
+	rawAscent: metrics.ascent,
+	rawDescent: metrics.descent
+};</code></pre>
 </figure>
 
 <figure class="code code--terminal">

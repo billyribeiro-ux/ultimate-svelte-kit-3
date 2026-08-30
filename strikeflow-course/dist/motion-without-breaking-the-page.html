@@ -85,6 +85,10 @@
 	transform: translate3d(0, 28px, 0);
 }
 
+/* … */
+
+/* Hero parts are choreographed by `motion/hero.ts`, which sets its own start
+   positions. They just need to be invisible until it does. */
 .motion-pending [data-hero] {
 	opacity: 0;
 }
@@ -104,23 +108,41 @@
 </aside>
 <aside class="callout callout--warn"><p>The script must be <strong>inline</strong>, in the <code>&lt;head&gt;</code>. An external file — however tiny — is a network round-trip, during which the browser has already painted, and you get the flicker you were trying to avoid. This is the one inline script in the whole project, and it earns its place.</p></aside>
 <h3 id="ordering">The ordering that removes the flicker</h3>
-<p>When GSAP does arrive, the order of two lines matters enormously:</p>
+<p>When GSAP does arrive, the order matters enormously. First apply the hidden state as an <strong>inline style</strong>; only then release the CSS gate; only then animate:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">src/lib/motion/reveal.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// 1. Apply the hidden state as an INLINE style first
-gsap.set(targets, { opacity: 0, y: 28, force3D: true });
+	<pre><code class="lang-ts">gsap.set(targets, {
+	opacity: 0,
+	...offset,
+	...(scale ? { scale: 0.97 } : {}),
+	/* … */
+	force3D: true
+});
 
-// 2. Only then release the CSS gate
 releaseMotionGate();
 
-// 3. Now animate
-gsap.to(targets, { opacity: 1, y: 0, /* ... */ });</code></pre>
+gsap.to(targets, {
+	opacity: 1,
+	y: 0,
+	x: 0,
+	scale: 1,
+	duration: dur,
+	delay,
+	stagger: items ? staggerAmount : 0,
+	// …
+	clearProps: 'transform',
+	scrollTrigger: {
+		trigger: node,
+		start,
+		toggleActions: repeat ? 'play reverse play reverse' : 'play none none none'
+	}
+});</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>Swap lines 1 and 2 and you get a one-frame flash of fully-visible content on every page load. The element must never be un-hidden between the CSS gate letting go and the inline style taking over.</p></aside>
+<aside class="callout callout--warn"><p>Swap <code>gsap.set</code> and <code>releaseMotionGate()</code> and you get a one-frame flash of fully-visible content on every page load. The element must never be un-hidden between the CSS gate letting go and the inline style taking over.</p></aside>
 <h3 id="reduced-motion">Reduced motion is not optional</h3>
 <p>Every operating system has a &quot;reduce motion&quot; setting. People turn it on for real reasons — vestibular disorders, where large moving content causes genuine nausea and dizziness, not mild annoyance.</p>
 
@@ -173,15 +195,32 @@ gsap.to(targets, { opacity: 1, y: 0, /* ... */ });</code></pre>
 
 			const { gsap } = motion;
 
+			// …
+
 			context = gsap.context(() =&gt; {
-				gsap.set(targets, { opacity: 0, y: distance, force3D: true });
+				gsap.set(targets, {
+					opacity: 0,
+					...offset,
+					...(scale ? { scale: 0.97 } : {}),
+					force3D: true
+				});
+
 				releaseMotionGate();
 
 				gsap.to(targets, {
 					opacity: 1,
 					y: 0,
+					x: 0,
+					scale: 1,
+					duration: dur,
+					delay,
+					stagger: items ? staggerAmount : 0,
 					clearProps: 'transform',
-					scrollTrigger: { trigger: node, start: 'top 85%' }
+					scrollTrigger: {
+						trigger: node,
+						start,
+						toggleActions: repeat ? 'play reverse play reverse' : 'play none none none'
+					}
 				});
 			}, node);
 		});

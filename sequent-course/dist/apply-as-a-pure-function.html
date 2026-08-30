@@ -35,16 +35,18 @@
 			<h1>`apply` as a pure function</h1>
 			<p class="lede">One function, <code>(state, command) → events</code>, with no clock, no database and no randomness. Everything else in the venue is a consequence of it.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write the engine's entry point and understand why its purity is worth every constraint it imposes.</p></aside>
-			<p>Here is the whole engine, as a type:</p>
+			<p>Here is the whole engine, in one signature:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/core/src/apply.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function apply(state: EngineState, sequenced: Sequenced&lt;Command&gt;): Event[];</code></pre>
+	<pre><code class="lang-ts">export function apply(state: EngineState, sequenced: SequencedCommand): Event[] {
+	// …
+}</code></pre>
 </figure>
-<p>Give it the current state and one command, and it returns the events that command caused. It mutates <code>state</code> in place for speed, and it touches nothing else. No <code>await</code>, because there is nothing to wait for.</p>
+<p>Give it the current state and one command, and it returns the events that command caused. (<code>SequencedCommand</code> is the protocol's alias for <code>Sequenced&lt;Command&gt;</code>.) It mutates <code>state</code> in place for speed, and it touches nothing else. No <code>await</code>, because there is nothing to wait for.</p>
 <h3 id="forbidden">What it is forbidden to do</h3>
 <ul><li><strong>No clock.</strong> Time comes from <code>sequenced.receivedAt</code>, stamped when the command arrived.</li><li><strong>No randomness.</strong> Ids come from <code>sequenced.seq</code>.</li><li><strong>No I/O.</strong> It cannot read a database or make a request, because <code>packages/core</code> does not depend on anything that can.</li><li><strong>No throwing for business reasons.</strong> A rejected order returns an <code>order_rejected</code> <strong>event</strong>, not an exception. Rejection is something that happened, and it goes in the log like everything else.</li></ul>
 
@@ -59,31 +61,33 @@
 		<span class="code__file">packages/core/src/apply.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function apply(state: EngineState, sequenced: Sequenced&lt;Command&gt;): Event[] {
-	// The venue's clock, taken from the command rather than read.
-	state.now = sequenced.receivedAt;
+	<pre><code class="lang-ts">export function apply(state: EngineState, sequenced: SequencedCommand): Event[] {
+	const { seq, receivedAt, body } = sequenced;
 
-	const command = sequenced.body;
+	// The venue's clock only ever moves forward, and only because a command told
+	// it to. Nothing in this file may call a clock of its own.
+	state.lastSeq = seq;
+	state.now = receivedAt;
 
-	switch (command.kind) {
+	switch (body.kind) {
 		case 'place_order':
-			return placeOrder(state, command, sequenced.seq);
+			return placeOrder(state, seq, body);
 		case 'cancel_order':
-			return cancelOrder(state, command, sequenced.seq);
+			return cancelOrder(state, body);
 		case 'replace_order':
-			return replaceOrder(state, command, sequenced.seq);
+			return replaceOrder(state, seq, body);
 		case 'cancel_all':
-			return cancelAll(state, command, sequenced.seq);
+			return cancelAll(state, body);
 		case 'set_risk_limits':
-			return setRiskLimits(state, command);
+			return setRiskLimits(state, body);
 		case 'set_kill_switch':
-			return setKillSwitch(state, command, sequenced.seq);
+			return setKillSwitch(state, body);
 		case 'list_instrument':
-			return listInstrument(state, command);
+			return listInstrument(state, body);
 		case 'set_phase':
-			return setPhase(state, command, sequenced.seq);
+			return setPhase(state, seq, body);
 		case 'tick':
-			return tick(state, sequenced.seq);
+			return tick(state, body);
 	}
 }</code></pre>
 </figure>
@@ -95,44 +99,69 @@
 		<span class="code__file">packages/core/src/apply.ts (abridged)</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">function placeOrder(state: EngineState, command: PlaceOrder, seq: number): Event[] {
-	// 1. Every pre-trade check, in one place, before anything is mutated.
-	const refused = checkOrder(state, command);
-	if (refused) {
-		return [{ kind: 'order_rejected', ...refused, /* ... */ }];
+	<pre><code class="lang-ts">function placeOrder(
+	state: EngineState,
+	seq: number,
+	command: Extract&lt;Command, { kind: 'place_order' }&gt;
+): Event[] {
+	const instrument = state.instruments.get(command.instrumentId);
+
+	// … (a `refuse` helper wraps a Refusal in an `order_rejected` event)
+
+	if (findLive(state, command.firmId, command.clientOrderId)) {
+		return refuse({
+			reason: 'duplicate_client_order_id',
+			detail: `${command.clientOrderId} is already working`
+		});
+	}
+
+	const failed = checkOrder(state, instrument, command);
+	if (failed) return refuse(failed);
+
+	// `checkOrder` proved this, but the compiler has not been told.
+	const found = instrument!;
+
+	// … (a market order outside continuous trading is refused here)
+
+	if (found.phase === 'continuous') {
+		const bookRefusal = checkAgainstBook(found.book, {
+			...command,
+			timeInForce: command.timeInForce,
+			selfTradePrevention: command.selfTradePrevention
+		});
+		if (bookRefusal) return refuse(bookRefusal);
 	}
 
 	const orderId = orderIdFor(seq);
-	const book = state.books.get(command.instrumentId)!;
+	// … (build the order; a market order gets a sentinel price that never rests)
 
-	// 2. FOK needs to know whether it *would* fill before anything moves.
-	const blocked = checkAgainstBook(state, command, book);
-	if (blocked) return [{ kind: 'order_rejected', ...blocked }];
+	const events: Event[] = [];
 
-	// 3. Match.
-	const result = match(book, { /* ... */ });
-
-	const events: Event[] = [{ kind: 'order_accepted', orderId, /* ... */ }];
-
-	// 4. Report the trades, in the order they happened.
-	result.fills.forEach((fill, index) =&gt; {
-		events.push(tradeEventFor(fill, tradeIdFor(seq, index), command, orderId));
-	});
-
-	// 5. Rest whatever is left, unless the time-in-force forbids it.
-	if (result.remaining &gt; 0 &amp;&amp; (command.timeInForce === 'gtc' || command.timeInForce === 'day')) {
-		rest(book, { orderId, /* ... */ });
-	} else if (result.remaining &gt; 0) {
-		events.push({ kind: 'order_cancelled', reason: 'ioc_remainder', /* ... */ });
+	// During pre-open and auction the book accumulates and nothing matches. The
+	// book is allowed to cross, which is the one moment in its life it may.
+	if (found.phase !== 'continuous') {
+		const position = rest(found.book, order);
+		trackLive(state, order);
+		events.push(accepted(order, command, position));
+		return events;
 	}
 
-	return events;
+	const result = match(found.book, {
+		side: command.side,
+		quantity: command.quantity,
+		firmId: command.firmId,
+		selfTradePrevention: command.selfTradePrevention,
+		...(command.price !== undefined ? { limitPrice: command.price } : {})
+	});
+
+	// … (report the pulls and the fills, then rest or cancel the remainder)
 }</code></pre>
 </figure>
+<p>The duplicate check comes first, and it is idempotency rather than tidiness: a participant whose connection dropped mid-order does not know whether it arrived, so the only safe thing they can do is send it again — and the venue's job is to recognise the second copy rather than work it twice. Notice also where the book lives: each instrument owns its own, on <code>state.instruments.get(…).book</code>.</p>
 <h3 id="tif">Time in force</h3>
 <p>Four values, and each one is a different answer to &quot;what if I cannot fill all of it right now?&quot;</p>
-<ul><li><strong>gtc</strong> — good till cancelled. Rest the remainder. The default.</li><li><strong>day</strong> — rest it, but cancel at the close.</li><li><strong>ioc</strong> — immediate or cancel. Take what you can, cancel the rest. Never rests.</li><li><strong>fok</strong> — fill or kill. All of it right now, or none of it. Nothing rests, and nothing partially fills.</li></ul>
-<p><code>fok</code> is the interesting one, because it needs an answer *before* anything moves. You cannot match and then decide you should not have.</p>
+<ul><li><strong>gtc</strong> — good till cancelled. Rest the remainder.</li><li><strong>day</strong> — rest it, but cancel at the close.</li><li><strong>ioc</strong> — immediate or cancel. Take what you can, cancel the rest. Never rests.</li><li><strong>fok</strong> — fill or kill. All of it right now, or none of it. Nothing rests, and nothing partially fills.</li></ul>
+<p><code>fok</code> is the interesting one, because it needs an answer *before* anything moves. You cannot match and then decide you should not have — so the book is walked with <code>dryRun</code> set, which fills nothing and reports what would have traded.</p>
 
 <figure class="code">
 	<figcaption>
@@ -140,28 +169,53 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * A dry run, for fill-or-kill.
+ * The checks that can only be made once the book has been consulted.
  *
- * `fillableQuantity` walks the book and returns how much *would* trade,
- * without touching anything. If it is less than the order, the order is refused
- * and the book is exactly as it was.
- *
- * The alternative — match, notice the shortfall, undo — means writing an undo
- * for every mutation and getting it right. A read-only pass is much smaller and
- * cannot be half-applied.
+ * Separate from `checkOrder` because they need a dry run, and a dry run is the
+ * most expensive thing in the pre-trade path. Doing it for every order — rather
+ * than only for the two order types that need it — would put a book walk on the
+ * critical path of orders that were never going to look at the book at all.
  */
-export function checkAgainstBook(state: EngineState, command: PlaceOrder, book: Book) {
-	if (command.timeInForce === 'fok') {
-		const fillable = fillableQuantity(book, command.side, command.price);
-		if (fillable &lt; command.quantity) {
-			return { reason: 'fok_not_fillable' as const, detail: `Only ${fillable} available` };
+export function checkAgainstBook(
+	book: Book,
+	check: OrderCheck &amp; {
+		timeInForce: string;
+		selfTradePrevention: 'cancel_resting' | 'cancel_aggressing' | 'cancel_both';
+	}
+): Refusal | undefined {
+	if (check.timeInForce === 'fok') {
+		const request = {
+			side: check.side,
+			quantity: check.quantity,
+			firmId: check.firmId,
+			selfTradePrevention: check.selfTradePrevention,
+			...(check.price !== undefined ? { limitPrice: check.price } : {})
+		};
+
+		if (fillableQuantity(book, request) &lt; check.quantity) {
+			return {
+				reason: 'insufficient_liquidity',
+				detail: 'Fill-or-kill: the book could not fill the whole order'
+			};
 		}
 	}
 
-	if (command.orderType === 'market' &amp;&amp; depthOf(book, command.side) === 0) {
-		// A market order with nothing to buy from would otherwise rest with no
-		// price, which is not a thing an order book can hold.
-		return { reason: 'market_order_no_liquidity' as const, detail: 'The other side is empty' };
+	/*
+	 * A market order against an empty book.
+	 *
+	 * Without this it would be accepted, match nothing, and be cancelled as an
+	 * unfilled immediate-or-cancel — technically correct and useless as feedback.
+	 * &quot;There was nothing to trade against&quot; is a different problem from &quot;your
+	 * order expired&quot;, and an algorithm reacts to them differently.
+	 */
+	if (check.price === undefined) {
+		const opposite = check.side === 'buy' ? book.asks : book.bids;
+		if (opposite.length === 0) {
+			return {
+				reason: 'no_opposing_liquidity',
+				detail: 'A market order needs something on the other side of the book'
+			};
+		}
 	}
 
 	return undefined;

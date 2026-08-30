@@ -43,26 +43,21 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Every pre-trade check, in order.
+ * Run every pre-trade check, in order, and stop at the first refusal.
  *
- * The sequence is a design decision, not an accident:
- *
- *   1. Does the instrument exist?      — cheapest, and everything else assumes it
- *   2. Is it trading?                  — phase check
- *   3. Is the firm stopped?            — the kill switch beats everything below
- *   4. Is the price on a tick?         — pure arithmetic, no state
- *   5. Is the quantity a whole lot?    — same
- *   6. Is the quantity within limits?  — per-account, one lookup
- *   7. Is the price within the collar? — needs the reference price
- *   8. Is the notional within limits?  — needs price × quantity
- *   9. Would the position breach?      — needs the current position AND working orders
- *
- * Cheap and certain first, expensive and stateful last. A malformed order is
- * refused by arithmetic before it costs a single lookup, and the kill switch
- * sits above every business rule because &quot;stop&quot; must mean stop.
+ * The order is not arbitrary. Cheap and unconditional checks come first, so the
+ * common rejections cost the least; and structural problems (&quot;no such
+ * instrument&quot;) are reported before policy ones (&quot;too big&quot;), because telling
+ * somebody their order exceeds a limit on an instrument that does not exist is
+ * a confusing way to say the symbol is wrong.
  */
-export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | undefined {</code></pre>
+export function checkOrder(
+	state: EngineState,
+	instrument: Instrument | undefined,
+	check: OrderCheck
+): Refusal | undefined {</code></pre>
 </figure>
+<ul><li>1. Does the instrument exist? — everything else assumes it</li><li>2. Is it in a phase that accepts orders?</li><li>3. Is the firm stopped? — the kill switch beats every business rule below</li><li>4. Is the price on the tick ladder? — pure arithmetic, no state</li><li>5. Is the quantity a whole number of lots? — same</li><li>6. Is the quantity within the account's order-size limit?</li><li>7. Is the price inside the collar? — needs the reference price</li><li>8. Is the notional within limits? — needs price × quantity</li><li>9. Would the position limit be breached? — needs the position AND the working orders</li></ul>
 <h3 id="ticks">Ticks and lots</h3>
 <p>A <strong>tick</strong> is the smallest price increment an instrument trades in. If the tick is 25 scaled units (a quarter of a penny), then £45.5025 is a valid price and £45.5030 is not.</p>
 
@@ -71,10 +66,26 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 		<span class="code__file">packages/core/src/risk.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	if (command.price !== undefined &amp;&amp; !isOnTick(command.price, instrument.tickSize)) {
+	<pre><code class="lang-ts">	/*
+	 * The grids. A price off the tick ladder or a quantity off the lot grid is
+	 * rejected rather than rounded.
+	 *
+	 * Rounding would be friendlier and is the wrong call: price-time priority
+	 * only means something if two orders &quot;at the same price&quot; are the same
+	 * number, and a participant who asked for 455.03 and got 455.00 has been
+	 * given a different order from the one they sent. Refusing is honest.
+	 */
+	if (check.price !== undefined &amp;&amp; !isOnTick(check.price, instrument.tickSize)) {
 		return {
 			reason: 'price_off_tick',
-			detail: `${formatPrice(command.price)} is not a multiple of the ${instrument.tickSize} tick`
+			detail: `Price must be a multiple of ${instrument.tickSize}`
+		};
+	}
+
+	if (check.quantity % instrument.lotSize !== 0) {
+		return {
+			reason: 'quantity_off_lot',
+			detail: `Quantity must be a multiple of ${instrument.lotSize}`
 		};
 	}</code></pre>
 </figure>
@@ -92,27 +103,42 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
-	 * The collar is anchored on the **last trade** if there has been one, and on
-	 * the listing reference price if not.
+	 * The fat-finger collar.
 	 *
-	 * Using the last trade means the band follows a genuinely moving market
-	 * rather than a stale number set at listing — an instrument that has run 30%
-	 * over a week should not have every order refused because the anchor is a
-	 * week old.
+	 * A limit price far from the reference is almost always a decimal point in
+	 * the wrong place — the classic is a price typed in pounds into a field that
+	 * wants pence. Collaring it costs a participant nothing on a normal order and
+	 * saves them from selling a hundred thousand shares at a hundredth of their
+	 * value.
+	 *
+	 * Only limit orders are collared. A market order has no price to check, which
+	 * is why a market order is a far more dangerous instruction than it looks and
+	 * why we only accept it as immediate-or-cancel.
 	 */
-	const anchor = instrument.lastTradePrice ?? instrument.referencePrice;
-	const band = Math.floor((anchor * instrument.collarBasisPoints) / 10_000);
+	if (check.price !== undefined) {
+		const distance = Math.abs(check.price - instrument.referencePrice);
+		const allowed = Math.trunc((instrument.referencePrice * limits.priceCollarBps) / 10_000);
 
-	if (command.price !== undefined &amp;&amp; Math.abs(command.price - anchor) &gt; band) {
-		return {
-			reason: 'price_outside_collar',
-			detail: `${formatPrice(command.price)} is more than ${
-				instrument.collarBasisPoints / 100
-			}% from ${formatPrice(anchor)}`
-		};
+		if (distance &gt; allowed) {
+			return {
+				reason: 'price_outside_collar',
+				detail: `Price is more than ${limits.priceCollarBps / 100}% from the reference of ${instrument.referencePrice}`
+			};
+		}
 	}</code></pre>
 </figure>
-<aside class="callout callout--note"><p>A collar refuses *good* orders too — a genuine 20% move gets blocked until an operator widens the band or the reference catches up. That is the trade every venue makes: a few refused orders in a fast market, against one catastrophic fill. Nobody has ever regretted the collar.</p></aside>
+<p>The band's width comes from the account's risk limits (<code>limits.priceCollarBps</code>), and it is anchored on <code>instrument.referencePrice</code> — which starts as the listing reference and then follows the market, because the engine moves it on every fill:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/core/src/apply.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		// The reference price follows the market. Every collar from here on is
+		// measured against where the instrument actually traded.
+		found.referencePrice = fill.price;</code></pre>
+</figure>
+<aside class="callout callout--note"><p>An anchor that moves with the market is the point: a collar fixed at yesterday's close would reject perfectly ordinary orders by the afternoon of a volatile day. A collar still refuses *good* orders too — a genuine 20% gap gets blocked until the limits are widened or the reference catches up. That is the trade every venue makes: a few refused orders in a fast market, against one catastrophic fill. Nobody has ever regretted the collar.</p></aside>
 <h3 id="working-exposure">Position limits, including what is still working</h3>
 <p>A position limit says &quot;this account may not be more than 50,000 shares long&quot;. The naive check compares the current position against the limit. It is wrong, and the way it is wrong is instructive.</p>
 
@@ -122,25 +148,32 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
-	 * The check includes orders that are still **working**, not just the
-	 * position.
+	 * The position limit, counting resting exposure as well as filled.
 	 *
-	 * An account at zero with 49,000 shares of resting bids is one fill away from
-	 * 49,000 long. Checking only the position would let it rest another 49,000,
-	 * and if both fill it is 98,000 long against a 50,000 limit — with every
-	 * individual order having passed the check.
+	 * The worst case is what matters: if everything this account has working on
+	 * this side filled, plus this new order, where would the position be? An
+	 * account long 40,000 with 8,000 more resting to buy has 48,000 of the 50,000
+	 * limit committed, whatever the position column says.
 	 *
-	 * This is the shape of nearly every limit bug: the limit is checked against
-	 * what has happened rather than against what has been *promised*.
+	 * Only the side that would *increase* absolute exposure is counted. An order
+	 * that reduces a position is always allowed through, because refusing
+	 * somebody the ability to flatten a position they are already over the limit
+	 * on is how a limit turns into a trap.
 	 */
-	const position = state.positions.get(positionKey(command.accountId, command.instrumentId)) ?? 0;
-	const working = workingExposure(state, command.accountId, command.instrumentId, command.side);
-	const after = position + working + signedQuantity;
+	const position = positionOf(state, check.accountId, check.instrumentId);
+	const working = workingOf(state, check.accountId, check.instrumentId);
 
-	if (Math.abs(after) &gt; limits.maxPosition) {
+	const projected =
+		check.side === 'buy'
+			? position + working.buy + check.quantity
+			: position - working.sell - check.quantity;
+
+	const reduces = Math.abs(projected) &lt;= Math.abs(position);
+
+	if (!reduces &amp;&amp; Math.abs(projected) &gt; limits.maxPositionQuantity) {
 		return {
-			reason: 'position_limit',
-			detail: `Would take the position to ${after}, past the ${limits.maxPosition} limit`
+			reason: 'exceeds_position_limit',
+			detail: `Would take the position to ${projected}, past the limit of ${limits.maxPositionQuantity}`
 		};
 	}</code></pre>
 </figure>
@@ -152,30 +185,43 @@ export function checkOrder(state: EngineState, command: PlaceOrder): Refusal | u
 		<span class="code__file">packages/core/src/apply.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">function setKillSwitch(state: EngineState, command: SetKillSwitch, seq: number): Event[] {
+	<pre><code class="lang-ts">/**
+ * The kill switch.
+ *
+ * Engaging it does two things at once, and both are necessary: it stops new
+ * orders, and it pulls every order the firm already has resting. Doing only the
+ * first would leave an algorithm that has already flooded the book with
+ * mispriced liquidity exposed to everyone who noticed.
+ */
+function setKillSwitch(
+	state: EngineState,
+	command: Extract&lt;Command, { kind: 'set_kill_switch' }&gt;
+): Event[] {
 	const events: Event[] = [];
+	let cancelled = 0;
 
 	if (command.engaged) {
 		state.killed.add(command.targetFirmId);
 
-		// Pull everything the firm has resting. All of it, atomically, before the
-		// event that says the switch was engaged.
-		for (const order of ordersOf(state, command.targetFirmId)) {
-			remove(state.books.get(order.instrumentId)!, order);
-			events.push({ kind: 'order_cancelled', reason: 'kill_switch', /* ... */ });
+		for (const live of [...state.orders.values()]) {
+			if (live.firmId !== command.targetFirmId) continue;
+			events.push(pull(state, live, 'kill_switch'));
+			cancelled += 1;
 		}
 	} else {
 		state.killed.delete(command.targetFirmId);
 	}
 
-	/*
-	 * The change is reported **after** the cancellations it caused, so a consumer
-	 * reading the stream in order sees the orders go and then learns why.
-	 *
-	 * The other order would have consumers seeing &quot;trading stopped&quot; followed by
-	 * a burst of cancellations they cannot attribute to it.
-	 */
-	events.push({ kind: 'kill_switch_changed', /* ... */, ordersCancelled: events.length });
+	// The change is reported *after* the cancellations it caused, so a consumer
+	// reading the stream in order sees the orders go and then learns why.
+	events.push({
+		kind: 'kill_switch_changed',
+		firmId: command.targetFirmId,
+		engaged: command.engaged,
+		reason: command.reason,
+		setBy: command.actorId,
+		ordersCancelled: cancelled
+	});
 
 	return events;
 }</code></pre>

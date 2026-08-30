@@ -43,8 +43,12 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
-	&lt;title&gt;Your appointment — {booking.business.name}&lt;/title&gt;
-	&lt;!-- The URL contains a credential. Never index it. --&gt;
+	&lt;title&gt;Your appointment — Halfpast&lt;/title&gt;
+	&lt;!--
+		Never index this page. The URL is the credential, and a search engine that
+		crawled it would publish somebody's appointment along with the ability to
+		cancel it.
+	--&gt;
 	&lt;meta name=&quot;robots&quot; content=&quot;noindex, nofollow&quot; /&gt;
 &lt;/svelte:head&gt;</code></pre>
 </figure>
@@ -56,16 +60,23 @@
 		<span class="code__file">src/routes/booking/[token]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if canCancel}
-	&lt;Button variant=&quot;ghost&quot; onclick={() =&gt; void cancel()}&gt;Cancel this appointment&lt;/Button&gt;
-{:else}
-	&lt;p class=&quot;text-muted&quot;&gt;
-		Appointments can be cancelled up to {booking.business.cancellationNoticeHours} hours
-		beforehand. Please call the studio on {booking.business.phone}.
+	<pre><code class="lang-svelte">{#if b.canCancel}
+	&lt;Button variant=&quot;secondary&quot; full onclick={() =&gt; void cancel()} loading={cancelling}&gt;
+		Cancel this appointment
+	&lt;/Button&gt;
+	&lt;p class=&quot;small text-faint&quot;&gt;
+		Free to cancel up to {b.cancellationNoticeHours} hours beforehand.
 	&lt;/p&gt;
+{:else if !cancelled}
+	&lt;Alert tone=&quot;warning&quot; title=&quot;Too late to cancel online&quot;&gt;
+		&lt;p&gt;
+			Please ring the studio{b.businessPhone ? ` on ${b.businessPhone}` : ''} and they will sort it
+			out.
+		&lt;/p&gt;
+	&lt;/Alert&gt;
 {/if}</code></pre>
 </figure>
-<p>Two things worth copying here. First, the rule is stated <strong>with</strong> the refusal — &quot;up to 24 hours beforehand&quot; tells them why the button is missing. Second, there is a way forward: the phone number, not a dead end.</p>
+<p>Two things worth copying here. First, the rule is stated <strong>with the working button</strong>, not the refusal — &quot;Free to cancel up to 24 hours beforehand&quot; sits right under the control while it still works, so the customer learns the boundary before they ever hit it. Second, once the button is gone, there is still a way forward: an alert naming the studio's phone number, not a dead end.</p>
 <p>And the server checks the same rule. The hidden button is manners; <code>cancelBooking</code> re-derives the notice window from the database, because a hidden button is not a control.</p>
 <h3 id="single-flight">Cancelling in one round trip</h3>
 
@@ -103,8 +114,8 @@
 <p>Without the <code>refresh()</code> line: post the cancellation, wait for a response, fire a fresh query, wait again, then re-render — with a stretch in the middle where the page still says &quot;confirmed&quot; and the customer wonders whether the button worked. With it, the response that confirms the cancellation carries the new state of the page.</p>
 <p>The status codes are chosen, not defaulted. <strong>409 Conflict</strong> for &quot;too late to cancel&quot;, because the request was perfectly valid and the world simply moved on; 400 for anything else the domain refuses. A blanket 400 would tell a monitoring dashboard that customers are sending malformed requests, when in fact they are arriving four minutes late.</p>
 <h3 id="freed">And the slot goes back on sale</h3>
-<p>Cancelling deletes the booking's claim rows — <code>onDelete: 'cascade'</code> does it — and publishes a diary change. Every booking page currently open on that day gets the freed time back within a second, without anybody refreshing anything.</p>
-<p>That is worth pausing on, because it is the payoff for all the machinery: three separate design decisions (cascade deletes, the claims table, live queries) combine into a behaviour nobody had to write.</p>
+<p>Cancelling does not delete the booking. It updates its <code>status</code> to <code>'cancelled'</code> and explicitly deletes its claim rows — <code>tx.delete(slotClaim).where(eq(slotClaim.bookingId, found.id))</code> — then publishes a diary change. <code>slotClaim.bookingId</code> does carry <code>onDelete: 'cascade'</code>, but that only fires if the booking row itself were ever deleted, which cancellation never does: the record has to survive so the studio still has something to look up. Every booking page currently open on that day gets the freed time back within a second, without anybody refreshing anything.</p>
+<p>That is worth pausing on, because it is the payoff for all the machinery: three separate design decisions (the claims table kept separate from the booking record, an explicit delete on cancellation, live queries) combine into a behaviour nobody had to write.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

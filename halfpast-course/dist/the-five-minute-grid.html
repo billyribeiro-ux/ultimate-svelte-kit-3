@@ -140,6 +140,8 @@ export function slotsIn({ start, end }: Interval): number[] {
 	for (const next of sorted) {
 		const current = merged[merged.length - 1];
 		if (current &amp;&amp; next.start &lt;= current.end) {
+			// Overlapping or touching — widen the one we are holding. `Math.max` is
+			// needed because the next interval may be entirely inside the current one.
 			merged[merged.length - 1] = { start: current.start, end: Math.max(current.end, next.end) };
 		} else {
 			merged.push({ start: next.start, end: next.end });

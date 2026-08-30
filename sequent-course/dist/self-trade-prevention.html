@@ -38,7 +38,7 @@
 			<p>Northgate has two desks. The equities desk bids £45.50; the systematic desk offers £45.50. They match. Northgate has bought from itself.</p>
 <p>That is called a <strong>wash trade</strong>, and it is a problem for two reasons. It costs the firm two lots of fees for a trade that moved nothing, and — much more seriously — it prints on the public tape as real volume. A firm doing it deliberately is manipulating the market; a firm doing it accidentally still looks like it is.</p>
 <h3 id="three-answers">Three answers</h3>
-<ul><li><strong>cancel_resting</strong> — pull the resting order, let the aggressor continue past it</li><li><strong>cancel_aggressor</strong> — refuse the incoming order, leave the book alone</li><li><strong>cancel_both</strong> — pull both. The safest, and the default here.</li></ul>
+<ul><li><strong>cancel_resting</strong> — pull the resting order, let the aggressor continue past it</li><li><strong>cancel_aggressing</strong> — refuse the incoming order, leave the book alone</li><li><strong>cancel_both</strong> — pull both. The safest, and the default here.</li></ul>
 <p>The client chooses per order, because which one is right depends on what the desks are doing and only the firm knows.</p>
 <h3 id="the-bug">The bug</h3>
 <p>Here is roughly what the first implementation looked like, inside the matching loop:</p>
@@ -59,42 +59,41 @@
 }</code></pre>
 </figure>
 <p>Read the return statement. It returns <code>fills: []</code>.</p>
-<p>Now consider what has already happened by the time we reach it. The aggressive order may have walked through <strong>two other price levels</strong> first, trading against genuine counterparties, and <code>match</code> mutated the book as it went — <code>resting.filled</code> was incremented, <code>level.total</code> was reduced, exhausted orders were shifted off.</p>
-<aside class="callout callout--warn"><p>So the book has changed, real trades have occurred, and the function returns an empty list of fills. The engine emits no <code>traded</code> events for them. Quantity has vanished: shares left the book and nobody was told. The ledger balances, the book looks fine, and two firms' positions are silently wrong.</p></aside>
+<p>Now consider what has already happened by the time we reach it. The aggressive order may have walked through <strong>two other price levels</strong> first, trading against genuine counterparties, and <code>match</code> mutated the book as it went — <code>resting.remaining</code> was decremented, <code>level.total</code> was reduced, exhausted orders were spliced out.</p>
+<aside class="callout callout--warn"><p>So the book has changed, real trades have occurred, and the function returns an empty list of fills. The engine emits no <code>traded</code> events for them: the venue has consumed liquidity without reporting a trade for it, and the book and the participants' records disagree from that moment on — silently, forever.</p></aside>
 <h3 id="how-found">How it was found</h3>
 <p>Not by an example test. Every example test anybody wrote had the self-trade as the *first* thing the order met, because that is how you naturally write the test — set up the scenario you are testing, minimally.</p>
-<p>It was found by a property test that generates random order sequences and asserts an invariant after every one:</p>
+<p>It was found by a property test that generates whole random sessions — places, cancels, kill switches, phase changes — runs each one through <code>apply</code>, and then asserts that quantity was conserved:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/core/src/invariants.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('conserves quantity', () =&gt; {
+	<pre><code class="lang-ts">it('conserves quantity: every share bought was sold by somebody', () =&gt; {
 	fc.assert(
-		fc.property(fc.array(orderArbitrary, { maxLength: 40 }), (orders) =&gt; {
-			const state = freshVenue();
-			let traded = 0;
+		fc.property(arbSession, (steps) =&gt; {
+			const { state, events } = run(steps);
 
-			for (const [index, order] of orders.entries()) {
-				for (const event of apply(state, sequence(order, index))) {
-					if (event.kind === 'traded') traded += event.quantity;
-				}
-			}
+			// Positions are signed, so the whole venue must net to zero. If it
+			// does not, the engine has created or destroyed shares.
+			const total = [...state.positions.values()].reduce((sum, n) =&gt; sum + n, 0);
+			expect(total).toBe(0);
 
-			/*
-			 * Everything that entered the venue is either resting, filled, or
-			 * cancelled. Nothing simply stops existing.
-			 */
-			expect(restingQuantity(state) + traded + cancelledQuantity)
-				.toBe(submittedQuantity(orders));
+			// And the same total reached from the other direction: the sum of
+			// traded quantity has to match what the positions say changed.
+			const traded = trades(events).reduce((sum, t) =&gt; sum + t.quantity, 0);
+			const longs = [...state.positions.values()].filter((n) =&gt; n &gt; 0).reduce((a, b) =&gt; a + b, 0);
+			expect(longs).toBeLessThanOrEqual(traded);
 		}),
 		{ numRuns: 400 }
 	);
 });</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>arbSession</code> generates up to 120 weighted random commands; <code>run</code> feeds them through <code>apply</code> one <code>seq</code> at a time and collects every event, exactly as the log would. The same file asserts five more properties over every generated session: an uncrossed book during continuous trading, no negative or over-filled orders, the index and the book agreeing, working exposure matching what is resting, and byte-identical replay.</p></aside>
 <p>Somewhere in four hundred random sequences was one where a firm's own order sat two levels deep, behind two genuine counterparties. The quantity did not add up, and the shrinker reduced it to a four-order case you could read.</p>
 <h3 id="the-fix">The fix, and the shape it took</h3>
+<p>The fix has two parts: every branch now returns the <code>fills</code> it has actually applied, and the pulls are settled through a single exit point. The shipped code keeps a comment on the branch — returning <code>fills: []</code> &quot;was a genuine bug and a nasty one&quot;, found by property-based testing &quot;in about four seconds&quot;.</p>
 
 <figure class="code">
 	<figcaption>
@@ -102,12 +101,17 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Pull the orders self-trade prevention marked, once, on the way out.
+ * Take the collected self-trade-prevention cancels off the book.
  *
- * A single exit point, and it exists because the first version removed orders
- * at each of the three branches — which meant `dryRun` was honoured in two of
- * them and forgotten in the third, and the reported &quot;pulled&quot; list did not match
- * what had actually been removed.
+ * Every exit from the walk goes through here, and that is the point. An
+ * earlier version returned directly from the `cancel_both` branch and skipped
+ * the removal — so the result said the resting order had been pulled while it
+ * was still sitting on the book, happily matchable. The event stream would
+ * have announced a cancellation that never happened, and the book and the
+ * ledger would have disagreed from that moment on.
+ *
+ * A single exit point is not stylistic here. It is the difference between the
+ * report and the reality being the same thing.
  */
 const settlePulls = (): Pulled[] =&gt; {
 	if (request.dryRun) return [];
@@ -120,10 +124,16 @@ const settlePulls = (): Pulled[] =&gt; {
 	return pulled;
 };
 
-// ...and every STP branch now returns the fills it has actually applied:
-case 'cancel_both':
-	toPull.push(resting);
-	return { fills, remaining, pulled: settlePulls(), aggressorCancelled: true };</code></pre>
+// …
+
+		case 'cancel_both':
+			toPull.push(resting);
+			return {
+				fills,
+				remaining: remaining as Quantity,
+				pulled: settlePulls(),
+				aggressorCancelled: true
+			};</code></pre>
 </figure>
 
 <aside class="callout callout--why">

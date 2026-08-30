@@ -86,18 +86,20 @@ const updatedAt = () =&gt;
 	.notNull()
 	.references(() =&gt; service.id, { onDelete: 'restrict' }),
 
-/* --- snapshots, frozen at booking time --- */
-serviceName: text('service_name').notNull(),
-durationMinutes: integer('duration_minutes').notNull(),
-priceCents: integer('price_cents').notNull(),
-currency: text('currency').notNull(),
+// …
 
 /**
  * The business's zone as it was when this was booked. Snapshotted because a
  * business can move, and &quot;your appointment was at 2pm&quot; should not silently
  * become 3pm in the confirmation you look at a year later.
  */
-timeZone: text('time_zone').notNull(),</code></pre>
+timeZone: text('time_zone').notNull(),
+
+/* --- snapshots, frozen at booking time --- */
+serviceName: text('service_name').notNull(),
+durationMinutes: integer('duration_minutes').notNull(),
+priceCents: integer('price_cents').notNull(),
+currency: text('currency').notNull(),</code></pre>
 </figure>
 <p>The booking holds a foreign key to the service <strong>and</strong> a copy of the service's name, duration, price and currency. That looks like sloppy normalisation. It is the opposite.</p>
 

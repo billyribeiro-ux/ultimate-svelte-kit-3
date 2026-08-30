@@ -58,14 +58,19 @@ cd apps/web</code></pre>
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-node';
 
+/* … */
 export default defineConfig(({ mode }) =&gt; {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
 	return {
 		plugins: [
 			sveltekit({
+				// …
 				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
+
+				/* … */
 				csrf: { trustedOrigins: ['*'] },
+
 				compilerOptions: { runes: true, experimental: { async: true } },
 				adapter: adapter(),
 				experimental: { remoteFunctions: true }
@@ -95,7 +100,9 @@ export default defineConfig(({ mode }) =&gt; {
 	</figcaption>
 	<pre><code class="lang-json">{
 	&quot;name&quot;: &quot;@sequent/web&quot;,
+	…
 	&quot;type&quot;: &quot;module&quot;,
+	…
 	&quot;imports&quot;: {
 		&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
 	}
@@ -143,8 +150,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
+	// …
 	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
 
+	/* … */
 	&quot;include&quot;: [
 		&quot;src/**/*.ts&quot;,
 		&quot;src/**/*.js&quot;,
@@ -157,6 +166,7 @@ build/server/chunks/index-BqK2v8.js:1:2847
 
 	&quot;compilerOptions&quot;: {
 		&quot;strict&quot;: true,
+		// …
 		&quot;noUncheckedIndexedAccess&quot;: true,
 		&quot;noImplicitOverride&quot;: true,
 		&quot;noFallthroughCasesInSwitch&quot;: true,

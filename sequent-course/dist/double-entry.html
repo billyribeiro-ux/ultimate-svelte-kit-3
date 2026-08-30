@@ -44,7 +44,7 @@
 <p>That single rule is worth more than every other correctness measure in this project put together. A ledger that balances *by construction* cannot silently lose a penny. A ledger that is *checked nightly* can lose one every day for a month before anybody runs the report.</p>
 <h3 id="signs">Signs, not columns</h3>
 <p>Textbook double entry uses two columns — debit and credit — and a rule about which side increases which kind of account. That is the right notation for a human with a pen and the wrong one for a database.</p>
-<p>Two columns means two places to make an error, and a balance check written as <code>SUM(debit) - SUM(credit)</code> — which is a subtraction somebody will eventually get backwards. One <strong>signed</strong> column makes &quot;does this balance&quot; into <code>SUM(amount) = 0</code>, which is very hard to get wrong.</p>
+<p>Two columns means two places to make an error, and a balance check written as <code>SUM(debit) - SUM(credit)</code> — which is a subtraction somebody will eventually get backwards. One <strong>signed</strong> column — positive is a debit, negative is a credit — makes &quot;does this balance&quot; into <code>SUM(amount) = 0</code>, which is very hard to get wrong.</p>
 
 <figure class="code">
 	<figcaption>
@@ -53,29 +53,35 @@
 	</figcaption>
 	<pre><code class="lang-ts">export interface Posting {
 	readonly accountId: string;
-	/** Positive is a debit, negative is a credit. They must cancel. */
 	readonly amount: Amount;
 }
 
-export async function postTransaction(tx: Executor, input: {
-	transactionId: string;
-	seq: number;
-	at: number;
-	kind: string;
-	postings: readonly Posting[];
-}): Promise&lt;void&gt; {
+// …
+
+export async function postTransaction(
+	tx: Executor,
+	input: {
+		transactionId: string;
+		seq: number;
+		at: number;
+		kind: string;
+		reference?: string;
+		postings: readonly Posting[];
+	}
+): Promise&lt;void&gt; {
 	const total = input.postings.reduce((sum, posting) =&gt; sum + posting.amount, 0);
 
 	if (total !== 0) {
 		throw new UnbalancedTransaction(input.transactionId, total, input.postings);
 	}
 
-	// A transaction with no postings balances trivially and means nothing.
+	// A transaction with no postings balances trivially and means nothing. Almost
+	// always a bug in the caller rather than a deliberate no-op.
 	if (input.postings.length === 0) {
 		throw new Error(`Ledger transaction ${input.transactionId} has no postings`);
 	}
 
-	// ...insert
+	// …
 }</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Notice what is <strong>not</strong> here: any attempt to fix an imbalance. Rounding the difference into one of the postings would make every transaction balance and quietly move the error into the ledger, where it would compound. Refusing is the feature.</p></aside>
@@ -116,16 +122,16 @@ export async function postTransaction(tx: Executor, input: {
 	</figcaption>
 	<pre><code class="lang-ts">const postings: Posting[] = [
 	// The exchange of value itself.
-	{ accountId: buyerCash,   amount: -notional },
-	{ accountId: buyerStock,  amount:  notional },
-	{ accountId: sellerStock, amount: -notional },
-	{ accountId: sellerCash,  amount:  notional },
+	{ accountId: buyerCash, amount: -notional as Amount },
+	{ accountId: buyerStock, amount: notional as Amount },
+	{ accountId: sellerStock, amount: -notional as Amount },
+	{ accountId: sellerCash, amount: notional as Amount },
 
-	// Fees. A negative fee is a rebate, and the sign handles it with no special
-	// case anywhere: the maker is *paid*, and the arithmetic is identical.
-	{ accountId: buyerCash,   amount: -event.buyerFee },
-	{ accountId: sellerCash,  amount: -event.sellerFee },
-	{ accountId: revenue,     amount:  event.buyerFee + event.sellerFee }
+	// Fees. A negative fee is a rebate, and the sign handles it with no
+	// special case anywhere.
+	{ accountId: buyerCash, amount: -event.buyerFee as Amount },
+	{ accountId: sellerCash, amount: -event.sellerFee as Amount },
+	{ accountId: revenue, amount: (event.buyerFee + event.sellerFee) as Amount }
 ];</code></pre>
 </figure>
 <p>Seven postings, summing to zero. The buyer's cash goes down by the notional and their stock up by it; the seller's the reverse; the fees come out of both and land in the venue's revenue account.</p>
@@ -137,8 +143,8 @@ export async function postTransaction(tx: Executor, input: {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-sql">-- Corrections are reversing entries, never updates. Same rule as the log, and
--- for the same reason: an accountant's question is &quot;what did you think the
--- balance was in March&quot;, and an updated row cannot answer it.
+-- for the same reason: an accountant's question is &quot;what did you think in
+-- March&quot;, and an updated row cannot answer it.
 CREATE TRIGGER IF NOT EXISTS ledger_posting_is_permanent
 BEFORE UPDATE ON ledger_posting
 BEGIN
@@ -158,11 +164,29 @@ END;</code></pre>
  * negatives of the original's. The books end up where they would have been if
  * the mistake had never happened, and the record still shows that it did.
  */
-export async function reverseTransaction(/* ... */) {
+export async function reverseTransaction(
+	tx: Executor,
+	client: Client,
+	originalId: string,
+	input: { transactionId: string; seq: number; at: number; reason: string }
+): Promise&lt;void&gt; {
+	const result = await client.execute({
+		sql: 'SELECT account_id, amount FROM ledger_posting WHERE transaction_id = ?',
+		args: [originalId]
+	});
+
+	// …
+
 	await postTransaction(tx, {
+		transactionId: input.transactionId,
+		seq: input.seq,
+		at: input.at,
 		kind: 'reversal',
 		reference: `${originalId} ${input.reason}`,
-		postings: original.map((row) =&gt; ({ accountId: row.accountId, amount: -row.amount }))
+		postings: result.rows.map((row) =&gt; ({
+			accountId: String(row['account_id']),
+			amount: -Number(row['amount']) as Amount
+		}))
 	});
 }</code></pre>
 </figure>
@@ -182,10 +206,15 @@ export async function reverseTransaction(/* ... */) {
  *
  * Running it is the cheapest possible audit and it should be part of the test
  * suite rather than a monthly ritual. If it is ever non-zero, something has
- * written to `ledger_posting` outside `postTransaction` — and finding out
- * which day that started is much easier than finding out which year.
+ * written to `ledger_posting` outside `postTransaction`, and finding out which
+ * day that started is much easier than finding out which year.
  */
-export async function trialBalance(client: Client) { /* ... */ }</code></pre>
+export async function trialBalance(client: Client): Promise&lt;{
+	accounts: Array&lt;{ accountId: string; kind: string; balance: number }&gt;;
+	total: number;
+}&gt; {
+	// …
+}</code></pre>
 </figure>
 <p>This assertion appears at the end of the load test, the fault-injection tests, and the projection tests. It is the single most valuable line in the suite: <code>expect(total).toBe(0)</code>.</p>
 

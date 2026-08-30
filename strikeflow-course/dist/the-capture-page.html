@@ -42,12 +42,18 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { ArrowRightIcon, CheckIcon, LockSimpleIcon } from 'phosphor-svelte';
+	// …
 	import { requestGuide } from './guide.remote.ts';
+	// …
 &lt;/script&gt;
 
+&lt;!-- …the hero copy column, then: --&gt;
 &lt;form {...requestGuide} class=&quot;signup&quot; aria-labelledby=&quot;signup-heading&quot;&gt;
 	&lt;h2 id=&quot;signup-heading&quot; class=&quot;signup__title&quot;&gt;Get the guide&lt;/h2&gt;
+	&lt;p class=&quot;signup__sub&quot;&gt;Enter your email and we'll send you straight to the download.&lt;/p&gt;
 
+	&lt;!-- Email --&gt;
 	&lt;div class=&quot;field&quot;&gt;
 		&lt;label class=&quot;field__label&quot; for=&quot;guide-email&quot;&gt;Email address&lt;/label&gt;
 		&lt;input
@@ -56,9 +62,12 @@
 			placeholder=&quot;you@example.com&quot;
 			autocomplete=&quot;email&quot;
 			{...requestGuide.fields.email.as('email')}
-			aria-describedby={requestGuide.fields.email.issues() ? 'guide-email-error' : undefined}
+			aria-describedby={requestGuide.fields.email.issues()
+				? 'guide-email-error'
+				: undefined}
 		/&gt;
 		{#if requestGuide.fields.email.issues()}
+			&lt;!-- … --&gt;
 			&lt;p class=&quot;field__error&quot; id=&quot;guide-email-error&quot; role=&quot;alert&quot;&gt;
 				{#each requestGuide.fields.email.issues() ?? [] as issue (issue.message)}
 					{issue.message}
@@ -67,9 +76,20 @@
 		{/if}
 	&lt;/div&gt;
 
+	&lt;!-- …the experience &lt;select&gt; and the consent checkbox repeat the same field pattern… --&gt;
+
+	&lt;!-- …the honeypot — shown in the next section… --&gt;
+
 	&lt;button class=&quot;signup__submit&quot; type=&quot;submit&quot; disabled={requestGuide.pending &gt; 0}&gt;
-		{#if requestGuide.pending &gt; 0}Sending…{:else}Send me the guide{/if}
+		{#if requestGuide.pending &gt; 0}
+			Sending…
+		{:else}
+			Send me the guide
+			&lt;ArrowRightIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+		{/if}
 	&lt;/button&gt;
+
+	&lt;!-- …the privacy reassurance line (LockSimpleIcon + a link to the policy)… --&gt;
 &lt;/form&gt;</code></pre>
 </figure>
 <h3 id="spread">What the spreads do</h3>

@@ -44,40 +44,66 @@
 		<span class="code__file">packages/protocol/src/ids.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * An order id, derived from the command that created it.
+	<pre><code class="lang-ts">function tag&lt;T extends string&gt;(value: string): T {
+	return value as T;
+}
+
+// …
+
+/**
+ * The identifier for a trade, derived from where it happened in the log.
  *
- * `O-0000000000001834` — the sequence number, zero-padded so ids sort
- * lexicographically in the same order they were created. That padding is worth
- * the ugliness: it means `ORDER BY order_id` and `ORDER BY seq` agree, and a
- * directory listing or a log file sorts correctly by accident.
+ * `T-0000000000001834-002` is the third trade produced by command 1,834. A
+ * single aggressive order can sweep several price levels and produce several
+ * trades from one command, which is what the suffix is for.
  *
- * Deterministic, so replay produces the same ids. Self-describing, so
- * &quot;where did this order come from&quot; is answered by reading it rather than by a
- * join.
+ * Two properties fall out of this for free, and both are worth more than they
+ * cost:
+ *
+ *   - **Reproducible.** Replay the log and every trade gets the same id it had
+ *     the first time. An auditor's query written a year ago still joins.
+ *   - **Self-locating.** Given a trade id you can find the command that caused
+ *     it without a lookup — the sequence number is right there in the string.
+ *     During an incident that is the difference between a minute and an hour.
+ *
+ * The sequence number is zero-padded to sixteen digits so that lexicographic
+ * order matches chronological order. That is the same reason ISO 8601 dates are
+ * written most-significant-first, and it means a plain `ORDER BY trade_id`
+ * sorts the tape correctly with no index on anything else.
  */
-export function orderIdFor(seq: number): OrderId {
-	return `O-${String(seq).padStart(16, '0')}` as OrderId;
+export function tradeIdFor(seq: number, index: number): TradeId {
+	if (!Number.isInteger(seq) || seq &lt; 0) throw new RangeError(`bad sequence: ${seq}`);
+	if (!Number.isInteger(index) || index &lt; 0) throw new RangeError(`bad index: ${index}`);
+
+	return tag&lt;TradeId&gt;(`T-${String(seq).padStart(16, '0')}-${String(index).padStart(3, '0')}`);
+}
+
+/** Recover the sequence number a trade id was minted at. */
+export function seqOfTrade(id: TradeId): number {
+	const [, seq] = id.split('-');
+	if (seq === undefined) throw new RangeError(`not a trade id: ${id}`);
+	return Number(seq);
 }
 
 /**
- * A trade id: the sequence number, plus which trade this was within the command.
+ * The venue's identifier for an order, derived from the command that placed it.
  *
- * One aggressive order can produce several trades as it eats through a level,
- * so the sequence number alone is not unique. The index disambiguates, and
- * keeps them in the order they occurred.
+ * One `place_order` command produces at most one order, so the sequence number
+ * is already a unique name for it and inventing a second one would only create
+ * something else to keep in step.
  *
- *   T-0000000000001834-002
- *     └ the command       └ the third trade it produced
+ * The gateway could have assigned this before the log — that was the first
+ * design — but deriving it here is strictly better: the engine no longer has to
+ * trust an identifier it did not produce, two commands cannot arrive claiming
+ * the same order id, and a replay reconstructs every id exactly. The gateway
+ * learns the id from the acceptance event, which it was waiting for anyway.
  */
-export function tradeIdFor(seq: number, index: number): TradeId {
-	return `T-${String(seq).padStart(16, '0')}-${String(index).padStart(3, '0')}` as TradeId;
+export function orderIdFor(seq: number): OrderId {
+	if (!Number.isInteger(seq) || seq &lt; 0) throw new RangeError(`bad sequence: ${seq}`);
+	return tag&lt;OrderId&gt;(`O-${String(seq).padStart(16, '0')}`);
 }
 
-/** And back, because an id that cannot be read is only half an id. */
-export function seqOfTrade(id: TradeId): number {
-	return Number(id.slice(2, 18));
-}</code></pre>
+// …</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -93,19 +119,76 @@ export function seqOfTrade(id: TradeId): number {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Random identifiers, at a separate subpath.
+ * Identifier generation. Server side only, and enforced by the module graph.
  *
- * This file is exported as `@sequent/protocol/generate`, not from the package
- * root. The engine imports `@sequent/protocol` and gets the whole vocabulary
- * *except* the one function that would make it non-deterministic.
+ * This file is deliberately **not** re-exported from `index.ts`. It is reached
+ * as `@sequent/protocol/generate`, which means:
  *
- * The separation is the point. A comment saying &quot;do not use this in the engine&quot;
- * is advice; a module the engine does not import is a guarantee.
+ *   - the browser bundle cannot pull it in, because importing it would drag
+ *     `node:crypto` into a client build and the bundler would refuse;
+ *   - `@sequent/core` — the matching engine — cannot reach it either, because
+ *     the engine imports the package root and nothing else.
+ *
+ * That second point is the one that matters. The engine must be a pure function
+ * of its input log, and a single `newId()` call inside it would break replay in
+ * a way no test would notice: the books would match, the trade identifiers
+ * would not, and every downstream join would silently start returning nothing.
+ *
+ * A comment saying &quot;don't call this from the engine&quot; would be a wish. A module
+ * the engine cannot import is a rule.
  */
-import { randomBytes } from 'node:crypto';
 
-export const newId = (): string =&gt; randomBytes(12).toString('base64url');</code></pre>
+import { randomFillSync } from 'node:crypto';
+
+/**
+ * Crockford's Base32 alphabet.
+ *
+ * Thirty-two characters with `I`, `L`, `O` and `U` removed. The first three go
+ * because they are indistinguishable from `1`, `1` and `0` when somebody reads
+ * an identifier off a screen and types it into a support ticket; `U` goes
+ * because its absence means the encoding cannot accidentally spell anything
+ * unfortunate.
+ */
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/**
+ * A fresh, sortable, unguessable identifier.
+ *
+ * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
+ * randomness, encoded as 26 characters of Base32.
+ *
+ * …
+ */
+export function newId(now: number = Date.now()): string {
+	if (!Number.isInteger(now) || now &lt; 0) {
+		throw new RangeError(`timestamp must be a non-negative integer, got ${now}`);
+	}
+
+	const bytes = randomFillSync(new Uint8Array(10));
+
+	// 48 bits of timestamp → 10 characters.
+	let timestamp = now;
+	let out = '';
+	for (let i = 0; i &lt; 10; i += 1) {
+		out = CROCKFORD[timestamp % 32]! + out;
+		timestamp = Math.floor(timestamp / 32);
+	}
+
+	// …
+
+	let carry = 0n;
+	for (const byte of bytes) carry = (carry &lt;&lt; 8n) | BigInt(byte);
+
+	let random = '';
+	for (let i = 0; i &lt; 16; i += 1) {
+		random = CROCKFORD[Number(carry &amp; 31n)]! + random;
+		carry &gt;&gt;= 5n;
+	}
+
+	return out + random;
+}</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The 26-character shape is not incidental: <code>packages/protocol/src/ids.ts</code> defines <code>const ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/</code> and exports <code>isGeneratedId()</code>, so anything claiming to be a server-minted id can be checked against the pattern rather than merely trusted.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -114,10 +197,12 @@ export const newId = (): string =&gt; randomBytes(12).toString('base64url');</co
 	</figcaption>
 	<pre><code class="lang-json">{
 	&quot;name&quot;: &quot;@sequent/protocol&quot;,
+	// …
 	&quot;exports&quot;: {
 		&quot;.&quot;: &quot;./src/index.ts&quot;,
 		&quot;./generate&quot;: &quot;./src/generate.ts&quot;
 	}
+	// …
 }</code></pre>
 </figure>
 <h3 id="keys">Composite keys, built not looked up</h3>
@@ -128,17 +213,29 @@ export const newId = (): string =&gt; randomBytes(12).toString('base64url');</co
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * A client's own name for an order is unique **per firm**, not globally.
+ * The key an order is filed under while it is live.
  *
- * Two firms may both have an order called `ORD-1`, and both are entitled to.
- * Every lookup by client order id therefore takes the firm too — and building
- * the key here rather than at each call site means nobody can forget.
+ * A `clientOrderId` is only unique **within a firm** — two participants
+ * choosing `ORDER-1` is not a collision, it is Tuesday. Every lookup by client
+ * reference therefore has to carry the firm, and building that key in one place
+ * means no call site can forget and accidentally let one firm cancel another's
+ * order.
  */
-export const clientKey = (firmId: FirmId, clientOrderId: ClientOrderId): string =&gt;
-	`${firmId}:${clientOrderId}`;
+export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
+	return `${firmId}\0${clientOrderId}`;
+}
 
-export const positionKey = (accountId: AccountId, instrumentId: InstrumentId): string =&gt;
-	`${accountId}:${instrumentId}`;</code></pre>
+/**
+ * The key a position is filed under.
+ *
+ * Positions are per account per instrument. The null byte is a separator that
+ * cannot appear in either identifier, so `(&quot;A&quot;, &quot;B.C&quot;)` and `(&quot;A.B&quot;, &quot;C&quot;)`
+ * cannot collide — the sort of thing that never happens until an instrument is
+ * listed with a dot in its symbol, which is most of them.
+ */
+export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
+	return `${accountId}\0${instrumentId}`;
+}</code></pre>
 </figure>
 
 <aside class="callout callout--check">

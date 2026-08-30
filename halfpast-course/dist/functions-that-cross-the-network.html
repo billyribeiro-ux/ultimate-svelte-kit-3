@@ -43,12 +43,14 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import * as v from 'valibot';
-import { query } from '$app/server';
+// …
+import { form, getRequestEvent, query } from '$app/server';
+// …
 
 export const getBookingPage = query(slugSchema, async (slug): Promise&lt;BookingPageData&gt; =&gt; {
 	const found = await db.query.business.findFirst({ where: eq(business.slug, slug) });
 	if (!found) error(404, 'We could not find that business.');
-
+	// …
 	return { /* … */ };
 });</code></pre>
 </figure>
@@ -59,11 +61,14 @@ export const getBookingPage = query(slugSchema, async (slug): Promise&lt;Booking
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { getBookingPage } from './booking.remote.ts';
-
+	// …
+	import { book, getAvailability, getBookingPage } from './booking.remote.ts';
+	// …
 	const shop = $derived(await getBookingPage(data.slug));
+	// …
 &lt;/script&gt;
 
+&lt;!-- … --&gt;
 &lt;h1&gt;{shop.business.name}&lt;/h1&gt;</code></pre>
 </figure>
 <p>That is it. No endpoint to name, no <code>fetch</code> to write, no <code>+page.server.ts</code>, no response type to keep in sync. The component imports a function and awaits it. SvelteKit puts an HTTP request in the middle and neither side has to know.</p>
@@ -110,13 +115,17 @@ const timeZoneSchema = v.pipe(
 	const context = await requireStaff(data.slug);
 	assertCanManageDiaryOf(context, data.staffId);
 
+	const member = await db.query.staff.findFirst({
+		where: and(eq(staff.id, data.staffId), eq(staff.businessId, context.business.id))
+	});
+	if (!member) error(404, 'No such staff member.');
+
 	if (data.endMinute &lt;= data.startMinute) {
 		error(400, 'A shift has to end after it starts.');
 	}
 
 	await db.insert(availabilityRule).values({ /* … */ });
 
-	// Tell every subscriber to this query to fetch again — in the same response.
 	void getHours({ slug: data.slug }).refresh();
 	publishDiaryChange(context.business.id);
 
@@ -134,8 +143,9 @@ const timeZoneSchema = v.pipe(
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// When the component knows better than the server which queries to update:
-await setServiceActive({ id, isActive }).updates(getServices(slug));</code></pre>
+await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));</code></pre>
 </figure>
+<p>This app never actually writes that line — its commands call <code>.refresh()</code> on the server, the way <code>addHours</code> does above, so every caller gets the fresh data without asking. <code>.updates()</code> is for the day only the calling component knows which queries are on screen.</p>
 <h3 id="errors">One trap on the way back</h3>
 <p>When a command calls <code>error(400, 'A shift has to end after it starts.')</code>, the browser sees SvelteKit's <code>HttpError</code>. And <code>HttpError</code> <strong>does not extend <code>Error</code></strong>.</p>
 

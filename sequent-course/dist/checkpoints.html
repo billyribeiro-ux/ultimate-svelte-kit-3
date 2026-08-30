@@ -78,26 +78,34 @@ await saveCheckpoint(seq);   // ← crash here</code></pre>
 	version: number,
 	events: readonly Event[]
 ): Promise&lt;void&gt; {
+	/* … */
 	await withTransaction(client, async (tx) =&gt; {
 		for (const body of events) {
 			await tx.execute({
 				sql: `INSERT INTO event_log (caused_by, at, version, kind, instrument_id, body)
 				      VALUES (?, ?, ?, ?, ?, ?)`,
-				args: [causedBy, at, version, body.kind, instrumentOf(body), JSON.stringify(body)]
+				args: [
+					causedBy,
+					at,
+					version,
+					body.kind,
+					instrumentOf(body) as InValue,
+					JSON.stringify(body)
+				]
 			});
 		}
 
-		// Inside. Always inside.
 		await checkpointIn(tx, consumer, causedBy, at);
 	});
 }</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Notice that <code>appendEvents</code> is the <strong>only</strong> function that knows this rule. An individual projector cannot get it wrong, because it never sees the checkpoint. Putting a rule in exactly one place is how you stop it being violated by the fourteenth person to add a consumer.</p></aside>
+<p>The <code>checkpointIn</code> call at the bottom is inside the transaction. Always inside.</p>
+<aside class="callout callout--note"><p>Notice that the rule lives in exactly <strong>one place per consumer</strong>: <code>appendEvents</code> for the engine, <code>applyBatch</code> for the projector. An individual projector cannot get it wrong, because it never sees the checkpoint. Putting a rule in exactly one place is how you stop it being violated by the fourteenth person to add a consumer.</p></aside>
 <h3 id="idempotent">And every consumer is idempotent anyway</h3>
 <p>The transaction makes duplicates impossible for the *engine*. Downstream consumers get a second guarantee, because they will be re-run: a crash between reading a batch and committing it means the batch arrives again.</p>
 <p>So every write a projector makes is idempotent:</p>
-<ul><li><code>INSERT ... ON CONFLICT DO NOTHING</code>, never a bare insert</li><li><code>SET filled = quantity - remaining</code> computed from the event, never <code>filled = filled + n</code></li></ul>
-<p>That second one is the important discipline. An accumulating update is correct exactly once and wrong on every replay — and replay is not an exceptional path here, it is the normal recovery path.</p>
+<ul><li><code>INSERT ... ON CONFLICT DO UPDATE</code>, never a bare insert</li><li><code>SET filled = ?</code> computed from the event, never an unguarded <code>filled = filled + ?</code></li></ul>
+<p>That second one is the important discipline. An unguarded accumulating update is correct exactly once and wrong on every replay — and replay is not an exceptional path here, it is the normal recovery path. The one increment the trade projector does make sits behind an already-projected check keyed on the trade id, so it runs at most once per trade: the guard, not the increment, is what makes it safe.</p>
 <h3 id="gaps">Detecting a gap</h3>
 
 <figure class="code">
@@ -106,35 +114,44 @@ await saveCheckpoint(seq);   // ← crash here</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Are there holes in the sequence?
+ * Check the log has no holes.
  *
- * There should never be — the sequencer assigns consecutively and nothing may
- * delete. But &quot;should never be&quot; is a claim, and this is how you check it.
+ * A gap means a command was assigned a sequence number and never committed,
+ * which means the total order has a hole in it and every replay after that
+ * point is describing a different venue from the one that ran.
  *
- * A gap means either a command vanished or a second writer was running. Both
- * are catastrophic and both are invisible until somebody counts.
+ * This should never fire. It is checked at startup anyway, because the cost is
+ * one query and the alternative is discovering it from a participant asking why
+ * their fill is missing.
  */
 export async function assertNoGaps(client: Client): Promise&lt;void&gt; {
-	const result = await client.execute(`
-		SELECT MIN(seq) AS lowest, MAX(seq) AS highest, COUNT(*) AS total FROM command_log
-	`);
+	const result = await client.execute(
+		`SELECT COUNT(*) AS n, COALESCE(MIN(seq), 1) AS lo, COALESCE(MAX(seq), 0) AS hi FROM command_log`
+	);
 
 	const row = result.rows[0];
-	if (!row || Number(row['total']) === 0) return;
+	if (!row) return;
 
-	const expected = Number(row['highest']) - Number(row['lowest']) + 1;
+	const count = Number(row['n']);
+	const lo = Number(row['lo']);
+	const hi = Number(row['hi']);
 
-	if (Number(row['total']) !== expected) {
+	if (count === 0) return;
+
+	// Sequence numbers start at 1 and increase by exactly one.
+	if (lo !== 1 || hi - lo + 1 !== count) {
 		throw new Error(
-			`The command log has gaps: ${row['total']} rows spanning ${row['lowest']}–${row['highest']}.`
+			`The command log has gaps: ${count} rows spanning ${lo}..${hi}. ` +
+				'The total order is incomplete and replay cannot be trusted.'
 		);
 	}
 }</code></pre>
 </figure>
+<p>The <code>lo !== 1</code> half of the check is not decoration. A log missing its *first* rows still has a contiguous span, so counting rows against the span alone would pass it — pinning the start of the sequence to 1 is what catches that case.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can describe both ways of getting a checkpoint wrong, and what each looks like afterwards</li><li>You can state the rule in one sentence</li><li>You can explain why <code>filled = filled + n</code> is dangerous and <code>filled = quantity - remaining</code> is not</li></ul>
+	<ul><li>You can describe both ways of getting a checkpoint wrong, and what each looks like afterwards</li><li>You can state the rule in one sentence</li><li>You can explain why an unguarded <code>filled = filled + ?</code> is dangerous and <code>SET filled = ?</code> computed from the event is not</li></ul>
 </aside>
 		</article>
 

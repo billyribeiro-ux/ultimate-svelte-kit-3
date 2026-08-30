@@ -43,31 +43,23 @@
 		<span class="code__file">src/lib/time/availability.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('does not offer a slot whose tidy-up time runs past closing', () =&gt; {
-	const slots = availableSlots({
-		timeZone: LONDON,
-		from: '2026-08-17',
-		to: '2026-08-17',
-		rules: [{ weekday: 1, startMinute: 9 * 60, endMinute: 17 * 60 }],
-		service: {
-			durationMinutes: 45,
-			bufferBeforeMinutes: 0,
-			bufferAfterMinutes: 10,
-			slotIntervalMinutes: 15
-		},
-		occupied: new Set(),
-		now: wallClockToInstant('2026-08-17', 0, LONDON),
-		minNoticeMinutes: 0,
-		maxAdvanceDays: 30
-	});
+	<pre><code class="lang-ts">const cutAndFinish: ServiceShape = {
+	durationMinutes: 45,
+	bufferBeforeMinutes: 0,
+	bufferAfterMinutes: 15,
+	slotIntervalMinutes: 15
+};
 
-	const last = slots.at(-1)!;
+// …
 
-	// 45 + 10 = 55 minutes of window needed, so the last start is 16:05.
-	expect(instantToMinuteOfDay(last.start, LONDON)).toBe(16 * 60 + 5);
+it('stops early enough that the buffer still fits before closing', () =&gt; {
+	// 45 minutes of chair time plus 15 minutes of tidying must end by 17:00,
+	// so the last bookable start is 16:00 — not 16:15.
+	const slots = availableSlots(query());
+	expect(asLocalTimes(slots).at(-1)).toBe('16:00');
 });</code></pre>
 </figure>
-<p>The name states the rule. The comment states the arithmetic. The assertion states the answer. Somebody reading this in a year learns the business rule from the test rather than having to reconstruct it from the implementation.</p>
+<p>The name states the rule. The comment states the arithmetic. The assertion states the answer. Two small helpers do the housekeeping: <code>query()</code> merges a test's overrides into a standard day — Monday, nine to five, this service — so each test states only the thing it is about, and <code>asLocalTimes</code> turns slot starts back into clock readings, which is how a human checks them. Somebody reading this in a year learns the business rule from the test rather than having to reconstruct it from the implementation.</p>
 <h3 id="concurrency">The most valuable test in the project</h3>
 
 <figure class="code">
@@ -75,29 +67,45 @@
 		<span class="code__file">src/lib/server/scheduling.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('lets exactly one of ten simultaneous requests win', async () =&gt; {
-	const attempts = Array.from({ length: 10 }, (_, index) =&gt;
-		createBooking({ ...base, customerName: `Racer ${index}` })
-	);
+	<pre><code class="lang-ts">/*
+ * The tests this whole schema exists for.
+ *
+ * `Promise.all` over N calls to `createBooking` is not a simulation of a race —
+ * it is a race. Each call opens its own transaction against the same file, and
+ * the only thing standing between them and a double-booked chair is the
+ * composite primary key on `slot_claim`.
+ */
+describe('createBooking under concurrency', () =&gt; {
+	it('lets exactly one of ten simultaneous requests win the same slot', async () =&gt; {
+		const attempts = Array.from({ length: 10 }, (_, index) =&gt;
+			createBooking(
+				bookingInput({
+					start: at(11 * 60),
+					customerName: `Customer ${index}`,
+					customerEmail: `customer${index}@example.test`
+				})
+			)
+		);
 
-	const results = await Promise.allSettled(attempts);
+		const results = await Promise.allSettled(attempts);
 
-	expect(results.filter((r) =&gt; r.status === 'fulfilled')).toHaveLength(1);
+		const won = results.filter((result) =&gt; result.status === 'fulfilled');
+		const lost = results.filter((result) =&gt; result.status === 'rejected');
 
-	for (const failure of results.filter((r) =&gt; r.status === 'rejected')) {
-		expect((failure.reason as BookingError).code).toBe('slot_taken');
-	}
+		expect(won).toHaveLength(1);
+		expect(lost).toHaveLength(9);
 
-	// Nothing half-written survived the nine rollbacks.
-	const bookings = await db.select().from(booking);
-	const claims = await db.select().from(slotClaim);
+		// And the diary agrees: one booking, twelve claims, no orphans.
+		expect(await db.select().from(booking)).toHaveLength(1);
+		expect(await db.select().from(slotClaim)).toHaveLength(12);
+	});
 
-	expect(bookings).toHaveLength(1);
-	expect(new Set(claims.map((c) =&gt; c.bookingId))).toEqual(new Set([bookings[0]!.id]));
+	// …
 });</code></pre>
 </figure>
 <p><code>Promise.allSettled</code>, not <code>Promise.all</code> — we *expect* nine rejections and want to inspect them, not to have the first one abandon the test.</p>
-<p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of orphaned claims from the rolled-back transactions. Checking that every claim belongs to the surviving booking is what proves the rollback rolled back.</p>
+<p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of leftovers from the nine rolled-back transactions. Counting the rows directly — one booking, and exactly the twelve five-minute claim cells of the winner's hour-long block, nothing more — is what proves the rollback rolled back.</p>
+<p>The test after this one sends five losers to the same slot and accepts either <code>slot_taken</code> or <code>slot_not_offered</code> as the reason: sometimes the pre-flight availability check catches the collision before the claim does, and both are honest answers. What matters, as its comment says, is that neither is a 500.</p>
 <h3 id="when-wrong">When the test is the thing that is wrong</h3>
 <p>A test in this project asserted that two rapid publishes produced two yields from <code>watchDiary</code>. It failed. The instinct is to fix the code.</p>
 <p>The code was right: coalescing is deliberate, because five bookings landing in one second should cause <strong>one</strong> re-read, not five. The test was encoding an assumption nobody had made. It now asserts the coalescing explicitly, which is a better test — it documents the design instead of accidentally contradicting it.</p>
@@ -109,7 +117,13 @@
 		<span class="code__file">don’t</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">expect(formatCompactMoney(5600)).toBe('£5.60K');</code></pre>
+	<pre><code class="lang-ts">const compact = new Intl.NumberFormat('en-GB', {
+	style: 'currency',
+	currency: 'GBP',
+	notation: 'compact'
+});
+
+expect(compact.format(5600)).toBe('£5.60K');</code></pre>
 </figure>
 
 <figure class="code">
@@ -117,9 +131,9 @@
 		<span class="code__file">do</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">expect(formatCompactMoney(5600)).toMatch(/^£5\.60?K$/);</code></pre>
+	<pre><code class="lang-ts">expect(compact.format(5600)).toMatch(/^£5\.60?K$/);</code></pre>
 </figure>
-<p><code>Intl</code> output depends on the runtime's ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from <code>£5.60K</code> to <code>£5.6K</code>. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it.</p>
+<p><code>Intl</code> output depends on the runtime's ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from <code>£5.60K</code> to <code>£5.6K</code>. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast's own <code>formatMoney</code> is a thin wrapper around <code>Intl.NumberFormat</code>, so its tests face exactly this trap.</p>
 <p>Assert the shape, or assert on the *inputs* to formatting. Never on a locale-dependent string you did not construct yourself.</p>
 <h3 id="require">One config flag worth turning on</h3>
 
@@ -129,8 +143,10 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
-	// A test with no assertions is a test that passes by accident.
-	expect: { requireAssertions: true }
+	// A test that asserts nothing is a test that cannot fail. Vitest will now
+	// treat one as an error rather than a pass.
+	expect: { requireAssertions: true },
+	// …
 }</code></pre>
 </figure>
 <p>It has already caught one real problem here: a test whose assertions were inside a callback that never ran. It was green for a week and testing nothing.</p>

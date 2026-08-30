@@ -79,7 +79,13 @@ take(key: string, config: BucketConfig, now: number, cost = 1): Verdict {
 	}
 
 	bucket.tokens -= cost;
-	return { allowed: true, remaining: Math.floor(bucket.tokens), retryAfter: 0, resetAt: this.#fullAt(bucket, config, now) };
+
+	return {
+		allowed: true,
+		remaining: Math.floor(bucket.tokens),
+		retryAfter: 0,
+		resetAt: this.#fullAt(bucket, config, now)
+	};
 }</code></pre>
 </figure>
 <p><code>now</code> is a parameter. The tests drive time by passing numbers rather than by sleeping — a rate-limit suite built on <code>setTimeout</code> is slow, flaky on a loaded CI box, and cannot check the interesting cases at all.</p>

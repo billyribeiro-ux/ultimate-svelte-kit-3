@@ -102,11 +102,14 @@ export async function enqueue(tx: Executor, message: OutboxMessage, now: number)
 	            AND failed_at IS NULL
 	            AND available_at &lt;= ?
 	            AND (leased_until IS NULL OR leased_until &lt;= ?)
+	            ${kind ? 'AND kind = ?' : ''}
 	          ORDER BY available_at, outbox_id
 	          LIMIT ?
 	      )
 	      RETURNING outbox_id, kind, seq, firm_id, idempotency_key, payload, attempts, created_at`,
-	args: [now + leaseMs, worker, now, now, limit]
+	args: kind
+		? [now + leaseMs, worker, now, now, kind, limit]
+		: [now + leaseMs, worker, now, now, limit]
 });</code></pre>
 </figure>
 <p>Claim it until <code>now + leaseMs</code>. If the worker dies, the lease runs out and the next worker picks the message up. <strong>Nothing has to detect the crash</strong> — no heartbeat, no health check, no &quot;reap dead workers&quot; job. The recovery is the absence of an update.</p>
@@ -155,16 +158,28 @@ export async function enqueue(tx: Executor, message: OutboxMessage, now: number)
 		<span class="code__file">apps/worker/src/deliver.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export interface Disposition {
-	readonly ok: boolean;
-	/** Try again later. */
-	readonly retry?: boolean;
-	/** Give up now — this will never succeed. Distinct from `ok`. */
+	<pre><code class="lang-ts">/**
+ * What happened, in three dispositions rather than two.
+ *
+ * `retry: false` on its own means **done** — either delivered, or there was
+ * nobody to deliver to, which is equally finished. `permanent: true` means it
+ * will never succeed and should go straight to the dead letters.
+ *
+ * The third case is the one a boolean cannot express, and leaving it out is how
+ * a message that is broken forever gets marked delivered: `retry: false` and
+ * the loop calls `succeed()`.
+ */
+export interface DeliveryOutcome {
+	readonly delivered: number;
+	readonly failed: number;
+	/** True if the whole message should be tried again later. */
+	readonly retry: boolean;
+	/** True if it will never succeed. Dead-letter it now rather than in an hour. */
 	readonly permanent?: boolean;
-	readonly reason?: string;
+	readonly error?: string;
 }</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>Two booleans are not enough for three outcomes. &quot;It worked&quot;, &quot;it failed and might work later&quot; and &quot;it failed and never will&quot; are genuinely three states, and collapsing the last two into <code>!retry</code> made the queue report success for a message it had thrown away.</p></aside>
+<aside class="callout callout--warn"><p>One boolean is not enough for three outcomes. &quot;It worked&quot;, &quot;it failed and might work later&quot; and &quot;it failed and never will&quot; are genuinely three states, and collapsing the last two into <code>retry: false</code> made the queue report success for a message it had thrown away. Two fields encode all three: <code>retry</code> says &quot;try again later&quot;, and <code>permanent</code> says &quot;dead-letter it now&quot; — distinct from done.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

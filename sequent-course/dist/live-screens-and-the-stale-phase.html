@@ -46,7 +46,7 @@
 	</figcaption>
 	<pre><code class="lang-ts">export const setPhase = command(schema, async (input) =&gt; {
 	const viewer = requireViewer();
-	await submit(viewer, { kind: 'change_phase', ...input });
+	await submit(viewer, { kind: 'set_phase', ...input });
 
 	// Tell the console to re-read.
 	void getVenue().refresh();
@@ -69,27 +69,44 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * The venue's instruments and their phases, streamed.
+ * The venue's instruments and their phases, **live**.
  *
- * A plain `query` plus `refresh()` cannot work here: `submit` appends a
- * *command*, and the phase does not change until the engine applies it and
- * writes the resulting event. A refresh fired straight after the command
- * re-reads the old value and reports success.
+ * ## Why this had to become a live query
  *
- * Tailing the log means the console updates when the phase *actually* changes,
- * which is both correct and — usefully — honest: an operator watching the badge
- * is watching the engine, not their own click.
+ * A plain query with a `.refresh()` after `setPhase` looked correct and was
+ * subtly wrong, in the way this whole architecture is designed to make you
+ * confront: the command is *sequenced*, not *applied*. The engine reads it a
+ * moment later and writes the `phase_changed` event; the refresh runs before
+ * that and re-reads the old phase.
+ *
+ * So the operator clicked &quot;halt&quot;, the venue genuinely halted, and the badge
+ * kept saying &quot;continuous&quot; until somebody reloaded. The most alarming possible
+ * version of a stale read.
+ *
+ * There is no version of `refresh()` that fixes this, because the answer does
+ * not exist yet at the moment of the request. The honest fix is the same one
+ * the terminal uses for the book: tail the event log and yield when the answer
+ * changes.
  */
-export const getVenue = query.live(v.object({}), async function* () {
-	requireOperator();
+export const getVenue = query.live(async function* () {
+	const viewer = requireViewer();
+	requireCan(viewer, 'set_phase');
+
 	const { request } = getRequestEvent();
 
 	yield await venueSnapshot();
 
-	for await (const batch of tailEvents(db, await currentSeq(), { signal: request.signal })) {
-		if (batch.some((record) =&gt; record.kind === 'phase_changed')) {
-			yield await venueSnapshot();
-		}
+	for await (const batch of tailEvents(db, await currentSeq(), {
+		signal: request.signal,
+		idleMs: 60
+	})) {
+		// Only the two event kinds that can change this answer. A venue with a
+		// busy book would otherwise re-render the admin page on every trade.
+		const relevant = batch.some(
+			(record) =&gt; record.body.kind === 'phase_changed' || record.body.kind === 'instrument_listed'
+		);
+
+		if (relevant) yield await venueSnapshot();
 	}
 });</code></pre>
 </figure>
@@ -98,9 +115,9 @@ export const getVenue = query.live(v.object({}), async function* () {
 <p>The rule that came out of this:</p>
 <ul><li><strong><code>refresh()</code></strong> when the command's effect is complete by the time it returns. Creating an API key, adding a webhook endpoint, setting a feature flag — these write directly to a table, so the next read sees them.</li><li><strong><code>query.live</code></strong> when the command goes through the log. Placing an order, cancelling, changing a phase, hitting the kill switch — the effect arrives later, from another process.</li></ul>
 <p>The test is not &quot;does this change often?&quot; — it is <strong>&quot;who writes the value I am about to read, and have they finished?&quot;</strong></p>
-<aside class="callout callout--note"><p>Note that the order blotter *does* use <code>refresh()</code>, and correctly: <code>order_record</code> gets an <code>accepted</code> row from the gateway path, so there is something true to show immediately. The blotter shows &quot;working&quot; and then transitions when the engine's events land — two stages, both honest, neither pretending.</p></aside>
+<aside class="callout callout--note"><p>Note that the order blotter *does* still call <code>refresh()</code> after placing an order — but as best-effort immediacy, not as the truth. The gateway writes no rows: the blotter's <code>working</code> row appears in <code>order_record</code> only when the projector applies the engine's <code>order_accepted</code> event, so a refresh fired in the same response can only return the list as it stood before the engine ran. The REST API states the same gap out loud — its <code>202</code> body carries <code>status: 'accepted'</code> and tells the caller to watch the event stream for the outcome. The refresh is a cheap chance to be early; the event-driven data is what is guaranteed to be right.</p></aside>
 <h3 id="the-test-trap">The test that could never pass</h3>
-<p>One more trap, from testing this page in a browser:</p>
+<p>One more trap, from driving this page in a browser:</p>
 
 <figure class="code">
 	<figcaption>

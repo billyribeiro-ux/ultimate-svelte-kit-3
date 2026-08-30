@@ -53,30 +53,57 @@
 export const site = {
 	name: 'StrikeFlow',
 	legalName: 'StrikeFlow Data Inc.',
+
+	/** Used as the `&lt;title&gt;` suffix on every page except the home page. */
 	titleSuffix: 'StrikeFlow',
+
 	tagline: 'Real-time options flow, decoded.',
+
+	// …
 	description:
-		'StrikeFlow streams the full options tape in real time — sweeps, blocks, dark pool ' +
-		'prints and dealer gamma — so you can read institutional positioning as it happens.',
+		'StrikeFlow streams the full options tape in real time — sweeps, blocks, dark pool prints and dealer gamma — so you can read institutional positioning as it happens.',
+
+	/** Canonical origin, validated and de-slashed in `src/env.ts`. */
 	url: PUBLIC_SITE_URL,
+
 	locale: 'en_US',
 	language: 'en',
+
+	founded: '2021',
+
 	contact: {
 		email: 'hello@strikeflow.io',
-		support: 'support@strikeflow.io'
+		support: 'support@strikeflow.io',
+		press: 'press@strikeflow.io',
+		phone: '+1-212-555-0148'
 	},
+
+	address: {
+		street: '85 Broad Street, Floor 17',
+		city: 'New York',
+		region: 'NY',
+		postalCode: '10004',
+		country: 'US'
+	},
+
+	// …
 	social: {
 		x: 'https://x.com/strikeflow',
-		linkedin: 'https://www.linkedin.com/company/strikeflow'
+		linkedin: 'https://www.linkedin.com/company/strikeflow',
+		github: 'https://github.com/strikeflow',
+		youtube: 'https://www.youtube.com/@strikeflow'
 	},
+
+	/** Fallback social share image. 1200×630 is the ratio X and LinkedIn both crop to. */
 	ogImage: '/og/default.png',
 	ogImageWidth: 1200,
 	ogImageHeight: 630
 } as const;
 
+/** Every social URL as an array — the shape `sameAs` wants. */
 export const socialProfiles: readonly string[] = Object.values(site.social);
 
-/** Turn a root-relative path into an absolute URL. */
+// …
 export function absoluteUrl(path: string): string {
 	if (path.startsWith('http://') || path.startsWith('https://')) return path;
 	return `${site.url}${path.startsWith('/') ? path : `/${path}`}`;
@@ -94,16 +121,22 @@ export function absoluteUrl(path: string): string {
 
 /**
  * Route IDs that take no parameters.
- * Filters '/blog/[slug]' out of the union, so nav can only hold safe links.
+ *
+ * `PageRouteId` includes dynamic routes like `/blog/[slug]`, which you can't link to
+ * without supplying a `slug`. This conditional type filters any route ID containing a
+ * `[` out of the union, so the nav can only ever hold routes that are safe to link
+ * to directly — and `resolve(href)` type-checks without needing a params argument.
  */
 export type StaticRoute = Exclude&lt;PageRouteId, `${string}[${string}`&gt;;
 
 export interface NavLink {
 	readonly label: string;
 	readonly href: StaticRoute;
+	/** Optional one-liner, shown in the mobile drawer where there's room for it. */
 	readonly description?: string;
 }
 
+/** Primary navigation, shown in the header. Kept short on purpose. */
 export const primaryNav: readonly NavLink[] = [
 	{ label: 'Features', href: '/features', description: 'What the platform does' },
 	{ label: 'Pricing', href: '/pricing', description: 'Plans and what each includes' },
@@ -125,16 +158,20 @@ export const primaryNav: readonly NavLink[] = [
 		<span class="code__file">src/lib/data/features.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export type IconName =
-	| 'PulseIcon' | 'CrosshairIcon' | 'FunctionIcon'
-	| 'EyeIcon' | 'BellRingingIcon' | 'RewindIcon';
+	<pre><code class="lang-ts">/** Icon names map 1:1 to Phosphor icon component names. */
+export type IconName =
+	'PulseIcon' | 'CrosshairIcon' | 'FunctionIcon' | 'EyeIcon' | 'BellRingingIcon' | 'RewindIcon';
 
 export interface Feature {
+	/** Stable key — used for anchors, keys in {#each}, and analytics. */
 	readonly id: string;
 	readonly title: string;
-	readonly summary: string;   // one line, used in cards AND structured data
-	readonly detail: string;    // longer copy, features page only
+	/** One-line summary. Used in cards and in structured data. */
+	readonly summary: string;
+	/** Longer copy, used on the features page. */
+	readonly detail: string;
 	readonly icon: IconName;
+	/** Three concrete capabilities. Specificity is what makes copy credible. */
 	readonly points: readonly string[];
 }
 
@@ -143,18 +180,18 @@ export const features: readonly Feature[] = [
 		id: 'live-flow',
 		title: 'Live flow scanner',
 		summary: 'Every sweep, block and split order as it prints — not thirty seconds later.',
-		detail: 'We consume the full OPRA feed and normalise it into a single stream…',
+		// …
 		icon: 'PulseIcon',
 		points: [
 			'Sub-250ms from exchange print to your screen',
 			'Sweep, block, split and cross classification',
 			'Filter by premium, size, expiry, moneyness or ticker'
 		]
-	}
+	},
 	// …five more
 ];</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Icons are stored as <strong>strings</strong>, not imported components. A <code>.ts</code> data file importing <code>.svelte</code> files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.</p></aside>
+<aside class="callout callout--note"><p>Icons are stored as <strong>strings</strong>, not imported components. A <code>.ts</code> data file importing <code>.svelte</code> files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.</p></aside>
 <p>Build out <code>pricing.ts</code>, <code>faq.ts</code>, <code>team.ts</code> and <code>posts.ts</code> the same way. The full contents are in the finished project — the pattern matters more than the copy.</p>
 <h3 id="posts-blocks">One decision worth copying: blog posts as blocks</h3>
 

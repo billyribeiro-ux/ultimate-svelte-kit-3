@@ -43,14 +43,42 @@
 		<span class="code__file">playwright.config.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">webServer: {
+	<pre><code class="lang-ts">const PORT = 4173;
+const ORIGIN = `http://localhost:${PORT}`;
+
+// …
+
+webServer: {
 	command: 'npm run build &amp;&amp; node build/index.js',
-	port: 4173,
-	reuseExistingServer: !process.env.CI
+	port: PORT,
+	env: {
+		DATABASE_URL: 'file:e2e.db',
+		ORIGIN,
+		PUBLIC_ORIGIN: ORIGIN,
+		PUBLIC_DEFAULT_TIME_ZONE: 'Europe/London',
+		BETTER_AUTH_SECRET: 'e2e-secret-not-used-for-anything-real-0000',
+		PORT: String(PORT)
+	},
+	/*
+	 * Never reuse a server that is already running.
+	 *
+	 * It is tempting — it saves fifteen seconds — and it means a suite can pass
+	 * against a build from twenty minutes ago while the code under test has
+	 * changed underneath it. That happened in the previous project in this
+	 * series and cost an hour of confusion.
+	 */
+	reuseExistingServer: false,
+	timeout: 120_000,
+
+	// …
 },
-workers: 1</code></pre>
+
+// …
+
+workers: 1,</code></pre>
 </figure>
 <p>The dev server and the built app differ in ways that matter: bundling, SSR, environment substitution, and how modules are externalised. Two of the worst bugs in this project — the missing libSQL native module and the CSRF origin mismatch — <strong>only exist in the build</strong>. A suite that runs against <code>vite dev</code> would have shipped both.</p>
+<p>Two settings here are deliberate refusals of the usual convenience. <code>reuseExistingServer</code> is <code>false</code> unconditionally — not the <code>!process.env.CI</code> most configs ship — because a reused server means testing a build from twenty minutes ago while the code has changed underneath it; the comment records the hour that cost. And the <code>env</code> block pins <code>ORIGIN</code> and <code>PUBLIC_ORIGIN</code> to the same address the tests drive: point the server at one port and drive it on another, and every form POST is a 403 from the CSRF protection doing its job.</p>
 <h3 id="fixtures">A fixture that cannot be forgotten</h3>
 
 <figure class="code">
@@ -59,11 +87,20 @@ workers: 1</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const test = base.extend&lt;{ emptyDiary: void; reportBrowserErrors: void }&gt;({
+	// …
+
 	emptyDiary: [
+		// eslint-disable-next-line no-empty-pattern -- Playwright requires the destructure
 		async ({}, use) =&gt; {
-			// A full re-seed, not just a diary wipe. The dashboard tests change
-			// prices, hide services and rewrite shifts, so the studio itself has
-			// to go back to its known shape.
+			/*
+			 * A full re-seed, not just a diary wipe.
+			 *
+			 * The dashboard tests change prices, hide services and rewrite shifts, so
+			 * &quot;empty the bookings&quot; is no longer enough to make a test independent —
+			 * the studio itself has to go back to its known shape.
+			 *
+			 * …
+			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
 				env: { ...process.env, DATABASE_URL: 'file:e2e.db' }
@@ -91,19 +128,22 @@ workers: 1</code></pre>
 			if (message.type() === 'error') console.error('[browser]', message.text());
 		});
 
-		// 4xx responses are expected — several tests assert on them. A 5xx never is.
+		// 4xx responses are expected — several tests assert on them. A 5xx never
+		// is, so surface it with its body rather than leaving a bare status code.
 		page.on('response', (response) =&gt; {
 			if (response.status() &lt; 500) return;
 			void response
 				.text()
-				.then((body) =&gt; console.error('[http]', response.status(), response.url(), body.slice(0, 300)))
+				.then((body) =&gt;
+					console.error('[http]', response.status(), response.url(), body.slice(0, 300))
+				)
 				.catch(() =&gt; {});
 		});
 
 		await use();
 	},
 	{ auto: true }
-]</code></pre>
+],</code></pre>
 </figure>
 <p>A remote query that rejects during a client-side navigation renders the error page and writes <strong>nothing</strong> to the server log — the server was never involved. Without this, such a failure appears as &quot;expected a button, found a page saying 500&quot; and the actual message sits in a browser console nobody is reading.</p>
 <p>This fixture found the sign-in <code>redirectTo</code> bug the first time it ran, and it is what turned &quot;the hours page mysteriously fails&quot; into &quot;Cannot read properties of undefined (reading 'weekday') at hours/+page.svelte:122&quot;.</p>
@@ -136,8 +176,10 @@ await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();</code><
 }
 
 test('cannot see another studio s diary', async ({ page }) =&gt; {
-	// A 404, not a 403. Confirming that /manage/other-studio exists but is not
-	// yours leaks the platform's customer list one guess at a time.
+	/*
+	 * A 404, not a 403. Confirming that `/manage/other-studio` exists but is
+	 * not yours leaks the platform's customer list one guess at a time.
+	 */
 	const response = await page.goto('/manage/some-other-studio');
 	expect(response?.status()).toBe(404);
 });</code></pre>

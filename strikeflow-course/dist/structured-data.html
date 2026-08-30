@@ -95,18 +95,35 @@
 		legalName: site.legalName,
 		url: `${site.url}/`,
 		description: site.description,
+		foundingDate: site.founded,
 		logo: {
 			'@type': 'ImageObject',
 			url: absoluteUrl('/brand/logo-512.png'),
 			width: 512,
 			height: 512
 		},
+		// …
 		sameAs: socialProfiles,
+		address: {
+			'@type': 'PostalAddress',
+			streetAddress: site.address.street,
+			addressLocality: site.address.city,
+			addressRegion: site.address.region,
+			postalCode: site.address.postalCode,
+			addressCountry: site.address.country
+		},
 		contactPoint: [
 			{
 				'@type': 'ContactPoint',
 				contactType: 'customer support',
 				email: site.contact.support,
+				availableLanguage: ['English']
+			},
+			{
+				'@type': 'ContactPoint',
+				contactType: 'sales',
+				email: site.contact.email,
+				telephone: site.contact.phone,
 				availableLanguage: ['English']
 			}
 		]
@@ -122,10 +139,10 @@
 		<span class="code__file">src/lib/seo/schema.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">		offers: plans.map((plan) =&gt; ({ /* … */ }))
-		// NOTE: there is deliberately no `aggregateRating` here.
-		// We have not collected verifiable reviews, and inventing one is a spam
-		// policy violation that gets sites manually penalised.</code></pre>
+	<pre><code class="lang-ts">	offers: plans.map((plan) =&gt; ({ /* … */ }))
+	// NOTE: there is deliberately no `aggregateRating` here. We have not collected
+	// verifiable reviews, and inventing one is a spam policy violation that gets
+	// sites manually penalised. Rich stars are not worth a manual action.</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><strong>Structured data must describe content that is genuinely visible on the page.</strong> Marking up a rating nobody left, or an FAQ that is not rendered, is a spam policy violation and earns a manual action — which takes months to lift. Every builder here is fed from the same data files the components render from, which makes honesty the path of least resistance.</p></aside>
 <p>The second honest note is about FAQ markup. Google narrowed FAQ rich results in 2023 to well-known authoritative government and health sites. A new fintech site will almost certainly not get FAQ snippets, and anyone promising otherwise is selling something. We emit it anyway, because it costs nothing and it is genuine machine-readable context — but not because we expect a snippet.</p>
@@ -137,9 +154,13 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function buildGraph(nodes: readonly SchemaNode[]): Record&lt;string, unknown&gt; {
-	return { '@context': 'https://schema.org', '@graph': nodes };
+	return {
+		'@context': 'https://schema.org',
+		'@graph': nodes
+	};
 }
 
+/* … */
 export function serializeJsonLd(graph: Record&lt;string, unknown&gt;): string {
 	return JSON.stringify(graph)
 		.replace(/&lt;/g, '\\u003c')
@@ -156,18 +177,28 @@ export function serializeJsonLd(graph: Record&lt;string, unknown&gt;): string {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const jsonLdScript = $derived(
-	// Built by concatenation so the closing-tag text never appears literally
-	// in this file — not even inside a comment.
+	// Assembled by concatenation, so the closing-tag text is never written
+	// literally anywhere in this file — not even inside a comment. An HTML
+	// tokeniser scans for that character sequence without understanding
+	// JavaScript, so a literal occurrence would end this component's own script
+	// block early. It is a genuine parsing hazard, not a style preference.
 	'&lt;script type=&quot;application/ld+json&quot;&gt;' +
 		serializeJsonLd(
 			buildGraph([
 				organizationSchema(),
 				websiteSchema(),
-				webPageSchema({ url: canonical, name: fullTitle, description }),
+				webPageSchema({
+					url: canonical,
+					name: fullTitle,
+					description,
+					datePublished: article?.published,
+					dateModified: article?.modified ?? article?.published
+				}),
 				...schema
 			])
 		) +
-		'&lt;/' + 'script&gt;'
+		'&lt;/' +
+		'script&gt;'
 );</code></pre>
 </figure>
 

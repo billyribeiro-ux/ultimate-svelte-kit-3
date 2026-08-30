@@ -84,15 +84,41 @@ export const leadStore: LeadStore = new FileLeadStore();</code></pre>
 	<pre><code class="lang-ts">import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
+// …
 const secret: string = EBOOK_TOKEN_SECRET ?? randomBytes(32).toString('hex');
 
+// …a boot-time console.warn if EBOOK_TOKEN_SECRET is unset…
+
+/** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-function encode(value: string) { return Buffer.from(value, 'utf8').toString('base64url'); }
-function sign(payload: string)  { return createHmac('sha256', secret).update(payload).digest('base64url'); }
+interface TokenPayload {
+	/** Who it was issued to. Lets us attribute a download without a database lookup. */
+	email: string;
+	/** Expiry, as epoch milliseconds. */
+	exp: number;
+}
 
+// …
+function encode(value: string): string {
+	return Buffer.from(value, 'utf8').toString('base64url');
+}
+
+function decode(value: string): string {
+	return Buffer.from(value, 'base64url').toString('utf8');
+}
+
+function sign(payload: string): string {
+	return createHmac('sha256', secret).update(payload).digest('base64url');
+}
+
+/** Issue a token for an email address. */
 export function createDownloadToken(email: string): string {
-	const payload = { email, exp: Date.now() + TTL_MS };
+	const payload: TokenPayload = {
+		email,
+		exp: Date.now() + TTL_MS
+	};
+
 	const encoded = encode(JSON.stringify(payload));
 	return `${encoded}.${sign(encoded)}`;
 }</code></pre>
@@ -114,7 +140,10 @@ export function createDownloadToken(email: string): string {
 	const [encoded, signature] = parts;
 	if (!encoded || !signature) return { valid: false, reason: 'malformed' };
 
-	const expectedBuffer = Buffer.from(sign(encoded));
+	const expected = sign(encoded);
+
+	/* …why timingSafeEqual and the length pre-check — see the warning below… */
+	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
 
 	if (expectedBuffer.length !== providedBuffer.length) {
@@ -125,9 +154,21 @@ export function createDownloadToken(email: string): string {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only NOW, with the signature proven, do we trust the payload contents.
-	const payload = JSON.parse(decode(encoded));
-	if (Date.now() &gt; payload.exp) return { valid: false, reason: 'expired' };
+	// Only now, with the signature proven, do we trust the payload's contents.
+	let payload: TokenPayload;
+	try {
+		payload = JSON.parse(decode(encoded)) as TokenPayload;
+	} catch {
+		return { valid: false, reason: 'malformed' };
+	}
+
+	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
+		return { valid: false, reason: 'malformed' };
+	}
+
+	if (Date.now() &gt; payload.exp) {
+		return { valid: false, reason: 'expired' };
+	}
 
 	return { valid: true, email: payload.email };
 }</code></pre>
@@ -142,13 +183,22 @@ export function createDownloadToken(email: string): string {
 		<span class="code__file">src/lib/server/rate-limit.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">const buckets = new Map&lt;string, { count: number; resetAt: number }&gt;();
+	<pre><code class="lang-ts">interface Bucket {
+	count: number;
+	/** Epoch ms when this window ends. */
+	resetAt: number;
+}
+
+const buckets = new Map&lt;string, Bucket&gt;();
+
+// …the sweep() helper that deletes expired buckets…
 
 export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimitResult {
 	const { limit = 5, windowMs = 60_000 } = options;
 	const now = Date.now();
 
-	// Cheap probabilistic cleanup — avoids keeping a setInterval alive forever
+	// Cheap probabilistic cleanup: sweep on roughly 1 in 50 calls rather than
+	// running a timer. Avoids keeping a `setInterval` alive for the process lifetime.
 	if (Math.random() &lt; 0.02) sweep(now);
 
 	const existing = buckets.get(key);
@@ -159,8 +209,8 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 	}
 
 	existing.count += 1;
-	const allowed = existing.count &lt;= limit;
 
+	const allowed = existing.count &lt;= limit;
 	return {
 		allowed,
 		remaining: Math.max(0, limit - existing.count),

@@ -64,23 +64,35 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+// …
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 
+// …
 export default defineConfig({
 	plugins: [
 		sveltekit({
-			adapter: adapter(),
 			compilerOptions: {
+				// …
 				experimental: { async: true }
 			},
+
+			adapter: adapter(),
+
 			experimental: {
+				// …
 				remoteFunctions: true
-			}
+			},
+
+			// …
 		}),
+
+		// …
 		sveltePhosphorOptimize()
-	]
+	],
+
+	// …
 });</code></pre>
 </figure>
 <ul><li><code>defineConfig</code> is a helper that does nothing at runtime — it exists purely so your editor can autocomplete the options.</li><li><code>plugins</code> is an array of things that transform your code. <strong>Order matters</strong> — they run in sequence.</li><li><code>sveltekit()</code> is the big one: it compiles <code>.svelte</code> files, sets up routing, and handles the server build. In SvelteKit 3, *all* framework configuration lives inside this call.</li></ul>

@@ -44,11 +44,16 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;scripts&quot;: {
+	…
 	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json&quot;,
+	…
 	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	…
 	&quot;test:unit&quot;: &quot;vitest&quot;,
+	…
 	&quot;test:e2e&quot;: &quot;node scripts/prepare-e2e-db.js &amp;&amp; playwright test&quot;,
-	&quot;verify&quot;: &quot;pnpm run check &amp;&amp; pnpm run lint &amp;&amp; pnpm run test:unit -- --run &amp;&amp; pnpm run build &amp;&amp; pnpm run test:e2e&quot;
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	…
 }</code></pre>
 </figure>
 <p>One command. If <code>pnpm run verify</code> is green, the thing is deployable; if it is not, nothing else matters. Put it in CI and make it required.</p>
@@ -61,8 +66,10 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">sveltekit({
-	paths: { origin: env.PUBLIC_ORIGIN }
-})</code></pre>
+	// …
+	paths: { origin: env.PUBLIC_ORIGIN },
+	// …
+}),</code></pre>
 </figure>
 <p>Because it is baked in at build time, <code>PUBLIC_ORIGIN</code> must be correct <strong>when you build</strong>, not when you start. That catches people whose CI builds an artefact and whose deploy step sets the environment.</p>
 <h3 id="deps">3. Dependencies versus devDependencies</h3>
@@ -74,9 +81,11 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;dependencies&quot;: {
+	…
 	&quot;@libsql/client&quot;: &quot;^0.17.4&quot;,
 	&quot;better-auth&quot;: &quot;^1.7.2&quot;,
-	&quot;drizzle-orm&quot;: &quot;^0.45.2&quot;
+	&quot;drizzle-orm&quot;: &quot;^0.45.2&quot;,
+	…
 }</code></pre>
 </figure>
 
@@ -85,7 +94,10 @@
 		<span class="code__file">vite.config.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">ssr: { external: ['@libsql/client', 'libsql'] }</code></pre>
+	<pre><code class="lang-ts">ssr: {
+	// …
+	external: ['@libsql/client', 'libsql']
+},</code></pre>
 </figure>
 <p>Both are needed. Get it wrong and the app builds, deploys, starts, and dies on the first request with <code>Cannot find module '@libsql/linux-x64-gnu'</code>.</p>
 <h3 id="node">4. Pin the runtime</h3>
@@ -95,8 +107,10 @@
 		<span class="code__file">package.json</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-json">&quot;engines&quot;: { &quot;node&quot;: &quot;&gt;=24.0.0&quot; },
-&quot;packageManager&quot;: &quot;pnpm@11.24.0&quot;</code></pre>
+	<pre><code class="lang-json">&quot;engines&quot;: {
+	&quot;node&quot;: &quot;&gt;=24.20.0&quot;
+},
+&quot;packageManager&quot;: &quot;pnpm@11.24.0&quot;,</code></pre>
 </figure>
 
 <figure class="code">

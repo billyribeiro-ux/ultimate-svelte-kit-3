@@ -40,63 +40,109 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">the grid of times</span>
+		<span class="code__file">src/lib/components/booking/SlotGrid.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+	/*
+	 * `auto-fill`, not `auto-fit`. With `auto-fit` a row containing three slots
+	 * stretches them across the full width, so the same 11:00 button is a
+	 * different size depending on how many neighbours it has — which looks like
+	 * a bug. `auto-fill` keeps the empty tracks, so every slot is the same size
+	 * whether the day is full or nearly empty.
+	 */
+	grid-template-columns: repeat(auto-fill, minmax(min(5.5rem, 100%), 1fr));
 	gap: var(--space-2);
 }</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">the service list</span>
+		<span class="code__file">src/lib/styles/utilities.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/**
+ * A grid that decides its own column count.
+ *
+ * `auto-fit` plus `minmax` means: fit as many columns as will be at least
+ * `--col-min` wide, and share the leftover space between them. No breakpoints,
+ * no media queries, and it is correct at every width including the ones nobody
+ * tested. `min()` stops it overflowing when the container is narrower than
+ * `--col-min` itself — the one case the classic version of this trick gets wrong.
+ */
+.auto-grid {
+	display: grid;
+	gap: var(--grid-gap, var(--space-5));
+	grid-template-columns: repeat(auto-fit, minmax(min(var(--col-min, 16rem), 100%), 1fr));
+}</code></pre>
+</figure>
+<p>Both are fully responsive with no media query, and both wrap their minimum in <code>min(…, 100%)</code> — the detail worth stealing. Without the cap, a track with a 16rem minimum overflows a 375px phone, because <code>minmax</code> honours its minimum even when there is not room. Capping it at 100% lets the column shrink when it must.</p>
+<p>And sometimes the responsive answer is no grid at all. The service list on the booking page is one card per row at every width, so its whole layout is a flex column:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.services {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-	gap: var(--space-4);
+	list-style: none;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
 }</code></pre>
 </figure>
-<p>Both are fully responsive with no media query. <code>min(100%, 18rem)</code> is the detail worth stealing: without it, a card with an 18rem minimum overflows a 375px phone, because <code>minmax</code> honours the minimum even when there is not room. Capping it at 100% lets it shrink when it must.</p>
+<p>Reaching for <code>auto-fit</code> here would have been solving a problem the design does not have. Pick the simplest layout that matches the content, and it tends to be the one that needs no breakpoint.</p>
 <h3 id="breakpoints">And when you do need one</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css</span>
+		<span class="code__file">src/lib/styles/utilities.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* utilities.css — the only min-width query in the app. */
-@media (min-width: 48rem) {
-	.split {
-		grid-template-columns: 1fr 1fr;
-	}
+	<pre><code class="lang-css">/** Vertical rhythm between major page sections. */
+.section {
+	padding-block: var(--space-7);
 }
 
-/* DateStrip.svelte — the only max-width one: below 26rem the day
-   labels stop fitting and shorten to their first two letters. */
-@media (max-width: 26rem) {
-	.day .name {
-		font-size: var(--text-xs);
+@media (min-width: 48rem) {
+	.section {
+		padding-block: var(--space-8);
 	}
 }</code></pre>
 </figure>
-<p>Two media queries in the entire application, and neither came from a table of phone sizes — both were written at the width where the content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/booking/DateStrip.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* On the narrowest phones the weekday initial is enough; the number carries
+ * the meaning and seven three-letter labels would wrap. */
+@media (max-width: 26rem) {
+	.weekday {
+		font-size: 0.6rem;
+	}
+	.day {
+		padding-inline: 0;
+	}
+}</code></pre>
+</figure>
+<p>Six width queries in the entire application: these two, a <code>min-width: 30rem</code> that lets the landing page's buttons stop being full-width, and three small <code>max-width</code> ones that tighten a component on narrow phones — the header drops the brand word at 22rem, a confirmation detail row collapses to one column at 26rem, and the diary's cancel button drops onto its own row at 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.</p>
 <h3 id="touch">Thumbs, not cursors</h3>
-<ul><li><strong>44px minimum</strong> on anything tappable — <code>min-block-size: 2.75rem</code>. The slot grid, the day strip, every icon button.</li><li><strong>Spacing between targets</strong>, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.</li><li><strong>Primary actions at the bottom</strong> on a phone. The top of a 6.7-inch screen needs a hand shuffle.</li><li><strong><code>inputmode</code> and <code>autocomplete</code></strong> on every field. <code>autocomplete=&quot;email&quot;</code> plus <code>inputmode=&quot;email&quot;</code> is the difference between two taps and thirty.</li></ul>
+<ul><li><strong>44px minimum</strong> on anything tappable — <code>min-height: 2.75rem</code>. The slot grid, the buttons, the header links.</li><li><strong>Spacing between targets</strong>, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.</li><li><strong>Primary actions at the bottom</strong> on a phone. The top of a 6.7-inch screen needs a hand shuffle.</li><li><strong><code>inputmode</code> and <code>autocomplete</code></strong> on every field. <code>autocomplete=&quot;email&quot;</code> plus <code>inputmode=&quot;email&quot;</code> is the difference between two taps and thirty.</li></ul>
 <h3 id="dvh">The viewport unit that does not lie</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">css</span>
+		<span class="code__file">src/routes/+layout.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">.screen {
-	/* Not 100vh. */
-	min-block-size: 100dvh;
+	<pre><code class="lang-css">.shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100dvh;
 }</code></pre>
 </figure>
 <p><code>100vh</code> on mobile Safari is the height of the viewport <strong>with the address bar hidden</strong>, which is not the height you have when the page loads. The bottom of a <code>100vh</code> element sits underneath the browser chrome, and that is where people put submit buttons. <code>dvh</code> is the dynamic viewport height and is correct at every moment.</p>
@@ -109,7 +155,13 @@
 	</figcaption>
 	<pre><code class="lang-ts">projects: [
 	{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-	{ name: 'mobile', use: { ...devices['Pixel 7'] } }
+	{
+		// A real phone profile, not a narrow desktop window. Touch targets,
+		// device pixel ratio and viewport all differ, and this app is used
+		// standing up more often than sitting down.
+		name: 'mobile',
+		use: { ...devices['Pixel 7'] }
+	}
 ]</code></pre>
 </figure>
 <p>Every test in the suite runs twice, and the mobile project uses a real touch-enabled emulation — viewport, device pixel ratio, user agent and pointer type. A <code>:hover</code>-only affordance passes on desktop and fails here, which is the entire point.</p>

@@ -43,11 +43,10 @@
 		<span class="code__file">packages/protocol/src/commands.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** Fields every command carries. */
-interface CommandMeta {
-	/** Whose command this is. Overwritten by the gateway; never trusted. */
+	<pre><code class="lang-ts">/** Fields every command carries, whoever sent it. */
+export interface CommandMeta {
 	readonly firmId: FirmId;
-	/** Which human or key sent it. For the audit trail. */
+	/** The human or key that issued it. Kept for the audit trail, not for auth. */
 	readonly actorId: UserId;
 }
 
@@ -55,16 +54,27 @@ export interface PlaceOrder extends CommandMeta {
 	readonly kind: 'place_order';
 	readonly accountId: AccountId;
 	readonly instrumentId: InstrumentId;
-	/** The client's own name for this order. Unique per firm. */
+	/**
+	 * The participant's own reference. Unique per firm, and the whole basis of
+	 * idempotency — a retry after a timeout carries the same one, and the venue
+	 * must treat the second copy as a duplicate rather than a second order.
+	 */
 	readonly clientOrderId: ClientOrderId;
 	readonly side: Side;
 	readonly orderType: OrderType;
-	/** Absent for a market order, which takes whatever the book offers. */
+	/**
+	 * Absent for a market order, and that is why `exactOptionalPropertyTypes` is
+	 * switched on: without it, `{ price: undefined }` type-checks against
+	 * `{ price?: Price }`, and a market order and a limit order with a missing
+	 * price become indistinguishable at exactly the wrong moment.
+	 */
 	readonly price?: Price;
 	readonly quantity: Quantity;
 	readonly timeInForce: TimeInForce;
 	readonly selfTradePrevention: SelfTradePrevention;
 }
+
+// …
 
 export type Command =
 	| PlaceOrder
@@ -88,31 +98,51 @@ export type Command =
 	</figcaption>
 	<pre><code class="lang-ts">import * as v from 'valibot';
 
+// …
+
+const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1e15));
+const nonNegativeInteger = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1e15));
 const identifier = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(64));
-const scaledInteger = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1e15));
+const symbol = v.pipe(v.string(), v.regex(/^[A-Z][A-Z0-9.]{0,15}$/, 'Not an instrument symbol'));
 
-export const placeOrderSchema = v.object({
-	kind: v.literal('place_order'),
-	...meta,
-	accountId: identifier,
-	instrumentId: identifier,
-	clientOrderId: identifier,
-	side: v.picklist(['buy', 'sell'] as const),
-	orderType: v.picklist(['limit', 'market'] as const),
-	price: v.optional(scaledInteger),
-	quantity: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1e12)),
-	timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'] as const),
-	selfTradePrevention: v.picklist(['cancel_resting', 'cancel_aggressor', 'cancel_both'] as const)
-});
+const meta = {
+	firmId: identifier,
+	actorId: identifier
+};
 
-/**
- * Parse anything into a Command, or throw.
- *
- * The one door. Nothing becomes a `Command` without passing through here, so
- * &quot;is this validated&quot; has one answer rather than fourteen.
- */
+export const placeOrderSchema = v.pipe(
+	v.object({
+		kind: v.literal('place_order'),
+		...meta,
+		accountId: identifier,
+		instrumentId: symbol,
+		clientOrderId: identifier,
+		side: v.picklist(SIDES),
+		orderType: v.picklist(ORDER_TYPES),
+		price: v.optional(positiveInteger),
+		quantity: positiveInteger,
+		timeInForce: v.picklist(TIME_IN_FORCE),
+		selfTradePrevention: v.optional(v.picklist(SELF_TRADE_PREVENTION), 'cancel_both')
+	}),
+	/*
+	 * A cross-field rule the type system cannot express: a limit order must have
+	 * a price and a market order must not. Checking it here means the engine can
+	 * treat &quot;limit with no price&quot; as impossible rather than as a case to handle,
+	 * and `v.check` on the whole object is the only place a rule about two
+	 * fields at once can live.
+	 */
+	v.check(
+		(order) =&gt; (order.orderType === 'limit') === (order.price !== undefined),
+		'A limit order needs a price, and a market order must not have one'
+	),
+	// …
+);
+
+// …
+
+/** Parse an untrusted payload into a command, or throw with a real message. */
 export function parseCommand(input: unknown): Command {
-	return v.parse(commandSchema, input);
+	return v.parse(commandSchema, input) as Command;
 }</code></pre>
 </figure>
 <aside class="callout callout--note"><p>valibot rather than Zod, throughout this project. The API is very similar; the difference is that valibot is modular — you import only the validators you use, and the bundle carries only those. For a schema library that ends up in client bundles, that adds up.</p></aside>
@@ -124,19 +154,24 @@ export function parseCommand(input: unknown): Command {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * A command, plus what the venue stamped on it when it arrived.
+ * A command as it appears in the log, once the sequencer has stamped it.
  *
- * The engine reads `receivedAt` instead of calling a clock. That single choice
- * is what makes replay reproduce history: replaying a command from March uses
- * March's timestamp, because the timestamp travels with the command rather than
- * being read when the command is processed.
+ * Three fields are added, and each one is a deliberate transfer of a decision
+ * from the engine to the sequencer:
+ *
+ *   `seq`        — the position in the total order. The engine never chooses
+ *                  this; being handed it is what makes the engine a function.
+ *   `receivedAt` — the venue's clock reading when the command arrived. The
+ *                  engine uses this instead of calling `Date.now()`, which is
+ *                  what lets a replay four years later reproduce a timestamp.
+ *   `version`    — which rules applied. When matching logic changes, old
+ *                  commands must still replay under the rules that were in
+ *                  force when they ran, or the log stops describing what
+ *                  actually happened.
  */
 export interface Sequenced&lt;T&gt; {
-	/** Its position in the total order. Assigned by the sequencer, never reused. */
 	readonly seq: number;
-	/** The venue's clock reading when it arrived. */
 	readonly receivedAt: number;
-	/** Which version of the rules was in force. */
 	readonly version: number;
 	readonly body: T;
 }</code></pre>
@@ -153,7 +188,14 @@ export interface Sequenced&lt;T&gt; {
 		<span class="code__file">packages/protocol/src/events.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export interface Traded {
+	<pre><code class="lang-ts">/**
+ * A trade. The only event that moves money.
+ *
+ * Both sides are named because the clearing side needs both, and because a
+ * trade is one fact rather than two — modelling it as a fill for the buyer and
+ * a separate fill for the seller invites them to disagree.
+ */
+export interface Traded {
 	readonly kind: 'traded';
 	readonly tradeId: TradeId;
 	readonly instrumentId: InstrumentId;
@@ -176,8 +218,11 @@ export interface Sequenced&lt;T&gt; {
 	 * the tape readable: a run of trades at the ask is buying pressure, and you
 	 * cannot see that from price alone.
 	 *
-	 * **Absent** for an auction trade, because an auction has no aggressor —
-	 * everybody crossed at one price simultaneously.
+	 * In a call auction there is no aggressor — both sides rested, and both are
+	 * charged the maker rate. Modelling that as an absent field rather than
+	 * inventing a side is the honest option: a consumer that assumes every trade
+	 * has an aggressor should fail loudly on the open rather than quietly
+	 * attributing the whole auction to whichever side we picked.
 	 */
 	readonly aggressor?: Side;
 
@@ -194,28 +239,46 @@ export interface Sequenced&lt;T&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Every reason an order can be refused.
+ * Rejection reasons, as codes rather than sentences.
  *
- * A closed list, so a client can branch on it. The free-text `detail` field
- * next to it is for a human and is explicitly not stable — the moment a client
- * matches on prose, a copy-edit becomes an outage at somebody else's firm.
+ * The code is for machines — an algorithmic trader retries on
+ * `price_outside_collar` after re-reading the reference, and gives up entirely
+ * on `kill_switch_engaged`. The human sentence lives next to it and can be
+ * rewritten without breaking anybody's error handling, which is the point of
+ * separating them.
  */
 export const REJECT_REASONS = [
+	/** The venue has never heard of this instrument. */
 	'unknown_instrument',
+	/** Trading is not open for this instrument right now. */
 	'instrument_not_trading',
-	'firm_stopped',
-	'price_off_tick',
-	'quantity_off_lot',
-	'quantity_too_large',
-	'price_outside_collar',
-	'notional_too_large',
-	'position_limit',
+	/** A duplicate `clientOrderId` — almost always a retry, and safe to ignore. */
 	'duplicate_client_order_id',
-	'no_such_order',
-	'market_order_no_liquidity',
-	'fok_not_fillable'
+	/** No resting order with that reference. Already filled, or already pulled. */
+	'unknown_order',
+	/** The price is not on the instrument's tick ladder. */
+	'price_off_tick',
+	/** The quantity is not a whole number of lots. */
+	'quantity_off_lot',
+	/** Too far from the reference price. The fat-finger guard. */
+	'price_outside_collar',
+	/** Bigger than this account is allowed to send in one order. */
+	'exceeds_max_order_size',
+	/** Would take the account past its position limit. */
+	'exceeds_position_limit',
+	/** The firm has been stopped, by itself or by the venue. */
+	'kill_switch_engaged',
+	/** Fill-or-kill, and the book could not fill all of it. */
+	'insufficient_liquidity',
+	/** Self-trade prevention refused the aggressing order. */
+	'self_trade_prevented',
+	/** A market order arrived with an empty book on the other side. */
+	'no_opposing_liquidity',
+	/** The account does not belong to the firm that sent the command. */
+	'account_not_owned'
 ] as const;</code></pre>
 </figure>
+<p>Fourteen codes. The free-text <code>detail</code> that travels beside each one is for a human and is deliberately not stable — the moment a client matches on prose, a copy-edit becomes an outage at somebody else's firm.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

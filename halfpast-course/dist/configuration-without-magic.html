@@ -45,23 +45,52 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig(({ mode }) =&gt; {
+	// …
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
 	return {
 		plugins: [
 			sveltekit({
+				// …
 				paths: { origin: env.PUBLIC_ORIGIN },
+
 				compilerOptions: {
-					runes: true,
+					// Runes everywhere except node_modules, where a dependency may still be
+					// written in legacy Svelte 4 style. Removable in Svelte 6.
+					runes: ({ filename }) =&gt;
+						filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
+
+					// `await` at the top level of &lt;script&gt;, inside $derived, and directly in
+					// markup. Remote functions are promises; this is what lets a component
+					// await one without a load function in the middle. Default in Svelte 6.
 					experimental: { async: true }
 				},
+
 				adapter: adapter(),
-				experimental: { remoteFunctions: true },
-				prerender: { handleHttpError: 'fail', handleMissingId: 'fail' }
+
+				experimental: {
+					// `query()`, `query.batch()`, `query.live()`, `command()` and `form()`
+					// from `$app/server`. The whole data layer of this app is built on them.
+					remoteFunctions: true
+				},
+
+				prerender: {
+					// A broken internal link fails the build instead of shipping a 404.
+					handleHttpError: 'fail',
+					handleMissingId: 'fail'
+				}
 			}),
+
+			// …
 			sveltePhosphorOptimize()
 		],
-		ssr: { external: ['@libsql/client', 'libsql'] }
+
+		ssr: {
+			// …
+			external: ['@libsql/client', 'libsql']
+		},
+
+		// …
 	};
 });</code></pre>
 </figure>
@@ -86,24 +115,42 @@ import * as v from 'valibot';
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
 
+// …
+
 export const variables = defineEnvVars({
+	/* ---------------------------------------------------------------- private */
+
 	DATABASE_URL: {
 		description:
 			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production.',
 		schema: required
 	},
 
+	// …
+
 	BETTER_AUTH_SECRET: {
-		description: 'Signs session cookies. Rotating it signs everybody out.',
-		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+		description:
+			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation.',
+		schema: v.pipe(
+			required,
+			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+		)
 	},
 
+	/* ----------------------------------------------------------------- public */
+
 	PUBLIC_ORIGIN: {
-		description: 'Where the app is served from. Used for canonical URLs and CSRF checks.',
+		description:
+			'The public base URL used for canonical links, share URLs and structured data. No trailing slash — one is stripped for you if you leave it on.',
 		public: true,
+		// `static` inlines the value at build time, so it costs nothing at runtime
+		// and dead code behind it can be eliminated. Only correct because this
+		// value cannot differ between build and deploy.
 		static: true,
 		schema: origin
-	}
+	},
+
+	// …
 });</code></pre>
 </figure>
 <ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a *type error*, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>

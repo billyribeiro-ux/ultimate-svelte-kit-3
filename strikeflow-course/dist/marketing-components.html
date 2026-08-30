@@ -43,14 +43,25 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Props {
+	/** Small uppercase label above the heading. */
 	eyebrow?: string;
 	title: string;
+	/** Intro paragraph below the heading. */
 	lede?: string;
-	/** Heading level — defaults to 2, correct for a section inside a page with one h1 */
+	/** Heading level. Defaults to 2 — correct for a section inside a page with one h1. */
 	level?: 2 | 3;
 	align?: 'start' | 'center';
+	/** Anchor id, so the section can be linked to directly. */
 	id?: string;
+	/** Optional extra content (buttons, badges) below the lede. */
 	children?: Snippet;
+	/**
+	 * Animate the heading on scroll — a masked line-by-line reveal.
+	 *
+	 * Off by default. A page where *every* heading performs is exhausting; the
+	 * effect works because it is used on the two or three that matter.
+	 */
+	animate?: boolean;
 }</code></pre>
 </figure>
 
@@ -58,6 +69,7 @@
 	<h4>Why a level prop at all</h4>
 	<p>Heading levels are a document outline, not font sizes. A screen reader user can pull up a list of headings and navigate by it, and jumping from <code>&lt;h1&gt;</code> to <code>&lt;h3&gt;</code> makes that outline read as though content is missing. So: visual size comes from CSS, and the level comes from where the section genuinely sits in the hierarchy. They are separate decisions.</p>
 </aside>
+<aside class="callout callout--note"><p><code>animate</code> belongs to the motion system from part 4: when set, the heading gets a masked line-by-line reveal on scroll. It defaults to off, and stays off for every header except the two or three that matter.</p></aside>
 <h3 id="grid">FeatureGrid, and a Safari quirk</h3>
 
 <figure class="code">
@@ -73,10 +85,21 @@
 				&lt;span class=&quot;feature-grid__icon&quot; aria-hidden=&quot;true&quot;&gt;
 					&lt;Icon size={26} weight=&quot;duotone&quot; /&gt;
 				&lt;/span&gt;
+
 				&lt;svelte:element this={`h${level}`} class=&quot;feature-grid__title&quot; id={feature.id}&gt;
 					{feature.title}
 				&lt;/svelte:element&gt;
-				&lt;p&gt;{feature.summary}&lt;/p&gt;
+
+				&lt;p class=&quot;feature-grid__summary&quot;&gt;{feature.summary}&lt;/p&gt;
+
+				{#if detailed}
+					&lt;p class=&quot;feature-grid__detail&quot;&gt;{feature.detail}&lt;/p&gt;
+					&lt;ul class=&quot;feature-grid__points&quot; role=&quot;list&quot;&gt;
+						{#each feature.points as point (point)}
+							&lt;li&gt;{point}&lt;/li&gt;
+						{/each}
+					&lt;/ul&gt;
+				{/if}
 			&lt;/Card&gt;
 		&lt;/li&gt;
 	{/each}
@@ -91,16 +114,22 @@
 		<span class="code__file">src/lib/components/marketing/StatStrip.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;dl class=&quot;stats&quot;&gt;
+	<pre><code class="lang-svelte">&lt;dl class=&quot;stats&quot; class:stats--bordered={bordered}&gt;
 	{#each stats as stat (stat.label)}
 		&lt;div class=&quot;stats__item&quot;&gt;
 			&lt;dt class=&quot;stats__label&quot;&gt;{stat.label}&lt;/dt&gt;
-			&lt;dd class=&quot;stats__value tabular&quot;&gt;{stat.value}&lt;/dd&gt;
+			&lt;dd class=&quot;stats__value tabular&quot; {@attach animated ? counter() : undefined}&gt;
+				{stat.value}
+			&lt;/dd&gt;
+			{#if stat.note}
+				&lt;dd class=&quot;stats__note&quot;&gt;{stat.note}&lt;/dd&gt;
+			{/if}
 		&lt;/div&gt;
 	{/each}
 &lt;/dl&gt;</code></pre>
 </figure>
 <p>A number and its label are genuinely a term/definition pair. Marking them up as a <code>&lt;dl&gt;</code> means a screen reader announces &quot;median latency, 240 milliseconds&quot; rather than two orphaned strings that happen to sit near each other.</p>
+<aside class="callout callout--note"><p>Two details worth noticing: the second <code>&lt;dd&gt;</code> is an honest-footnote slot — a stat that needs qualifying carries its qualifier in the markup, not a tooltip. And <code>{@attach animated ? counter() : undefined}</code> reaches forward to the count-up attachment from part 4, which animates the visible copy while the real value stays in the DOM for assistive tech. With <code>animated</code> off (the default) it is a no-op.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -127,7 +156,9 @@
 				&lt;CaretDownIcon size={18} weight=&quot;bold&quot; /&gt;
 			&lt;/span&gt;
 		&lt;/summary&gt;
-		&lt;div class=&quot;faq__answer&quot;&gt;&lt;p&gt;{item.answer}&lt;/p&gt;&lt;/div&gt;
+		&lt;div class=&quot;faq__answer&quot;&gt;
+			&lt;p&gt;{item.answer}&lt;/p&gt;
+		&lt;/div&gt;
 	&lt;/details&gt;
 {/each}</code></pre>
 </figure>
@@ -162,17 +193,23 @@
 		type=&quot;button&quot;
 		role=&quot;radio&quot;
 		aria-checked={billing === 'monthly'}
+		class=&quot;pricing__toggle-option&quot;
 		class:is-active={billing === 'monthly'}
 		onclick={() =&gt; (billing = 'monthly')}
-	&gt;Monthly&lt;/button&gt;
-
+	&gt;
+		Monthly
+	&lt;/button&gt;
 	&lt;button
 		type=&quot;button&quot;
 		role=&quot;radio&quot;
 		aria-checked={billing === 'annual'}
+		class=&quot;pricing__toggle-option&quot;
 		class:is-active={billing === 'annual'}
 		onclick={() =&gt; (billing = 'annual')}
-	&gt;Annual &lt;span class=&quot;pricing__saving&quot;&gt;save {bestSaving}%&lt;/span&gt;&lt;/button&gt;
+	&gt;
+		Annual
+		&lt;span class=&quot;pricing__saving&quot;&gt;save {bestSaving}%&lt;/span&gt;
+	&lt;/button&gt;
 &lt;/div&gt;</code></pre>
 </figure>
 <p><code>role=&quot;radiogroup&quot;</code> plus <code>role=&quot;radio&quot;</code> gives assistive tech the right mental model — &quot;one of two options&quot;, rather than &quot;two unrelated buttons&quot;.</p>

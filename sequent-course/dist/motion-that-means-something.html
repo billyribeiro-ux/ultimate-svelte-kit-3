@@ -53,6 +53,8 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
+ * GSAP's global defaults.
+ *
  * `power2.out` for almost everything: fast at the start, settling at the end.
  * That is what physical objects do, and it is what makes an interface feel
  * responsive — the movement has visibly *begun* within a frame or two of the
@@ -62,6 +64,8 @@
  * on a button press it reads as lag.
  */
 gsap.defaults({ ease: 'power2.out', duration: 0.35 });
+
+// …
 
 export const DURATION = {
 	/** A flash, a state change, a colour. Barely perceptible as motion. */
@@ -194,6 +198,8 @@ export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&g
 	value,
 	duration: duration ?? DURATION.quick,
 	ease: 'power2.out',
+	// `true` rather than 'auto': there is exactly one tween per node and
+	// the newest target is always the right one.
 	overwrite: true,
 	snap: { value: 1 },
 	onUpdate: () =&gt; (node.textContent = format(state.value))

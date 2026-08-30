@@ -69,7 +69,9 @@ packages:
 
 # Keep the lockfile honest about what each package actually uses, rather than
 # letting a transitive dependency satisfy an undeclared import.
-linkWorkspacePackages: true</code></pre>
+linkWorkspacePackages: true
+
+# …</code></pre>
 </figure>
 <h3 id="the-six">The six packages</h3>
 <ul><li><code>packages/protocol</code> — commands, events, money, ids. The vocabulary, versioned.</li><li><code>packages/core</code> — the matching engine, auctions and risk. <strong>Pure functions, no I/O of any kind.</strong></li><li><code>packages/store</code> — the log, projections, the ledger, tenancy, authorisation.</li><li><code>apps/engine</code> — the process that turns commands into events, and recovers from crashes.</li><li><code>apps/worker</code> — drains the outbox: signed webhooks, and email.</li><li><code>apps/web</code> — SvelteKit 3: the terminal, the risk console, the admin area, the public API.</li></ul>
@@ -88,27 +90,42 @@ linkWorkspacePackages: true</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
+	&quot;$schema&quot;: &quot;https://json.schemastore.org/tsconfig&quot;,
 	&quot;compilerOptions&quot;: {
-		&quot;target&quot;: &quot;esnext&quot;,
+		&quot;target&quot;: &quot;es2024&quot;,
+		&quot;lib&quot;: [&quot;es2024&quot;],
 		&quot;module&quot;: &quot;nodenext&quot;,
 		&quot;moduleResolution&quot;: &quot;nodenext&quot;,
+
+		/*
+		 * Strict, and then some.
+		 *
+		 * `strict` alone still lets two things through that matter here.
+		 * `noUncheckedIndexedAccess` makes `book.levels[i]` a `Level | undefined`,
+		 * which is the truth — and in a matching engine, an off-by-one that reads
+		 * past the end of a price ladder is exactly the bug you want the compiler
+		 * to find rather than the market.
+		 * `exactOptionalPropertyTypes` stops `{ price?: number }` from silently
+		 * accepting `{ price: undefined }`, which is how a market order ends up
+		 * indistinguishable from a limit order with a missing price.
+		 */
 		&quot;strict&quot;: true,
-
-		// `array[0]` is `T | undefined`. Half this codebase asks &quot;what is the best
-		// bid&quot;, and the honest answer is often &quot;there isn't one&quot;.
 		&quot;noUncheckedIndexedAccess&quot;: true,
-
-		// `{ a?: string }` and `{ a: string | undefined }` become different types.
-		// Fiddly, and it is what catches &quot;I passed undefined where the field was
-		// supposed to be absent&quot; — which matters on the wire.
 		&quot;exactOptionalPropertyTypes&quot;: true,
-
 		&quot;noImplicitOverride&quot;: true,
 		&quot;noFallthroughCasesInSwitch&quot;: true,
+		&quot;noPropertyAccessFromIndexSignature&quot;: true,
+
+		/* Node 24 runs TypeScript directly, so we type-check and never emit. */
+		&quot;noEmit&quot;: true,
+		&quot;allowImportingTsExtensions&quot;: true,
+		&quot;rewriteRelativeImportExtensions&quot;: true,
 		&quot;verbatimModuleSyntax&quot;: true,
 		&quot;isolatedModules&quot;: true,
+
+		// …
 		&quot;skipLibCheck&quot;: true,
-		&quot;noEmit&quot;: true
+		&quot;resolveJsonModule&quot;: true
 	}
 }</code></pre>
 </figure>

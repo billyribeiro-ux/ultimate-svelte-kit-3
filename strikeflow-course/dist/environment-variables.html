@@ -49,7 +49,7 @@
 import * as v from 'valibot';
 
 export const variables = defineEnvVars({
-	/** Canonical origin, no trailing slash. */
+	// …
 	PUBLIC_SITE_URL: {
 		public: true,
 		static: true,
@@ -57,17 +57,23 @@ export const variables = defineEnvVars({
 		schema: v.pipe(
 			v.optional(v.string(), 'http://localhost:5173'),
 			v.url('PUBLIC_SITE_URL must be a valid absolute URL'),
-			// Strip a trailing slash once, here, rather than defensively everywhere else
+			// A trailing slash here produces &quot;https://site.com//about&quot; downstream.
+			// Strip it once, here, rather than defensively everywhere else.
 			v.transform((url) =&gt; url.replace(/\/+$/, ''))
 		)
 	},
 
-	/** Private by default — no `public: true`. */
+	/**
+	 * Directory where captured leads are appended.
+	 *
+	 * Private: the browser has no business knowing where we write.
+	 */
 	LEADS_DIR: {
 		description: 'Directory for the newline-delimited JSON lead log.',
 		schema: v.optional(v.string(), '.data')
 	},
 
+	// …
 	EBOOK_TOKEN_SECRET: {
 		description: 'HMAC key for signing ebook download links. Set this in production.',
 		schema: v.optional(v.pipe(v.string(), v.minLength(32, 'Use at least 32 characters')))
@@ -108,13 +114,23 @@ import { EBOOK_TOKEN_SECRET } from '$app/env/private';</code></pre>
 		<span class="code__file">.env.example</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-bash"># Copy to .env and fill in. .env is gitignored; this file is not.
+	<pre><code class="lang-bash"># Copy to `.env` and fill in. `.env` is gitignored; this file is not.
+#
+# Every variable here is declared and validated in `src/env.ts`.
+# If you add one there, add it here too — this file is the documentation
+# a new engineer reads before their first `pnpm dev`.
 
+# Canonical origin. No trailing slash.
+# Local dev can leave this as-is; production MUST set it to the real domain,
+# or every canonical tag, Open Graph URL and sitemap entry will point at localhost.
 PUBLIC_SITE_URL=&quot;http://localhost:5173&quot;
+
+# Where captured leads are appended as newline-delimited JSON.
 LEADS_DIR=&quot;.data&quot;
 
-# Generate with:
-#   node -e &quot;console.log(crypto.randomBytes(32).toString('hex'))&quot;
+# Signs the ebook download links. Minimum 32 characters.
+# Generate one with:  node -e &quot;console.log(crypto.randomBytes(32).toString('hex'))&quot;
+# Leave unset in development and a throwaway key is generated at boot.
 EBOOK_TOKEN_SECRET=&quot;&quot;</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Commit <code>.env.example</code>, never <code>.env</code>. The example file is the documentation a new engineer reads before their first <code>pnpm dev</code>, and keeping it in sync with <code>src/env.ts</code> costs nothing.</p></aside>

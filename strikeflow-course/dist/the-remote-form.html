@@ -94,41 +94,55 @@ const guideSchema = v.object({
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const requestGuide = form(guideSchema, async (data, issue) =&gt; {
+	// …
 	const event = getRequestEvent();
 
-	/* 1. Rate limit */
+	/* ---- 1. Rate limit -------------------------------------------------- */
 	const limit = rateLimit(`guide:${event.getClientAddress()}`, {
 		limit: 5,
 		windowMs: 60_000
 	});
 
 	if (!limit.allowed) {
-		invalid(issue.email(
-			`Too many attempts. Please wait ${limit.retryAfterSeconds} seconds and try again.`
-		));
+		// Attached to the email field so it renders next to the input the user is
+		// looking at, rather than in a form-level error block they might miss.
+		invalid(
+			issue.email(
+				`Too many attempts. Please wait ${limit.retryAfterSeconds} seconds and try again.`
+			)
+		);
 	}
 
-	/* 2. Honeypot — note what we do NOT do: tell them */
+	/* ---- 2. Honeypot ---------------------------------------------------- */
+	// …
 	const isBot = data._company.trim().length &gt; 0;
 
 	const email = normaliseEmail(data.email);
 
-	/* 3. Persist */
+	/* ---- 3. Persist ----------------------------------------------------- */
 	if (!isBot) {
 		const alreadyKnown = await leadStore.has(email);
+
 		if (!alreadyKnown) {
-			await leadStore.save({
+			const lead: Lead = {
 				email,
 				experience: data.experience,
 				consentedToMarketing: data.consent,
 				capturedAt: new Date().toISOString(),
 				source: 'guide-landing'
-			});
+			};
+
+			await leadStore.save(lead);
 		}
+
+		// A real deployment sends the welcome email here — and does it via a queue,
+		// not inline, so a slow mail provider can't hold the user's request open.
 	}
 
-	/* 4. Issue a signed link and redirect */
+	/* ---- 4. Issue a signed download link -------------------------------- */
 	const token = createDownloadToken(email);
+
+	// …
 	redirect(303, `/guide/thank-you?t=${encodeURIComponent(token)}`);
 });</code></pre>
 </figure>

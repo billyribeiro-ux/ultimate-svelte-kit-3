@@ -43,26 +43,30 @@
 		<span class="code__file">src/lib/motion/magnetic.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">const hasFinePointer =
-	window.matchMedia('(pointer: fine) and (hover: hover)').matches;
-if (!hasFinePointer) return;   // no cursor on a touchscreen
+	<pre><code class="lang-ts">const hasFinePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
+if (!hasFinePointer) return;
 
 const moveX = gsap.quickTo(node, 'x', { duration: 0.45, ease: 'power3.out' });
 const moveY = gsap.quickTo(node, 'y', { duration: 0.45, ease: 'power3.out' });
 
 function handleMove(event: PointerEvent) {
 	const rect = node.getBoundingClientRect();
+
+	// …
 	const offsetX = event.clientX - (rect.left + rect.width / 2);
 	const offsetY = event.clientY - (rect.top + rect.height / 2);
 
+	// …
 	const normalX = offsetX / (rect.width / 2 + radius);
 	const normalY = offsetY / (rect.height / 2 + radius);
 
+	// …
 	moveX(gsap.utils.clamp(-1, 1, normalX) * strength);
 	moveY(gsap.utils.clamp(-1, 1, normalY) * strength);
 }
 
 function handleLeave() {
+	// …
 	gsap.to(node, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.45)' });
 }</code></pre>
 </figure>
@@ -82,19 +86,19 @@ function handleLeave() {
 		<span class="code__file">src/lib/motion/counter.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// Two layers: the real value for assistive tech, a clone for the eyes
+	<pre><code class="lang-ts">/* … */
 const accessible = document.createElement('span');
 accessible.className = 'visually-hidden';
-accessible.textContent = raw;               // &quot;&lt;250ms&quot; from the first frame
+accessible.textContent = raw;
 
 const visual = document.createElement('span');
-visual.setAttribute('aria-hidden', 'true'); // never announced
-visual.textContent = prefix + format(0, decimals) + suffix;
+visual.setAttribute('aria-hidden', 'true');
+visual.textContent = `${parsed.prefix}${format(0, parsed.decimals)}${parsed.suffix}`;
 
 node.textContent = '';
 node.append(accessible, visual);</code></pre>
 </figure>
-<p>The DOM holds the truth from the first frame; only the pixels are lying. There is a second detail too — our values are strings like <code>&quot;&lt;250ms&quot;</code> and <code>&quot;1.4M&quot;</code>, so the counter splits each into prefix, number and suffix, animates only the middle, and reassembles on every frame.</p>
+<p>Two layers make this safe: a visually-hidden span carries the real value for assistive tech from the very first frame, and a second span, marked <code>aria-hidden</code> so it is never announced, is the one that actually counts up. Only the pixels are lying. There is a second detail too — our values are strings like <code>&quot;&lt;250ms&quot;</code> and <code>&quot;1.4M&quot;</code>, so the counter splits each into prefix, number and suffix, animates only the middle, and reassembles on every frame.</p>
 <aside class="callout callout--note"><p><code>onComplete</code> sets the exact original string. Floating-point drift can otherwise leave you on &quot;1,399,999&quot; forever, which is the kind of bug that survives to production because it is only wrong by one.</p></aside>
 <h3 id="parallax">Parallax, used sparingly</h3>
 
@@ -105,12 +109,12 @@ node.append(accessible, visual);</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">gsap.to(node, {
 	yPercent: speed * 100,
-	ease: 'none',              // parallax tracks scroll, not time
+	ease: 'none', // parallax must be linear — it tracks scroll, not time
 	scrollTrigger: {
 		trigger: node.parentElement ?? node,
 		start: 'top top',
 		end: 'bottom top',
-		scrub: true            // tied directly to scroll position
+		scrub: true
 	}
 });</code></pre>
 </figure>
@@ -141,12 +145,14 @@ node.append(accessible, visual);</code></pre>
 		<span class="code__file">src/lib/styles/motion.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">::view-transition-old(root) {
-	animation: vt-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
-}
+	<pre><code class="lang-css">@media (prefers-reduced-motion: no-preference) {
+	::view-transition-old(root) {
+		animation: vt-fade-out 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
+	}
 
-::view-transition-new(root) {
-	animation: vt-fade-in 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+	::view-transition-new(root) {
+		animation: vt-fade-in 220ms cubic-bezier(0, 0, 0.2, 1) forwards;
+	}
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>Keep it fast — ours is 220ms. A page transition is dead time in which the user can do nothing. Long elaborate page transitions are the single most common way a &quot;cinematic&quot; site becomes an irritating one.</p></aside>

@@ -59,7 +59,7 @@
 	readonly maxRatePerSecond: number;
 }</code></pre>
 </figure>
-<p>A table rather than a chain of conditionals, for the same reason the permission matrix in Part 3 is a table: <strong>somebody who is not a programmer has to be able to check it.</strong> A pricing bug found by the finance team reading this table costs a conversation. The same bug found by a customer costs a refund and some trust.</p>
+<p>A table rather than a chain of conditionals, for the same reason the permission matrix in Part 3 is a table: <strong>somebody who is not a programmer has to be able to check it.</strong> A pricing bug found by the finance team reading this table costs nothing. The same bug found by a customer costs a refund and a conversation.</p>
 <aside class="callout callout--note"><p>Every amount is an integer in the same scaled units as everything else in the venue. Prices, fees and invoice lines share one representation, so a fee the venue earned can be compared with an invoice line without a conversion nobody would remember to write.</p></aside>
 <h3 id="prorate">Proration, in three lines that are easy to get wrong</h3>
 
@@ -92,12 +92,23 @@
 	<pre><code class="lang-ts">/**
  * What a firm used in a period.
  *
- * Counted from the event log rather than from a counter, so re-running this
- * produces the same number. A counter incremented by the projector would drift
- * the first time a batch was replayed — and projectors replay after every
- * crash, by design.
+ * Derived by counting the log, not by a counter somebody increments. That is
+ * the property that makes it safe to re-run: the same window always produces
+ * the same number, however many times a projector has replayed it, and a
+ * disputed invoice can be recomputed from first principles months later.
+ *
+ * A `usage_counter` table incremented on each order would be faster and would
+ * drift the first time the projector re-applied a batch after a crash — by an
+ * amount nobody could ever reconstruct.
  */
-export async function usageFor(client: Client, firmId: string, from: number, to: number) { /* … */ }</code></pre>
+export async function usageFor(
+	client: Client,
+	firmId: string,
+	from: number,
+	to: number
+): Promise&lt;Usage&gt; {
+	// …
+}</code></pre>
 </figure>
 
 <aside class="callout callout--why">

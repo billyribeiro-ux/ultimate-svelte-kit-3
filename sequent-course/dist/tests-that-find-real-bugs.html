@@ -48,20 +48,21 @@
 		<span class="code__file">ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('never crosses the book', () =&gt; {
+	<pre><code class="lang-ts">it('never leaves a crossed book during continuous trading', () =&gt; {
 	fc.assert(
-		fc.property(fc.array(arbitraryOrder(), { maxLength: 200 }), (orders) =&gt; {
-			let state = emptyBook();
-			for (const order of orders) state = apply(state, order).state;
+		fc.property(arbSession, (steps) =&gt; {
+			const { state } = run(steps);
+			const instrument = state.instruments.get(VOD)!;
 
-			const bid = bestBid(state);
-			const ask = bestAsk(state);
-			if (bid &amp;&amp; ask) expect(bid.price).toBeLessThan(ask.price);
-		})
+			if (instrument.phase === 'continuous') {
+				expect(isCrossed(instrument.book)).toBe(false);
+			}
+		}),
+		{ numRuns: 400 }
 	);
 });</code></pre>
 </figure>
-<p><code>fast-check</code> generates hundreds of random order sequences and checks the property after each. When it finds a failure it <strong>shrinks</strong> it — repeatedly simplifying the input while the failure persists — so what you get is not a 200-order sequence but the three orders that actually matter.</p>
+<p><code>fast-check</code> generates hundreds of random sessions and checks the property after each. When it finds a failure it <strong>shrinks</strong> it — repeatedly simplifying the input while the failure persists — so what you get is not a 120-step session but the three orders that actually matter.</p>
 <aside class="callout callout--note"><p>Shrinking is the feature. A random failure you cannot reduce is barely more useful than a bug report. The four-order counterexample that fits in a comment is what turns &quot;the fuzzer found something&quot; into a fix.</p></aside>
 <h3 id="chaos">Fault injection</h3>
 
@@ -89,17 +90,25 @@
 		<span class="code__file">apps/engine/src/snapshot.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">try {
-	return { seq, state: deserialise(JSON.parse(body)) };
-} catch {
-	/*
-	 * A corrupt snapshot is treated as an absent one.
-	 *
-	 * The snapshot is an optimisation: everything in it can be rebuilt by
-	 * replaying the log. Throwing here converts &quot;startup is slower than usual&quot;
-	 * into &quot;the venue does not start&quot;, which is the worst possible trade for a
-	 * file whose entire purpose is to save time.
-	 */
+	<pre><code class="lang-ts">/*
+ * A snapshot that will not parse is treated as **absent**, not as an error.
+ *
+ * …
+ *
+ * It is logged rather than swallowed silently: a venue that quietly replays
+ * from genesis every start is one whose snapshots have been broken for
+ * months and whose boot time nobody has questioned.
+ */
+try {
+	return {
+		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
+		fingerprint: String(row['fingerprint'])
+	};
+} catch (thrown) {
+	console.error(
+		`[engine] snapshot at seq ${Number(row['seq'])} is unreadable; replaying from genesis instead.`,
+		thrown
+	);
 	return undefined;
 }</code></pre>
 </figure>
@@ -117,12 +126,15 @@
  *
  *   **Where it breaks first.** Every system has one bottleneck at a time, and
  *   knowing which one is the difference between optimising something that
- *   matters and optimising something that does not.
+ *   matters and optimising something that does not. Here it is the sequencer:
+ *   one writer, by design, and therefore the ceiling on the whole venue.
  *
  *   **Whether correctness survives volume.** Almost every concurrency bug is
  *   invisible below some threshold. The assertions at the end of these tests
  *   are the same ones the small suites make — the books balance, no order is
  *   overfilled — and they are the point. The timing is context.
+ *
+ * …
  */</code></pre>
 </figure>
 <p>Ten thousand orders. The engine died partway through:</p>
@@ -163,19 +175,39 @@ export async function withTransaction&lt;T&gt;(
 
 	const run = previous.then(async () =&gt; {
 		await client.execute('BEGIN IMMEDIATE');
+
 		try {
 			const result = await work(client);
 			await client.execute('COMMIT');
 			return result;
 		} catch (thrown) {
-			try { await client.execute('ROLLBACK'); } catch { /* original error is the one worth having */ }
+			/*
+			 * The rollback is itself wrapped, and its failure is swallowed.
+			 *
+			 * If the connection has gone, `ROLLBACK` throws too — and throwing *that*
+			 * would replace the real error with a meaningless one, hiding the reason
+			 * the transaction failed in the first place.
+			 */
+			try {
+				await client.execute('ROLLBACK');
+			} catch {
+				// The original error is the one worth having.
+			}
+
 			throw thrown;
 		}
 	});
 
-	// Note the double-swallow: the chain must survive a rejection, or one failed
-	// write leaves every later transaction on this connection waiting forever.
-	chains.set(client, run.then(() =&gt; undefined, () =&gt; undefined));
+	// The chain must continue whether this call succeeded or not, or one failed
+	// transaction would block every later one on this connection forever.
+	chains.set(
+		client,
+		run.then(
+			() =&gt; undefined,
+			() =&gt; undefined
+		)
+	);
+
 	return run;
 }</code></pre>
 </figure>

@@ -54,15 +54,16 @@
 		description:
 			'Accept new orders at the gateway. Off is a venue-wide pause that leaves existing orders resting.'
 	},
+	// …
 	deliver_webhooks: {
 		default: true,
 		description: 'Let the worker deliver webhooks. Off queues them, it does not drop them.'
 	},
+	// …
 	new_firm_signup: {
 		default: false,
 		description: 'Allow a new member firm to be created. Off by default: onboarding is manual.'
 	}
-	// …
 } as const;
 
 export type FlagName = keyof typeof FLAGS;</code></pre>
@@ -107,7 +108,7 @@ export type FlagName = keyof typeof FLAGS;</code></pre>
 	}
 }</code></pre>
 </figure>
-<p>Five seconds of cache. Long enough that a busy venue does one query per flag per five seconds rather than one per order; short enough that &quot;I turned it off&quot; and &quot;it is off&quot; are the same sentence in an incident.</p>
+<p>Five seconds of cache. Long enough that a busy venue does one query per flag per five seconds rather than one per request; short enough that &quot;I turned it off&quot; and &quot;it is off&quot; are the same sentence in an incident.</p>
 
 <aside class="callout callout--why">
 	<h4>Why that staleness is acceptable here and nowhere else</h4>
@@ -136,10 +137,10 @@ export type FlagName = keyof typeof FLAGS;</code></pre>
  * The flag check goes **after** authorisation and before the append.
  *
  * After, because &quot;the venue is paused&quot; is not something to tell somebody who
- * was not allowed to send this anyway — that would leak which commands exist to
- * whoever is probing. Before the append, because a paused venue must not put
- * the command in the log at all: a log entry is a promise the engine will apply
- * it, and pausing means not making that promise.
+ * was not allowed to send this anyway — that would leak which commands exist
+ * to whoever is probing. Before the append, because a paused venue must not
+ * put the command in the log at all: a log entry is a promise the engine will
+ * apply it, and pausing means not making that promise.
  */
 const flag = FLAG_FOR[authorised.kind];
 if (flag &amp;&amp; !(await flags.enabled(flag))) {

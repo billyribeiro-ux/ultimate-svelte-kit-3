@@ -53,14 +53,23 @@
 	margin-block-start: var(--space-2);
 	/* Stops a sideways swipe at the edge from scrolling the page behind it. */
 	overscroll-behavior-x: contain;
-	/* Same reason as `.card`: without this the scroller itself can be forced
-	   wide by its table when it is a flex or grid item. */
+	/* Same reason as `.card` above: without this the scroller itself can be
+	   forced wide by its table when it is a flex or grid item. */
 	min-inline-size: 0;
 }
 
-.scroller:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.scroller:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
 
-.scroller table { inline-size: 100%; border-collapse: collapse; min-inline-size: 32rem; }
+.scroller table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	min-inline-size: 32rem;
+}
+
+/* … */
 
 /* The pinned column, so scrolling sideways never loses the row's identity. */
 .scroller .pin {
@@ -71,8 +80,12 @@
 }
 
 @media (min-width: 48rem) {
-	.scroller table { min-inline-size: 0; }
-	.scroller .pin { position: static; }
+	.scroller table {
+		min-inline-size: 0;
+	}
+	.scroller .pin {
+		position: static;
+	}
 }</code></pre>
 </figure>
 <ul><li><strong><code>overscroll-behavior-x: contain</code></strong> — swiping past the end of the table stops there instead of dragging the page behind it. Without it, a horizontal scroller inside a page feels broken on iOS.</li><li><strong><code>:focus-visible</code> on the scroller</strong> — a horizontal scroll region must be reachable by keyboard, and a focus ring is what tells somebody they can now use the arrow keys.</li><li><strong>The 48rem query undoes it all.</strong> On a laptop the table fits, so the pin becomes <code>static</code> and the minimum width goes away. The mobile treatment is not carried up to a screen that does not need it.</li></ul>
@@ -86,8 +99,10 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.card {
+	/* … */
+
 	/*
-	 * The second most common cause, which took a browser to find.
+	 * And the second most common cause, which took a browser to find.
 	 *
 	 * A `position: sticky` cell inside a horizontally scrolling container
 	 * contributes its **sticky-shifted** position to scrollable overflow, and
@@ -95,9 +110,13 @@
 	 * first column of a table that scrolls 220px sideways adds 220px of
 	 * scrollable width to the *page*, even though the table itself is correctly
 	 * clipped and nothing is visibly out of place.
+	 *
+	 * …
 	 */
 	overflow-x: clip;
 	overflow-clip-margin: 4px;
+
+	/* … */
 	overflow-y: visible;
 }</code></pre>
 </figure>
@@ -129,7 +148,7 @@
 
 <aside class="callout callout--why">
 	<h4>What actually found both of these</h4>
-	<p>A real browser at 390px, 768px and 1440px, with a check that compared <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code>. Not a unit test, not a screenshot diff, not a component story. Two of the most user-visible bugs in this project were invisible to every form of testing except opening the page.</p>
+	<p>A real browser at 390px, 768px and 1440px, comparing <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code> by hand in the console. Not a unit test, not a screenshot diff, not a component story. Two of the most user-visible bugs in this project were invisible to everything except opening the page and looking.</p>
 </aside>
 
 <aside class="callout callout--check">

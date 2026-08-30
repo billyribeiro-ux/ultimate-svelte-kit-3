@@ -57,7 +57,7 @@ async function createBookingNow(input: CreateBookingInput): Promise&lt;Booking&g
 	const now = input.now ?? Date.now();
 
 	return db.transaction(async (tx) =&gt; {
-		/* --- 1. Re-derive availability from scratch -------------------------- */
+		/* --- 1. Re-derive what was actually on offer ------------------------- */
 		// … load the business, service, staff, the pairing, the rules and the
 		// occupied cells, then run the same pure `availableSlots` from chapter 8.
 
@@ -74,14 +74,14 @@ async function createBookingNow(input: CreateBookingInput): Promise&lt;Booking&g
 			throw new BookingError('slot_not_offered', 'That time is no longer available.');
 		}
 
-		/* --- 2. The customer -------------------------------------------------- */
+		/* --- 2. The customer ------------------------------------------------- */
 		// Find by (business, lowercased email) or insert.
 
-		/* --- 3. The booking row ----------------------------------------------- */
+		/* --- 3. The booking row ---------------------------------------------- */
 		const [created] = await tx.insert(booking).values({ /* … snapshots … */ }).returning();
 		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
 
-		/* --- 4. The claim. This is the part that cannot be raced. -------------- */
+		/* --- 4. The claim. This is the part that cannot be raced. ------------- */
 		const cells = slotsIn({ start: blockStart, end: blockEnd });
 
 		try {
@@ -133,9 +133,11 @@ const [rules, claims] = await Promise.all([
 		<span class="code__file">src/lib/server/scheduling.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export type BookingErrorCode =
-	| 'slot_taken'          // somebody else claimed it in the last few milliseconds
-	| 'slot_not_offered'    // it stopped being offered — hours changed, day off added
+	<pre><code class="lang-ts">// …
+
+export type BookingErrorCode =
+	| 'slot_taken'
+	| 'slot_not_offered'
 	| 'service_unavailable'
 	| 'staff_unavailable'
 	| 'too_soon'
@@ -154,6 +156,7 @@ export class BookingError extends Error {
 	}
 }</code></pre>
 </figure>
+<p><code>slot_taken</code> is somebody else claiming the exact cell in the last few milliseconds; <code>slot_not_offered</code> is the slot no longer being on offer at all — hours changed, a day off was added.</p>
 <p>A code <strong>and</strong> a message. The message is for the person; the code is for the interface, which can decide to refresh the grid on <code>slot_taken</code>, apologise on <code>too_far_ahead</code>, and — as the customer's cancel command does — return <strong>409</strong> rather than 400 for <code>too_late_to_cancel</code>, because the request was valid and the world moved on. Matching on message text works right up until somebody improves the wording.</p>
 
 <aside class="callout callout--check">

@@ -83,9 +83,15 @@ Cross-site POST form submissions are forbidden</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">sveltekit({
-	// Kit's own cross-site check is turned off, and replaced by a stricter one
-	// in `hooks.server.ts`. Read that before deciding this is reckless.
+	// …
+
+	/*
+	 * Kit's own cross-site check is turned off, and replaced by a stricter
+	 * one in `hooks.server.ts`. Read that before deciding this is reckless.
+	 * …
+	 */
 	csrf: { trustedOrigins: ['*'] },
+
 	// …
 })</code></pre>
 </figure>
@@ -98,6 +104,7 @@ Cross-site POST form submissions are forbidden</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/* … */
 const handleCsrf: Handle = async ({ event, resolve }) =&gt; {
 	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
 
@@ -109,11 +116,10 @@ const handleCsrf: Handle = async ({ event, resolve }) =&gt; {
 	/*
 	 * A missing `Origin` on a non-GET is refused rather than trusted.
 	 *
-	 * Every browser has sent `Origin` on cross-origin form submissions for
-	 * years, so &quot;no origin&quot; here means a non-browser client — which should be
-	 * using a token, not a cookie. Trusting the absence is the mistake that
-	 * turns this check into decoration, because it is the one thing an attacker
-	 * can arrange.
+	 * Every browser has sent `Origin` on cross-origin form submissions for years,
+	 * so &quot;no origin&quot; here means a non-browser client — which should be using a
+	 * token, not a cookie. Trusting the absence is the mistake that turns this
+	 * check into decoration, because it is the one thing an attacker can arrange.
 	 */
 	if (origin !== PUBLIC_ORIGIN) {
 		return new Response('Cross-site request refused.', {

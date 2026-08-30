@@ -62,7 +62,10 @@ export const MIGRATIONS: readonly Migration[] = [
 	{
 		id: 1,
 		name: 'firm.billable_from',
-		statements: ['ALTER TABLE firm ADD COLUMN billable_from INTEGER']
+		statements: [
+			// …
+			'ALTER TABLE firm ADD COLUMN billable_from INTEGER'
+		]
 	},
 	// …
 ];</code></pre>
@@ -90,9 +93,9 @@ export const MIGRATIONS: readonly Migration[] = [
  * `created_at` is the wrong date to prorate from — and prorating from the
  * wrong date is the most common billing complaint there is.
  *
- * Nullable rather than `NOT NULL DEFAULT 0`: null means &quot;not yet billable&quot;,
- * which is a real state, and a default of zero would mean every existing firm
- * was billable from 1970.
+ * Nullable rather than `NOT NULL DEFAULT 0`: null means &quot;not yet
+ * billable&quot;, which is a real state, and a default of zero would mean
+ * every existing firm was billable from 1970.
  */
 'ALTER TABLE firm ADD COLUMN billable_from INTEGER'</code></pre>
 </figure>

@@ -50,7 +50,7 @@
 	{/if}
 &lt;/header&gt;
 
-{#if entries.length === 0}
+{#if result.entries.length === 0}
 	&lt;p class=&quot;empty&quot;&gt;Nothing booked. Enjoy it.&lt;/p&gt;
 {/if}</code></pre>
 </figure>
@@ -67,10 +67,11 @@
 	<pre><code class="lang-svelte">&lt;button
 	type=&quot;button&quot;
 	class=&quot;cancel&quot;
-	onclick={() =&gt; void cancelEntry(entry)}
+	onclick={() =&gt; void cancel(entry.id, entry.customerName)}
+	disabled={cancelling === entry.id}
 	aria-label=&quot;Cancel {entry.customerName}'s appointment&quot;
 &gt;
-	&lt;XIcon weight=&quot;bold&quot; /&gt;
+	&lt;XCircleIcon weight=&quot;bold&quot; /&gt;
 &lt;/button&gt;</code></pre>
 </figure>
 <p>The visible label is an icon; the accessible name is a full sentence. A screen-reader user hearing &quot;button, button, button&quot; down a list of appointments has no idea which one they are on, and the fix is one attribute.</p>
@@ -82,8 +83,17 @@
 		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;li class=&quot;appointment&quot; style=&quot;--hue: {appointment.staffColourHue}&quot;&gt;
-	&lt;span class=&quot;who&quot;&gt;{appointment.staffName}&lt;/span&gt;
+	<pre><code class="lang-svelte">&lt;li class=&quot;entry&quot; style=&quot;--hue: {entry.colourHue}&quot;&gt;
+	&lt;!-- … --&gt;
+	&lt;p class=&quot;who&quot;&gt;
+		&lt;strong&gt;{entry.customerName}&lt;/strong&gt;
+		&lt;!-- … --&gt;
+	&lt;/p&gt;
+
+	&lt;p class=&quot;with text-muted&quot;&gt;
+		with {entry.staffName}
+		&lt;!-- … --&gt;
+	&lt;/p&gt;
 	&lt;!-- … --&gt;
 &lt;/li&gt;</code></pre>
 </figure>
@@ -93,11 +103,11 @@
 		<span class="code__file">and in the stylesheet</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">.appointment {
+	<pre><code class="lang-css">.entry {
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
 }</code></pre>
 </figure>
-<p>One custom property carries the staff member's hue into the CSS, and because the colours are one lightness and six hues in oklch, they are legible at a glance and equally weighted. <strong>And the name is always there too</strong> — colour alone excludes roughly one man in twelve.</p>
+<p>One custom property carries the staff member's hue into the CSS, and because every staff colour shares one hard-coded lightness in oklch, they are legible at a glance and equally weighted regardless of hue. <strong>And the name is always there too</strong> — <code>.who</code> names the customer, <code>.with</code> names the staff member, and colour alone excludes roughly one man in twelve.</p>
 <h3 id="tabs">Navigation for a phone, without a hamburger</h3>
 
 <figure class="code">
@@ -108,6 +118,7 @@
 	<pre><code class="lang-svelte">&lt;nav class=&quot;tabs&quot; aria-label=&quot;Dashboard sections&quot;&gt;
 	&lt;div class=&quot;tabs-inner container&quot;&gt;
 		{#each visible as section (section.path)}
+			{@const Icon = section.icon}
 			{@const active = activePath === section.path}
 			&lt;a class=&quot;tab&quot; class:active href=&quot;{base}{section.path}&quot; aria-current={active ? 'page' : undefined}&gt;
 				&lt;Icon weight={active ? 'fill' : 'regular'} aria-hidden=&quot;true&quot; /&gt;

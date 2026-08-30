@@ -67,17 +67,28 @@ describe('addTax', () =&gt; {
 		<span class="code__file">vite.config.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';   // &lt;- note: vitest/config
+	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+// …
 
 export default defineConfig({
-	plugins: [ sveltekit({ /* ... */ }) ],
+	plugins: [
+		sveltekit({
+			// …
+		}),
+
+		/* …the ordering story from chapter 19: this must come after sveltekit()… */
+		sveltePhosphorOptimize()
+	],
 
 	test: {
 		expect: { requireAssertions: true },
-		projects: [ /* ... */ ]
+		projects: [
+			// …
+		]
 	}
 });</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The import comes from <code>vitest/config</code>, not <code>vite</code> — the same <code>defineConfig</code>, but its types know about the <code>test</code> block.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>One config, one transform pipeline</h4>
@@ -185,19 +196,30 @@ export default defineConfig({
 	const a = mulberry32(42);
 	const b = mulberry32(42);
 
-	expect(Array.from({ length: 20 }, () =&gt; a()))
-		.toEqual(Array.from({ length: 20 }, () =&gt; b()));
+	const first = Array.from({ length: 20 }, () =&gt; a());
+	const second = Array.from({ length: 20 }, () =&gt; b());
+
+	expect(first).toEqual(second);
 });
+
+// …
 
 it('produces strictly increasing, evenly spaced timestamps', () =&gt; {
 	const { price } = generateSeries({ bars: 30, interval: 300 });
 
 	for (let i = 1; i &lt; price.length; i += 1) {
-		expect(price[i]!.time - price[i - 1]!.time).toBe(300);
+		const previous = price[i - 1];
+		const current = price[i];
+		expect(previous).toBeDefined();
+		expect(current).toBeDefined();
+		// Lightweight Charts silently misbehaves on out-of-order data, so this
+		// invariant matters more than it looks.
+		expect(current!.time - previous!.time).toBe(300);
 	}
 });
 
 it('never produces a non-positive price', () =&gt; {
+	// A random walk can wander below zero without the guard in generateSeries.
 	for (const seed of [1, 500, 12345, 987654]) {
 		for (const point of generateSeries({ seed, bars: 400 }).price) {
 			expect(point.value).toBeGreaterThan(0);
@@ -211,8 +233,20 @@ it('never produces a non-positive price', () =&gt; {
 	<p>They assert *properties*: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting <code>price[3] === 428.91</code> would fail on every harmless tweak, and a test that cries wolf gets deleted.</p>
 </aside>
 <h3 id="wrong-test">When the test is wrong</h3>
-<p>While writing this project I asserted <code>formatCompactUsd(5_600)</code> returns <code>&quot;$5.6K&quot;</code>. It returns <code>&quot;$5.60K&quot;</code> — <code>Intl</code> compact <strong>currency</strong> formatting keeps the currency's minimum fraction digits, unlike plain compact number formatting.</p>
-<aside class="callout callout--note"><p>The code was right; my expectation was wrong. That is a normal and useful outcome — the test taught me something about an API I thought I knew. Fix the expectation, and leave a comment explaining why the surprising output is correct, or the next person will &quot;fix&quot; it back.</p></aside>
+<p>While writing this project I asserted <code>formatCompactUsd(5_600)</code> returns exactly <code>&quot;$5.60K&quot;</code> — and the assertion broke when the project moved from Node 22 to Node 24. <code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and its output is a moving target: compact <strong>currency</strong> formatting used to keep the currency's minimum fraction digits (<code>$5.60K</code> on Node 22's ICU 78.2), and ICU 78.3, which Node 24 ships, trims them to <code>$5.6K</code>. Same code, different text, depending on which Node is installed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/utils/market-data.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('formats a value with a trailing zero, whichever ICU is installed', () =&gt; {
+	/* …a long comment in the source explains: DELIBERATELY A PATTERN, NOT AN EXACT STRING… */
+	expect(formatCompactUsd(5_600)).toMatch(/^\$5\.60?K$/);
+	expect(formatCompactUsd(1_000)).toMatch(/^\$1(\.00)?K$/);
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>A byte-exact assertion here is not a test of <code>formatCompactUsd</code> — it is a test of which Node version is installed, and it fails on upgrade for a reason that has nothing to do with the code under test. What the app actually needs is the right symbol, the right magnitude suffix and no more than two decimals, so the test asserts a pattern — and carries a comment explaining why, or the next person will &quot;fix&quot; it back to an exact string.</p></aside>
 <h3 id="running">Running them</h3>
 
 <figure class="code code--terminal">

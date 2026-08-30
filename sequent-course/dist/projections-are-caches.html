@@ -81,18 +81,25 @@
 	</figcaption>
 	<pre><code class="lang-ts">case 'traded': {
 	await tx.execute({
-		sql: 'INSERT INTO trade (...) VALUES (...) ON CONFLICT (trade_id) DO NOTHING',
-		args: [/* ... */]
+		sql: `INSERT INTO trade (
+				trade_id, seq, instrument_id, at, price, quantity, aggressor,
+				buy_order_id, buy_firm_id, buy_account_id,
+				sell_order_id, sell_firm_id, sell_account_id,
+				buyer_fee, seller_fee
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT (trade_id) DO NOTHING`,
+		// …
 	});
 
 	/*
 	 * The trade is the idempotency key for everything downstream of it.
 	 *
-	 * If the ledger already has a transaction under this trade id, this trade has
-	 * already been projected — so the position updates and fill increments below
-	 * must not run again. Without this check a replayed batch would move every
-	 * position twice and the ledger would still balance, which is the worst kind
-	 * of wrong: internally consistent and completely false.
+	 * If the ledger already holds a transaction under this trade id, the
+	 * trade has already been projected — so the position updates and ledger
+	 * postings below must not run again. Without this check a replayed batch
+	 * would move every position twice and the ledger would still balance,
+	 * which is the worst kind of wrong: internally consistent and completely
+	 * false.
 	 */
 	const alreadySeen = await tx.execute({
 		sql: 'SELECT COUNT(*) AS n FROM ledger_transaction WHERE transaction_id = ?',
@@ -100,10 +107,17 @@
 	});
 	if (Number(alreadySeen.rows[0]?.['n'] ?? 0) &gt; 0) break;
 
-	// Everything below runs at most once per trade.
-	await applyToPosition(tx, { /* buyer */ });
-	await applyToPosition(tx, { /* seller */ });
-	await markFilled(tx, event);
+	await applyToPosition(tx, {
+		accountId: event.buyAccountId,
+		// …
+	});
+	await applyToPosition(tx, {
+		accountId: event.sellAccountId,
+		// …
+	});
+
+	// …
+
 	await postTrade(tx, record, event);
 	break;
 }</code></pre>
@@ -128,13 +142,22 @@ ask levels: [ '£45.49', '£45.505', '£45.51' ]</code></pre>
 		<span class="code__file">packages/store/src/projections.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
+	<pre><code class="lang-ts">// …
+/*
  * Mark both sides as filled.
  *
- * This was missing, and the symptom was excellent: the depth ladder showed a
- * **crossed** book. The engine was right the whole time. Only the read model
- * was lying, which is precisely the failure mode projections have — nothing
- * throws, the numbers are just wrong in a way that looks like a matching bug.
+ * This was missing, and the symptom was excellent: the depth ladder
+ * showed a **crossed** book. An order that fills completely produces
+ * trades and no cancellation, so the projection left it `working` with
+ * `filled = 0` forever — and the ladder, which is derived from working
+ * orders, kept showing liquidity that had already been consumed.
+ *
+ * The engine was right the whole time. Only the read model was lying,
+ * which is precisely the failure mode projections have: nothing throws,
+ * the numbers are just wrong in a way that looks like a matching bug.
+ *
+ * The increments are safe because the whole block sits behind the
+ * already-projected guard above, so it runs at most once per trade.
  */
 for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 	await tx.execute({
@@ -145,7 +168,8 @@ for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 			WHERE order_id = ?`,
 		args: [event.quantity, event.quantity, record.at, orderId]
 	});
-}</code></pre>
+}
+// …</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -161,8 +185,14 @@ for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 	</figcaption>
 	<pre><code class="lang-ts">export async function rebuild(client: Client): Promise&lt;number&gt; {
 	await withTransaction(client, async (tx) =&gt; {
-		for (const table of ['ledger_posting', 'ledger_transaction', 'ledger_account',
-		                     'position', 'trade', 'order_record']) {
+		for (const table of [
+			'ledger_posting',
+			'ledger_transaction',
+			'ledger_account',
+			'position',
+			'trade',
+			'order_record'
+		]) {
 			await tx.execute(`DELETE FROM ${table}`);
 		}
 		await tx.execute({
@@ -172,7 +202,6 @@ for (const orderId of [event.buyOrderId, event.sellOrderId]) {
 	});
 
 	return catchUp(client, 500, { notify: false });
-	//                            ^^^^^^^^^^^^^^^
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>notify: false</code> is the most important argument in this file. A rebuild replays every event the venue has ever recorded — and without this flag it would also re-enqueue every notification, telling every member firm about six months of trades in one burst because somebody changed the shape of a read model.</p></aside>

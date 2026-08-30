@@ -52,7 +52,7 @@
 	&quot;error&quot;: {
 		&quot;code&quot;: &quot;rate_limited&quot;,
 		&quot;message&quot;: &quot;Too many requests.&quot;,
-		&quot;requestId&quot;: &quot;3f9a2c7e1b04&quot;
+		&quot;requestId&quot;: &quot;3f9a2c7e-1b0&quot;
 	}
 }</code></pre>
 </figure>
@@ -135,7 +135,7 @@ if (status === 403) return new ApiError('forbidden', message);
 if (status === 404) return new ApiError('not_found', message);
 return new ApiError('internal', 'Something went wrong at our end.');</code></pre>
 </figure>
-<p>Then we added the venue-pause feature flag, which throws <code>error(503, 'The venue is not accepting new orders at the moment.')</code>. The chain has no 503 branch, so it fell through to the last line, and pausing the venue told every API client <strong>&quot;something went wrong at our end&quot;</strong> — a 500, which clients treat as a bug to report rather than a state to wait out.</p>
+<p>Then we added the venue-pause feature flag, which throws <code>error(503, 'The venue is not accepting new orders at the moment. Cancels still work.')</code>. The chain has no 503 branch, so it fell through to the last line, and pausing the venue told every API client <strong>&quot;something went wrong at our end&quot;</strong> — a 500, which clients treat as a bug to report rather than a state to wait out.</p>
 
 <figure class="code">
 	<figcaption>

@@ -50,23 +50,28 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">split = new SplitText(node, {
-	type: 'lines',
-	mask: 'lines',          // GSAP creates the overflow:hidden wrapper for us
+	type: by,
+	mask: by,
 	linesClass: 'split-line',
-	autoSplit: true,        // re-split when the element resizes
-	aria: 'auto'            // &lt;- read the warning below
+	/* … */
+	autoSplit: true,
+	/* … */
+	aria: 'auto'
 });
 
-const lines = split.lines;
+const targets = by === 'lines' ? split.lines : split.words;
 
-gsap.set(lines, { yPercent: 115, opacity: 0 });
+gsap.set(targets, { yPercent: 115, opacity: 0, rotate, force3D: true });
 releaseMotionGate();
 
-gsap.to(lines, {
+gsap.to(targets, {
 	yPercent: 0,
 	opacity: 1,
-	duration: 1.05,
-	stagger: 0.075
+	rotate: 0,
+	duration: dur,
+	delay,
+	stagger: staggerAmount,
+	/* … */
 });</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>aria: 'auto'</code> is <strong>not optional</strong>. SplitText shreds your heading into dozens of divs, which a screen reader would otherwise announce one fragment at a time — &quot;Read&quot;, &quot;institutional&quot;, &quot;options flow&quot; as three disconnected utterances. This option restores the original string as an accessible name and hides the fragments. Skip it and you have made your headline actively worse for the people who least benefit from a visual flourish.</p></aside>
@@ -79,7 +84,8 @@ gsap.to(lines, {
 	</figcaption>
 	<pre><code class="lang-css">.split-line {
 	padding-bottom: 0.12em;
-	margin-bottom: -0.12em;   /* undo it, so line spacing is unchanged */
+	/* Undoes the padding so the visual line spacing is unchanged. */
+	margin-bottom: -0.12em;
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>Without that padding the mask clips the <strong>descenders</strong> — the tails of g, j, p, q and y — because the wrapper is exactly the line height and descenders hang below it. It is subtle enough that you see &quot;the type looks a bit off&quot; without working out why.</p></aside>
@@ -93,25 +99,66 @@ gsap.to(lines, {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const timeline = gsap.timeline({
-	// A short beat before anything moves. Starting on the very first frame
-	// reads as a page still loading; a pause reads as deliberate.
+	// …
 	delay: 0.12,
 	defaults: { ease: 'sf.out' }
 });
 
-timeline.to(badge, { opacity: 1, y: 0, scale: 1, duration: 0.7 });
+if (badge) {
+	timeline.to(badge, {
+		opacity: 1,
+		y: 0,
+		scale: 1,
+		duration: duration.base
+	});
+}
 
-timeline.to(lines, {
-	yPercent: 0, opacity: 1, duration: 1.35, stagger: 0.075
-}, '-=0.45');          // overlaps the badge — one gesture, not two
+if (lines.length) {
+	timeline.to(
+		lines,
+		{
+			yPercent: 0,
+			opacity: 1,
+			duration: duration.cinematic,
+			stagger: stagger.base
+		},
+		// …
+		'-=0.45'
+	);
+}
 
-timeline.to(panel, {
-	opacity: 1, y: 0, scale: 1,
-	duration: 1.5      // slower: a large object should feel heavier
-}, '&lt;0.3');            // starts just after the headline begins
+if (panel) {
+	timeline.to(
+		panel,
+		{
+			opacity: 1,
+			y: 0,
+			scale: 1,
+			// …
+			duration: duration.cinematic + 0.15
+		},
+		// …
+		'&lt;0.3'
+	);
+}
 
-timeline.to(lede,    { opacity: 1, y: 0, duration: 0.7 }, '-=0.85');
-timeline.to(buttons, { opacity: 1, y: 0, stagger: 0.045 }, '-=0.5');</code></pre>
+if (lede) {
+	timeline.to(lede, { opacity: 1, y: 0, duration: duration.base }, '-=0.85');
+}
+
+if (actions?.children.length) {
+	timeline.to(
+		actions.children,
+		{
+			opacity: 1,
+			y: 0,
+			duration: duration.base,
+			stagger: stagger.tight,
+			clearProps: 'transform' // so `magnetic` can take over cleanly
+		},
+		'-=0.5'
+	);
+}</code></pre>
 </figure>
 
 <aside class="callout callout--why">

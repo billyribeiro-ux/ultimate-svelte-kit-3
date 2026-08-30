@@ -81,11 +81,15 @@
 .slot {
 	display: grid;
 	place-items: center;
-	min-height: 2.75rem;       /* 44px — the smallest comfortable tap target */
+	margin: 0;
+	min-height: 2.75rem;
+	padding: var(--space-2);
+	/* … */
 	font-variant-numeric: tabular-nums;
+	/* … */
 }</code></pre>
 </figure>
-<p><code>auto-fill</code> with <code>minmax</code> is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. 44px is the floor for a tap target, and this grid is the single most-tapped thing in the app. <code>tabular-nums</code> is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.</p>
+<p><code>auto-fill</code> with <code>minmax</code> is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. The <code>min-height</code> of 2.75rem is 44px — the floor for a comfortable tap target — and this grid is the single most-tapped thing in the app. <code>tabular-nums</code> is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.</p>
 <h3 id="flip">When a slot disappears</h3>
 <p>Availability is live. Somebody else books 11:00 and that cell vanishes — and every later time shifts up by one position, <strong>while a finger is on the way down</strong>.</p>
 
@@ -95,13 +99,19 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * FLIP — First, Last, Invert, Play.
+ * FLIP — the technique that makes a live-updating grid feel like an object
+ * rather than a slideshow.
+ *
+ * The name is the method: **F**irst, **L**ast, **I**nvert, **P**lay.
  *
  *   First   — measure where everything is, right now.
  *   Last    — let the DOM change. Items appear, disappear, move.
  *   Invert  — instantly transform each survivor back to where it *was*, so the
  *             frame looks identical to before the change.
- *   Play    — animate those transforms away.
+ *   Play    — animate those transforms away. The elements slide to their new
+ *             homes because the browser has already decided where those are.
+ *
+ * …
  */</code></pre>
 </figure>
 <p>Nothing animates layout. Layout happens once, in a single frame; what animates is a <code>transform</code>, which the compositor handles without touching the main thread. Animating <code>top</code> and <code>left</code> forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.</p>
@@ -115,19 +125,40 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function prefersReducedMotion(): boolean {
-	return browser &amp;&amp; window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	if (!browser) return false;
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export async function loadMotion() {
-	if (!browser || prefersReducedMotion()) return null;
-	// Only now is GSAP downloaded at all.
-	const { gsap } = await import('gsap');
-	const { Flip } = await import('gsap/Flip');
-	gsap.registerPlugin(Flip);
-	return { gsap, Flip };
+let pending: Promise&lt;Motion | null&gt; | null = null;
+
+export function loadMotion(): Promise&lt;Motion | null&gt; {
+	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
+
+	pending ??= (async () =&gt; {
+		try {
+			const [{ gsap }, { Flip }] = await Promise.all([import('gsap'), import('gsap/Flip')]);
+
+			gsap.registerPlugin(Flip);
+
+			// GSAP's default is a gentle ease-out over half a second, which is a
+			// reasonable default for a marketing page and too slow for a tool
+			// somebody uses forty times a day. These match the CSS tokens so a
+			// GSAP transition and a CSS one feel like the same system.
+			gsap.defaults({ duration: 0.35, ease: 'power3.out' });
+
+			return { gsap, Flip };
+		} catch (thrown) {
+			// A blocked or failed chunk must not take the page with it.
+			console.warn('[motion] GSAP failed to load; continuing without animation', thrown);
+			return null;
+		}
+	})();
+
+	return pending;
 }</code></pre>
 </figure>
 <p>Both <code>capture</code> and <code>play</code> become no-ops and the grid updates instantly. For somebody who asked for less motion that is not a degraded experience, it is the correct one — and they never download the animation library at all.</p>
+<aside class="callout callout--note"><p>The result is memoised in <code>pending</code> with <code>??=</code>, so twenty components mounting at once share one network request rather than starting twenty. <code>Promise.all</code> fetches <code>gsap</code> and <code>gsap/Flip</code> together instead of one after the other, <code>gsap.defaults(...)</code> sets a snappier timing than GSAP's own default so a GSAP tween and a CSS transition feel like the same system, and the <code>try/catch</code> means a blocked or failed chunk resolves to <code>null</code> rather than rejecting — the same outcome a reduced-motion visitor already gets, handled by the same <code>if (!motion) return</code>.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

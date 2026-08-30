@@ -47,8 +47,8 @@
 /**
  * Drizzle Kit runs OUTSIDE the SvelteKit app — it is a CLI, not part of the
  * server bundle — so it cannot use `$app/env/private`, which only exists inside
- * Vite. It reads `process.env` directly, which is why the `db:*` scripts source
- * `.env` first.
+ * Vite. It reads `process.env` directly — drizzle-kit loads `.env` on its own,
+ * and `scripts/seed.ts` calls `process.loadEnvFile('.env')` for the same reason.
  */
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set — did you copy .env.example to .env?');
@@ -74,7 +74,7 @@ export default defineConfig({
 	<pre><code>pnpm exec drizzle-kit generate   # write the SQL
 pnpm exec drizzle-kit migrate    # apply it</code></pre>
 </figure>
-<p>Read the comment at the top before copying it. Drizzle Kit is a <strong>command-line tool</strong>, not part of the server bundle, so <code>$app/env/private</code> — which only exists inside Vite — is unavailable to it. It reads <code>process.env</code> directly, which is why the <code>db:*</code> scripts source <code>.env</code> first. Getting this wrong produces an import error that looks like a bug in Drizzle.</p>
+<p>Read the comment at the top before copying it. Drizzle Kit is a <strong>command-line tool</strong>, not part of the server bundle, so <code>$app/env/private</code> — which only exists inside Vite — is unavailable to it. It reads <code>process.env</code> directly: drizzle-kit loads <code>.env</code> on its own, and the seed script calls <code>process.loadEnvFile('.env')</code> for the same reason. Getting this wrong produces an import error that looks like a bug in Drizzle.</p>
 <p>Generated migrations are checked into git and never edited afterwards. If a migration is wrong, the fix is another migration — editing an applied one means your database and your history disagree, and every colleague's machine drifts a little further from yours.</p>
 <aside class="callout callout--note"><p><code>strict: true</code> makes drizzle-kit ask before doing anything destructive. On a project where a wrong answer drops a table of real appointments, being asked is a feature.</p></aside>
 <h3 id="seed">The seed script</h3>
@@ -87,15 +87,22 @@ pnpm exec drizzle-kit migrate    # apply it</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">console.log('· clearing');
 
-// Order matters: children before parents, or the foreign keys refuse.
+// Children first. Relying on cascades here would work but would make the script
+// depend on rules it is not about.
 await db.delete(slotClaim);
 await db.delete(booking);
 await db.delete(timeOff);
 await db.delete(availabilityRule);
 await db.delete(staffService);
-// ...and so on up the tree.</code></pre>
+await db.delete(customer);
+await db.delete(service);
+await db.delete(staff);
+await db.delete(business);
+await db.delete(session);
+await db.delete(account);
+await db.delete(user);</code></pre>
 </figure>
-<p>One decision in there is worth calling out: the seed <strong>keeps the same business row</strong> rather than dropping and recreating it. Dropping it produced an intermittent 500 in whichever test happened to run next — a live query still streaming to a page the previous test had only just closed would suddenly find its business missing. The failure pointed nowhere near the cause.</p>
+<p>One decision in there is worth calling out: the deletes run <strong>children first</strong>, even though most of these tables cascade from <code>business</code> and a single <code>delete(business)</code> would take the tree down with it. Relying on cascades would work — but it would make the script depend on rules it is not about, and a later change to one <code>onDelete</code> would quietly change what the seed clears. So the script spells out its own order, all the way down to the auth tables, and rebuilds everything — business row included — from nothing.</p>
 <h3 id="relative">Everything relative to today</h3>
 
 <figure class="code">
@@ -105,14 +112,19 @@ await db.delete(staffService);
 	</figcaption>
 	<pre><code class="lang-ts">const today = todayIn(TIME_ZONE);
 
-await seedBooking({
-	staffId: ada.id,
-	serviceSlug: 'cut-and-finish',
-	customerIndex: 0,
-	dayOffset: 1,                     // tomorrow, whenever &quot;today&quot; is
-	startMinute: 10 * 60,
-	note: 'Growing out a bob — please keep the length.'
-});</code></pre>
+// …
+
+const seeded = [
+	await seedBooking({
+		staffId: ada!.id,
+		serviceSlug: 'cut-and-finish',
+		customerIndex: 0,
+		dayOffset: 1,
+		startMinute: 10 * 60,
+		note: 'Growing out a bob — please keep the length.'
+	}),
+	// …
+];</code></pre>
 </figure>
 <p>Not a single hard-coded date. A seed with <code>2026-08-14</code> in it works beautifully until 15 August, at which point the demo diary is empty and every screenshot in your documentation shows a past appointment.</p>
 <p><code>seedBooking</code> inserts the booking <strong>and</strong> its grid claims, exactly as the real code path does. A seed that writes bookings without claims produces a demo where the diary looks full and every slot appears bookable — a very confusing ten minutes.</p>

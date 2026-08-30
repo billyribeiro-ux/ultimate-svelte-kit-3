@@ -93,11 +93,11 @@ const ALLOWED: Readonly&lt;Record&lt;Role, readonly Action[]&gt;&gt; = {
 	</figcaption>
 	<pre><code class="lang-ts">export function can(viewer: Viewer, action: Action, target: Target = {}): Decision {
 	/*
-	 * 1. The tenant boundary — FIRST.
+	 * 1. The tenant boundary.
 	 *
-	 * A venue operator is above it. Everybody else is confined to their own
-	 * firm, and asking about another one gets the same answer as asking about a
-	 * firm that does not exist.
+	 * A venue operator is above it — they administer the venue itself. Everybody
+	 * else is confined to their own firm, and asking about another one gets the
+	 * same answer as asking about a firm that does not exist.
 	 */
 	if (target.firmId !== undefined &amp;&amp; target.firmId !== viewer.firmId) {
 		if (viewer.role !== 'venue_operator') return deny('not_found');
@@ -106,14 +106,29 @@ const ALLOWED: Readonly&lt;Record&lt;Role, readonly Action[]&gt;&gt; = {
 	// 2. Does the role permit this action at all?
 	if (!ALLOWED[viewer.role].includes(action)) return deny('forbidden');
 
-	// 3. Account assignment. Belonging to the firm is not the same as being
-	//    allowed to trade on a particular desk.
+	/*
+	 * 3. Account assignment.
+	 *
+	 * Belonging to the firm is not the same as being allowed to trade on a
+	 * particular desk. A trader assigned to the equities account must not be able
+	 * to send an order on the derivatives one just because both are theirs.
+	 *
+	 * `firm_admin` and `risk_manager` are exempt because their actions are
+	 * firm-wide by definition — a kill switch that only covered some of a firm's
+	 * accounts would be worse than none.
+	 */
 	if (target.accountId !== undefined &amp;&amp; needsAssignment(viewer.role)) {
 		if (!viewer.accountIds.includes(target.accountId)) return deny('account_not_assigned');
 	}
 
-	// 4. API key scopes, if this is a key rather than a person. Applied last,
-	//    and only ever narrowing.
+	/*
+	 * 4. API key scopes, if this is a key rather than a person.
+	 *
+	 * Applied last, and only ever narrowing. A key cannot grant something the
+	 * role does not already allow — which is what makes revoking a person's
+	 * account enough to stop their keys, rather than a separate job somebody
+	 * forgets.
+	 */
 	if (viewer.scopes !== undefined) {
 		if (!viewer.scopes.includes(SCOPE_FOR[action])) return deny('missing_scope');
 	}
@@ -159,19 +174,37 @@ export type DenialReason =
 		<span class="code__file">packages/store/src/authz.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">it('has a complete and deliberate matrix', () =&gt; {
-	// Five roles, thirteen actions, sixty-five assertions. Every cell of the
-	// permission table, asserted explicitly — so a change to ALLOWED that
-	// somebody did not mean to make fails here rather than in production.
+	<pre><code class="lang-ts">describe('the complete matrix', () =&gt; {
+	/*
+	 * Every role against every action, written out.
+	 *
+	 * This is long and it is the most valuable test in the file. A change to the
+	 * permission table that nobody intended shows up here as a diff a reviewer
+	 * can read, rather than as an absence of a test nobody thought to write.
+	 */
+	const EXPECTED: Record&lt;Role, readonly Action[]&gt; = {
+		trader: ['place_order', 'cancel_order', 'view_orders', 'view_positions'],
+		// …
+	};
+
 	for (const role of ROLES) {
-		for (const action of ACTIONS) {
-			expect(can(viewer(role), action).allowed, `${role} / ${action}`)
-				.toBe(EXPECTED[role].includes(action));
-		}
+		it(`${role} may do exactly what the table says`, () =&gt; {
+			const allowed = ACTIONS.filter((action) =&gt; can(viewer(role), action).allowed);
+			expect([...allowed].sort()).toEqual([...EXPECTED[role]].sort());
+		});
 	}
+
+	it('gives nobody every permission', () =&gt; {
+		// A role that can do everything is a role somebody will be given by
+		// accident. If one ever appears here, it should be a deliberate diff.
+		for (const role of ROLES) {
+			const allowed = ACTIONS.filter((action) =&gt; can(viewer(role), action).allowed);
+			expect(allowed.length).toBeLessThan(ACTIONS.length);
+		}
+	});
 });</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Sixty-five assertions sounds excessive until you consider the alternative: a permission table that nobody has ever checked in full, protecting other people's money. It is possible *because* <code>can</code> is pure — no database, no request, no session lookup.</p></aside>
+<aside class="callout callout--note"><p>Sixty-five cells — five roles by thirteen actions — covered by five assertions, one sorted-array comparison per role, plus a guard that no role ever holds every permission. Checking the whole table sounds excessive until you consider the alternative: a permission table that nobody has ever checked in full, protecting other people's money. It is possible *because* <code>can</code> is pure — no database, no request, no session lookup.</p></aside>
 <h3 id="bug">Bug found: the risk console let traders in</h3>
 <p>The risk console's load function gated on <code>view_positions</code>:</p>
 

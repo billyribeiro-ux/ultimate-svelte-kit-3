@@ -52,15 +52,28 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const easePath = {
-	// Extremely fast start, very long tail. The house curve.
+	/**
+	 * The house ease. Extremely fast start, very long tail.
+	 *
+	 * Reads as: the object was already moving and is now settling into place. This is
+	 * the curve doing most of the work in making the site feel expensive.
+	 */
 	out: 'M0,0 C0.12,0.82 0.16,1 1,1',
 
-	// Symmetrical — for things that both enter and leave.
+	/**
+	 * For elements that both enter and leave — drawers, modals.
+	 * Symmetrical, so the exit mirrors the entrance.
+	 */
 	inOut: 'M0,0 C0.76,0 0.24,1 1,1',
 
-	// Slight overshoot then settle. Use once per page, at most.
+	/**
+	 * A restrained overshoot. Travels slightly past the target and settles back.
+	 *
+	 * Use sparingly — on one hero element, or a success state. Everywhere at once and
+	 * the page looks bouncy, which reads as playful rather than premium.
+	 */
 	overshoot: 'M0,0 C0.16,0.9 0.28,1.06 1,1'
-};</code></pre>
+} as const;</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Those strings are SVG path data describing a Bézier curve, which GSAP's CustomEase turns into an easing function. The horizontal axis is time; the vertical axis is progress. You can draw your own at <a href="https://gsap.com/docs/v3/Eases/CustomEase" target="_blank" rel="noopener">gsap.com/docs/v3/Eases/CustomEase</a>.</p></aside>
 <h3 id="overlap">2. Overlap</h3>
@@ -85,7 +98,7 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');</code></pre>
 <ul><li>*(omitted)* — immediately after the previous tween ends. Sequential, and usually wrong.</li><li><code>'&lt;'</code> — at the same moment the previous tween *started*.</li><li><code>'&lt;0.3'</code> — 0.3 seconds after the previous tween started.</li><li><code>'-=0.6'</code> — 0.6 seconds before the end of the timeline so far, i.e. overlapping into it.</li><li><code>0.5</code> — absolute: half a second from the very beginning.</li></ul>
 <h3 id="restraint">3. Restraint</h3>
 <ul><li><strong>Distance:</strong> 16–44px. Large travel looks cheap and draws attention to the animation rather than the content.</li><li><strong>Duration:</strong> 0.3–1.2s. Under 0.2s is a state change, not a movement. Over 1.4s and the user is waiting for your website to finish having an opinion.</li><li><strong>Stagger:</strong> 0.045–0.11s between items. At 0.3s a six-item grid takes nearly two seconds and reads as a queue.</li><li><strong>Direction:</strong> consistent. Everything rises. Mixed directions read as chaos.</li></ul>
-<aside class="callout callout--warn"><p>The most common failure is animating *everything*. If every heading, card, icon and divider performs on entry, the page becomes exhausting and nothing stands out — which defeats the purpose, since the point of motion is to direct attention. In this project the headline reveal is used on three headings out of dozens.</p></aside>
+<aside class="callout callout--warn"><p>The most common failure is animating *everything*. If every heading, card, icon and divider performs on entry, the page becomes exhausting and nothing stands out — which defeats the purpose, since the point of motion is to direct attention. In this project the headline reveal is used on three headings on the home page — seven across the whole site — out of dozens.</p></aside>
 <h3 id="performance">The performance rule you cannot break</h3>
 <p><strong>Animate only <code>transform</code> and <code>opacity</code>.</strong> Nothing else.</p>
 <p>When a browser draws a frame it may do up to three things: <strong>layout</strong> (work out where everything goes), <strong>paint</strong> (draw the pixels), and <strong>composite</strong> (arrange the finished layers). Layout is by far the most expensive.</p>

@@ -88,16 +88,36 @@
 		<span class="code__file">vite.config.ts (the shape of it)</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export default defineConfig({
-	plugins: [
-		sveltekit({
-			adapter: adapter(),
-			compilerOptions: { /* … */ },
-			experimental: { remoteFunctions: true }
-		})
-	]
+	<pre><code class="lang-ts">export default defineConfig(({ mode }) =&gt; {
+	/* … */
+	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	return {
+		plugins: [
+			sveltekit({
+				/* … */
+				paths: { origin: env.PUBLIC_ORIGIN },
+
+				compilerOptions: {
+					/* … */
+					experimental: { async: true }
+				},
+
+				adapter: adapter(),
+
+				experimental: {
+					/* … */
+					remoteFunctions: true
+				},
+				/* … */
+			}),
+			/* … */
+		],
+		/* … */
+	};
 });</code></pre>
 </figure>
+<p>Notice the outer shape before anything else: the config is a *function* of <code>({ mode })</code> that returns the object, not the object itself. That shape is load-bearing, not stylistic — the function form is what lets the config read the environment with <code>loadEnv</code> before building, which <code>paths.origin</code> needs.</p>
 <p>This is not cosmetic tidying. In Kit 2 the Vite plugin had to asynchronously load your config file before it could do anything, which made a whole family of setup-ordering bugs possible. Now Vite hands the config straight to the plugin.</p>
 <h3 id="cleanup">Clearing the demo</h3>
 <p>The addons leave working examples behind. Read them once, then delete them — they will otherwise sit in your routes forever, and a demo login page in a real app is a liability.</p>

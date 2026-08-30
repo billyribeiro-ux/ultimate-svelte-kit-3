@@ -36,7 +36,7 @@
 			<p class="lede">Tokens in oklch, a fluid type scale that respects zoom, and dark mode as an exercise in flipping numbers.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Six stylesheets that make every later component short, and consistent by construction.</p></aside>
 			<p>No Tailwind, no CSS-in-JS, no component library. Six files of vanilla CSS, loaded once, and every component after this is a handful of rules.</p>
-<ul><li><code>reset.css</code> — flatten the browser defaults we do not want.</li><li><code>tokens.css</code> — every colour, size, radius and duration, named.</li><li><code>fonts.css</code> — <code>@font-face</code>, with metric-matched fallbacks.</li><li><code>base.css</code> — element defaults: headings, links, form controls.</li><li><code>utilities.css</code> — the handful of helpers worth having.</li><li><code>app.css</code> — imports the other five, in that order.</li></ul>
+<ul><li><code>fonts.css</code> — <code>@font-face</code>, with metric-matched fallbacks.</li><li><code>tokens.css</code> — every colour, size, radius and duration, named.</li><li><code>reset.css</code> — flatten the browser defaults we do not want.</li><li><code>base.css</code> — element defaults: headings, links, form controls.</li><li><code>utilities.css</code> — the handful of helpers worth having.</li><li><code>app.css</code> — imports the other five, in that order.</li></ul>
 <h3 id="oklch">Why oklch and not hex</h3>
 
 <figure class="code">
@@ -45,13 +45,17 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">:root {
-	--paper: oklch(99% 0.005 95);
-	--ink: oklch(22% 0.02 260);
-	--accent: oklch(58% 0.14 195);
+	/* Surfaces, from furthest back to nearest front. */
+	--paper: oklch(98.6% 0.006 85);
+	/* … */
+	--ink: oklch(22% 0.015 230);
+	/* … */
+	--accent: oklch(52% 0.11 190);
+	/* … */
 }</code></pre>
 </figure>
 <p><code>oklch(lightness chroma hue)</code>. Three reasons it beats hex for a design system:</p>
-<ol><li><strong>The first number is perceived lightness.</strong> Two colours at <code>oklch(70% …)</code> look equally bright to a human eye whatever their hue. In hex, <code>#0000FF</code> and <code>#FFFF00</code> have wildly different perceived brightness at similar-looking values, so palettes get even contrast by squinting rather than by construction.</li><li><strong>Changing hue while holding lightness gives colours that belong together.</strong> Our six staff colours are one lightness and six hues. In hex you nudge three channels each and hope.</li><li><strong>Dark mode becomes flipping numbers.</strong> <code>--paper</code> goes from 99% to 15%, <code>--ink</code> from 22% to 92%. That is a change you can reason about, not a second palette to maintain.</li></ol>
+<ol><li><strong>The first number is perceived lightness.</strong> Two colours at <code>oklch(70% …)</code> look equally bright to a human eye whatever their hue. In hex, <code>#0000FF</code> and <code>#FFFF00</code> have wildly different perceived brightness at similar-looking values, so palettes get even contrast by squinting rather than by construction.</li><li><strong>Changing hue while holding lightness gives colours that belong together.</strong> Our staff colours work this way: each person stores a single hue (the seed gives Ada 268 and Ben 172) and the diary paints every stripe at one hard-coded lightness. In hex you nudge three channels each and hope.</li><li><strong>Dark mode becomes flipping numbers.</strong> <code>--paper</code> goes from 98.6% to 16.5%, <code>--ink</code> from 22% to 94%. That is a change you can reason about, not a second palette to maintain.</li></ol>
 <h3 id="type">A fluid type scale that does not break zoom</h3>
 
 <figure class="code">
@@ -61,6 +65,7 @@
 	</figcaption>
 	<pre><code class="lang-css">--text-sm: clamp(0.875rem, 0.85rem + 0.12vw, 0.925rem);
 --text-base: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
+/* … */
 --text-xl: clamp(1.6rem, 1.4rem + 1vw, 2.25rem);</code></pre>
 </figure>
 <p><code>clamp(minimum, preferred, maximum)</code>: the text grows with the viewport between two limits, so there are no breakpoints to write for typography.</p>
@@ -73,20 +78,25 @@
 		<span class="code__file">src/lib/styles/fonts.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">@font-face {
+	<pre><code class="lang-css">/* Public Sans: real ascent 0.95em, real descent 0.23em, at weight 400. */
+@font-face {
 	font-family: 'Public Sans Fallback';
 	src: local('Arial');
-	size-adjust: 97.5%;
-	ascent-override: 92%;
-	descent-override: 24%;
+	size-adjust: 105.4%;
+	ascent-override: 90.1%;
+	descent-override: 21.8%;
 	line-gap-override: 0%;
-}
-
-:root {
-	--font-body: 'Public Sans', 'Public Sans Fallback', system-ui, sans-serif;
 }</code></pre>
 </figure>
-<p>A <code>@font-face</code> with no download: it takes a font already on the machine and <strong>adjusts its metrics</strong> to match the one being fetched. The fallback then occupies almost exactly the same space, so when the real font arrives nothing jumps.</p>
+<p>A <code>@font-face</code> with no download: it takes a font already on the machine and <strong>adjusts its metrics</strong> to match the one being fetched. The fallback then occupies almost exactly the same space, so when the real font arrives nothing jumps. The numbers were measured, not estimated — <code>pnpm run fonts:measure</code> reproduces them. The family then enters the stack over in <code>tokens.css</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">--font-body: 'Public Sans', 'Public Sans Fallback', system-ui, sans-serif;</code></pre>
+</figure>
 <p>That jump is called layout shift, Google measures it, and — more to the point — it is what makes somebody tap the wrong appointment time because the button moved between the decision and the finger.</p>
 <aside class="callout callout--note"><p>The fallback is named as a first-class family in the stack rather than appended as an afterthought. The generic families at the end catch machines with neither.</p></aside>
 <h3 id="dark">Dark mode, and the flash it can cause</h3>

@@ -42,25 +42,53 @@
 	<p>It is about deciding what matters. A 390px screen cannot show everything, so you have to rank — and that ranking is *true on every screen*. The desktop version of a page designed phone-first has a clear hierarchy because it was forced to have one. The phone version of a page designed desktop-first is whatever was left after the columns were thrown away.</p>
 </aside>
 <h3 id="breakpoints">Breakpoints from content, not devices</h3>
+<p>The queries live where the content lives, not in a central list of devices. The global stylesheet owns exactly one — <code>48rem</code>, where dense tables stop needing their mobile treatment (next chapter). The other two sit in the components whose layout actually changes at that width. The ladder is the smallest example: base styles are the phone, no media query, and the second column arrives only when there is room for it.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">apps/web/src/lib/styles/app.css</span>
+		<span class="code__file">apps/web/src/lib/components/DepthLadder.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* Base styles: the phone. No media query. */
-
-@media (min-width: 48rem) {
-	/* 768px — a tablet, or a phone turned sideways. */
+	<pre><code class="lang-css">.sides {
+	display: grid;
+	/* Mobile first: one column, and two only when there is room for both. */
+	grid-template-columns: 1fr;
+	gap: var(--space-4);
 }
 
-@media (min-width: 64rem) {
-	/* 1024px — a laptop. Where the terminal gets its side-by-side layout. */
+@media (min-width: 40rem) {
+	.sides {
+		grid-template-columns: 1fr 1fr;
+	}
 }</code></pre>
 </figure>
-<ul><li><strong><code>min-width</code>, never <code>max-width</code>.</strong> Base styles are the small screen; each query *adds* as room appears. Written the other way round, every rule needs an override and the cascade fights you.</li><li><strong><code>rem</code>, not <code>px</code>.</strong> A person who has set their browser font to 20px gets breakpoints that scale with it. In <code>px</code> they get a layout that switches at the wrong moment for their text size.</li><li><strong>Two breakpoints.</strong> Not five. Every extra one is a layout somebody has to check, and this app only genuinely has three shapes: one column, two columns, and the full desk.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * From `md` up the ticket stops being a sheet and becomes an ordinary column.
+ * Everything the sheet needed is unset explicitly rather than left to
+ * cascade — a half-unset fixed element is the classic source of a panel that
+ * floats over the page on exactly one screen size.
+ */
+@media (min-width: 64rem) {
+	.terminal {
+		padding-block-end: 0;
+	}
+	/* … */
+	.grid {
+		grid-template-columns: 2fr 1fr 1fr;
+		align-items: start;
+	}
+	/* … */
+}</code></pre>
+</figure>
+<ul><li><strong><code>min-width</code>, never <code>max-width</code>.</strong> Base styles are the small screen; each query *adds* as room appears. Written the other way round, every rule needs an override and the cascade fights you.</li><li><strong><code>rem</code>, not <code>px</code>.</strong> A person who has set their browser font to 20px gets breakpoints that scale with it. In <code>px</code> they get a layout that switches at the wrong moment for their text size.</li><li><strong>Three breakpoints.</strong> Not five. Every extra one is a layout somebody has to check, and each of these three is earned by content: <code>40rem</code>, where the ladder's two sides and the admin grids go two-up; <code>48rem</code>, where tables fit and stop needing the mobile treatment; <code>64rem</code>, where the terminal gets its side-by-side desk.</li></ul>
 <h3 id="the-bug">The page that scrolled sideways</h3>
-<p>The terminal was checked at 390px in a real browser. It scrolled sideways by 122 pixels. Every panel measured correctly — <code>getBoundingClientRect</code> on every child was inside its parent — and the page still scrolled.</p>
+<p>The terminal was checked at 390px in a real browser. It scrolled sideways by 220 pixels. Every panel measured correctly — <code>getBoundingClientRect</code> on every child was inside its parent — and the page still scrolled.</p>
 <p>There were two independent causes. Here is the first.</p>
 
 <figure class="code">
@@ -69,6 +97,8 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.card {
+	/* … */
+
 	/*
 	 * `min-inline-size: 0`, and it is not cosmetic.
 	 *
@@ -81,8 +111,12 @@
 	 * The maddening part is that the table is inside `.scroller`, which has
 	 * `overflow-x: auto` and exists precisely to absorb this. It never gets the
 	 * chance: its parent has already grown to fit, so there is nothing to scroll.
+	 *
+	 * …
 	 */
 	min-inline-size: 0;
+
+	/* … */
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>This is the single most common cause of &quot;why does my page scroll sideways on mobile&quot;, and it is invisible in devtools because <strong>every element looks like it is behaving.</strong> Nothing is overflowing its parent. The parents simply grew.</p></aside>

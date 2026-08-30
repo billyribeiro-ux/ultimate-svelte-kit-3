@@ -58,7 +58,7 @@ node --version   # v24.20.0</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Do not take a version number from a tutorial — including this one — as current. The authoritative list is <code>https://nodejs.org/dist/index.json</code>: every release, with its date and whether it is LTS. It is a plain JSON file and you can read it in a browser.</p></aside>
 <h3 id="engines">Making the project insist</h3>
-<p>A README that says &quot;requires Node 24&quot; is a wish. Two lines make it a rule.</p>
+<p>A README that says &quot;requires Node 24&quot; is a wish. A little configuration makes the project speak up for itself.</p>
 
 <figure class="code">
 	<figcaption>
@@ -79,20 +79,20 @@ node --version   # v24.20.0</code></pre>
 	</figcaption>
 	<pre><code class="lang-ini">engine-strict=true</code></pre>
 </figure>
-<p>On its own, <code>engines</code> is advisory — npm prints a warning and carries on. <code>engine-strict=true</code> turns the warning into a refusal. Try installing under Node 22 and you get:</p>
+<p>On its own, <code>engines</code> is advisory. What <code>engine-strict=true</code> buys you depends on which tool reads it: <strong>npm</strong> turns the mismatch into a refusal, while <strong>pnpm 11</strong> — what this project actually installs with — still carries on, but complains loudly. Run <code>pnpm install</code> under Node 22 and you get:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment
-This is happening because the package's manifest has an engines.node field.</code></pre>
+	<pre><code> WARN  Unsupported engine: wanted: {&quot;node&quot;:&quot;&gt;=24.20.0&quot;} (current: {&quot;node&quot;:&quot;v22.11.0&quot;,&quot;pnpm&quot;:&quot;11.24.0&quot;})</code></pre>
 </figure>
+<p>If you want pnpm to refuse outright rather than warn, set <code>engineStrict: true</code> in <code>pnpm-workspace.yaml</code>. Then the same install stops dead with <code>ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)</code> before touching a single package.</p>
 
 <aside class="callout callout--why">
 	<h4>Why this is worth the friction</h4>
-	<p>Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud failure on day one is cheaper than a quiet one on day twenty-one.</p>
+	<p>Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.</p>
 </aside>
 <p>Add an <code>.nvmrc</code> too, so <code>nvm use</code> in the project folder picks the right one with no arguments:</p>
 
@@ -131,7 +131,7 @@ This is happening because the package's manifest has an engines.node field.</cod
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>npm install -g pnpm
-pnpm --version   # 10.x</code></pre>
+pnpm --version   # 11.x</code></pre>
 </figure>
 
 <aside class="callout callout--check">

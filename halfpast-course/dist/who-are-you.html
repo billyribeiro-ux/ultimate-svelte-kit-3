@@ -60,7 +60,11 @@
 	<pre><code class="lang-ts">import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { getRequestEvent } from '$app/server';
 import { db } from './db/index.ts';
+
+// …
 
 export const auth = betterAuth({
 	baseURL: ORIGIN,
@@ -73,18 +77,29 @@ export const auth = betterAuth({
 		// The default is 8. Length is the only password rule that reliably helps;
 		// the ones about symbols mostly teach people to append &quot;!1&quot;.
 		minPasswordLength: 12,
-		maxPasswordLength: 256
+		maxPasswordLength: 256,
+		// …
 	},
 
 	session: {
 		expiresIn: 60 * 60 * 24 * 30, // thirty days
 		// Slide the expiry forward at most once a day, so an active user is not
 		// logged out mid-week but we are not writing a session row on every request.
-		updateAge: 60 * 60 * 24
-	}
+		updateAge: 60 * 60 * 24,
+		// …
+	},
+
+	// …
+
+	plugins: [
+		// Must be last. It reaches into SvelteKit's request event to set cookies on
+		// the response Kit is building, which only works once everything else has
+		// decided what those cookies should be.
+		sveltekitCookies(getRequestEvent)
+	]
 });</code></pre>
 </figure>
-<p><code>better-auth/minimal</code> is the smaller entry point: no social providers, no plugins, no organisation features. Importing from it rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything above still works.</p>
+<p><code>better-auth/minimal</code> is the smaller entry point: no social providers, no organisation features. It still supports the <code>plugins</code> array shown above, and this config needs exactly one: <code>sveltekitCookies</code>, which reaches into SvelteKit's own request event to set cookies on the response Kit is building — which only works once everything else has decided what those cookies should be, so it has to run last. Importing from <code>minimal</code> rather than the default keeps a large amount of code out of the server bundle that we would never call, and everything else above still works.</p>
 <aside class="callout callout--note"><p>The password rules are worth arguing about. A twelve-character minimum with no composition requirements beats an eight-character minimum that demands a symbol: length is the only rule that reliably increases the work an attacker has to do, and the symbol rules mostly teach people to append &quot;!1&quot;.</p></aside>
 <h3 id="hooks">Attaching the session to every request</h3>
 
@@ -93,22 +108,30 @@ export const auth = betterAuth({
 		<span class="code__file">src/hooks.server.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { sequence } from '@sveltejs/kit/hooks';
-import type { Handle } from '@sveltejs/kit/hooks';
+	<pre><code class="lang-ts">import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { sequence } from '@sveltejs/kit/hooks';
+import { building } from '$app/env';
+import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth } from '#lib/server/auth.ts';
+
+// …
 
 const handleAuth: Handle = async ({ event, resolve }) =&gt; {
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
-	event.locals.user = session?.user ?? null;
-	event.locals.session = session?.session ?? null;
+	if (session) {
+		event.locals.session = session.session;
+		event.locals.user = session.user;
+	}
 
-	return resolve(event);
+	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-// One job each, composed. `handleHeaders` is in chapter 34.
+// …
+
 export const handle: Handle = sequence(handleAuth, handleHeaders);</code></pre>
 </figure>
+<p><code>svelteKitHandler</code> must wrap <code>resolve</code>, because Better Auth also owns the <code>/api/auth/*</code> routes — sign-in, sign-out, session refresh — and those are not SvelteKit routes at all. It intercepts requests to that prefix itself and passes everything else through to the rest of the app.</p>
 <aside class="callout callout--warn"><p>Hook types moved. <code>Handle</code>, <code>HandleServerError</code> and <code>HandleClientError</code> are imported from <code>@sveltejs/kit/hooks</code> in SvelteKit 3, not from <code>@sveltejs/kit</code>. The old import is a type error, which is at least a loud failure.</p></aside>
 <p>Declare the shape once so the whole app knows it:</p>
 
@@ -117,19 +140,26 @@ export const handle: Handle = sequence(handleAuth, handleHeaders);</code></pre>
 		<span class="code__file">src/app.d.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">declare global {
+	<pre><code class="lang-ts">import type { User, Session } from 'better-auth';
+
+declare global {
 	namespace App {
 		interface Locals {
-			user: { id: string; name: string; email: string } | null;
-			session: { id: string; expiresAt: Date } | null;
+			/** Set by `handleAuth` in `hooks.server.ts`. Absent for a signed-out visitor. */
+			user?: User;
+			session?: Session;
 		}
+
+		// …
 	}
 }
 
 export {};</code></pre>
 </figure>
 <h3 id="errors">Errors that say what kind they are</h3>
-<p>SvelteKit 3 changed the shape of <code>handleError</code>. It now receives a <code>kind</code>, and it is genuinely useful.</p>
+<p>SvelteKit 3 changed the shape of <code>handleError</code>. It now receives a <code>kind</code>, and that is the whole value of the hook — it says where the error came from:</p>
+<ul><li><strong><code>app</code></strong> — we threw it ourselves with <code>error(404, …)</code>. Intentional.</li><li><strong><code>framework</code></strong> — SvelteKit generated it, e.g. a 404. Expected.</li><li><strong><code>validation</code></strong> — a remote function was called with arguments that failed its schema. Usually a stale client, occasionally somebody poking.</li><li><strong><code>unknown</code></strong> — something genuinely broke. This is the only one that is a bug.</li></ul>
+<p>Logging all four fills the log with 404s from bots and buries the one entry that mattered. Logging only <code>unknown</code> means every line in the error log is something a person should look at.</p>
 
 <figure class="code">
 	<figcaption>
@@ -137,14 +167,6 @@ export {};</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const handleError: HandleServerError = ({ kind, error, event }) =&gt; {
-	/*
-	 * `kind` is one of 'app' | 'framework' | 'validation' | 'unknown'.
-	 *
-	 * Only 'unknown' is a surprise. An 'app' error is our own `error(404, …)`, a
-	 * 'validation' error is somebody sending a malformed request, and a
-	 * 'framework' error already has a sensible message. Logging those at error
-	 * level trains everybody to ignore the log.
-	 */
 	if (kind !== 'unknown') {
 		// Keep the framework's status and message; just satisfy our own `App.Error`.
 		return {};
@@ -166,7 +188,7 @@ export {};</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/scheduling.ts</span>
+		<span class="code__file">src/routes/booking/[token]/manage.remote.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const tokenSchema = v.pipe(
@@ -181,6 +203,7 @@ export const getManagedBooking = query(tokenSchema, async (token): Promise&lt;Ma
 	const found = await loadBookingByToken(token);
 	if (!found) error(404, 'We could not find that booking.');
 
+	// … noticeMs, then the flat object below
 	return { /* … only the fields this page needs … */ };
 });</code></pre>
 </figure>
