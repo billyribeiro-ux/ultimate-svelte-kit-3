@@ -113,7 +113,7 @@ export function isFree(interval: Interval, occupied: ReadonlySet<number>): boole
  * offering slots inside them. Sort by start, then either extend the interval
  * you are holding or begin a new one.
  *
- * `>=` rather than `>` on the comparison merges touching intervals too: 09:00–12:00
+ * `<=` rather than `<` on the comparison merges touching intervals too: 09:00–12:00
  * and 12:00–17:00 become one 09:00–17:00 window rather than two, which matters
  * because an appointment is allowed to straddle that seam.
  */

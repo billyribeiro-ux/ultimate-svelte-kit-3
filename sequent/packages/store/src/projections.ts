@@ -139,12 +139,12 @@ async function project(tx: Executor, record: EventRecord): Promise<void> {
 			/*
 			 * The trade is the idempotency key for everything downstream of it.
 			 *
-			 * `changes` is zero when the insert hit the conflict clause, which means
-			 * this trade has already been projected — so the position updates and
-			 * ledger postings below must not run again. Without this check a replayed
-			 * batch would move every position twice and the ledger would still
-			 * balance, which is the worst kind of wrong: internally consistent and
-			 * completely false.
+			 * If the ledger already holds a transaction under this trade id, the
+			 * trade has already been projected — so the position updates and ledger
+			 * postings below must not run again. Without this check a replayed batch
+			 * would move every position twice and the ledger would still balance,
+			 * which is the worst kind of wrong: internally consistent and completely
+			 * false.
 			 */
 			const alreadySeen = await tx.execute({
 				sql: 'SELECT COUNT(*) AS n FROM ledger_transaction WHERE transaction_id = ?',

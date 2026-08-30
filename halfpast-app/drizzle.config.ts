@@ -3,8 +3,8 @@ import { defineConfig } from 'drizzle-kit';
 /**
  * Drizzle Kit runs OUTSIDE the SvelteKit app — it is a CLI, not part of the
  * server bundle — so it cannot use `$app/env/private`, which only exists inside
- * Vite. It reads `process.env` directly, which is why the `db:*` scripts source
- * `.env` first.
+ * Vite. It reads `process.env` directly — drizzle-kit loads `.env` on its own,
+ * and `scripts/seed.ts` calls `process.loadEnvFile('.env')` for the same reason.
  */
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set — did you copy .env.example to .env?');

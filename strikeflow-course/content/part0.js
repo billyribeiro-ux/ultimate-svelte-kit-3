@@ -330,7 +330,7 @@ input:focus   { }  /* an input, while it is selected */
 			},
 			{
 				type: 'note',
-				text: "You will not need `!important` anywhere in this project. If you reach for it, the real problem is usually a selector that is more specific than it needs to be somewhere else."
+				text: "This project writes `!important` exactly three times, all in one place: the reduced-motion kill-switch in `reset.css`, which must override every animation on the site no matter how specific the selector that set it — the one canonical legitimate use. If you reach for it anywhere else, the real problem is usually a selector that is more specific than it needs to be somewhere else."
 			},
 			{ type: 'h3', id: 'variables', text: 'Custom properties (CSS variables)' },
 			{
@@ -696,11 +696,11 @@ mkdir new-thing  # make a directory`
 			{
 				type: 'terminal',
 				code: `node -v
-# v22.22.2  — anything 22.17 or higher works for this project`
+# v24.20.0  — this project requires 24.20.0 or higher`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 requires Node 22.17 or newer, and this project targets the current LTS — **24.20.0** at the time of writing. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
+				text: 'SvelteKit 3 itself runs on Node 22.17 or newer, but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.20.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
 			},
 			{ type: 'h3', id: 'packages', text: 'Packages and the package manager' },
 			{
@@ -778,7 +778,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` shows 22.17+, `pnpm -v` shows 10+, and you can explain what the `^` in a version number means.'
+				text: '`node -v` shows 24.20.0+, `pnpm -v` shows 10+, and you can explain what the `^` in a version number means.'
 			}
 		]
 	},
@@ -847,23 +847,35 @@ mkdir new-thing  # make a directory`
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `import { defineConfig } from 'vitest/config';
+// …
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 
+// …
 export default defineConfig({
 	plugins: [
 		sveltekit({
-			adapter: adapter(),
 			compilerOptions: {
+				// …
 				experimental: { async: true }
 			},
+
+			adapter: adapter(),
+
 			experimental: {
+				// …
 				remoteFunctions: true
-			}
+			},
+
+			// …
 		}),
+
+		// …
 		sveltePhosphorOptimize()
-	]
+	],
+
+	// …
 });`
 			},
 			{

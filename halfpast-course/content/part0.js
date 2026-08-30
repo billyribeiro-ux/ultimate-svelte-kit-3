@@ -247,7 +247,7 @@ node --version   # v24.20.0`
 			{ type: 'h3', id: 'engines', text: 'Making the project insist' },
 			{
 				type: 'p',
-				text: 'A README that says "requires Node 24" is a wish. Two lines make it a rule.'
+				text: 'A README that says "requires Node 24" is a wish. A little configuration makes the project speak up for itself.'
 			},
 			{
 				type: 'code',
@@ -268,17 +268,20 @@ node --version   # v24.20.0`
 			},
 			{
 				type: 'p',
-				text: 'On its own, `engines` is advisory — npm prints a warning and carries on. `engine-strict=true` turns the warning into a refusal. Try installing under Node 22 and you get:'
+				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 11** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22 and you get:'
 			},
 			{
 				type: 'terminal',
-				code: `ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment
-This is happening because the package's manifest has an engines.node field.`
+				code: ` WARN  Unsupported engine: wanted: {"node":">=24.20.0"} (current: {"node":"v22.11.0","pnpm":"11.24.0"})`
+			},
+			{
+				type: 'p',
+				text: 'If you want pnpm to refuse outright rather than warn, set `engineStrict: true` in `pnpm-workspace.yaml`. Then the same install stops dead with `ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)` before touching a single package.'
 			},
 			{
 				type: 'why',
 				title: 'Why this is worth the friction',
-				text: 'Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud failure on day one is cheaper than a quiet one on day twenty-one.'
+				text: 'Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.'
 			},
 			{
 				type: 'p',
@@ -316,7 +319,7 @@ new Intl.NumberFormat('en-US', {
 			},
 
 			{ type: 'h3', id: 'pnpm', text: 'pnpm' },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 10.x' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 11.x' },
 			{
 				type: 'checkpoint',
 				text: '`node --version` reports 24.20.0 or newer, and `pnpm --version` reports 11 or newer.'
@@ -400,15 +403,38 @@ halfpast-app/
 				file: 'vite.config.ts (the shape of it)',
 				lang: 'ts',
 				code: `
-export default defineConfig({
-	plugins: [
-		sveltekit({
-			adapter: adapter(),
-			compilerOptions: { /* … */ },
-			experimental: { remoteFunctions: true }
-		})
-	]
+export default defineConfig(({ mode }) => {
+	/* … */
+	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	return {
+		plugins: [
+			sveltekit({
+				/* … */
+				paths: { origin: env.PUBLIC_ORIGIN },
+
+				compilerOptions: {
+					/* … */
+					experimental: { async: true }
+				},
+
+				adapter: adapter(),
+
+				experimental: {
+					/* … */
+					remoteFunctions: true
+				},
+				/* … */
+			}),
+			/* … */
+		],
+		/* … */
+	};
 });`
+			},
+			{
+				type: 'p',
+				text: 'Notice the outer shape before anything else: the config is a *function* of `({ mode })` that returns the object, not the object itself. That shape is load-bearing, not stylistic — the function form is what lets the config read the environment with `loadEnv` before building, which `paths.origin` needs.'
 			},
 			{
 				type: 'p',

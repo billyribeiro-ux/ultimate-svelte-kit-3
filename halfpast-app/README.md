@@ -58,7 +58,7 @@ The project was scaffolded with the Svelte CLI and then built out by hand:
 ```sh
 pnpm dlx sv create --template minimal --types ts \
   --add prettier eslint vitest="usages:unit,component" playwright \
-  sveltekit-adapter="adapter:node" drizzle="database:sqlite+sqlite:libsql" \
+  sveltekit-adapter="adapter:node" drizzle="database:sqlite+client:libsql" \
   better-auth="demo:password" experimental="features:async,remoteFunctions" \
   --install pnpm halfpast-app
 ```

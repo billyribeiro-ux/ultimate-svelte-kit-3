@@ -66,7 +66,7 @@ export interface OutboxMessage {
 /**
  * Add a message to the outbox, inside a transaction the caller owns.
  *
- * Taking a `Transaction` rather than a `Client` is the entire design, expressed
+ * Taking an `Executor` rather than a `Client` is the entire design, expressed
  * in the type. A function that opened its own transaction could not be atomic
  * with the caller's work, and this signature makes it impossible to use wrongly:
  * there is no way to call it outside a transaction.
