@@ -24,12 +24,14 @@ export const part4 = [
 				lang: 'ts',
 				code: `
 import * as v from 'valibot';
-import { query } from '$app/server';
+// …
+import { form, getRequestEvent, query } from '$app/server';
+// …
 
 export const getBookingPage = query(slugSchema, async (slug): Promise<BookingPageData> => {
 	const found = await db.query.business.findFirst({ where: eq(business.slug, slug) });
 	if (!found) error(404, 'We could not find that business.');
-
+	// …
 	return { /* … */ };
 });`
 			},
@@ -39,11 +41,14 @@ export const getBookingPage = query(slugSchema, async (slug): Promise<BookingPag
 				lang: 'svelte',
 				code: `
 <script lang="ts">
-	import { getBookingPage } from './booking.remote.ts';
-
+	// …
+	import { book, getAvailability, getBookingPage } from './booking.remote.ts';
+	// …
 	const shop = $derived(await getBookingPage(data.slug));
+	// …
 </script>
 
+<!-- … -->
 <h1>{shop.business.name}</h1>`
 			},
 			{
@@ -118,13 +123,17 @@ export const addHours = command(hoursSchema, async (data) => {
 	const context = await requireStaff(data.slug);
 	assertCanManageDiaryOf(context, data.staffId);
 
+	const member = await db.query.staff.findFirst({
+		where: and(eq(staff.id, data.staffId), eq(staff.businessId, context.business.id))
+	});
+	if (!member) error(404, 'No such staff member.');
+
 	if (data.endMinute <= data.startMinute) {
 		error(400, 'A shift has to end after it starts.');
 	}
 
 	await db.insert(availabilityRule).values({ /* … */ });
 
-	// Tell every subscriber to this query to fetch again — in the same response.
 	void getHours({ slug: data.slug }).refresh();
 	publishDiaryChange(context.business.id);
 
@@ -151,7 +160,11 @@ export const addHours = command(hoursSchema, async (data) => {
 				lang: 'ts',
 				code: `
 // When the component knows better than the server which queries to update:
-await setServiceActive({ id, isActive }).updates(getServices(slug));`
+await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));`
+			},
+			{
+				type: 'p',
+				text: 'This app never actually writes that line — its commands call `.refresh()` on the server, the way `addHours` does above, so every caller gets the fresh data without asking. `.updates()` is for the day only the calling component knows which queries are on screen.'
 			},
 
 			{ type: 'h3', id: 'errors', text: 'One trap on the way back' },
@@ -220,10 +233,14 @@ export function messageFrom(thrown: unknown, fallback: string): string {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-<form {...book}>
-	<input {...book.fields.name.as('text')} />
-	<input {...book.fields.email.as('email')} />
-	<button type="submit">Book this time</button>
+<form {...book} class="stack stack-lg">
+	<!-- … -->
+	<input {...book.fields.name.as('text')} … />
+	<!-- … -->
+	<input {...book.fields.email.as('email')} … />
+	<!-- … -->
+	<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
+	<!-- … -->
 </form>`
 			},
 			{
@@ -340,12 +357,16 @@ const slotValueSchema = v.pipe(
 				lang: 'svelte',
 				code: `
 {#each services as entry (entry.id)}
+	<!-- … -->
 	{@const editForm = saveService.for(entry.id)}
-
-	<form {...editForm}>
-		<input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} />
+	<!-- … -->
+	<form {...editForm} class="edit stack">
+		<!-- … -->
+		<input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} … />
+		<!-- … -->
 		<Button type="submit" loading={editForm.pending > 0}>Save changes</Button>
 	</form>
+	<!-- … -->
 {/each}`
 			},
 			{
@@ -441,13 +462,24 @@ export const getAvailability = query.live(availabilityArgs, async function* (arg
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-const availability = $derived(
-	await getAvailability({ slug, serviceId, staffId, from: day, days: 14 })
-);`
+const availabilityQuery = $derived(
+	service
+		? getAvailability({
+				slug: data.slug,
+				serviceId: service.id,
+				staffId: staffId ?? undefined,
+				from: weekFrom,
+				days: 7
+			})
+		: null
+);
+
+// …
+const availability = $derived(availabilityQuery ? await availabilityQuery : null);`
 			},
 			{
 				type: 'p',
-				text: 'No subscription to manage, no cleanup to write, no `onDestroy`. The `$derived` re-runs when the arguments change and the component re-renders when a new value arrives. The generator on the server and the `await` in the component are the entire API.'
+				text: 'Two `$derived`s, on purpose. `availabilityQuery` is the resource — recreated whenever a different service, week or person is chosen, and it carries `.connected`, which is how the page knows whether to show its "Live" badge. `availability` is the value, re-awaited every time the server pushes a new one down the stream. No subscription to manage, no cleanup to write, no `onDestroy` — the generator on the server and the `await` in the component are the entire API.'
 			},
 
 			{
@@ -474,11 +506,20 @@ const availability = $derived(
 				lang: 'ts',
 				code: `
 sveltekit({
+	// …
 	compilerOptions: {
-		runes: true,
+		// Runes everywhere except node_modules, where a dependency may still be
+		// written in legacy Svelte 4 style. Removable in Svelte 6.
+		runes: ({ filename }) =>
+			filename.split(/[/\\\\]/).includes('node_modules') ? undefined : true,
+
+		// \`await\` at the top level of <script>, inside $derived, and directly in
+		// markup. Remote functions are promises; this is what lets a component
+		// await one without a load function in the middle. Default in Svelte 6.
 		experimental: { async: true }
-	}
-})`
+	},
+	// …
+}),`
 			},
 
 			{ type: 'h3', id: 'boundaries', text: 'Boundaries' },
@@ -495,10 +536,15 @@ sveltekit({
 	{@render children()}
 
 	{#snippet failed(error, reset)}
-		<Alert tone="error" title="Something went wrong">
-			<p>{messageFrom(error, 'We could not load this page.')}</p>
-			<Button onclick={reset}>Try again</Button>
-		</Alert>
+		<div class="container-narrow section">
+			<div class="failure" role="alert">
+				<h1>Something went wrong</h1>
+				<p>
+					{messageFrom(error, 'We could not load this page.')}
+				</p>
+				<button type="button" onclick={reset}>Try again</button>
+			</div>
+		</div>
 	{/snippet}
 </svelte:boundary>`
 			},
@@ -524,7 +570,7 @@ sveltekit({
 			},
 			{
 				type: 'code',
-				file: 'twelve lines that reproduce it',
+				file: 'nine lines that reproduce it',
 				lang: 'svelte',
 				code: `
 <script lang="ts">
@@ -613,7 +659,7 @@ $effect(() => {
 	const availability = $derived(await getAvailability(args));
 </script>
 
-<SlotGrid {availability} />`
+<AvailabilityGrid {availability} />`
 			},
 			{
 				type: 'p',
