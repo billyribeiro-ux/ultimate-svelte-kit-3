@@ -22,9 +22,9 @@ export const part5 = [
 			{
 				type: 'ul',
 				items: [
-					'`reset.css` — flatten the browser defaults we do not want.',
-					'`tokens.css` — every colour, size, radius and duration, named.',
 					'`fonts.css` — `@font-face`, with metric-matched fallbacks.',
+					'`tokens.css` — every colour, size, radius and duration, named.',
+					'`reset.css` — flatten the browser defaults we do not want.',
 					'`base.css` — element defaults: headings, links, form controls.',
 					'`utilities.css` — the handful of helpers worth having.',
 					'`app.css` — imports the other five, in that order.'
@@ -38,9 +38,13 @@ export const part5 = [
 				lang: 'css',
 				code: `
 :root {
-	--paper: oklch(99% 0.005 95);
-	--ink: oklch(22% 0.02 260);
-	--accent: oklch(58% 0.14 195);
+	/* Surfaces, from furthest back to nearest front. */
+	--paper: oklch(98.6% 0.006 85);
+	/* … */
+	--ink: oklch(22% 0.015 230);
+	/* … */
+	--accent: oklch(52% 0.11 190);
+	/* … */
 }`
 			},
 			{
@@ -51,8 +55,8 @@ export const part5 = [
 				type: 'ol',
 				items: [
 					'**The first number is perceived lightness.** Two colours at `oklch(70% …)` look equally bright to a human eye whatever their hue. In hex, `#0000FF` and `#FFFF00` have wildly different perceived brightness at similar-looking values, so palettes get even contrast by squinting rather than by construction.',
-					'**Changing hue while holding lightness gives colours that belong together.** Our six staff colours are one lightness and six hues. In hex you nudge three channels each and hope.',
-					'**Dark mode becomes flipping numbers.** `--paper` goes from 99% to 15%, `--ink` from 22% to 92%. That is a change you can reason about, not a second palette to maintain.'
+					'**Changing hue while holding lightness gives colours that belong together.** Our staff colours work this way: each person stores a single hue (the seed gives Ada 268 and Ben 172) and the diary paints every stripe at one hard-coded lightness. In hex you nudge three channels each and hope.',
+					'**Dark mode becomes flipping numbers.** `--paper` goes from 98.6% to 16.5%, `--ink` from 22% to 94%. That is a change you can reason about, not a second palette to maintain.'
 				]
 			},
 
@@ -64,6 +68,7 @@ export const part5 = [
 				code: `
 --text-sm: clamp(0.875rem, 0.85rem + 0.12vw, 0.925rem);
 --text-base: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem);
+/* … */
 --text-xl: clamp(1.6rem, 1.4rem + 1vw, 2.25rem);`
 			},
 			{
@@ -85,22 +90,26 @@ export const part5 = [
 				file: 'src/lib/styles/fonts.css',
 				lang: 'css',
 				code: `
+/* Public Sans: real ascent 0.95em, real descent 0.23em, at weight 400. */
 @font-face {
 	font-family: 'Public Sans Fallback';
 	src: local('Arial');
-	size-adjust: 97.5%;
-	ascent-override: 92%;
-	descent-override: 24%;
+	size-adjust: 105.4%;
+	ascent-override: 90.1%;
+	descent-override: 21.8%;
 	line-gap-override: 0%;
-}
-
-:root {
-	--font-body: 'Public Sans', 'Public Sans Fallback', system-ui, sans-serif;
 }`
 			},
 			{
 				type: 'p',
-				text: 'A `@font-face` with no download: it takes a font already on the machine and **adjusts its metrics** to match the one being fetched. The fallback then occupies almost exactly the same space, so when the real font arrives nothing jumps.'
+				text: 'A `@font-face` with no download: it takes a font already on the machine and **adjusts its metrics** to match the one being fetched. The fallback then occupies almost exactly the same space, so when the real font arrives nothing jumps. The numbers were measured, not estimated — `pnpm run fonts:measure` reproduces them. The family then enters the stack over in `tokens.css`:'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/styles/tokens.css',
+				lang: 'css',
+				code: `
+--font-body: 'Public Sans', 'Public Sans Fallback', system-ui, sans-serif;`
 			},
 			{
 				type: 'p',
@@ -201,6 +210,8 @@ class ThemeStore {
 				code: `
 const serviceSlug = $derived(page.url.searchParams.get('service'));
 
+// …
+
 function pickService(slug: string | null) {
 	/*
 	 * \`page.url\` is a \`ReadonlyURL\` in SvelteKit 3 — its \`searchParams\` has no
@@ -237,10 +248,10 @@ function pickService(slug: string | null) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if chosenSlot}
-	<section class="details" {@attach reveal({ y: 16 })}>
-		<h2>Your details</h2>
-		<!-- name, email, phone, note -->
+{#if selectedStart !== null}
+	<section class="step details" {@attach reveal({ y: 14 })}>
+		<h3>Your details</h3>
+		<!-- … name, email, phone, note … -->
 	</section>
 {/if}`
 			},
@@ -255,11 +266,23 @@ function pickService(slug: string | null) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if offeredBy.length > 1}
-	<fieldset class="who">
-		<legend>Choose who with</legend>
-		<!-- radio per person, plus "anyone" -->
-	</fieldset>
+{#if service.staffIds.length > 1}
+	<section class="step">
+		<h3>Who with?</h3>
+		<div class="who" role="radiogroup" aria-label="Choose who with">
+			<button
+				type="button"
+				role="radio"
+				aria-checked={staffId === null}
+				class="who-option"
+				class:selected={staffId === null}
+				onclick={() => (staffId = null)}
+			>
+				Anyone
+			</button>
+			<!-- … one button per person who offers this service … -->
+		</div>
+	</section>
 {/if}`
 			},
 			{
@@ -300,15 +323,15 @@ function pickService(slug: string | null) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if book.fields.allIssues()?.length}
-	<Alert tone="error" title="We could not book that">
-		<p>{book.fields.allIssues()?.[0]?.message}</p>
+{#if book.result === undefined && book.fields.allIssues()?.length}
+	<Alert tone="error" title="Please check the form">
+		<p>Some details need another look.</p>
 	</Alert>
 {/if}`
 			},
 			{
 				type: 'p',
-				text: 'The message the customer sees for a lost race is "Sorry — that time was just taken. Please choose another." — and because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.'
+				text: 'For a lost race the message comes from the server: "That time was just taken." — or, when the race is lost at the claim itself, "Sorry — that time was booked moments ago." And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.'
 			},
 
 			{
@@ -376,13 +399,17 @@ function pickService(slug: string | null) {
 .slot {
 	display: grid;
 	place-items: center;
-	min-height: 2.75rem;       /* 44px — the smallest comfortable tap target */
+	margin: 0;
+	min-height: 2.75rem;
+	padding: var(--space-2);
+	/* … */
 	font-variant-numeric: tabular-nums;
+	/* … */
 }`
 			},
 			{
 				type: 'p',
-				text: '`auto-fill` with `minmax` is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. 44px is the floor for a tap target, and this grid is the single most-tapped thing in the app. `tabular-nums` is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.'
+				text: '`auto-fill` with `minmax` is a responsive grid with no breakpoints: three columns on a small phone, seven on a tablet, and the browser does the arithmetic. The `min-height` of 2.75rem is 44px — the floor for a comfortable tap target — and this grid is the single most-tapped thing in the app. `tabular-nums` is a small one worth knowing: without it, 11:00 and 12:45 are different widths and the column of times looks ragged.'
 			},
 
 			{ type: 'h3', id: 'flip', text: 'When a slot disappears' },
@@ -396,13 +423,19 @@ function pickService(slug: string | null) {
 				lang: 'ts',
 				code: `
 /**
- * FLIP — First, Last, Invert, Play.
+ * FLIP — the technique that makes a live-updating grid feel like an object
+ * rather than a slideshow.
+ *
+ * The name is the method: **F**irst, **L**ast, **I**nvert, **P**lay.
  *
  *   First   — measure where everything is, right now.
  *   Last    — let the DOM change. Items appear, disappear, move.
  *   Invert  — instantly transform each survivor back to where it *was*, so the
  *             frame looks identical to before the change.
- *   Play    — animate those transforms away.
+ *   Play    — animate those transforms away. The elements slide to their new
+ *             homes because the browser has already decided where those are.
+ *
+ * …
  */`
 			},
 			{
@@ -425,21 +458,45 @@ function pickService(slug: string | null) {
 				lang: 'ts',
 				code: `
 export function prefersReducedMotion(): boolean {
-	return browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	if (!browser) return false;
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export async function loadMotion() {
-	if (!browser || prefersReducedMotion()) return null;
-	// Only now is GSAP downloaded at all.
-	const { gsap } = await import('gsap');
-	const { Flip } = await import('gsap/Flip');
-	gsap.registerPlugin(Flip);
-	return { gsap, Flip };
+let pending: Promise<Motion | null> | null = null;
+
+export function loadMotion(): Promise<Motion | null> {
+	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
+
+	pending ??= (async () => {
+		try {
+			const [{ gsap }, { Flip }] = await Promise.all([import('gsap'), import('gsap/Flip')]);
+
+			gsap.registerPlugin(Flip);
+
+			// GSAP's default is a gentle ease-out over half a second, which is a
+			// reasonable default for a marketing page and too slow for a tool
+			// somebody uses forty times a day. These match the CSS tokens so a
+			// GSAP transition and a CSS one feel like the same system.
+			gsap.defaults({ duration: 0.35, ease: 'power3.out' });
+
+			return { gsap, Flip };
+		} catch (thrown) {
+			// A blocked or failed chunk must not take the page with it.
+			console.warn('[motion] GSAP failed to load; continuing without animation', thrown);
+			return null;
+		}
+	})();
+
+	return pending;
 }`
 			},
 			{
 				type: 'p',
 				text: 'Both `capture` and `play` become no-ops and the grid updates instantly. For somebody who asked for less motion that is not a degraded experience, it is the correct one — and they never download the animation library at all.'
+			},
+			{
+				type: 'note',
+				text: 'The result is memoised in `pending` with `??=`, so twenty components mounting at once share one network request rather than starting twenty. `Promise.all` fetches `gsap` and `gsap/Flip` together instead of one after the other, `gsap.defaults(...)` sets a snappier timing than GSAP\'s own default so a GSAP tween and a CSS transition feel like the same system, and the `try/catch` means a blocked or failed chunk resolves to `null` rather than rejecting — the same outcome a reduced-motion visitor already gets, handled by the same `if (!motion) return`.'
 			},
 
 			{
@@ -466,8 +523,12 @@ export async function loadMotion() {
 				lang: 'svelte',
 				code: `
 <svelte:head>
-	<title>Your appointment — {booking.business.name}</title>
-	<!-- The URL contains a credential. Never index it. -->
+	<title>Your appointment — Halfpast</title>
+	<!--
+		Never index this page. The URL is the credential, and a search engine that
+		crawled it would publish somebody's appointment along with the ability to
+		cancel it.
+	-->
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>`
 			},
@@ -482,18 +543,25 @@ export async function loadMotion() {
 				file: 'src/routes/booking/[token]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if canCancel}
-	<Button variant="ghost" onclick={() => void cancel()}>Cancel this appointment</Button>
-{:else}
-	<p class="text-muted">
-		Appointments can be cancelled up to {booking.business.cancellationNoticeHours} hours
-		beforehand. Please call the studio on {booking.business.phone}.
+{#if b.canCancel}
+	<Button variant="secondary" full onclick={() => void cancel()} loading={cancelling}>
+		Cancel this appointment
+	</Button>
+	<p class="small text-faint">
+		Free to cancel up to {b.cancellationNoticeHours} hours beforehand.
 	</p>
+{:else if !cancelled}
+	<Alert tone="warning" title="Too late to cancel online">
+		<p>
+			Please ring the studio{b.businessPhone ? \` on \${b.businessPhone}\` : ''} and they will sort it
+			out.
+		</p>
+	</Alert>
 {/if}`
 			},
 			{
 				type: 'p',
-				text: 'Two things worth copying here. First, the rule is stated **with** the refusal — "up to 24 hours beforehand" tells them why the button is missing. Second, there is a way forward: the phone number, not a dead end.'
+				text: 'Two things worth copying here. First, the rule is stated **with the working button**, not the refusal — "Free to cancel up to 24 hours beforehand" sits right under the control while it still works, so the customer learns the boundary before they ever hit it. Second, once the button is gone, there is still a way forward: an alert naming the studio\'s phone number, not a dead end.'
 			},
 			{
 				type: 'p',
@@ -544,11 +612,11 @@ export const cancelOwnBooking = command(
 			{ type: 'h3', id: 'freed', text: 'And the slot goes back on sale' },
 			{
 				type: 'p',
-				text: 'Cancelling deletes the booking\'s claim rows — `onDelete: \'cascade\'` does it — and publishes a diary change. Every booking page currently open on that day gets the freed time back within a second, without anybody refreshing anything.'
+				text: 'Cancelling does not delete the booking. It updates its `status` to `\'cancelled\'` and explicitly deletes its claim rows — `tx.delete(slotClaim).where(eq(slotClaim.bookingId, found.id))` — then publishes a diary change. `slotClaim.bookingId` does carry `onDelete: \'cascade\'`, but that only fires if the booking row itself were ever deleted, which cancellation never does: the record has to survive so the studio still has something to look up. Every booking page currently open on that day gets the freed time back within a second, without anybody refreshing anything.'
 			},
 			{
 				type: 'p',
-				text: 'That is worth pausing on, because it is the payoff for all the machinery: three separate design decisions (cascade deletes, the claims table, live queries) combine into a behaviour nobody had to write.'
+				text: 'That is worth pausing on, because it is the payoff for all the machinery: three separate design decisions (the claims table kept separate from the booking record, an explicit delete on cancellation, live queries) combine into a behaviour nobody had to write.'
 			},
 
 			{
@@ -582,7 +650,7 @@ export const cancelOwnBooking = command(
 	{/if}
 </header>
 
-{#if entries.length === 0}
+{#if result.entries.length === 0}
 	<p class="empty">Nothing booked. Enjoy it.</p>
 {/if}`
 			},
@@ -608,10 +676,11 @@ export const cancelOwnBooking = command(
 <button
 	type="button"
 	class="cancel"
-	onclick={() => void cancelEntry(entry)}
+	onclick={() => void cancel(entry.id, entry.customerName)}
+	disabled={cancelling === entry.id}
 	aria-label="Cancel {entry.customerName}'s appointment"
 >
-	<XIcon weight="bold" />
+	<XCircleIcon weight="bold" />
 </button>`
 			},
 			{
@@ -629,8 +698,17 @@ export const cancelOwnBooking = command(
 				file: 'src/routes/manage/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-<li class="appointment" style="--hue: {appointment.staffColourHue}">
-	<span class="who">{appointment.staffName}</span>
+<li class="entry" style="--hue: {entry.colourHue}">
+	<!-- … -->
+	<p class="who">
+		<strong>{entry.customerName}</strong>
+		<!-- … -->
+	</p>
+
+	<p class="with text-muted">
+		with {entry.staffName}
+		<!-- … -->
+	</p>
 	<!-- … -->
 </li>`
 			},
@@ -639,13 +717,13 @@ export const cancelOwnBooking = command(
 				file: 'and in the stylesheet',
 				lang: 'css',
 				code: `
-.appointment {
+.entry {
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
 }`
 			},
 			{
 				type: 'p',
-				text: 'One custom property carries the staff member\'s hue into the CSS, and because the colours are one lightness and six hues in oklch, they are legible at a glance and equally weighted. **And the name is always there too** — colour alone excludes roughly one man in twelve.'
+				text: 'One custom property carries the staff member\'s hue into the CSS, and because every staff colour shares one hard-coded lightness in oklch, they are legible at a glance and equally weighted regardless of hue. **And the name is always there too** — `.who` names the customer, `.with` names the staff member, and colour alone excludes roughly one man in twelve.'
 			},
 
 			{ type: 'h3', id: 'tabs', text: 'Navigation for a phone, without a hamburger' },
@@ -657,6 +735,7 @@ export const cancelOwnBooking = command(
 <nav class="tabs" aria-label="Dashboard sections">
 	<div class="tabs-inner container">
 		{#each visible as section (section.path)}
+			{@const Icon = section.icon}
 			{@const active = activePath === section.path}
 			<a class="tab" class:active href="{base}{section.path}" aria-current={active ? 'page' : undefined}>
 				<Icon weight={active ? 'fill' : 'regular'} aria-hidden="true" />
@@ -789,24 +868,40 @@ function toClock(minutes: number): string {
 				file: 'src/routes/manage/[slug]/studio.remote.ts',
 				lang: 'ts',
 				code: `
-export const setStaffService = command(pairSchema, async ({ slug, staffId, serviceId, offers }) => {
-	const context = await requireOwner(slug);
+export const setStaffService = command(
+	v.object({
+		slug: slugSchema,
+		staffId: idSchema,
+		serviceId: idSchema,
+		offers: v.boolean()
+	}),
+	async ({ slug, staffId, serviceId, offers }) => {
+		const context = await requireOwner(slug);
 
-	if (offers) {
-		await db
-			.insert(staffService)
-			.values({ staffId, serviceId })
-			// Ticking an already-ticked box is not an error, it is a no-op.
-			.onConflictDoNothing();
-	} else {
-		await db
-			.delete(staffService)
-			.where(and(eq(staffService.staffId, staffId), eq(staffService.serviceId, serviceId)));
+		// … both staffId and serviceId are looked up scoped to
+		// context.business.id first, and a 404 stops an owner of one studio
+		// wiring their staff to another studio's services by id …
+
+		if (offers) {
+			/*
+			 * \`onConflictDoNothing\` makes this idempotent. Two quick clicks would
+			 * otherwise race and the second would fail on the composite primary key —
+			 * a red error for an action that already succeeded.
+			 */
+			await db.insert(staffService).values({ staffId, serviceId }).onConflictDoNothing();
+		} else {
+			await db
+				.delete(staffService)
+				.where(and(eq(staffService.staffId, staffId), eq(staffService.serviceId, serviceId)));
+		}
+
+		void getTeam(slug).refresh();
+		void getServices(slug).refresh();
+		publishDiaryChange(context.business.id);
+
+		return { offers };
 	}
-
-	void getTeam(slug).refresh();
-	return { ok: true };
-});`
+);`
 			},
 			{
 				type: 'p',
