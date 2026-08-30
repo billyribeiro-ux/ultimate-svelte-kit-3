@@ -44,14 +44,19 @@ import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-node';
 
+/* … */
 export default defineConfig(({ mode }) => {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
 	return {
 		plugins: [
 			sveltekit({
+				// …
 				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
+
+				/* … */
 				csrf: { trustedOrigins: ['*'] },
+
 				compilerOptions: { runes: true, experimental: { async: true } },
 				adapter: adapter(),
 				experimental: { remoteFunctions: true }
@@ -101,7 +106,9 @@ export default defineConfig(({ mode }) => {
 				code: `
 {
 	"name": "@sequent/web",
+	…
 	"type": "module",
+	…
 	"imports": {
 		"#lib/*": "./src/lib/*"
 	}
@@ -154,8 +161,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 				lang: 'json',
 				code: `
 {
+	// …
 	"extends": "$app/tsconfig",
 
+	/* … */
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.js",
@@ -168,6 +177,7 @@ build/server/chunks/index-BqK2v8.js:1:2847
 
 	"compilerOptions": {
 		"strict": true,
+		// …
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"noFallthroughCasesInSwitch": true,
@@ -315,20 +325,25 @@ import { PUBLIC_ORIGIN } from '$app/env/public';`
 				file: 'apps/web/src/routes/terminal/market.remote.ts',
 				lang: 'ts',
 				code: `
-import { query } from '$app/server';
+// …
+import type { Row } from '@libsql/client';
+// …
+import { command, getRequestEvent, query } from '$app/server';
+
+// …
 
 export const getMyOrders = query(async () => {
 	const viewer = requireViewer();
 	requireCan(viewer, 'view_orders');
 
 	const result = await db.execute({
-		sql: \`SELECT order_id, client_order_id, instrument_id, side, price, quantity,
-		             filled, time_in_force, status, cancel_reason, updated_at
-		      FROM order_record WHERE firm_id = ? ORDER BY seq DESC LIMIT 100\`,
+		sql: \`SELECT order_id, client_order_id, instrument_id, side, price, quantity, filled,
+					 time_in_force, status, cancel_reason, updated_at
+			  FROM order_record WHERE firm_id = ? ORDER BY seq DESC LIMIT 100\`,
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row) => ({ /* … */ }));
+	return result.rows.map((row: Row) => ({ /* … */ }));
 });`
 			},
 			{
@@ -384,11 +399,11 @@ export const placeOrder = command(
 		accountId: v.pipe(v.string(), v.minLength(1)),
 		instrumentId: symbol,
 		clientOrderId: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
-		side: v.picklist(['buy', 'sell']),
-		orderType: v.picklist(['limit', 'market']),
+		side: v.picklist(['buy', 'sell'] as const),
+		orderType: v.picklist(['limit', 'market'] as const),
 		price: v.optional(positiveInteger),
 		quantity: positiveInteger,
-		timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'])
+		timeInForce: v.picklist(['gtc', 'day', 'ioc', 'fok'] as const)
 	}),
 	async (input) => {
 		const viewer = requireViewer();
@@ -468,20 +483,19 @@ export const watchMarket = query.live(
 		requireViewer();
 		const { request } = getRequestEvent();
 
-		// 1. Yield the current answer immediately, so the page has something to draw.
 		yield await snapshotOf(args.instrumentId, args.depth);
 
-		// 2. Wait for a reason to look again.
 		for await (const batch of tailEvents(db, await currentSeq(), {
 			signal: request.signal,
 			idleMs: 40
 		})) {
+			// Only wake for events about this instrument. A quiet instrument on a
+			// busy venue should cost nothing.
 			const relevant = batch.some((record) => {
-				const body = record.body;
+				const body = record.body as { instrumentId?: string };
 				return body.instrumentId === args.instrumentId;
 			});
 
-			// 3. Yield the new answer.
 			if (relevant) yield await snapshotOf(args.instrumentId, args.depth);
 		}
 	}
@@ -489,7 +503,7 @@ export const watchMarket = query.live(
 			},
 			{
 				type: 'p',
-				text: 'Three steps, always the same three: yield now, wait, yield again. The interesting decisions are in the waiting.'
+				text: 'The shape is always the same three steps: yield the current answer immediately, so the page has something to draw; wait for a reason to look again; yield the new answer. The interesting decisions are in the waiting.'
 			},
 			{
 				type: 'why',
@@ -768,9 +782,15 @@ Cross-site POST form submissions are forbidden`
 				lang: 'ts',
 				code: `
 sveltekit({
-	// Kit's own cross-site check is turned off, and replaced by a stricter one
-	// in \`hooks.server.ts\`. Read that before deciding this is reckless.
+	// …
+
+	/*
+	 * Kit's own cross-site check is turned off, and replaced by a stricter
+	 * one in \`hooks.server.ts\`. Read that before deciding this is reckless.
+	 * …
+	 */
 	csrf: { trustedOrigins: ['*'] },
+
 	// …
 })`
 			},
@@ -785,6 +805,7 @@ sveltekit({
 				code: `
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/* … */
 const handleCsrf: Handle = async ({ event, resolve }) => {
 	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
 
@@ -796,11 +817,10 @@ const handleCsrf: Handle = async ({ event, resolve }) => {
 	/*
 	 * A missing \`Origin\` on a non-GET is refused rather than trusted.
 	 *
-	 * Every browser has sent \`Origin\` on cross-origin form submissions for
-	 * years, so "no origin" here means a non-browser client — which should be
-	 * using a token, not a cookie. Trusting the absence is the mistake that
-	 * turns this check into decoration, because it is the one thing an attacker
-	 * can arrange.
+	 * Every browser has sent \`Origin\` on cross-origin form submissions for years,
+	 * so "no origin" here means a non-browser client — which should be using a
+	 * token, not a cookie. Trusting the absence is the mistake that turns this
+	 * check into decoration, because it is the one thing an attacker can arrange.
 	 */
 	if (origin !== PUBLIC_ORIGIN) {
 		return new Response('Cross-site request refused.', {
@@ -901,12 +921,12 @@ const positions = $derived(await getMyPositions());`
 			{
 				type: 'terminal',
 				code: `
-TypeError: Cannot read properties of undefined (reading 'side')
-    at Module.$$render (+page.svelte:214:31)`
+TypeError: Cannot read properties of undefined (reading 'price')
+    at Module.$$render (+page.svelte:257:28)`
 			},
 			{
 				type: 'p',
-				text: 'Line 214 is a `bind:group={ticket.side}` on the buy/sell toggle. `ticket` is a `$state` object declared further down the script. On the client everything worked perfectly. Only server rendering died.'
+				text: 'The line it points at is the `bind:value={ticket.price}` on the ticket\'s price input. `ticket` is a `$state` object declared further down the script. On the client everything worked perfectly. Only server rendering died.'
 			},
 			{
 				type: 'why',
@@ -933,14 +953,14 @@ TypeError: Cannot read properties of undefined (reading 'side')
  * which is what makes it so easy to walk into.
  */
 let ticket = $state({
-	side: 'buy',
+	side: 'buy' as 'buy' | 'sell',
 	price: '',
 	quantity: '100',
-	timeInForce: 'gtc'
+	timeInForce: 'gtc' as 'gtc' | 'day' | 'ioc' | 'fok'
 });
 
 let sending = $state(false);
-let lastError = $state(null);
+let lastError = $state<string | null>(null);
 
 // …only now the awaited deriveds
 const instruments = $derived(await getInstruments());`
@@ -967,12 +987,12 @@ const instruments = $derived(await getInstruments());`
 /*
  * Announce a phase change with the venue's one dramatic gesture.
  *
- * $effect and not a derived, because this *does something to the world*
+ * \`$effect\` and not a derived, because this *does something to the world*
  * rather than computing a value. A derived that fired an animation would run
  * again on every unrelated re-read, which is the difference between "when
  * this changes" and "whenever anybody looks".
  *
- * The guard on seenPhase being non-null is what stops the sweep firing on
+ * The guard on \`seenPhase\` being non-null is what stops the sweep firing on
  * first load: arriving at an open market is not the market opening.
  */
 $effect(() => {
