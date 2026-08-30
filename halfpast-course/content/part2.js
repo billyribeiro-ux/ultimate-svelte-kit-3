@@ -62,11 +62,16 @@ import { createClient } from '@libsql/client';
 import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
+// …
 const client = createClient({
 	url: DATABASE_URL,
-	authToken: DATABASE_AUTH_TOKEN
+	// libSQL rejects \`authToken: undefined\` on some versions, so only pass the key
+	// when we actually have one. Spreading a conditional object is the tidiest way
+	// to say "this property may not exist at all".
+	...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
 });
 
+// …
 export const db = drizzle(client, { schema });`
 			},
 			{
@@ -86,7 +91,10 @@ export const db = drizzle(client, { schema });`
 				code: `
 void (async () => {
 	try {
+		// Persisted in the database file, so this is idempotent; running it every
+		// boot simply guarantees no deployment is ever missing it.
 		await client.execute('PRAGMA journal_mode = WAL');
+		// Per-connection, so this one genuinely must run at every startup.
 		await client.execute('PRAGMA busy_timeout = 5000');
 	} catch (error) {
 		console.warn('[db] could not apply pragmas; continuing with defaults', error);
@@ -199,18 +207,20 @@ serviceId: text('service_id')
 	.notNull()
 	.references(() => service.id, { onDelete: 'restrict' }),
 
-/* --- snapshots, frozen at booking time --- */
-serviceName: text('service_name').notNull(),
-durationMinutes: integer('duration_minutes').notNull(),
-priceCents: integer('price_cents').notNull(),
-currency: text('currency').notNull(),
+// …
 
 /**
  * The business's zone as it was when this was booked. Snapshotted because a
  * business can move, and "your appointment was at 2pm" should not silently
  * become 3pm in the confirmation you look at a year later.
  */
-timeZone: text('time_zone').notNull(),`
+timeZone: text('time_zone').notNull(),
+
+/* --- snapshots, frozen at booking time --- */
+serviceName: text('service_name').notNull(),
+durationMinutes: integer('duration_minutes').notNull(),
+priceCents: integer('price_cents').notNull(),
+currency: text('currency').notNull(),`
 			},
 			{
 				type: 'p',
@@ -406,8 +416,18 @@ export function isUniqueViolation(error: unknown): boolean {
 				file: 'src/lib/server/scheduling.ts',
 				lang: 'ts',
 				code: `
+/* --- 4. The claim. This is the part that cannot be raced. ------------- */
+
+const cells = slotsIn({ start: blockStart, end: blockEnd });
+
 try {
-	await tx.insert(slotClaim).values(cells);
+	await tx.insert(slotClaim).values(
+		cells.map((cell) => ({
+			staffId: chosenStaff.id,
+			slotStart: new Date(cell),
+			bookingId: created.id
+		}))
+	);
 } catch (error) {
 	if (isUniqueViolation(error)) {
 		// The whole transaction is about to roll back, so the booking row we
@@ -474,8 +494,8 @@ import { defineConfig } from 'drizzle-kit';
 /**
  * Drizzle Kit runs OUTSIDE the SvelteKit app — it is a CLI, not part of the
  * server bundle — so it cannot use \`$app/env/private\`, which only exists inside
- * Vite. It reads \`process.env\` directly, which is why the \`db:*\` scripts source
- * \`.env\` first.
+ * Vite. It reads \`process.env\` directly — drizzle-kit loads \`.env\` on its own,
+ * and \`scripts/seed.ts\` calls \`process.loadEnvFile('.env')\` for the same reason.
  */
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set — did you copy .env.example to .env?');
@@ -498,7 +518,7 @@ export default defineConfig({
 			},
 			{
 				type: 'p',
-				text: 'Read the comment at the top before copying it. Drizzle Kit is a **command-line tool**, not part of the server bundle, so `$app/env/private` — which only exists inside Vite — is unavailable to it. It reads `process.env` directly, which is why the `db:*` scripts source `.env` first. Getting this wrong produces an import error that looks like a bug in Drizzle.'
+				text: 'Read the comment at the top before copying it. Drizzle Kit is a **command-line tool**, not part of the server bundle, so `$app/env/private` — which only exists inside Vite — is unavailable to it. It reads `process.env` directly: drizzle-kit loads `.env` on its own, and the seed script calls `process.loadEnvFile(\'.env\')` for the same reason. Getting this wrong produces an import error that looks like a bug in Drizzle.'
 			},
 			{
 				type: 'p',
@@ -521,17 +541,24 @@ export default defineConfig({
 				code: `
 console.log('· clearing');
 
-// Order matters: children before parents, or the foreign keys refuse.
+// Children first. Relying on cascades here would work but would make the script
+// depend on rules it is not about.
 await db.delete(slotClaim);
 await db.delete(booking);
 await db.delete(timeOff);
 await db.delete(availabilityRule);
 await db.delete(staffService);
-// ...and so on up the tree.`
+await db.delete(customer);
+await db.delete(service);
+await db.delete(staff);
+await db.delete(business);
+await db.delete(session);
+await db.delete(account);
+await db.delete(user);`
 			},
 			{
 				type: 'p',
-				text: 'One decision in there is worth calling out: the seed **keeps the same business row** rather than dropping and recreating it. Dropping it produced an intermittent 500 in whichever test happened to run next — a live query still streaming to a page the previous test had only just closed would suddenly find its business missing. The failure pointed nowhere near the cause.'
+				text: 'One decision in there is worth calling out: the deletes run **children first**, even though most of these tables cascade from `business` and a single `delete(business)` would take the tree down with it. Relying on cascades would work — but it would make the script depend on rules it is not about, and a later change to one `onDelete` would quietly change what the seed clears. So the script spells out its own order, all the way down to the auth tables, and rebuilds everything — business row included — from nothing.'
 			},
 
 			{ type: 'h3', id: 'relative', text: 'Everything relative to today' },
@@ -542,14 +569,19 @@ await db.delete(staffService);
 				code: `
 const today = todayIn(TIME_ZONE);
 
-await seedBooking({
-	staffId: ada.id,
-	serviceSlug: 'cut-and-finish',
-	customerIndex: 0,
-	dayOffset: 1,                     // tomorrow, whenever "today" is
-	startMinute: 10 * 60,
-	note: 'Growing out a bob — please keep the length.'
-});`
+// …
+
+const seeded = [
+	await seedBooking({
+		staffId: ada!.id,
+		serviceSlug: 'cut-and-finish',
+		customerIndex: 0,
+		dayOffset: 1,
+		startMinute: 10 * 60,
+		note: 'Growing out a bob — please keep the length.'
+	}),
+	// …
+];`
 			},
 			{
 				type: 'p',
@@ -632,6 +664,7 @@ export class WriteQueue {
 	 */
 	#tail: Promise<unknown> = Promise.resolve();
 
+	/** How many tasks are queued or running. Useful in tests and health checks. */
 	#depth = 0;
 
 	get depth(): number {
@@ -659,6 +692,12 @@ export class WriteQueue {
 	}
 }
 
+/**
+ * The one queue every write in the app goes through.
+ *
+ * A module-level singleton, which is the right shape here: it is guarding a
+ * process-wide resource, so having two of them would guard nothing.
+ */
 export const writeQueue = new WriteQueue();`
 			},
 			{
@@ -691,35 +730,37 @@ export const writeQueue = new WriteQueue();`
 				file: 'src/lib/server/scheduling.spec.ts',
 				lang: 'ts',
 				code: `
-it('lets exactly one of ten simultaneous requests win', async () => {
+it('lets exactly one of ten simultaneous requests win the same slot', async () => {
 	const attempts = Array.from({ length: 10 }, (_, index) =>
-		createBooking({ ...base, customerName: \`Racer \${index}\` })
+		createBooking(
+			bookingInput({
+				start: at(11 * 60),
+				customerName: \`Customer \${index}\`,
+				customerEmail: \`customer\${index}@example.test\`
+			})
+		)
 	);
 
 	const results = await Promise.allSettled(attempts);
 
-	const won = results.filter((r) => r.status === 'fulfilled');
-	const lost = results.filter((r) => r.status === 'rejected');
+	const won = results.filter((result) => result.status === 'fulfilled');
+	const lost = results.filter((result) => result.status === 'rejected');
 
 	expect(won).toHaveLength(1);
 	expect(lost).toHaveLength(9);
 
-	// Every loser got the right refusal, not a lock error or a stack trace.
-	for (const failure of lost) {
-		expect((failure.reason as BookingError).code).toBe('slot_taken');
-	}
-
-	// And nothing half-written survived: one booking, and claims only for it.
-	const bookings = await db.select().from(booking);
-	const claims = await db.select().from(slotClaim);
-
-	expect(bookings).toHaveLength(1);
-	expect(new Set(claims.map((c) => c.bookingId))).toEqual(new Set([bookings[0]!.id]));
+	// And the diary agrees: one booking, twelve claims, no orphans.
+	expect(await db.select().from(booking)).toHaveLength(1);
+	expect(await db.select().from(slotClaim)).toHaveLength(12);
 });`
 			},
 			{
 				type: 'p',
-				text: 'The last two assertions are the ones people leave out. "Exactly one winner" can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Checking that every claim belongs to the surviving booking is what proves the rollback actually rolled back.'
+				text: 'The last two assertions are the ones people leave out. "Exactly one winner" can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Counting exactly twelve claims — the winner\'s block on the grid and nobody else\'s — is what proves the rollback actually rolled back.'
+			},
+			{
+				type: 'p',
+				text: 'What the losers were *told* is checked in a separate test, and it deliberately accepts either `slot_taken` or `slot_not_offered`. Depending on timing, the pre-flight availability check may catch the clash before the claim does — the slot was already gone by the time that request read the diary. Both are honest answers; what matters is that no loser sees a 500.'
 			},
 
 			{

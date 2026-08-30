@@ -235,7 +235,7 @@ export function wallClockToInstant(
 			{ type: 'h3', id: 'disambiguation', text: 'The four policies' },
 			{
 				type: 'p',
-				text: 'Here is the decision the last chapter promised. `toZoned` takes a fourth argument saying what to do when the wall-clock reading has no instant or two.'
+				text: 'Here is the decision the last chapter promised. `toZoned` takes a third argument saying what to do when the wall-clock reading has no instant or two.'
 			},
 			{
 				type: 'code',
@@ -429,6 +429,8 @@ export function mergeIntervals(intervals: readonly Interval[]): Interval[] {
 	for (const next of sorted) {
 		const current = merged[merged.length - 1];
 		if (current && next.start <= current.end) {
+			// Overlapping or touching — widen the one we are holding. \`Math.max\` is
+			// needed because the next interval may be entirely inside the current one.
 			merged[merged.length - 1] = { start: current.start, end: Math.max(current.end, next.end) };
 		} else {
 			merged.push({ start: next.start, end: next.end });
@@ -482,7 +484,10 @@ export interface AvailabilityQuery {
 	readonly to: IsoDate;
 	readonly rules: readonly WeeklyRule[];
 	readonly service: ServiceShape;
-	/** Occupied grid cells, as start instants. */
+	/**
+	 * Occupied grid cells, as start instants. Comes straight from a range query
+	 * against \`slot_claim\`, plus any time off expanded onto the same grid.
+	 */
 	readonly occupied: ReadonlySet<number>;
 	/** Now, as an instant. Passed in so tests can choose it. */
 	readonly now: number;
@@ -549,6 +554,8 @@ export function windowsForDay(
 			end: wallClockToInstant(day, rule.endMinute, zone)
 		}));
 
+	// Two rows that touch or overlap become one window, so an appointment may sit
+	// across the seam between them.
 	return mergeIntervals(windows);
 }`
 			},
@@ -611,16 +618,24 @@ function ruleAppliesOn(rule: WeeklyRule, day: IsoDate): boolean {
 				file: 'src/lib/time/availability.ts',
 				lang: 'ts',
 				code: `
-export function assertServiceFitsGrid(service: ServiceShape): void {
-	for (const [name, minutes] of [
-		['duration', service.durationMinutes],
-		['buffer before', service.bufferBeforeMinutes],
-		['buffer after', service.bufferAfterMinutes],
-		['slot interval', service.slotIntervalMinutes]
-	] as const) {
-		if (!isWholeSlots(minutes)) {
-			throw new Error(\`\${name} must be a multiple of \${SLOT_MINUTES} minutes, got \${minutes}\`);
-		}
+function assertServiceFitsGrid(service: ServiceShape): void {
+	const problems: string[] = [];
+
+	if (!isWholeSlots(service.durationMinutes)) problems.push(\`duration \${service.durationMinutes}\`);
+	if (!isWholeSlots(service.bufferBeforeMinutes))
+		problems.push(\`buffer before \${service.bufferBeforeMinutes}\`);
+	if (!isWholeSlots(service.bufferAfterMinutes))
+		problems.push(\`buffer after \${service.bufferAfterMinutes}\`);
+	if (!isWholeSlots(service.slotIntervalMinutes))
+		problems.push(\`slot interval \${service.slotIntervalMinutes}\`);
+	if (service.durationMinutes <= 0) problems.push('duration must be positive');
+	if (service.slotIntervalMinutes <= 0) problems.push('slot interval must be positive');
+
+	if (problems.length > 0) {
+		throw new Error(
+			\`Service does not fit the 5-minute grid: \${problems.join(', ')}. \` +
+				'Durations, buffers and intervals must be positive multiples of 5 minutes.'
+		);
 	}
 }`
 			},
@@ -659,20 +674,29 @@ export function assertServiceFitsGrid(service: ServiceShape): void {
 				lang: 'ts',
 				code: `
 test: {
-	// A test with no assertions is a test that passes by accident.
+	// A test that asserts nothing is a test that cannot fail. Vitest will now
+	// treat one as an error rather than a pass.
 	expect: { requireAssertions: true },
 	projects: [
 		{
+			// Component tests — a real Chromium, not a DOM emulator. jsdom quietly
+			// lies about layout, focus and \`matchMedia\`, which are exactly the things
+			// a booking UI needs to get right.
 			extends: './vite.config.ts',
 			test: {
 				name: 'client',
-				environment: 'browser',
-				browser: { enabled: true, provider: 'playwright', instances: [{ browser: 'chromium' }] },
+				browser: {
+					enabled: true,
+					provider: playwright(),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
 				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-				setupFiles: ['./vitest-setup-client.ts']
+				exclude: ['src/lib/server/**']
 			}
 		},
 		{
+			// Pure logic — plain Node, no browser, fast. The time engine and the
+			// booking rules live here, and they are the tests that matter most.
 			extends: './vite.config.ts',
 			test: {
 				name: 'server',
@@ -687,7 +711,7 @@ test: {
 			{
 				type: 'ul',
 				items: [
-					'The **client** project runs in a real Chromium via Playwright, not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.',
+					'The **client** project runs in a real, headless Chromium — `provider: playwright()`, a function imported from `@vitest/browser-playwright` — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.',
 					'The **server** project is plain Node and starts instantly. All our time tests live here.',
 					'The naming convention does the routing: `foo.svelte.spec.ts` is a component test, `foo.spec.ts` is a server one.'
 				]
@@ -709,45 +733,86 @@ test: {
 				lang: 'ts',
 				code: `
 import { describe, expect, it } from 'vitest';
-import { SLOT_MS, isFree, slotsIn } from './grid.ts';
+import {
+	SLOT_MS,
+	ceilToSlot,
+	floorToSlot,
+	isFree,
+	isSlotAligned,
+	isWholeSlots,
+	mergeIntervals,
+	slotCount,
+	slotsIn
+} from './grid.ts';
+
+/** A readable instant builder: \`at('2026-08-14T09:00Z')\`. */
+const at = (iso: string) => new Date(iso).getTime();
+
+// …
 
 describe('slotsIn', () => {
-	it('is half-open: an interval ending on a boundary does not claim the next cell', () => {
-		const start = 0;
-		const end = 3 * SLOT_MS;
-
-		expect(slotsIn({ start, end })).toEqual([0, SLOT_MS, 2 * SLOT_MS]);
+	it('covers a clean 45-minute appointment with nine cells', () => {
+		const cells = slotsIn({ start: at('2026-08-14T09:00Z'), end: at('2026-08-14T09:45Z') });
+		expect(cells).toHaveLength(9);
+		expect(cells[0]).toBe(at('2026-08-14T09:00Z'));
+		expect(cells.at(-1)).toBe(at('2026-08-14T09:40Z'));
 	});
 
-	it('widens outwards, because half a cell is unusable', () => {
-		// 09:02 to 09:38, on a grid anchored at 09:00.
-		const start = 2 * 60_000;
-		const end = 38 * 60_000;
+	it('is half-open: back-to-back appointments share no cell', () => {
+		const first = slotsIn({ start: at('2026-08-14T09:00Z'), end: at('2026-08-14T09:45Z') });
+		const second = slotsIn({ start: at('2026-08-14T09:45Z'), end: at('2026-08-14T10:30Z') });
+		const overlap = first.filter((cell) => second.includes(cell));
+		expect(overlap).toEqual([]);
+	});
 
-		const cells = slotsIn({ start, end });
-
-		expect(cells[0]).toBe(0);                    // the 09:00 cell is consumed
-		expect(cells.at(-1)).toBe(35 * 60_000);      // and the 09:35 one
+	it('widens a ragged interval outwards to whole cells', () => {
+		// 12:22 to 13:08 — neither end is on the grid.
+		const cells = slotsIn({ start: at('2026-08-14T12:22Z'), end: at('2026-08-14T13:08Z') });
+		expect(cells[0]).toBe(at('2026-08-14T12:20Z'));
+		expect(cells.at(-1)).toBe(at('2026-08-14T13:05Z'));
 	});
 
 	it('returns nothing for an empty or backwards interval', () => {
-		expect(slotsIn({ start: 100, end: 100 })).toEqual([]);
-		expect(slotsIn({ start: 500, end: 100 })).toEqual([]);
+		const t = at('2026-08-14T09:00Z');
+		expect(slotsIn({ start: t, end: t })).toEqual([]);
+		expect(slotsIn({ start: t, end: t - SLOT_MS })).toEqual([]);
 	});
+
+	// …
 });
 
 describe('isFree', () => {
-	it('rejects an interval touching a single taken cell', () => {
-		const occupied = new Set([5 * SLOT_MS]);
+	const occupied = new Set(
+		slotsIn({ start: at('2026-08-14T10:00Z'), end: at('2026-08-14T10:30Z') })
+	);
 
-		expect(isFree({ start: 0, end: 5 * SLOT_MS }, occupied)).toBe(true);
-		expect(isFree({ start: 0, end: 5 * SLOT_MS + 1 }, occupied)).toBe(false);
+	it('is true for an interval that ends exactly where a booking begins', () => {
+		expect(isFree({ start: at('2026-08-14T09:30Z'), end: at('2026-08-14T10:00Z') }, occupied)).toBe(
+			true
+		);
 	});
+
+	it('is true for an interval that begins exactly where a booking ends', () => {
+		expect(isFree({ start: at('2026-08-14T10:30Z'), end: at('2026-08-14T11:00Z') }, occupied)).toBe(
+			true
+		);
+	});
+
+	it('is false for a single overlapping minute at either edge', () => {
+		expect(isFree({ start: at('2026-08-14T09:30Z'), end: at('2026-08-14T10:01Z') }, occupied)).toBe(
+			false
+		);
+		expect(isFree({ start: at('2026-08-14T10:29Z'), end: at('2026-08-14T11:00Z') }, occupied)).toBe(
+			false
+		);
+	});
+
+	// …
 });`
 			},
 			{
 				type: 'p',
-				text: 'That last test is the half-open rule stated as an executable sentence. An interval ending exactly on the boundary of a taken cell is fine; one millisecond further and it is not.'
+				text: 'Those last three tests are the half-open rule stated as executable sentences. An interval that ends exactly where a booking begins — or begins exactly where it ends — is fine; overlap it by a single minute at either edge and it is not.'
 			},
 
 			{ type: 'h3', id: 'dst', text: 'The tests that matter' },
@@ -762,13 +827,18 @@ describe('isFree', () => {
 				code: `
 import { describe, expect, it } from 'vitest';
 import {
+	// …
 	hoursInLocalDay,
+	instantToIsoDate,
 	instantToMinuteOfDay,
+	// …
 	wallClockToInstant,
+	weekdayOf,
 	zoneAbbreviation
 } from './zone.ts';
 
 const LONDON = 'Europe/London';
+// …
 const iso = (instant: number) => new Date(instant).toISOString();
 
 describe('wallClockToInstant — the mornings clocks move', () => {
@@ -809,6 +879,8 @@ describe('wallClockToInstant — the mornings clocks move', () => {
 	it('can refuse an ambiguous time outright when a human must decide', () => {
 		expect(() => wallClockToInstant('2026-10-25', 90, LONDON, 'reject')).toThrow();
 	});
+
+	// …
 });`
 			},
 			{
@@ -831,6 +903,8 @@ describe('wallClockToInstant — the mornings clocks move', () => {
 				lang: 'ts',
 				code: `
 const KATHMANDU = 'Asia/Kathmandu'; // UTC+05:45, and no DST — a useful oddity.
+
+// …
 
 it('handles a zone with a 45-minute offset', () => {
 	expect(iso(wallClockToInstant('2026-08-14', 9 * 60, KATHMANDU))).toBe(
