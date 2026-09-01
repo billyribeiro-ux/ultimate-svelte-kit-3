@@ -32,7 +32,7 @@
 
 <svelte:boundary>
 	{#if board.current}
-		<Workspace loaded={board.current} {t} />
+		<Workspace loaded={board.current} {t} locale={data.locale} />
 	{/if}
 
 	{#snippet pending()}

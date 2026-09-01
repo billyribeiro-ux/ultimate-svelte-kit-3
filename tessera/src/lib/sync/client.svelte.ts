@@ -266,14 +266,26 @@ export class SyncClient {
 				}
 
 				/*
-				 * Our own operations come back on this stream too, and applying them is
-				 * a no-op. They are filtered anyway, because "no-op" still means walking
-				 * the switch, touching the clock and re-materialising a label — for
-				 * every keystroke, on the replica that is already busy typing.
+				 * Everything is applied, including this replica's own operations.
+				 *
+				 * The first version filtered them out — `!stamp.endsWith(this.actor)` —
+				 * on the reasoning that re-applying your own echo is wasted work. It is,
+				 * by a rounding error, and the filter is wrong for a reason that takes a
+				 * reload to notice.
+				 *
+				 * An actor id lives in `sessionStorage`, so it survives a refresh. After
+				 * one, the catch-up replays this tab's *entire history* — and every one
+				 * of those operations still ends with this actor, so every one of them
+				 * was discarded. The board came back empty, the cursor advanced to the
+				 * board's head anyway, and the next local snapshot wrote that emptiness
+				 * down against a current watermark. From then on it was permanent, and
+				 * only for the tab that had done the work.
+				 *
+				 * Applying an operation twice is a no-op by construction — that is what
+				 * the whole of `crdt/` is for. Trusting it is cheaper to reason about
+				 * and it is the only version that is correct.
 				 */
-				this.document.applyAll(
-					incoming.filter((operation) => !operation.stamp.endsWith(this.actor))
-				);
+				this.document.applyAll(incoming);
 
 				this.#watermark = Math.max(this.#watermark, event.watermark);
 				this.#scheduleSnapshot();
@@ -345,10 +357,26 @@ export class SyncClient {
 
 		try {
 			const batch = waiting.slice(0, BATCH_LIMIT);
-			const result = await pushOps({ boardId: this.boardId, actor: this.actor, ops: batch });
+			await pushOps({ boardId: this.boardId, actor: this.actor, ops: batch });
 
 			await local.acknowledge(this.boardId, batch).catch(() => {});
-			this.#watermark = Math.max(this.#watermark, result.watermark);
+
+			/*
+			 * The push response carries a watermark, and it is deliberately ignored.
+			 *
+			 * That number is the *board's* head, which includes operations from
+			 * everybody else that this replica has not received yet. Advancing the
+			 * cursor to it — which the first version did — means the next stream
+			 * connection asks for everything "since" a point past operations that were
+			 * never applied, and they are gone: the board is missing shapes, the
+			 * locally saved snapshot records the inflated watermark alongside the
+			 * incomplete content, and a reload makes it permanent.
+			 *
+			 * The cursor advances in exactly one place: `#receive`, from the watermark
+			 * that arrives *with* a batch of operations, once those operations have
+			 * been applied. That is the same rule `crdt/version.ts` states for version
+			 * vectors, and this is the second time ignoring it has cost an afternoon.
+			 */
 			this.queued = Math.max(0, waiting.length - batch.length);
 			this.refusal = null;
 			this.#settle();

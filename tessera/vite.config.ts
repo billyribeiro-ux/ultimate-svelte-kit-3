@@ -76,6 +76,27 @@ export default defineConfig(({ mode }) => {
 					// A broken internal link fails the build instead of shipping a 404.
 					handleHttpError: 'fail',
 					handleMissingId: 'fail'
+				},
+
+				/*
+				 * ONE COMPONENT COMPILED AS A CUSTOM ELEMENT
+				 * =========================================
+				 *
+				 * `<svelte:options customElement>` describes the element, but the
+				 * compiler only *emits* one when `customElement: true` is set — and
+				 * setting it globally would wrap every component in the application in
+				 * custom-element machinery it does not need.
+				 *
+				 * `dynamicCompileOptions` is the seam: it is called per file, so the
+				 * embeddable viewer compiles one way and everything else compiles the
+				 * other. Without it the build succeeds and `svelte-check` warns
+				 * "the customElement option is used when generating a custom element" —
+				 * which is easy to read as noise and is in fact "your element does not
+				 * exist".
+				 */
+				dynamicCompileOptions({ filename }) {
+					if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+					return {};
 				}
 			}),
 

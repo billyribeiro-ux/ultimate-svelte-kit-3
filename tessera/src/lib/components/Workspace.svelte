@@ -5,7 +5,10 @@
 	import { BoardEditor } from '#lib/canvas/editor.svelte.ts';
 	import { History } from '#lib/history/undo.svelte.ts';
 	import { connect, type SyncClient } from '#lib/sync/client.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { save, toPng, toSvg } from '#lib/export/index.ts';
+	import { theme } from '#lib/theme.svelte.ts';
+	import Button from './Button.svelte';
+	import type { Locale, Messages } from '#lib/i18n/index.ts';
 	import type { Peer } from '#lib/sync/protocol.ts';
 	import Board from './Board.svelte';
 	import Toolbar from './Toolbar.svelte';
@@ -13,13 +16,24 @@
 	import Outline from './Outline.svelte';
 	import SyncBadge from './SyncBadge.svelte';
 	import Peers from './Peers.svelte';
+	import Comments from './Comments.svelte';
+	/*
+	 * Aliased, because `History` is already the undo stack imported above.
+	 *
+	 * The clash is worth a moment: they are genuinely different things — one is
+	 * this replica's undo stack, the other is the board's shared version history —
+	 * and giving them the same name in one file would be confusing even if the
+	 * compiler allowed it.
+	 */
+	import HistoryPanel from './History.svelte';
 
 	interface Props {
 		loaded: LoadedBoard;
 		t: Messages;
+		locale: Locale;
 	}
 
-	let { loaded, t }: Props = $props();
+	let { loaded, t, locale }: Props = $props();
 
 	/*
 	 * The camera and the history stack outlive any one connection, so they are
@@ -35,7 +49,12 @@
 
 	let sync = $state<SyncClient | null>(null);
 	let editor = $state<BoardEditor | null>(null);
-	let panel = $state<'outline' | 'inspector'>('inspector');
+	let panel = $state<'inspector' | 'outline' | 'comments' | 'history'>('inspector');
+
+	/** The shape a new comment thread anchors to, if exactly one is selected. */
+	const anchor = $derived(
+		editor && editor.selection.size === 1 ? ([...editor.selection][0] ?? null) : null
+	);
 
 	$effect(() => {
 		/*
@@ -91,6 +110,41 @@
 		untrack(() => editor?.fit());
 	});
 
+	let exporting = $state(false);
+
+	/**
+	 * Export the *document*, not the screen.
+	 *
+	 * The nodes come from the model rather than from the DOM, so an export
+	 * contains the whole board — including everything the viewport has culled —
+	 * and none of the editor's selection outlines, guides or cursors.
+	 */
+	async function exportPng() {
+		if (!editor || exporting) return;
+		exporting = true;
+
+		try {
+			const nodes = editor.document.painted();
+			const edges = [...editor.document.edges.values()];
+			const blob = await toPng(nodes, edges, { theme: theme.resolved });
+			save(blob, `${loaded.title || 'board'}.png`);
+		} catch (thrown) {
+			// Reported rather than swallowed: an export that silently does nothing is
+			// indistinguishable from a button that is not wired up.
+			console.error('[tessera] export failed', thrown);
+		} finally {
+			exporting = false;
+		}
+	}
+
+	function exportSvg() {
+		if (!editor) return;
+		const nodes = editor.document.painted();
+		const edges = [...editor.document.edges.values()];
+		const svg = toSvg(nodes, edges, { theme: theme.resolved });
+		save(new Blob([svg], { type: 'image/svg+xml' }), `${loaded.title || 'board'}.svg`);
+	}
+
 	function follow(peer: Peer) {
 		if (!peer.viewport) return;
 		void camera.fit(peer.viewport, 24);
@@ -106,6 +160,13 @@
 				<SyncBadge {sync} {t} />
 				<Peers peers={sync.peers} {t} onfollow={follow} />
 			{/if}
+
+			<div class="workspace__export">
+				<Button size="sm" onclick={exportSvg}>SVG</Button>
+				<Button size="sm" disabled={exporting} onclick={exportPng}>
+					{exporting ? 'Exporting…' : 'PNG'}
+				</Button>
+			</div>
 		</div>
 	</header>
 
@@ -130,30 +191,27 @@
 		{#if editor}
 			<aside class="workspace__panel">
 				<div class="workspace__tabs" role="tablist" aria-label="Panel">
-					<button
-						type="button"
-						role="tab"
-						aria-selected={panel === 'inspector'}
-						class:workspace__tab--on={panel === 'inspector'}
-						onclick={() => (panel = 'inspector')}
-					>
-						Properties
-					</button>
-					<button
-						type="button"
-						role="tab"
-						aria-selected={panel === 'outline'}
-						class:workspace__tab--on={panel === 'outline'}
-						onclick={() => (panel = 'outline')}
-					>
-						{t.a11y.outline}
-					</button>
+					{#each [['inspector', 'Properties'], ['outline', t.a11y.outline], ['comments', t.comments.heading], ['history', t.history.heading]] as const as [key, label] (key)}
+						<button
+							type="button"
+							role="tab"
+							aria-selected={panel === key}
+							class:workspace__tab--on={panel === key}
+							onclick={() => (panel = key)}
+						>
+							{label}
+						</button>
+					{/each}
 				</div>
 
 				{#if panel === 'inspector'}
 					<Inspector {editor} {t} />
-				{:else}
+				{:else if panel === 'outline'}
 					<Outline {editor} {t} />
+				{:else if panel === 'comments'}
+					<Comments boardId={loaded.id} {anchor} {t} />
+				{:else}
+					<HistoryPanel boardId={loaded.id} {locale} {t} readOnly={loaded.readOnly} />
 				{/if}
 			</aside>
 		{/if}
@@ -190,6 +248,19 @@
 		align-items: center;
 		gap: var(--space-4);
 		min-width: 0;
+	}
+
+	.workspace__export {
+		display: flex;
+		gap: var(--space-1);
+	}
+
+	/* The export buttons are the first thing to go on a narrow screen: nobody
+	   downloads a diagram on a phone, and the sync state has to stay visible. */
+	@media (max-width: 47.99rem) {
+		.workspace__export {
+			display: none;
+		}
 	}
 
 	/*
@@ -250,6 +321,14 @@
 		gap: var(--space-1);
 		padding: var(--space-2) var(--space-2) 0;
 		border-bottom: 1px solid var(--border);
+		/* Four tabs do not fit an 18rem sidebar or a narrow phone; scrolling keeps
+		   them one row high and in a fixed, learnable order. */
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.workspace__tabs::-webkit-scrollbar {
+		display: none;
 	}
 
 	.workspace__tabs button {
