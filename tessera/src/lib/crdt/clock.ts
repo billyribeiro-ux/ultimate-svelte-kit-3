@@ -73,28 +73,52 @@ const ACTOR_LENGTH = 8;
 const MAX_COUNTER = 10 ** COUNTER_DIGITS - 1;
 
 /**
- * How far ahead of local physical time a received timestamp may be before we
- * refuse it.
+ * CLOCK DRIFT, AND WHERE THE GUARD BELONGS
+ * ----------------------------------------
+ * A replica with a badly wrong clock is not hypothetical: a laptop resuming from
+ * sleep before NTP catches up is minutes ahead, and a virtual machine can be
+ * years ahead. One such stamp drags every replica's `wall` to that value
+ * permanently — an HLC only moves forward — so version history reads as 2039 and
+ * no amount of correct local time undoes it.
  *
- * A replica with a badly wrong clock is not hypothetical — a laptop resuming
- * from sleep before NTP catches up is ahead by minutes, and a virtual machine
- * can be ahead by years. Without this guard, one such message drags every
- * replica's `wall` to that value permanently: the document's clock is now in
- * 2039, version history is nonsense, and no amount of correct local time undoes
- * it, because an HLC only ever moves forward.
+ * The first version of this file guarded against that inside `observe()`, which
+ * threw on a stamp too far ahead. It was the wrong tier, for two reasons.
  *
- * Five minutes is generous for real clock skew and far tighter than the failure.
+ *   - It protects nothing. By the time a client sees the stamp, the operation is
+ *     already in the shared log and on everybody's screen. Refusing to advance
+ *     past it does not un-publish it; it only leaves this replica free to reissue
+ *     a stamp it has already used.
+ *   - It breaks the innocent party. The comparison is "remote ahead of me", so a
+ *     user whose own clock is *slow* rejects every operation from everyone. Their
+ *     board silently stops updating, and the machine at fault is not theirs.
+ *
+ * So the client never refuses: `observe()` always advances. The check lives at
+ * the one boundary where poison can still be kept out of the log — the server's
+ * ingestion path, whose clock is the one everybody has implicitly agreed to
+ * trust. `isPlausible()` is that check, and `sync/ingest.ts` is its only caller.
+ *
+ * Five minutes is generous for real skew and far tighter than the failure.
  */
 export const MAX_DRIFT_MS = 5 * 60 * 1000;
 
-/** Thrown when a received timestamp is too far in the future to be believed. */
+/** How far ahead of `now` a stamp claims to be. Negative means it is in the past. */
+export function driftMs(stamp: Stamp, now: number): number {
+	return wallOf(stamp) - now;
+}
+
+/** Is this stamp close enough to the given time to be worth accepting? */
+export function isPlausible(stamp: Stamp, now: number = Date.now()): boolean {
+	return driftMs(stamp, now) <= MAX_DRIFT_MS;
+}
+
+/** Thrown by the server when an incoming stamp is too far in the future to believe. */
 export class ClockDriftError extends Error {
 	constructor(
-		readonly received: Hlc,
-		readonly localWall: number
+		readonly stamp: Stamp,
+		readonly now: number
 	) {
 		super(
-			`Timestamp is ${Math.round((received.wall - localWall) / 1000)}s ahead of local time; ` +
+			`Operation is ${Math.round(driftMs(stamp, now) / 1000)}s ahead of server time; ` +
 				`refusing it (limit ${MAX_DRIFT_MS / 1000}s). Check the sending machine's clock.`
 		);
 		this.name = 'ClockDriftError';
@@ -243,23 +267,21 @@ export class Clock {
 	}
 
 	/**
-	 * Fold a received stamp into this clock.
+	 * Fold a stamp into this clock — one received from the network, or one read
+	 * back out of our own persisted state.
 	 *
 	 * This is the step that buys causality. After observing your operation, every
 	 * stamp I issue is greater than yours, so an edit I made *because* I saw
 	 * yours can never sort before it — regardless of what our two machines think
 	 * the time is.
 	 *
-	 * @throws ClockDriftError if the remote wall clock is implausibly far ahead.
+	 * It never refuses. See the note on drift above: refusing here protects
+	 * nothing and breaks the replica with the slow clock rather than the one with
+	 * the wrong one.
 	 */
 	observe(stamp: Stamp): void {
 		const remote = decode(stamp);
 		const physical = this.#now();
-
-		if (remote.wall - physical > MAX_DRIFT_MS) {
-			throw new ClockDriftError(remote, physical);
-		}
-
 		const wall = Math.max(this.#wall, remote.wall, physical);
 
 		if (wall === this.#wall && wall === remote.wall) {
