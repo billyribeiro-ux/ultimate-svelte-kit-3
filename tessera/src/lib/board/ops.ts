@@ -38,8 +38,8 @@
  */
 
 import * as v from 'valibot';
-import type { Stamp } from '#lib/crdt';
-import { isOrderKey } from '#lib/crdt';
+import type { Stamp } from '#lib/crdt/index.ts';
+import { isOrderKey } from '#lib/crdt/index.ts';
 import {
 	EDGE_KINDS,
 	FILLS,
@@ -96,8 +96,18 @@ export type Operation =
 			readonly kind: 'node.remove';
 			readonly stamp: Stamp;
 			readonly target: NodeId;
-			/** The add stamps this removal observed. See `crdt/orset.ts`. */
-			readonly observed: readonly Stamp[];
+			/**
+			 * The add stamps this removal observed. See `crdt/orset.ts`.
+			 *
+			 * A plain array, not `readonly Stamp[]`, and this is a boundary decision
+			 * rather than an oversight. valibot infers `Stamp[]` for the wire type, and
+			 * `readonly Stamp[]` is not assignable to it — so a `readonly` here makes
+			 * every call that sends an operation to the server need a cast. The
+			 * properties are still `readonly`, which is what stops an operation being
+			 * edited after it is created; only the array's own mutability is given up,
+			 * and nothing in the codebase mutates one.
+			 */
+			readonly observed: Stamp[];
 	  }
 	| NodeSetOperation
 	| {
@@ -110,7 +120,7 @@ export type Operation =
 			readonly kind: 'edge.remove';
 			readonly stamp: Stamp;
 			readonly target: EdgeId;
-			readonly observed: readonly Stamp[];
+			readonly observed: Stamp[];
 	  }
 	| EdgeSetOperation
 	| {
@@ -126,7 +136,7 @@ export type Operation =
 			readonly kind: 'text.delete';
 			readonly stamp: Stamp;
 			readonly target: Stamp;
-			readonly chars: readonly Stamp[];
+			readonly chars: Stamp[];
 	  };
 
 export type OperationKind = Operation['kind'];

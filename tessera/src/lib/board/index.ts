@@ -8,6 +8,7 @@
  */
 
 export { BoardDocument, EdgeView, NodeView, type ApplyResult } from './document.svelte';
+export { LoadedBoard } from './loaded';
 export {
 	BATCH_LIMIT,
 	BatchSchema,

@@ -42,7 +42,7 @@ import {
 	versionFromJSON,
 	versionToJSON,
 	write
-} from '#lib/crdt';
+} from '#lib/crdt/index.ts';
 import {
 	type EdgeField,
 	type EdgeFields,
@@ -77,8 +77,16 @@ export class NodeView {
 	kind = $state<NodeKind>('service');
 	x = $state(0);
 	y = $state(0);
-	w = $state(NODE_DEFAULTS.w);
-	h = $state(NODE_DEFAULTS.h);
+	/*
+	 * Annotated `<number>` rather than inferred.
+	 *
+	 * `NODE_DEFAULTS` is `as const`, so the inferred type of `$state(168)` is the
+	 * literal `168` and the first resize is a type error complaining that `number`
+	 * is not assignable to `168`. Widening at the declaration is the fix; removing
+	 * `as const` would lose the literal types the operation schemas depend on.
+	 */
+	w = $state<number>(NODE_DEFAULTS.w);
+	h = $state<number>(NODE_DEFAULTS.h);
 	fill = $state<Fill>(NODE_DEFAULTS.fill);
 	order = $state<OrderKey>('V' as OrderKey);
 	parent = $state<NodeId | null>(null);
@@ -129,8 +137,16 @@ export class BoardDocument {
 	readonly #clock: Clock;
 	#version: VersionVector = emptyVersion();
 
-	/** Called with every operation this replica creates. The sync layer listens. */
-	#emit: ((operation: Operation) => void) | null = null;
+	/**
+	 * Called with every operation this replica creates.
+	 *
+	 * A set rather than a single slot. Two things listen — the sync engine, which
+	 * queues operations for the server, and the history stack, which records them
+	 * for undo — and the first version of this held one function, so whichever
+	 * subscribed second silently replaced the first. The symptom was undo working
+	 * perfectly and nothing ever reaching the network.
+	 */
+	readonly #listeners = new Set<(operation: Operation) => void>();
 
 	constructor(
 		readonly actor: ActorId,
@@ -149,10 +165,8 @@ export class BoardDocument {
 	}
 
 	onLocalOperation(listener: (operation: Operation) => void): () => void {
-		this.#emit = listener;
-		return () => {
-			this.#emit = null;
-		};
+		this.#listeners.add(listener);
+		return () => this.#listeners.delete(listener);
 	}
 
 	/**
@@ -294,7 +308,7 @@ export class BoardDocument {
 	 */
 	#commit(operation: Operation): Operation {
 		this.apply(operation);
-		this.#emit?.(operation);
+		for (const listener of this.#listeners) listener(operation);
 		return operation;
 	}
 

@@ -1,0 +1,135 @@
+/*
+ * RESET
+ * =====
+ *
+ * Short, and every rule earns its place. A reset that zeroes everything and then
+ * rebuilds it in `base.css` is two files fighting; this one only removes
+ * defaults that are actively wrong for an application.
+ */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/*
+ * The margin reset, scoped rather than universal.
+ *
+ * `* { margin: 0 }` also strips it from elements inside user content, and then
+ * every rendered comment needs its paragraph spacing put back.
+ */
+html,
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd,
+ol,
+ul {
+	margin: 0;
+}
+
+ol[role='list'],
+ul[role='list'] {
+	list-style: none;
+	padding: 0;
+}
+
+html {
+	/* Not `scroll-behavior: smooth` unconditionally — see the reduced-motion
+	   block in base.css. Smooth scrolling is a vestibular trigger for some
+	   people and the browser gives us no way to ask. */
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	min-height: 100svh;
+	line-height: var(--lh-normal);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+
+/* A heading is not prose. Long words break rather than overflow, and the
+   defaults for `text-wrap` make short lines look deliberate. */
+h1,
+h2,
+h3,
+h4 {
+	text-wrap: balance;
+	overflow-wrap: break-word;
+}
+
+p,
+li,
+dd,
+dt,
+figcaption {
+	text-wrap: pretty;
+	overflow-wrap: break-word;
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+	display: block;
+	max-width: 100%;
+}
+
+/* Form controls do not inherit type. They should. */
+input,
+button,
+textarea,
+select {
+	font: inherit;
+	letter-spacing: inherit;
+	color: inherit;
+}
+
+button {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+
+/*
+ * The focus ring.
+ *
+ * Removed only where the browser would have drawn it for a mouse click, and
+ * replaced everywhere with something visible against both themes. Never
+ * `outline: none` without a replacement — that is the single most common way an
+ * application becomes unusable by keyboard, and it is invisible to the person
+ * who wrote it.
+ */
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+:focus:not(:focus-visible) {
+	outline: none;
+}
+
+/* The board is one big application region; a text cursor over it is a lie. */
+[data-canvas] {
+	user-select: none;
+	-webkit-user-select: none;
+	touch-action: none;
+}
+
+#svelte-app {
+	/* A new stacking context, so nothing inside can escape the app's layer
+	   ordering by accident. */
+	isolation: isolate;
+}

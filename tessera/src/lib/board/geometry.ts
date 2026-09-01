@@ -85,7 +85,15 @@ export function centre(rect: Rect): Point {
  */
 export function portPoint(rect: Rect, port: Port, towards: Point): Point {
 	const middle = centre(rect);
-	const side = port === 'auto' ? autoPort(middle, towards) : port;
+
+	/*
+	 * Narrowed to the four real sides before the switch, so the switch is
+	 * exhaustive over exactly the cases that exist. Leaving `'auto'` in the union
+	 * and adding an unreachable branch for it works and is worse: the branch has
+	 * to return something, whatever it returns is a lie, and a future fifth port
+	 * would land in it silently instead of failing to compile.
+	 */
+	const side: Exclude<Port, 'auto'> = port === 'auto' ? autoPort(middle, towards) : port;
 
 	switch (side) {
 		case 'top':
@@ -96,10 +104,6 @@ export function portPoint(rect: Rect, port: Port, towards: Point): Point {
 			return { x: rect.x, y: middle.y };
 		case 'right':
 			return { x: rect.x + rect.w, y: middle.y };
-		case 'auto':
-			// Unreachable: `autoPort` never returns 'auto'. Present because the
-			// compiler cannot know that, and a thrown error here would be a lie.
-			return middle;
 	}
 }
 

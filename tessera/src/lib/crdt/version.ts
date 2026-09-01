@@ -133,5 +133,5 @@ export function toJSON(vector: VersionVector): EncodedVersion {
 }
 
 export function fromJSON(encoded: EncodedVersion): VersionVector {
-	return new Map(Object.entries(encoded)) as VersionVector;
+	return new Map(Object.entries(encoded) as [ActorId, Stamp][]);
 }

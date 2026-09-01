@@ -1,0 +1,111 @@
+/*
+ * BASE
+ * ====
+ *
+ * Element defaults, in tokens. Nothing here targets a class.
+ */
+
+body {
+	font-family: var(--font-sans);
+	font-size: var(--fs-base);
+	font-weight: var(--weight-regular);
+	color: var(--text);
+	background: var(--bg-app);
+}
+
+h1 {
+	font-size: var(--fs-2xl);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+	font-weight: var(--weight-bold);
+}
+
+h2 {
+	font-size: var(--fs-xl);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--tracking-tight);
+	font-weight: var(--weight-semibold);
+}
+
+h3 {
+	font-size: var(--fs-lg);
+	line-height: var(--lh-snug);
+	font-weight: var(--weight-semibold);
+}
+
+h4 {
+	font-size: var(--fs-md);
+	line-height: var(--lh-snug);
+	font-weight: var(--weight-medium);
+}
+
+a {
+	color: var(--accent);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+
+a:hover {
+	color: var(--accent-strong);
+}
+
+code,
+kbd,
+samp {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+	font-variant-ligatures: none;
+}
+
+kbd {
+	display: inline-block;
+	padding: 0.1em 0.4em;
+	border: 1px solid var(--border);
+	border-bottom-width: 2px;
+	border-radius: var(--radius-sm);
+	background: var(--surface-raised);
+	font-size: var(--fs-xs);
+	line-height: 1.4;
+	color: var(--text-muted);
+}
+
+hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin: var(--space-5) 0;
+}
+
+::selection {
+	background: var(--accent-wash);
+}
+
+/*
+ * REDUCED MOTION
+ * --------------
+ * Not "make animations shorter" — off. The people this setting exists for are
+ * not asking for a snappier interface, they are asking not to be made ill by
+ * one.
+ *
+ * `0.01ms` rather than `0s` because a zero-duration animation never fires
+ * `animationend`, and any code waiting for that event to clean up would hang
+ * forever. This is the one place a magic number is the correct answer.
+ *
+ * The board's own motion is handled separately, in `motion/preferences.ts`,
+ * because it needs to *not start* rather than to finish instantly.
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}

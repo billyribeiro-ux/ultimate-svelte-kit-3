@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BoardDocument } from './document.svelte';
-import { MIDDLE, between, newActorId, type ActorId, type OrderKey } from '#lib/crdt';
+import { MIDDLE, between, newActorId, type ActorId, type OrderKey } from '#lib/crdt/index.ts';
 import { emptySnapshot } from './snapshot';
 import type { Operation } from './ops';
 import type { NodeId } from './types';

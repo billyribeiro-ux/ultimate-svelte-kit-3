@@ -33,7 +33,7 @@
  */
 
 import * as v from 'valibot';
-import type { EncodedVersion, RgaSnapshot } from '#lib/crdt';
+import type { EncodedVersion, RgaSnapshot } from '#lib/crdt/index.ts';
 
 /** The OR-Set wire shape: element id to the stamps that added and removed it. */
 export interface OrSetJson {

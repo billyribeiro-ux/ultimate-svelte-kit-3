@@ -1,0 +1,263 @@
+/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Two themes, one set of names. Every colour in this application is a semantic
+ * token — `--surface-raised`, not `--grey-800` — because a component that asks
+ * for grey-800 has decided what the theme is, and the second theme then needs a
+ * second component.
+ *
+ * The palette scales sit above the semantic layer and are referenced only here.
+ * If a component stylesheet mentions `--ink-500`, that is a bug.
+ *
+ * Dark is the default. This is a tool people keep open beside an editor for
+ * hours, and the light theme is the deliberate choice rather than the fallback.
+ */
+
+:root {
+	/* ---- Palette ------------------------------------------------------ */
+
+	/* Neutrals, cool, tuned so adjacent steps are visibly distinct on a cheap
+	   laptop panel rather than only on a calibrated monitor. */
+	--ink-950: #08090b;
+	--ink-900: #0d1117;
+	--ink-850: #12171f;
+	--ink-800: #171d27;
+	--ink-750: #1d242f;
+	--ink-700: #262e3a;
+	--ink-600: #38424f;
+	--ink-500: #5a6472;
+	--ink-400: #7d8794;
+	--ink-300: #a3acb8;
+	--ink-200: #c8cfd8;
+	--ink-100: #e3e8ee;
+	--ink-050: #f1f4f7;
+
+	/* Warm paper, so the light theme does not read as a switched-off dark one. */
+	--paper-000: #ffffff;
+	--paper-050: #fbfbfa;
+	--paper-100: #f5f4f1;
+	--paper-200: #eceae5;
+
+	/* Brand: a saturated violet that survives both grounds without adjustment. */
+	--iris-300: #b8a8ff;
+	--iris-400: #9b86ff;
+	--iris-500: #7c5cff;
+	--iris-600: #6344e0;
+	--iris-700: #4f36b4;
+
+	/* The six node fills, defined as a hue each so the light and dark variants
+	   are the same colour at different lightnesses rather than two guesses. */
+	--fill-slate-h: 220;
+	--fill-indigo-h: 255;
+	--fill-jade-h: 162;
+	--fill-amber-h: 38;
+	--fill-rose-h: 348;
+	--fill-cyan-h: 194;
+
+	--danger-400: #ff6b6b;
+	--danger-500: #e03e3e;
+	--warn-400: #f2b544;
+	--good-400: #35c88f;
+
+	/* ---- Type --------------------------------------------------------- */
+
+	--font-sans:
+		'Instrument Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	/*
+	 * A modular scale with a fluid middle.
+	 *
+	 * `clamp` on the two display sizes only. Body text that grows with the
+	 * viewport looks clever and means somebody on a 32-inch monitor reads
+	 * 21-pixel prose; the ratio a person wants there is more words, not bigger
+	 * ones.
+	 */
+	--fs-xs: 0.75rem;
+	--fs-sm: 0.8125rem;
+	--fs-base: 0.9375rem;
+	--fs-md: 1.0625rem;
+	--fs-lg: 1.25rem;
+	--fs-xl: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+	--fs-2xl: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+
+	--lh-tight: 1.15;
+	--lh-snug: 1.35;
+	--lh-normal: 1.6;
+
+	--weight-regular: 400;
+	--weight-medium: 520;
+	--weight-semibold: 620;
+	--weight-bold: 700;
+
+	--tracking-tight: -0.02em;
+	--tracking-normal: 0;
+	--tracking-wide: 0.06em;
+
+	/* ---- Space -------------------------------------------------------- */
+
+	/* A 4px base. Every gap in the interface is one of these; a one-off value in
+	   a component is how two panels end up almost aligned. */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-7: 3rem;
+	--space-8: 4rem;
+	--space-9: 6rem;
+
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 14px;
+	--radius-full: 999px;
+
+	/* ---- Motion ------------------------------------------------------- */
+
+	/*
+	 * Two durations and two curves, and that is the whole vocabulary.
+	 *
+	 * `--ease-out` for anything entering or responding to a press: fast at the
+	 * start, so it feels like the interface reacted rather than considered.
+	 * `--ease-spring` overshoots very slightly and is reserved for things that
+	 * should feel physical — a panel snapping open, a node landing.
+	 */
+	--fast: 120ms;
+	--normal: 220ms;
+	--slow: 400ms;
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+
+	/* ---- Layers ------------------------------------------------------- */
+
+	/* Named, so nobody ever writes `z-index: 9999` again — and so the one time
+	   somebody needs to sit between two of these, there is somewhere to put it. */
+	--z-canvas: 0;
+	--z-selection: 10;
+	--z-presence: 20;
+	--z-panel: 30;
+	--z-toolbar: 40;
+	--z-dialog: 50;
+	--z-toast: 60;
+
+	/* ---- Semantic: dark, the default ---------------------------------- */
+
+	color-scheme: dark;
+
+	--bg-canvas: var(--ink-950);
+	--bg-app: var(--ink-900);
+	--surface: var(--ink-850);
+	--surface-raised: var(--ink-800);
+	--surface-sunken: var(--ink-950);
+	--surface-hover: var(--ink-750);
+
+	--border: var(--ink-700);
+	--border-strong: var(--ink-600);
+	--border-subtle: var(--ink-800);
+
+	--text: var(--ink-050);
+	--text-muted: var(--ink-300);
+	--text-faint: var(--ink-400);
+	--text-inverse: var(--ink-950);
+
+	--accent: var(--iris-400);
+	--accent-strong: var(--iris-500);
+	--accent-text: var(--ink-950);
+	--accent-wash: color-mix(in oklab, var(--iris-500) 18%, transparent);
+
+	--danger: var(--danger-400);
+	--warn: var(--warn-400);
+	--good: var(--good-400);
+
+	/* Node fills: a dark, desaturated body with a bright edge, so a shape reads
+	   as a labelled object rather than a coloured blob. */
+	--fill-lightness: 22%;
+	--fill-chroma: 42%;
+	--fill-edge-lightness: 68%;
+
+	--grid-line: color-mix(in oklab, var(--ink-100) 6%, transparent);
+	--shadow-panel: 0 18px 40px -18px rgb(0 0 0 / 0.75), 0 2px 6px rgb(0 0 0 / 0.4);
+	--shadow-node: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+/*
+ * Light.
+ *
+ * Both selectors, deliberately. `[data-theme='light']` is the explicit choice
+ * made by the toggle and written to localStorage; the media query is for
+ * everybody who has never touched it. Only the semantic layer is redefined —
+ * the palette above is the same in both.
+ */
+@media (prefers-color-scheme: light) {
+	:root:not([data-theme='dark']) {
+		color-scheme: light;
+
+		--bg-canvas: var(--paper-100);
+		--bg-app: var(--paper-050);
+		--surface: var(--paper-000);
+		--surface-raised: var(--paper-000);
+		--surface-sunken: var(--paper-100);
+		--surface-hover: var(--paper-100);
+
+		--border: var(--ink-100);
+		--border-strong: var(--ink-200);
+		--border-subtle: var(--paper-200);
+
+		--text: var(--ink-900);
+		--text-muted: var(--ink-500);
+		--text-faint: var(--ink-400);
+		--text-inverse: var(--paper-000);
+
+		--accent: var(--iris-600);
+		--accent-strong: var(--iris-700);
+		--accent-text: var(--paper-000);
+		--accent-wash: color-mix(in oklab, var(--iris-500) 12%, transparent);
+
+		--danger: var(--danger-500);
+
+		--fill-lightness: 94%;
+		--fill-chroma: 38%;
+		--fill-edge-lightness: 42%;
+
+		--grid-line: color-mix(in oklab, var(--ink-900) 7%, transparent);
+		--shadow-panel: 0 16px 34px -20px rgb(23 29 39 / 0.28), 0 1px 3px rgb(23 29 39 / 0.08);
+		--shadow-node: 0 1px 2px rgb(23 29 39 / 0.1);
+	}
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+
+	--bg-canvas: var(--paper-100);
+	--bg-app: var(--paper-050);
+	--surface: var(--paper-000);
+	--surface-raised: var(--paper-000);
+	--surface-sunken: var(--paper-100);
+	--surface-hover: var(--paper-100);
+
+	--border: var(--ink-100);
+	--border-strong: var(--ink-200);
+	--border-subtle: var(--paper-200);
+
+	--text: var(--ink-900);
+	--text-muted: var(--ink-500);
+	--text-faint: var(--ink-400);
+	--text-inverse: var(--paper-000);
+
+	--accent: var(--iris-600);
+	--accent-strong: var(--iris-700);
+	--accent-text: var(--paper-000);
+	--accent-wash: color-mix(in oklab, var(--iris-500) 12%, transparent);
+
+	--danger: var(--danger-500);
+
+	--fill-lightness: 94%;
+	--fill-chroma: 38%;
+	--fill-edge-lightness: 42%;
+
+	--grid-line: color-mix(in oklab, var(--ink-900) 7%, transparent);
+	--shadow-panel: 0 16px 34px -20px rgb(23 29 39 / 0.28), 0 1px 3px rgb(23 29 39 / 0.08);
+	--shadow-node: 0 1px 2px rgb(23 29 39 / 0.1);
+}

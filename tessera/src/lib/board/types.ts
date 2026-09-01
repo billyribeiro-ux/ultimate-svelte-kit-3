@@ -13,7 +13,7 @@
  * id sorts them by age. A UUID would do the first two and none of the rest.
  */
 
-import type { Stamp } from '#lib/crdt';
+import type { Stamp } from '#lib/crdt/index.ts';
 
 export type NodeId = Stamp;
 export type EdgeId = Stamp;
