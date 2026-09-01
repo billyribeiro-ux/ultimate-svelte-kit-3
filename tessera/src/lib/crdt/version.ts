@@ -40,7 +40,7 @@
  * stamps of individual operations.
  */
 
-import { type ActorId, type Stamp, actorOf, max } from './clock';
+import { type ActorId, type Stamp, actorOf, max } from './clock.ts';
 
 /** A frozen point in a document's history. */
 export type VersionVector = ReadonlyMap<ActorId, Stamp>;

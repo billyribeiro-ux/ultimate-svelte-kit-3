@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BoardDocument } from './document.svelte';
 import { MIDDLE, between, newActorId, type ActorId, type OrderKey } from '#lib/crdt/index.ts';
-import { emptySnapshot } from './snapshot';
-import type { Operation } from './ops';
-import type { NodeId } from './types';
+import { emptySnapshot } from './snapshot.ts';
+import type { Operation } from './ops.ts';
+import type { NodeId } from './types.ts';
 
 /** A document with a fixed clock, so ordering is logical rather than accidental. */
 function board(name: string, at = 1_700_000_000_000): BoardDocument {

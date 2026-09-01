@@ -26,7 +26,7 @@ export {
 	type ActorId,
 	type Hlc,
 	type Stamp
-} from './clock';
+} from './clock.ts';
 
 export {
 	dominates,
@@ -40,9 +40,16 @@ export {
 	unseen,
 	type EncodedVersion,
 	type VersionVector
-} from './version';
+} from './version.ts';
 
-export { mergeRegister, register, write, type Lww } from './register';
-export { OrSet, type ElementHistory } from './orset';
-export { RgaText, type RgaItem, type RgaSnapshot } from './rga';
-export { MIDDLE, between, betweenMany, compareOrder, isOrderKey, type OrderKey } from './fracdex';
+export { mergeRegister, register, write, type Lww } from './register.ts';
+export { OrSet, type ElementHistory } from './orset.ts';
+export { RgaText, type RgaItem, type RgaSnapshot } from './rga.ts';
+export {
+	MIDDLE,
+	between,
+	betweenMany,
+	compareOrder,
+	isOrderKey,
+	type OrderKey
+} from './fracdex.ts';

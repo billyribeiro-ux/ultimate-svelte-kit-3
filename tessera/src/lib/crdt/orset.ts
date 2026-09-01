@@ -36,8 +36,8 @@
  * tidy.
  */
 
-import type { Stamp } from './clock';
-import { type VersionVector, has as versionHas } from './version';
+import type { Stamp } from './clock.ts';
+import { type VersionVector, has as versionHas } from './version.ts';
 
 /** The two halves of an element's history. Both only ever grow. */
 export interface ElementHistory {

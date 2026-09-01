@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { MIDDLE, between, betweenMany, compareOrder, isOrderKey, type OrderKey } from './fracdex';
-import { int, seeded } from './testing';
+import {
+	MIDDLE,
+	between,
+	betweenMany,
+	compareOrder,
+	isOrderKey,
+	type OrderKey
+} from './fracdex.ts';
+import { int, seeded } from './testing.ts';
 
 const key = (value: string) => value as OrderKey;
 

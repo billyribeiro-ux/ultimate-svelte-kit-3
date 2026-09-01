@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { dominates, empty, equal, fromJSON, has, merge, observe, toJSON, unseen } from './version';
-import { actor, stamp } from './testing';
+import {
+	dominates,
+	empty,
+	equal,
+	fromJSON,
+	has,
+	merge,
+	observe,
+	toJSON,
+	unseen
+} from './version.ts';
+import { actor, stamp } from './testing.ts';
 
 const a1 = stamp(1_000, 0, 'a');
 const a2 = stamp(1_000, 1, 'a');

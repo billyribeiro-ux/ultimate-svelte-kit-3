@@ -51,7 +51,7 @@ import {
 	type EdgeId,
 	type NodeFields,
 	type NodeId
-} from './types';
+} from './types.ts';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */

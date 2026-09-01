@@ -45,7 +45,7 @@
  * anyway would be the expensive kind of foresight.
  */
 
-import type { Stamp } from './clock';
+import type { Stamp } from './clock.ts';
 
 /** One character, and where it belongs. */
 export interface RgaItem {

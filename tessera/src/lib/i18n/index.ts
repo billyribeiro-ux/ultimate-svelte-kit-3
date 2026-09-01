@@ -23,10 +23,10 @@
  * point these files export to JSON and the accessors stay identical.
  */
 
-import { en, type Messages } from './messages/en';
-import { fr } from './messages/fr';
-import { ja } from './messages/ja';
-import { DEFAULT_LOCALE, type Locale } from './locales';
+import { en, type Messages } from './messages/en.ts';
+import { fr } from './messages/fr.ts';
+import { ja } from './messages/ja.ts';
+import { DEFAULT_LOCALE, type Locale } from './locales.ts';
 
 const CATALOGUES: Record<Locale, Messages> = { en, fr, ja };
 
@@ -78,6 +78,6 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 	return formatter.format(when);
 }
 
-export { DEFAULT_LOCALE, ENDONYM, HTML_LANG, LOCALES, isLocale, negotiate } from './locales';
-export type { Locale } from './locales';
-export type { Messages } from './messages/en';
+export { DEFAULT_LOCALE, ENDONYM, HTML_LANG, LOCALES, isLocale, negotiate } from './locales.ts';
+export type { Locale } from './locales.ts';
+export type { Messages } from './messages/en.ts';

@@ -26,12 +26,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Clock, type Stamp } from './clock';
-import { OrSet } from './orset';
-import { RgaText } from './rga';
-import { type Lww, write } from './register';
-import { type VersionVector, empty, observe } from './version';
-import { actor, int, pick, seeded, shuffle } from './testing';
+import { Clock, type Stamp } from './clock.ts';
+import { OrSet } from './orset.ts';
+import { RgaText } from './rga.ts';
+import { type Lww, write } from './register.ts';
+import { type VersionVector, empty, observe } from './version.ts';
+import { actor, int, pick, seeded, shuffle } from './testing.ts';
 
 type NodeId = string;
 

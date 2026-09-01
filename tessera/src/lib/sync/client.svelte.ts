@@ -31,10 +31,10 @@ import {
 	type Peer,
 	type PresenceUpdate,
 	type ServerEvent
-} from './protocol';
+} from './protocol.ts';
 import { pushOps, announcePresence } from '#lib/remote/sync.remote.ts';
-import { actorId } from './actor';
-import * as local from './local';
+import { actorId } from './actor.ts';
+import * as local from './local.ts';
 
 export type SyncStatus =
 	/** Connected, and everything this device has made is acknowledged. */
@@ -311,6 +311,21 @@ export class SyncClient {
 	 * the whole path reasonable.
 	 */
 	async #flush(): Promise<void> {
+		/*
+		 * Skipped because one is already in flight.
+		 *
+		 * Nothing is scheduled here on purpose — the running flush reschedules
+		 * itself in its `finally` if anything is left. The first version of this
+		 * returned and *also* did not reschedule, which silently stranded the tail
+		 * of every fast burst: type five characters, the flush for the first four
+		 * is in flight when the fifth arrives, its timer fires, this returns, and
+		 * the fifth operation sits in `#buffer` for the rest of the session.
+		 *
+		 * The symptom was a label that read `Alph` on every other replica and
+		 * `Alpha` on the one that typed it, surviving a reload, because the
+		 * operation never reached the server at all. A randomised end-to-end test
+		 * found it about one run in three.
+		 */
 		if (this.#flushing || this.#stopped || this.readOnly) return;
 
 		// Persist before sending. If the tab dies between these two lines the work
@@ -337,14 +352,21 @@ export class SyncClient {
 			this.queued = Math.max(0, waiting.length - batch.length);
 			this.refusal = null;
 			this.#settle();
-
-			// More than one batch worth was waiting; keep going immediately rather
-			// than waiting for the next local edit to trigger a flush.
-			if (this.queued > 0) this.#scheduleFlush();
 		} catch (thrown) {
 			this.#onPushFailure(thrown);
 		} finally {
 			this.#flushing = false;
+
+			/*
+			 * Always look again.
+			 *
+			 * Two things can be waiting by now: operations made while this request was
+			 * in flight (in `#buffer`), and the remainder of a batch larger than
+			 * `BATCH_LIMIT` (already in the outbox). Rescheduling here rather than at
+			 * each of those sites means there is exactly one place responsible for
+			 * "the queue is not empty, come back", and no path that forgets.
+			 */
+			if (this.#buffer.length > 0 || this.queued > 0) this.#scheduleFlush();
 		}
 	}
 

@@ -21,8 +21,8 @@
 
 import { and, eq } from 'drizzle-orm';
 import type { Operation } from '#lib/board/index.ts';
-import { db } from './db';
-import { board, membership, type Role } from './db/schema';
+import { db } from './db/index.ts';
+import { board, membership, type Role } from './db/schema.ts';
 
 /** What a role may do, from most to least. */
 const RANK: Record<Role, number> = { owner: 3, editor: 2, commenter: 1, viewer: 0 };
@@ -101,12 +101,12 @@ export async function accessTo(boardId: string, userId: string): Promise<BoardAc
 
 /** Thrown by the guards below. `status` is what the route should answer with. */
 export class AccessError extends Error {
-	constructor(
-		readonly status: 403 | 404,
-		message: string
-	) {
+	readonly status: 403 | 404;
+
+	constructor(status: 403 | 404, message: string) {
 		super(message);
 		this.name = 'AccessError';
+		this.status = status;
 	}
 }
 

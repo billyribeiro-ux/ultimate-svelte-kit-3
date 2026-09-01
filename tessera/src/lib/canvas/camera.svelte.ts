@@ -151,14 +151,21 @@ export class Camera {
 	 * on the very first render before the `ResizeObserver` has reported. Dividing
 	 * by zero there produces `Infinity`, the transform becomes `NaN`, and every
 	 * node disappears — from a board that is perfectly fine.
+	 *
+	 * `magnify` caps how far this may zoom *in*, and defaults to 1:1. Fitting is
+	 * about bringing things into view, not about making them bigger: a board with
+	 * one box in it would otherwise open at four times actual size, which looks
+	 * broken and — because the renderer culls anything outside the viewport —
+	 * means a colleague's next shape is drawn off screen and never appears. That
+	 * combination cost an afternoon, in a test that looked like a sync failure.
 	 */
-	fit(target: Rect, padding = 64): Promise<void> {
+	fit(target: Rect, padding = 64, magnify = 1): Promise<void> {
 		const { w, h } = this.size;
 		if (w === 0 || h === 0) return Promise.resolve();
 		if (target.w === 0 || target.h === 0) return Promise.resolve();
 
 		const scale = clamp(
-			Math.min((w - padding * 2) / target.w, (h - padding * 2) / target.h),
+			Math.min((w - padding * 2) / target.w, (h - padding * 2) / target.h, magnify),
 			MIN_SCALE,
 			MAX_SCALE
 		);

@@ -16,10 +16,19 @@
 
 import { relations, sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import type { Role } from '../roles';
-import { user } from './auth.schema';
+import type { Role } from '../roles.ts';
+import { user } from './auth.schema.ts';
 
-export * from './auth.schema';
+/*
+ * The extension is required.
+ *
+ * Vite resolves an extensionless import; the plain Node loader that runs
+ * `scripts/seed.ts` does not, and the failure is `ERR_MODULE_NOT_FOUND` pointing
+ * at a path with no suffix. Note that `auth.schema.ts` is *generated* by
+ * `pnpm run auth:schema`, so its own internal imports are whatever the Better
+ * Auth CLI writes — this line is ours and stays correct.
+ */
+export * from './auth.schema.ts';
 
 /** `(cast(unixepoch('subsecond') * 1000 as integer))`, matching Better Auth's own columns. */
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
@@ -46,7 +55,7 @@ export const workspace = sqliteTable('workspace', {
  * would make every migration that inserts a role a puzzle, and every row in the
  * database unreadable without a lookup table in somebody's head.
  */
-export { ROLES, type Role } from '../roles';
+export { ROLES, type Role } from '../roles.ts';
 
 export const membership = sqliteTable(
 	'membership',

@@ -113,15 +113,17 @@ export function isPlausible(stamp: Stamp, now: number = Date.now()): boolean {
 
 /** Thrown by the server when an incoming stamp is too far in the future to believe. */
 export class ClockDriftError extends Error {
-	constructor(
-		readonly stamp: Stamp,
-		readonly now: number
-	) {
+	readonly stamp: Stamp;
+	readonly now: number;
+
+	constructor(stamp: Stamp, now: number) {
 		super(
 			`Operation is ${Math.round(driftMs(stamp, now) / 1000)}s ahead of server time; ` +
 				`refusing it (limit ${MAX_DRIFT_MS / 1000}s). Check the sending machine's clock.`
 		);
 		this.name = 'ClockDriftError';
+		this.stamp = stamp;
+		this.now = now;
 	}
 }
 
@@ -221,12 +223,27 @@ export class Clock {
 	#counter: number;
 	readonly #now: () => number;
 
+	readonly actor: ActorId;
+
+	/**
+	 * Fields and assignments written out, rather than TypeScript's parameter
+	 * properties.
+	 *
+	 * `constructor(readonly actor: ActorId)` is the same thing in four fewer
+	 * characters, and it is one of the three constructs — with `enum` and
+	 * namespaces — that TypeScript has to *emit* code for rather than erase. Node
+	 * strips types without a compiler, so a file using them cannot be run with
+	 * `node file.ts`, and `scripts/seed.ts` does exactly that with this module in
+	 * its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at
+	 * runtime, from a file that type-checks perfectly.
+	 */
 	constructor(
-		readonly actor: ActorId,
+		actor: ActorId,
 		now: () => number = Date.now,
 		/** Resume from a persisted state so a reload cannot go backwards. */
 		resume?: Hlc
 	) {
+		this.actor = actor;
 		this.#now = now;
 		this.#wall = resume?.wall ?? 0;
 		this.#counter = resume?.counter ?? 0;

@@ -23,7 +23,7 @@
  * explanation for a deleted paragraph.
  */
 
-import { type Stamp, compare } from './clock';
+import { type Stamp, compare } from './clock.ts';
 
 /** A value with the stamp of the write that produced it. */
 export interface Lww<T> {

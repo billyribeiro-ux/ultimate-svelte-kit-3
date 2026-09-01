@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { OrSet } from './orset';
-import { empty, observe } from './version';
-import { stamp } from './testing';
+import { OrSet } from './orset.ts';
+import { empty, observe } from './version.ts';
+import { stamp } from './testing.ts';
 
 const addA = stamp(1_000, 0, 'a');
 const addB = stamp(1_000, 0, 'b');

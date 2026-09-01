@@ -8,7 +8,7 @@
 import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import { DATABASE_URL } from '$app/env/private';
-import * as schema from './schema';
+import * as schema from './schema.ts';
 
 const client = createClient({ url: DATABASE_URL });
 
@@ -16,4 +16,4 @@ export const db = drizzle(client, { schema });
 
 /** The raw client, for the two places that need `PRAGMA` or a transaction batch. */
 export { client };
-export * as schema from './schema';
+export * as schema from './schema.ts';

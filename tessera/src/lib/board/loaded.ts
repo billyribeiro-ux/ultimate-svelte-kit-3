@@ -11,24 +11,30 @@
 import type { ActorId } from '#lib/crdt/index.ts';
 import type { Role } from '#lib/server/roles.ts';
 import { BoardDocument } from './document.svelte';
-import { parseSnapshot, type BoardSnapshot } from './snapshot';
+import { parseSnapshot, type BoardSnapshot } from './snapshot.ts';
 
 export class LoadedBoard {
-	constructor(
-		readonly id: string,
-		readonly title: string,
-		readonly snapshot: BoardSnapshot,
-		/**
-		 * The sequence the snapshot is current to.
-		 *
-		 * The client streams from here. Getting it wrong in the safe direction
-		 * (too low) costs a few redundant operations; wrong in the other direction
-		 * silently loses everything in between, which is the kind of bug that shows
-		 * up as "sometimes a box I definitely drew is missing".
-		 */
-		readonly watermark: number,
-		readonly role: Role
-	) {}
+	readonly id: string;
+	readonly title: string;
+	readonly snapshot: BoardSnapshot;
+	/**
+	 * The sequence the snapshot is current to.
+	 *
+	 * The client streams from here. Getting it wrong in the safe direction (too
+	 * low) costs a few redundant operations; wrong in the other direction silently
+	 * loses everything in between, which is the kind of bug that shows up as
+	 * "sometimes a box I definitely drew is missing".
+	 */
+	readonly watermark: number;
+	readonly role: Role;
+
+	constructor(id: string, title: string, snapshot: BoardSnapshot, watermark: number, role: Role) {
+		this.id = id;
+		this.title = title;
+		this.snapshot = snapshot;
+		this.watermark = watermark;
+		this.role = role;
+	}
 
 	get readOnly(): boolean {
 		return this.role === 'viewer' || this.role === 'commenter';

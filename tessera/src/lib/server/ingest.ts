@@ -25,20 +25,20 @@ import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { actorOf, isPlausible } from '#lib/crdt/index.ts';
 import { parseOperation, type Operation } from '#lib/board/index.ts';
 import type { PushResult } from '#lib/sync/protocol.ts';
-import { db } from './db';
-import { board, operation } from './db/schema';
-import { mayApply, refusalFor } from './rbac';
-import type { Role } from './db/schema';
-import { publish } from './hub';
+import { db } from './db/index.ts';
+import { board, operation } from './db/schema.ts';
+import { mayApply, refusalFor } from './rbac.ts';
+import type { Role } from './db/schema.ts';
+import { publish } from './hub.ts';
 
 /** Refused with a reason the client can show somebody. */
 export class IngestError extends Error {
-	constructor(
-		readonly status: 403 | 409 | 422,
-		message: string
-	) {
+	readonly status: 403 | 409 | 422;
+
+	constructor(status: 403 | 409 | 422, message: string) {
 		super(message);
 		this.name = 'IngestError';
+		this.status = status;
 	}
 }
 
@@ -118,7 +118,9 @@ export async function ingest({
 			.insert(operation)
 			.values(rows)
 			.onConflictDoNothing()
-			.returning({ seq: operation.seq });
+			// The stamp comes back as well as the sequence, because the broadcast below
+			// needs to know *which* operations were new, not just how many.
+			.returning({ seq: operation.seq, stamp: operation.stamp });
 
 		if (written.length > 0) {
 			await tx
@@ -133,14 +135,22 @@ export async function ingest({
 	const watermark = await watermarkOf(boardId);
 
 	/*
-	 * Broadcast only what was actually new.
+	 * Broadcast only what was actually new, selected by stamp.
 	 *
-	 * Echoing a re-sent operation is harmless — every replica is idempotent — but
-	 * it is also pure waste, and during a reconnect storm it is the difference
-	 * between a quiet catch-up and every client re-parsing the same batch.
+	 * The first version took `ops.slice(ops.length - inserted.length)`, on the
+	 * assumption that any duplicates in a re-sent batch would be a prefix. Nothing
+	 * guarantees that — a client can legitimately resend a batch whose middle was
+	 * already accepted — and when it is wrong the broadcast silently drops a
+	 * genuinely new operation while echoing one everybody already had. The
+	 * receiving replicas then differ from the log until their next reconnect.
+	 *
+	 * Echoing a re-sent operation would be harmless, since every replica is
+	 * idempotent; dropping a new one is not. Filtering on the returned stamps
+	 * costs a `Set` and cannot be wrong.
 	 */
 	if (inserted.length > 0) {
-		const fresh = ops.slice(ops.length - inserted.length);
+		const accepted = new Set(inserted.map((row) => row.stamp));
+		const fresh = ops.filter((candidate) => accepted.has(candidate.stamp));
 		publish(boardId, { type: 'ops', ops: fresh, watermark });
 	}
 

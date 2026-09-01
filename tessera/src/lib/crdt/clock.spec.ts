@@ -13,8 +13,8 @@ import {
 	newActorId,
 	wallOf,
 	type Stamp
-} from './clock';
-import { actor, fakeClock, seeded, stamp } from './testing';
+} from './clock.ts';
+import { actor, fakeClock, seeded, stamp } from './testing.ts';
 
 describe('encoding', () => {
 	it('round-trips', () => {

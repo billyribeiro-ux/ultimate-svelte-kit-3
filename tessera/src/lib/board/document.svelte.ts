@@ -58,9 +58,9 @@ import {
 	MAX_SIZE,
 	MIN_SIZE,
 	NODE_DEFAULTS
-} from './types';
-import type { Operation } from './ops';
-import { type BoardSnapshot, type EncodedRegister, emptySnapshot } from './snapshot';
+} from './types.ts';
+import type { Operation } from './ops.ts';
+import { type BoardSnapshot, type EncodedRegister, emptySnapshot } from './snapshot.ts';
 
 /* ------------------------------------------------------------------ */
 /* Views                                                               */
@@ -148,10 +148,10 @@ export class BoardDocument {
 	 */
 	readonly #listeners = new Set<(operation: Operation) => void>();
 
-	constructor(
-		readonly actor: ActorId,
-		now: () => number = Date.now
-	) {
+	readonly actor: ActorId;
+
+	constructor(actor: ActorId, now: () => number = Date.now) {
+		this.actor = actor;
 		this.#clock = new Clock(actor, now);
 	}
 

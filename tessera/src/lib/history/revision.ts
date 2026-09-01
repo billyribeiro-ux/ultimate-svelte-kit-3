@@ -11,16 +11,22 @@
 import { ago, type Locale, type Messages } from '#lib/i18n/index.ts';
 
 export class BoardRevision {
-	constructor(
-		/** The server's sequence number. The only cursor a client should hold. */
-		readonly seq: number,
-		readonly at: Date,
-		/** Set when somebody named this point. Null for an ordinary run of edits. */
-		readonly label: string | null,
-		readonly authorName: string,
-		/** How many operations this revision covers since the previous one. */
-		readonly operations: number
-	) {}
+	/** The server's sequence number. The only cursor a client should hold. */
+	readonly seq: number;
+	readonly at: Date;
+	/** Set when somebody named this point. Null for an ordinary run of edits. */
+	readonly label: string | null;
+	readonly authorName: string;
+	/** How many operations this revision covers since the previous one. */
+	readonly operations: number;
+
+	constructor(seq: number, at: Date, label: string | null, authorName: string, operations: number) {
+		this.seq = seq;
+		this.at = at;
+		this.label = label;
+		this.authorName = authorName;
+		this.operations = operations;
+	}
 
 	get isCheckpoint(): boolean {
 		return this.label !== null;

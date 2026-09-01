@@ -10,7 +10,7 @@ import {
 	roundedPath,
 	route,
 	snap
-} from './geometry';
+} from './geometry.ts';
 
 const box = { x: 10, y: 20, w: 100, h: 50 };
 

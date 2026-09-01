@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mergeRegister, register, write } from './register';
-import { stamp } from './testing';
+import { mergeRegister, register, write } from './register.ts';
+import { stamp } from './testing.ts';
 
 const early = stamp(1_000, 0, 'a');
 const late = stamp(1_000, 1, 'a');

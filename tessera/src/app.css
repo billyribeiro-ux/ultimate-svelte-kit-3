@@ -19,6 +19,12 @@
  * paths are stable and `app.html` can preload them. Importing the fontsource
  * stylesheet instead would give them hashed names that nothing can preload.
  *
+ * `format('woff2')`, not `format('woff2-variations')`. The `-variations` form is
+ * a superseded draft that some browsers no longer match, and a face they cannot
+ * match is a face they will not download — so the preload sits unused and the
+ * console says so. The variable axis is declared by the `font-weight` range
+ * below, which is what actually matters.
+ *
  * `font-display: swap` shows the fallback immediately and swaps when the real
  * face arrives. The alternative, `optional`, avoids the swap entirely but will
  * silently decline to use the font at all on a slow connection — and a diagram
@@ -26,7 +32,7 @@
  */
 @font-face {
 	font-family: 'Instrument Sans Variable';
-	src: url('/fonts/instrument-sans-latin-wght-normal.woff2') format('woff2-variations');
+	src: url('/fonts/instrument-sans-latin-wght-normal.woff2') format('woff2');
 	font-weight: 400 700;
 	font-style: normal;
 	font-display: swap;
@@ -37,7 +43,7 @@
 
 @font-face {
 	font-family: 'JetBrains Mono Variable';
-	src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+	src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
 	font-weight: 400 700;
 	font-style: normal;
 	font-display: swap;

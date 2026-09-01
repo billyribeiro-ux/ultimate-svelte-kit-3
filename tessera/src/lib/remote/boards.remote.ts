@@ -17,10 +17,10 @@
  * unsynced work is what loses.
  */
 
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { and, desc, eq } from 'drizzle-orm';
-import { command, query } from '$app/server';
+import { command, form, query } from '$app/server';
 import { emptySnapshot, parseSnapshot, LoadedBoard } from '#lib/board/index.ts';
 import { db } from '#lib/server/db/index.ts';
 import { board, membership, workspace } from '#lib/server/db/schema.ts';
@@ -110,7 +110,20 @@ export const openBoard = query(boardId, async (id) => {
 	);
 });
 
-export const createBoard = command(
+/**
+ * Create a board.
+ *
+ * A `form()`, not a `command()`, for one reason: it works with JavaScript
+ * switched off. The markup is a real `<form>` with a real submit button, so a
+ * browser that has not run — or has failed to run — the client bundle still
+ * creates the board and follows the redirect. With JavaScript, SvelteKit
+ * intercepts the submission and there is no page load.
+ *
+ * That is not a hypothetical audience. It is every visitor during the seconds
+ * before hydration finishes, which on a slow connection is the whole of their
+ * first impression.
+ */
+export const createBoard = form(
 	v.object({ workspaceId: v.pipe(v.string(), v.minLength(1)), title }),
 	async ({ workspaceId, title: name }) => {
 		const user = requireUser();
@@ -138,7 +151,13 @@ export const createBoard = command(
 		 */
 		await myBoards().reconnect();
 
-		return { id };
+		/*
+		 * Redirect from the server rather than returning the id for the client to
+		 * navigate with. It is what the form does with JavaScript switched off, and
+		 * making the enhanced path do something different is how two code paths
+		 * drift until only one of them is ever exercised.
+		 */
+		redirect(303, `/boards/${id}`);
 	}
 );
 

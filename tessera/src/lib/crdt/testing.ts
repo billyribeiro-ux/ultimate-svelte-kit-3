@@ -11,7 +11,7 @@
  * is type-checked with the code it describes.
  */
 
-import { type ActorId, type Stamp, Clock, encode } from './clock';
+import { type ActorId, type Stamp, Clock, encode } from './clock.ts';
 
 /**
  * mulberry32 — 32 bits of state, uniform enough for choosing array indices, and

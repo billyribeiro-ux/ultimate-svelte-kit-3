@@ -13,7 +13,7 @@
  * other convention for one function.
  */
 
-import type { Point, Port, Rect } from './types';
+import type { Point, Port, Rect } from './types.ts';
 
 export function contains(rect: Rect, point: Point): boolean {
 	return (

@@ -8,7 +8,7 @@
  */
 
 export { BoardDocument, EdgeView, NodeView, type ApplyResult } from './document.svelte';
-export { LoadedBoard } from './loaded';
+export { LoadedBoard } from './loaded.ts';
 export {
 	BATCH_LIMIT,
 	BatchSchema,
@@ -22,7 +22,7 @@ export {
 	type NodeSetOperation,
 	type Operation,
 	type OperationKind
-} from './ops';
+} from './ops.ts';
 export {
 	BoardSnapshotSchema,
 	emptySnapshot,
@@ -30,7 +30,7 @@ export {
 	type BoardSnapshot,
 	type EncodedRegister,
 	type OrSetJson
-} from './snapshot';
+} from './snapshot.ts';
 export {
 	bounds,
 	centre,
@@ -42,7 +42,7 @@ export {
 	roundedPath,
 	route,
 	snap
-} from './geometry';
+} from './geometry.ts';
 export {
 	EDGE_KINDS,
 	FILLS,
@@ -63,4 +63,4 @@ export {
 	type Point,
 	type Port,
 	type Rect
-} from './types';
+} from './types.ts';

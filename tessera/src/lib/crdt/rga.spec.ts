@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { RgaText, type RgaItem } from './rga';
-import { int, pick, seeded, shuffle, stamp } from './testing';
-import type { Stamp } from './clock';
+import { RgaText, type RgaItem } from './rga.ts';
+import { int, pick, seeded, shuffle, stamp } from './testing.ts';
+import type { Stamp } from './clock.ts';
 
 /** All ids from one actor, so ordering is decided purely by the number given. */
 const id = (n: number): Stamp => stamp(n, 0, 'a');

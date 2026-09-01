@@ -46,12 +46,18 @@ export default defineConfig(
 		 * no component ever reads — and pay a signal write for each one on every
 		 * frame of a drag.
 		 *
-		 * The file's own header explains the split at length. Turning the rule off
-		 * for this one file is the honest way to record that the exception is
-		 * deliberate; scattering `eslint-disable` comments across nine lines would
-		 * say it nine times and less clearly.
+		 * `editor.svelte.ts` is the same exception for a different reason: the maps it
+		 * builds are "what these shapes looked like before the drag", captured so
+		 * undo has something to restore. Nothing renders them, they are written once
+		 * and read once, and making them reactive would allocate a proxy per shape at
+		 * the start of every gesture.
+		 *
+		 * Each file's own header explains its split at length. Turning the rule off
+		 * for the two of them is the honest way to record that the exception is
+		 * deliberate; scattering `eslint-disable` comments across a dozen lines would
+		 * say it a dozen times and less clearly.
 		 */
-		files: ['src/lib/board/document.svelte.ts'],
+		files: ['src/lib/board/document.svelte.ts', 'src/lib/canvas/editor.svelte.ts'],
 		rules: { 'svelte/prefer-svelte-reactivity': 'off' }
 	},
 
