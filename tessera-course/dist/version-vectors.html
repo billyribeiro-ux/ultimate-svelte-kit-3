@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What have I already seen? — Building Tessera</title>
+<meta name="description" content="A four-line version vector, made possible by the last chapter — and the afternoon lost to using it for the wrong job.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 29.166666666666668%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html" aria-current="page"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>What have I already seen?</h1>
+			<p class="lede">A four-line version vector, made possible by the last chapter — and the afternoon lost to using it for the wrong job.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Be able to ask &quot;what do I still need from you?&quot; in one string comparison, and know exactly what a vector must never be used for.</p></aside>
+			<p>When a replica reconnects it needs to ask the server one question: *what have I missed?* Answering it badly means either re-downloading the whole board on every reconnect, or missing operations silently.</p>
+<p>The textbook answer is a <strong>version vector</strong>: a map from replica to sequence number. Actor <code>a3f1</code> is at operation 412. That works, and it requires every replica to maintain a sequence counter alongside its clock, keep the two in step, and persist both.</p>
+<p>Tessera’s maps a replica to a <strong>stamp</strong> instead — and this is the payoff from the last chapter.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/version.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * VERSION VECTORS
+ * ===============
+ *
+ * &quot;What do I already have, and what do I still need from you?&quot;
+ *
+ * The usual version vector maps a replica to a sequence number: actor `a3f1` is
+ * at operation 412. Tessera's maps a replica to a **stamp** instead, because
+ * `clock.ts` already guarantees that every stamp an actor produces is strictly
+ * greater than the last one it produced. A stamp *is* that actor's sequence
+ * number, with a readable date attached and nothing extra to keep in step.
+ *
+ * The consequences are pleasant:
+ *
+ *   - &quot;Have I seen this operation?&quot; is `stamp &lt;= vector[actor]`, a string
+ *     comparison.
+ *   - &quot;What do you need?&quot; is `SELECT * WHERE actor = ? AND stamp &gt; ?`, one index
+ *     scan per actor, no join, no scan of anything you already have.
+ *   - A vector is a small JSON object that compresses well and reads clearly in
+ *     a log.
+ *</code></pre>
+</figure>
+<p>Because <code>clock.ts</code> guarantees every stamp an actor produces is strictly greater than its last, <strong>a stamp already is that actor’s sequence number</strong> — with a readable date attached and nothing extra to keep in step.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/version.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { type ActorId, type Stamp, actorOf, max } from './clock.ts';
+
+/** A frozen point in a document's history. */
+export type VersionVector = ReadonlyMap&lt;ActorId, Stamp&gt;;
+
+/** The wire form: a plain object, because JSON has no Map. */
+export type EncodedVersion = Record&lt;string, string&gt;;
+
+/** The empty vector — a replica that has seen nothing. */
+export function empty(): VersionVector {
+	return new Map();
+}
+
+/**
+ * Has this vector already observed `stamp`?
+ *
+ * Note `&lt;=` rather than `&lt;`: the vector stores the *last* stamp seen, inclusive.
+ * Getting this wrong makes every sync redeliver exactly one operation per actor
+ * forever — a bug that looks like a performance problem and is a correctness one,
+ * because those redelivered operations also re-trigger any effect watching them.
+ */
+export function has(vector: VersionVector, stamp: Stamp): boolean {
+	const seen = vector.get(actorOf(stamp));
+	return seen !== undefined &amp;&amp; stamp &lt;= seen;
+}
+
+/**
+ * The vector after observing `stamp`. Returns a new Map; vectors are values.
+ *
+ * Copying rather than mutating costs an allocation per operation and buys the
+ * ability to hand a vector to a component and know it will not change underneath
+ * the render. In a document with a hot loop this would be the wrong trade; a
+ * vector has one entry per replica that has ever touched the board, which is
+ * tens, not thousands.
+ */
+export function observe(vector: VersionVector, stamp: Stamp): VersionVector {
+	const actor = actorOf(stamp);
+	const seen = vector.get(actor);
+	if (seen !== undefined &amp;&amp; stamp &lt;= seen) return vector;
+
+	const next = new Map(vector);
+	next.set(actor, stamp);
+	return next;
+}
+
+/** The least upper bound of two vectors: everything either side has seen. */
+export function merge(a: VersionVector, b: VersionVector): VersionVector {
+	const next = new Map(a);
+	for (const [actor, stamp] of b) {
+		const seen = next.get(actor);
+		next.set(actor, seen === undefined ? stamp : max(seen, stamp));
+	}
+	return next;
+}</code></pre>
+</figure>
+<p>Four functions and one of them is a <code>Map</code> copy. Note the <code>&lt;=</code> in <code>has</code>: the vector stores the *last* stamp seen, inclusive. Make it <code>&lt;</code> and every sync redelivers exactly one operation per actor forever — which looks like a performance problem, and is a correctness one, because those redelivered operations re-trigger anything watching them.</p>
+<p>And note that <code>observe</code> returns a <strong>new</strong> map. Vectors are values here. That costs an allocation per operation and buys the ability to hand one to a component and know it will not change underneath a render. In a hot loop that would be the wrong trade; a vector has one entry per replica that has ever touched the board, which is tens.</p>
+<h3 id="dominates">Concurrency, defined</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/version.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Does `a` dominate `b` — has it seen everything `b` has?
+ *
+ * Two vectors where neither dominates the other are *concurrent*, which is the
+ * interesting case and the reason a CRDT exists at all.
+ */
+export function dominates(a: VersionVector, b: VersionVector): boolean {
+	for (const [actor, stamp] of b) {
+		const seen = a.get(actor);
+		if (seen === undefined || seen &lt; stamp) return false;
+	}
+	return true;
+}
+
+/** Do these two vectors describe exactly the same set of operations? */
+export function equal(a: VersionVector, b: VersionVector): boolean {
+	return a.size === b.size &amp;&amp; dominates(a, b);
+}</code></pre>
+</figure>
+<p>This is where &quot;concurrent&quot; gets a definition rather than a feeling. <code>a</code> <strong>dominates</strong> <code>b</code> if it has seen everything <code>b</code> has. If neither dominates the other, the two states are <strong>concurrent</strong> — they each know something the other does not. That is the case a CRDT exists for, and it is now a function you can call.</p>
+<h3 id="the-bug">The afternoon this cost</h3>
+<aside class="callout callout--warn"><p>A version vector is a <strong>sync cursor</strong>, not a delivery filter. Those sound like the same thing. They are not, and the difference is silent data loss.</p></aside>
+<p>The first version of <code>apply</code> began with a fast path that looked obviously correct:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">apply(operation: Operation): void {
+	// &quot;We have already seen this one.&quot; — and this is wrong.
+	if (has(this.#version, operation.stamp)) return;
+	…
+}</code></pre>
+</figure>
+<p>The reasoning: an operation already covered by the vector is one we have already applied, so skip the work. That reasoning holds <strong>only while each actor’s operations arrive in order</strong>.</p>
+<p>They usually do. A client keeps one request in flight; the server replays in stamp order. &quot;Usually&quot; is not a property you can build on. Shuffle the delivery — which a reconnecting client does by accident, and which the property test in chapter 12 does on purpose — and the vector jumps over a gap. Everything in that gap is discarded, in silence, with no error anywhere. One replica ends up with <code>aegaa</code> and another with <code>aaegaa</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/version.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"> * WHAT THIS IS NOT FOR
+ * --------------------
+ * A vector is a **sync cursor**, not a delivery filter. The distinction cost an
+ * afternoon.
+ *
+ * The first version of `apply` started with `if (has(version, stamp)) return`,
+ * on the reasoning that an operation already covered by the vector is one we
+ * have already applied. That reasoning holds only while each actor's operations
+ * arrive in order. They usually do — a client keeps one request in flight and
+ * the server replays in stamp order — but &quot;usually&quot; is not a property you can
+ * build on, and when delivery *was* shuffled the vector jumped over a gap and
+ * the skipped operation was discarded in silence.
+ *
+ * So nothing gates on this. Every structure in this folder is idempotent on its
+ * own, which makes `apply` safe under any delivery order and makes the fast path
+ * worthless anyway. The vector's job is to tell the server where to resume, and
+ * `sync/client.svelte.ts` advances it from the **watermark** the server sends
+ * with each batch — a point the server guarantees is complete — never from the
+ * stamps of individual operations.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The fix was to delete the optimisation</h4>
+	<p>Every structure in this folder is idempotent on its own — a set insert, a stamp comparison, a <code>Map.has</code>. Applying an operation twice costs a few nanoseconds and changes nothing. So the fast path bought approximately nothing and cost a correctness guarantee. Deleting it makes <code>apply</code> safe under <strong>any</strong> delivery order, which is a much stronger property than &quot;safe under the order we currently happen to produce&quot;.</p>
+</aside>
+<p>The vector goes back to the one job it is genuinely correct for: telling the server where to resume. And the client advances it from the <strong>watermark</strong> the server sends with each batch — a point the server guarantees is complete — never from the stamps of individual operations. That distinction returns, with consequences, in chapter 25.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/version.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Filter a batch down to the operations `vector` has not seen.
+ *
+ * The server does this with SQL. The client does it in memory, on every incoming
+ * batch, because a reconnect can legitimately redeliver: the client's cursor is
+ * what it last *persisted*, and it may have applied operations after that.
+ */
+export function unseen&lt;T extends { readonly stamp: Stamp }&gt;(
+	vector: VersionVector,
+	operations: readonly T[]
+): T[] {
+	return operations.filter((operation) =&gt; !has(vector, operation.stamp));
+}
+
+export function toJSON(vector: VersionVector): EncodedVersion {
+	return Object.fromEntries(vector);
+}
+
+export function fromJSON(encoded: EncodedVersion): VersionVector {
+	return new Map(Object.entries(encoded) as [ActorId, Stamp][]);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what a version vector is for and what it must never be used for.</li><li>You can define &quot;concurrent&quot; precisely, in terms of domination.</li><li>You can explain why deleting a fast path was the right fix rather than fixing it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hybrid-logical-clocks.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Time that cannot go backwards</span>
+			</a>
+			<a class="pager__link pager__link--next" href="fractional-indexing.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Room between any two things</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The map of the project — Building Tessera</title>
+<meta name="description" content="Every folder, what lives in it, and the rule that decides which folder a new file goes in.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20.833333333333336%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html" aria-current="page"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>The map of the project</h1>
+			<p class="lede">Every folder, what lives in it, and the rule that decides which folder a new file goes in.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know where to put things, and be able to predict where something is before looking for it.</p></aside>
+			<p>Before we write anything substantial, here is the whole thing. You will not remember it yet; the point is that when a later chapter says &quot;this goes in <code>lib/board</code>&quot;, you already know why it is not in <code>lib/crdt</code>.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>src/
+  lib/
+    crdt/        the data types. no Svelte, no DOM, no app concepts.
+    board/       what a board IS: shapes, edges, operations, snapshots.
+    sync/        getting operations to and from other replicas.
+    canvas/      camera, gestures, hit-testing, editing.
+    server/      everything that must not reach the browser.
+    remote/      remote functions — the seam between the two.
+    components/  the interface.
+    i18n/        messages and locale resolution.
+    export/      SVG and PNG, in a worker.
+    embed/       the one component that compiles to a custom element.
+    history/     undo, and version-history value objects.
+    motion/      GSAP timelines, honouring reduced motion.
+    styles/      tokens, reset, base, utilities.
+  routes/        the URL structure.
+  hooks.ts       reroute + transport. runs on both sides.
+  hooks.server.ts
+  hooks.client.ts
+  params.ts      route parameter matchers.
+  env.ts         environment variables.
+  service-worker.ts</code></pre>
+</figure>
+<h3 id="the-layers">Four layers, and the rule</h3>
+<p>The folders fall into four layers, and the rule is that <strong>a layer may only import from layers above it</strong>.</p>
+<ol><li><strong><code>crdt/</code></strong> — pure algebra. Knows about stamps and sets and sequences. Does not know what a &quot;shape&quot; is, and could be published as a standalone package tomorrow.</li><li><strong><code>board/</code></strong> — the domain. Knows a board has shapes with positions and labels. Does not know about networks, storage, or Svelte components.</li><li><strong><code>sync/</code>, <code>server/</code>, <code>canvas/</code></strong> — machinery. Each knows about <code>board/</code> and about one piece of the outside world: the network, the database, the pointer.</li><li><strong><code>components/</code>, <code>routes/</code></strong> — the interface. Knows about everything, and is known by nothing.</li></ol>
+
+<aside class="callout callout--why">
+	<h4>Why the rule earns its keep here specifically</h4>
+	<p>The CRDT is the part that has to be *right*, and the only way to be confident it is right is to test it exhaustively — thousands of randomised schedules, in milliseconds, in plain Node. That is only possible while it has no dependencies. The first import of a Svelte rune into <code>crdt/</code> would make its test suite need a browser, and a test suite that needs a browser is a test suite you run less often.</p>
+</aside>
+<h3 id="imports">The import style</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// package.json
+&quot;imports&quot;: {
+	&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
+	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
+}</code></pre>
+</figure>
+<p>Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain <code>node</code> process running a script. Every import carries its extension:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { Clock } from '#lib/crdt/clock.ts';
+import Board from '#lib/components/Board.svelte';
+import { boardOps } from '#lib/board/index.ts';</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The extensions are not optional. Node’s ESM resolver does not guess, and the type-stripping runtime resolves <code>.ts</code> specifiers directly. Omit one and you get <code>ERR_MODULE_NOT_FOUND</code> naming a file that is plainly there. Ask anybody who has spent twenty minutes on it.</p></aside>
+<h3 id="routes">The routes</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>routes/
+  +layout.svelte               shell: fonts, theme, styles
+  [[lang=locale]]/             optional language segment
+    +page.svelte               the landing page
+    sign-in/+page.svelte
+    boards/+page.svelte        your boards
+    boards/[board]/+page@.svelte   the editor — note the @
+  embed/[board]/+page.svelte   the read-only viewer
+  api/boards/[board]/
+    stream/+server.ts          SSE: operations and presence
+    snapshot/+server.ts        a board as JSON, for the embed</code></pre>
+</figure>
+<p>Two things to notice. <code>[[lang=locale]]</code> is an *optional* parameter with a matcher — <code>/fr/boards</code> and <code>/boards</code> are the same route. And <code>+page@.svelte</code>, with a bare <code>@</code>, resets the layout inheritance: the editor is a full-viewport application and does not want the site chrome its siblings share.</p>
+<p>There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 6.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the four layers and the direction imports are allowed to flow.</li><li>You know why <code>crdt/</code> must not import anything.</li><li>You can explain what <code>+page@.svelte</code> does differently from <code>+page.svelte</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-environment.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Environment variables that cannot be wrong</span>
+			</a>
+			<a class="pager__link pager__link--next" href="hybrid-logical-clocks.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Time that cannot go backwards</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

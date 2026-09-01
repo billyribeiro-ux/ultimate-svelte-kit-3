@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setting up: a SvelteKit 3 project — Building Tessera</title>
+<meta name="description" content="Node, pnpm, the folder, and the single biggest change in SvelteKit 3 — there is no svelte.config.js any more.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">03 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 12.5%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html" aria-current="page"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 03</p>
+			<h1>Setting up: a SvelteKit 3 project</h1>
+			<p class="lede">Node, pnpm, the folder, and the single biggest change in SvelteKit 3 — there is no svelte.config.js any more.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Have an empty application that runs, with every framework option in one place and each one understood.</p></aside>
+			<p>Check your Node. This project needs 24.20 or newer, which is the current LTS at the time of writing.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>node --version
+# v24.20.0
+
+npm install -g pnpm
+pnpm --version
+# 11.24.0</code></pre>
+</figure>
+<aside class="callout callout--note"><p>pnpm rather than npm for one concrete reason: it refuses to let a package import something it did not declare. That sounds pedantic until a dependency of a dependency disappears in a minor release and your application stops building on a machine that is not yours.</p></aside>
+<h3 id="creating-it">Creating the project</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm create svelte@next tessera
+cd tessera
+pnpm install</code></pre>
+</figure>
+<p>Open the folder and look at what is *not* there.</p>
+<aside class="callout callout--warn"><p>There is no <code>svelte.config.js</code>. In SvelteKit 3 every framework option moved into the <code>sveltekit()</code> plugin inside <code>vite.config.ts</code>. If you have written SvelteKit before, this is the change that will trip you the most: the adapter, <code>prerender</code>, <code>alias</code>, <code>paths</code>, compiler options — all of it is now one object, in one file, next to the rest of the build configuration.</p></aside>
+<h3 id="the-vite-config">The whole configuration, in one file</h3>
+<p>Here is Tessera’s, in full. It is long, and every line in it is load-bearing — several of them were added *after* a failure, and those comments are the failures.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
+// `loadEnv` is not re-exported from there, so it comes straight from Vite.
+import { defineConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
+import { playwright } from '@vitest/browser-playwright';
+import adapter from '@sveltejs/adapter-node';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
+
+/*
+ * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
+ * plugin. There is no `svelte.config.js`.
+ *
+ * The config is a *function* because it has to read the environment before the
+ * build starts — `paths.origin` below is substituted into the output.
+ */
+export default defineConfig(({ mode }) =&gt; {
+	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	return {
+		plugins: [
+			sveltekit({</code></pre>
+</figure>
+<p>A function, not an object. <code>loadEnv</code> reads <code>.env</code> files before the build starts, because one of the values below is substituted *into the output* rather than read at runtime.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The trusted origin for CSRF checks on form submissions and remote
+ * function calls, and — since adapter-node v6 — a BUILD-time value
+ * rather than a runtime `ORIGIN` variable.
+ *
+ * Leave it unset and the adapter reconstructs the origin from request
+ * headers, where with no `PROTOCOL_HEADER` configured it assumes
+ * `https`. A server on plain HTTP then computes `https://localhost:4173`,
+ * the browser sends `http://localhost:4173`, and every POST comes back
+ * `403 {&quot;message&quot;:&quot;Cross-site remote requests are forbidden&quot;}` from an
+ * app whose GET requests all work perfectly.
+ */
+paths: { origin: env.PUBLIC_ORIGIN },
+
+compilerOptions: {
+	// Runes everywhere except node_modules, where a dependency may still be</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The 403 that looks like a bug in your form</h4>
+	<p>That comment is a scar. <code>adapter-node</code> v6 moved the trusted origin from a runtime <code>ORIGIN</code> variable to build-time <code>paths.origin</code>. Leave it unset and the adapter reconstructs the origin from request headers, assuming <code>https</code> unless told otherwise. Your server on plain HTTP computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, and every POST — every form, every remote command — comes back <code>403 Cross-site remote requests are forbidden</code>, in an application whose GET requests all work perfectly.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	runes: ({ filename }) =&gt;
+		filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
+
+	/*
+	 * `await` at the top level of `&lt;script&gt;`, inside `$derived`, and
+	 * directly in markup.
+	 *
+	 * Tessera leans on this harder than a CRUD app would. Opening a board
+	 * means awaiting IndexedDB, and the honest way to express &quot;this board
+	 * is still coming out of local storage&quot; is an `await` inside a
+	 * `&lt;svelte:boundary&gt;` with a `pending` snippet — not a `loading`
+	 * boolean threaded through four components.
+	 */
+	experimental: { async: true }
+},
+
+adapter: adapter(),
+
+experimental: {</code></pre>
+</figure>
+<p><code>runes</code> as a *function* rather than <code>true</code>. Your own code is runes-only; a dependency in <code>node_modules</code> might still be written in Svelte 4 style, and forcing runes on it breaks it. The distinction goes away in Svelte 6.</p>
+<p><code>experimental.async</code> turns on <code>await</code> at the top level of <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup. Tessera uses it more than most applications would, because opening a board means awaiting IndexedDB and the honest way to say &quot;still loading from local storage&quot; is an <code>await</code> inside a boundary rather than a <code>loading</code> flag threaded through four components.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	// from `$app/server`.
+	remoteFunctions: true,
+
+	/*
+	 * Preload the next route inside a Svelte *fork*: the framework
+	 * speculatively runs the new page's state without committing it, then
+	 * either adopts the result or throws it away.
+	 *
+	 * Worth having here because the board list preloads boards on hover,
+	 * and a board's `load` opens an IndexedDB transaction. Without forking,
+	 * an abandoned preload leaves that transaction's effects behind.
+	 */
+	forkPreloads: true
+},
+
+prerender: {
+	// A broken internal link fails the build instead of shipping a 404.
+	handleHttpError: 'fail',</code></pre>
+</figure>
+<p><code>remoteFunctions</code> enables <code>query</code>, <code>command</code> and <code>form</code> from <code>$app/server</code> — the mechanism that replaces most of this application’s API routes. <code>forkPreloads</code> is subtler: preloading a route on hover speculatively runs the next page’s state in a Svelte *fork*, then adopts it or throws it away. It matters here because a board’s load opens an IndexedDB transaction, and without forking an abandoned preload leaves that transaction’s effects behind.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	},
+
+	/*
+	 * ONE COMPONENT COMPILED AS A CUSTOM ELEMENT
+	 * =========================================
+	 *
+	 * `&lt;svelte:options customElement&gt;` describes the element, but the
+	 * compiler only *emits* one when `customElement: true` is set — and
+	 * setting it globally would wrap every component in the application in
+	 * custom-element machinery it does not need.
+	 *
+	 * `dynamicCompileOptions` is the seam: it is called per file, so the
+	 * embeddable viewer compiles one way and everything else compiles the
+	 * other. Without it the build succeeds and `svelte-check` warns
+	 * &quot;the customElement option is used when generating a custom element&quot; —
+	 * which is easy to read as noise and is in fact &quot;your element does not
+	 * exist&quot;.
+	 */
+	dynamicCompileOptions({ filename }) {
+		if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+		return {};
+	}
+}),</code></pre>
+</figure>
+<p><code>dynamicCompileOptions</code> is the seam that lets exactly one component in the codebase compile to a custom element. We will come back to it in chapter 40; note for now that it is called per file, so the embeddable viewer compiles one way and the other sixty components compile the other.</p>
+<h3 id="strictness">TypeScript, on hard mode</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;sourceMap&quot;: true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		&quot;strict&quot;: true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`. In a CRDT this is the
+		// difference between a merge that handles a missing element and one that
+		// reads a property of undefined on a replica that has not seen the insert
+		// yet — which is the single most common way a convergence bug is written.
+		&quot;noUncheckedIndexedAccess&quot;: true,
+
+		// An overriding method must say `override`.
+		&quot;noImplicitOverride&quot;: true,
+
+		// A `case` that falls through to the next must be deliberate. The op
+		// dispatcher is one big switch, and a missing `break` there silently applies
+		// two operations for one.
+		&quot;noFallthroughCasesInSwitch&quot;: true,
+
+		// Every path through a value-returning function must return.
+		&quot;noImplicitReturns&quot;: true,
+
+		// Unused locals and parameters are errors. Dead code in a merge function is
+		// usually half of a case somebody stopped writing.
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	&quot;include&quot;: [
+		&quot;src/**/*.ts&quot;,
+		&quot;src/**/*.js&quot;,
+		&quot;src/**/*.svelte&quot;,
+		&quot;e2e/**/*.ts&quot;,
+		&quot;scripts/**/*.js&quot;,
+		&quot;*.config.ts&quot;,
+		&quot;*.config.js&quot;
+	],
+	/*
+	 * The service worker is excluded here and checked by `tsconfig.service-worker.json`.
+	 *
+	 * It runs in a `ServiceWorkerGlobalScope`, not a window: `self` is a different
+	 * type, `document` does not exist, and the DOM lib actively lies about both.
+	 * SvelteKit says so on every `sync` — &quot;src/service-worker should be added to
+	 * the exclude array&quot; — and the cost of ignoring it is a file that type-checks
+	 * against an environment it will never run in.
+	 */
+	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;drizzle&quot;, &quot;src/service-worker.ts&quot;]
+}</code></pre>
+</figure>
+<p>Two of those flags do most of the work. <code>noUncheckedIndexedAccess</code> makes <code>array[i]</code> have type <code>T | undefined</code>, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.</p>
+<p><code>verbatimModuleSyntax</code> forces <code>import type</code> where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.</p>
+<aside class="callout callout--warn"><p>Node’s strip-only TypeScript has a second consequence that will bite you within an hour: <strong>no parameter properties</strong>. <code>constructor(private readonly db: Client) {}</code> is a syntax error at runtime, because stripping the types leaves a constructor that assigns nothing. Declare the field and assign it. Relative imports also need their file extensions — <code>./clock.ts</code>, not <code>./clock</code>.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>pnpm dev</code> serves a page.</li><li>You can find every framework option without opening more than one file.</li><li>You know why <code>paths.origin</code> exists, and what its absence looks like from the outside.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="who-decides.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Who decides who wins</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-environment.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Environment variables that cannot be wrong</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

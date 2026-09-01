@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environment variables that cannot be wrong — Building Tessera</title>
+<meta name="description" content="`src/env.ts` and `defineEnvVars` — declaring every variable once, validating at boot, and making a secret in the browser something you have to type on purpose.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">04 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 16.666666666666664%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html" aria-current="page"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 04</p>
+			<h1>Environment variables that cannot be wrong</h1>
+			<p class="lede"><code>src/env.ts</code> and <code>defineEnvVars</code> — declaring every variable once, validating at boot, and making a secret in the browser something you have to type on purpose.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Set up configuration that fails at start-up with a clear message rather than at 3am with an undefined.</p></aside>
+			<p>SvelteKit 2 had four magic modules: <code>$env/static/private</code>, <code>$env/dynamic/private</code>, and public versions of both. They worked, and they had two rough edges — a typo in a variable name was <code>undefined</code> rather than an error, and whether a value was allowed in the browser depended on remembering a naming convention.</p>
+<p>SvelteKit 3 replaced all four with one file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every environment variable this app reads, declared once.
+ *
+ * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * declared here cannot be imported — a type error at build time rather than an
+ * `undefined` that surfaces in production three weeks later — and `public: true`
+ * is something you have to type, so a secret cannot reach the browser by
+ * accident.
+ *
+ * The schemas are valibot. They run once, at boot, against the real environment.
+ * A malformed `PUBLIC_ORIGIN` stops the server starting instead of producing a
+ * fleet of 403s that look like a CSRF bug.
+ */
+import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {</code></pre>
+</figure>
+<p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;imports as undefined&quot; — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.</p>
+<h3 id="the-flags">What you declare, and why</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	description: 'libSQL connection string. `file:local.db` in development.',
+	schema: required
+},
+
+PUBLIC_ORIGIN: {
+	description: 'Where the app is served from, with no trailing slash. Used for CSRF checks.',
+	public: true,
+
+	/*
+	 * `static: true` means the value is inlined at build time rather than read
+	 * from the environment at runtime. It has to be: `paths.origin` in
+	 * `vite.config.ts` reads the same variable during the build, and a value
+	 * that could differ between build and run would make the CSRF check compare
+	 * two different origins.
+	 */
+	static: true,
+	schema: v.pipe(
+		required,
+		v.url('Must be an absolute URL'),
+		// A trailing slash makes `${PUBLIC_ORIGIN}/b/${id}` produce a double slash,
+		// which most servers tolerate and canonical-URL checks do not.
+		v.transform((value) =&gt; value.replace(/\/+$/, ''))
+	)
+},
+
+BETTER_AUTH_SECRET: {</code></pre>
+</figure>
+<ul><li><strong><code>schema</code></strong> — a valibot schema, run once at boot against the real environment. <code>DATABASE_URL=&quot;&quot;</code> stops the server starting with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — allowed in the browser. Absent by default, so a secret reaching the client requires somebody to *type the word public*. That is a much better failure surface than a naming convention.</li><li><strong><code>static: true</code></strong> — inlined at build time rather than read from <code>process.env</code> per request. <code>PUBLIC_ORIGIN</code> has to be static: <code>vite.config.ts</code> reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.</li></ul>
+<p>Notice the schema does more than check. <code>v.transform</code> strips trailing slashes, because <code>https://tessera.app/</code> and <code>https://tessera.app</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalise once, here, rather than remembering to normalise at every use.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">
+		/*
+		 * Thirty-two characters is not a style preference. Better Auth derives its
+		 * signing key from this string; a short one is a short key, and the failure
+		 * mode of a short key is silent — everything works, and forging a session
+		 * is cheap.
+		 */
+		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+	},
+
+	BOARD_LOG_RETENTION_DAYS: {
+		description: 'How long a board keeps individual operations before compaction.',
+		schema: v.optional(
+			v.pipe(
+				v.string(),
+				v.transform(Number),
+				v.number(),
+				v.integer(),
+				v.minValue(1, 'Compacting away today’s own edits would lose work')
+			),
+			'30'
+		)
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A minimum length is not a style preference</h4>
+	<p>Better Auth derives its signing key from <code>BETTER_AUTH_SECRET</code>. A short string is a short key, and the failure mode of a short key is *silent*: everything works, nothing logs, and forging a session cookie is cheap. A schema is the only place that check can live where it is impossible to skip.</p>
+</aside>
+<p>And the last one shows the shape of a validated optional: a string from the environment, transformed to a number, checked to be an integer of at least 1, defaulting to <code>'30'</code>. The minimum has a reason written next to it — compacting away today’s own edits would lose work — which is the sort of thing that is obvious when you write it and mysterious six months later.</p>
+<h3 id="using-them">Reading them</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { DATABASE_URL } from '$env/private';
+import { PUBLIC_ORIGIN } from '$env/public';</code></pre>
+</figure>
+<p>Two modules, typed from your declarations. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code># .env — never committed
+DATABASE_URL=file:local.db
+PUBLIC_ORIGIN=http://localhost:5173
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every variable the app reads is declared in one file with a description.</li><li>Deleting a variable from <code>.env</code> fails at boot with a message naming it.</li><li>You can say why <code>PUBLIC_ORIGIN</code> must be <code>static: true</code> specifically.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="setting-up.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Setting up: a SvelteKit 3 project</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-map.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The map of the project</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

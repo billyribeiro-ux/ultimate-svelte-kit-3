@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telling everybody else — Building Tessera</title>
+<meta name="description" content="An in-memory hub that is explicitly not a delivery guarantee, and a server-sent event stream that subscribes before it reads.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 83.33333333333334%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html" aria-current="page"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>Telling everybody else</h1>
+			<p class="lede">An in-memory hub that is explicitly not a delivery guarantee, and a server-sent event stream that subscribes before it reads.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Push operations to other tabs in milliseconds, while remaining correct if every push is lost.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/hub.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE FAN-OUT HUB
+ * ===============
+ *
+ * When a batch of operations is accepted, everybody else looking at that board
+ * needs to hear about it. This is the in-memory registry of who is listening.
+ *
+ * WHAT THIS IS NOT
+ * ----------------
+ * It is not durable, and it is not the delivery guarantee. A client that misses
+ * a broadcast — its connection dropped, it was mid-reconnect, the process
+ * restarted — recovers by asking for everything after its cursor, which is a
+ * plain indexed read from the operation log. The hub only makes that recovery
+ * rare enough that it is not the normal path.
+ *
+ * Building it the other way round is the classic mistake: a &quot;reliable&quot; pub/sub
+ * with acknowledgements and retries, sitting in front of a database that already
+ * has the data and can already answer &quot;what did I miss&quot;. The queue then becomes
+ * a second source of truth that can disagree with the first.
+ *
+ * ONE PROCESS
+ * -----------
+ * This is a `Map` in one Node process, which is exactly right for adapter-node
+ * behind a single instance and exactly wrong for two. Running a second instance
+ * means a client connected to A never hears about a write that landed on B —
+ * until it reconnects and catches up, which it will, but seconds later rather
+ * than milliseconds.
+ *
+ * The fix is to replace `publish` with something that goes through Redis, NATS
+ * or Postgres `LISTEN/NOTIFY`, and nothing else changes: the interface below is
+ * the seam. That is why it is an interface at all rather than a set inlined into
+ * the SSE route.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The classic mistake this avoids</h4>
+	<p>Building a &quot;reliable&quot; pub/sub with acknowledgements and retries, sitting in front of a database that <strong>already has the data</strong> and can already answer &quot;what did I miss&quot;. The queue then becomes a second source of truth that can disagree with the first, and now you are debugging two systems. Here the hub is explicitly a latency optimisation: it makes recovery rare, and recovery is a plain indexed read.</p>
+</aside>
+<p>The honesty about scaling is worth copying too. A <code>Map</code> in one Node process is exactly right behind a single instance and exactly wrong behind two — a client connected to A never hears a write that landed on B, until it reconnects. The fix is to replace <code>publish</code> with Redis, NATS or Postgres <code>LISTEN/NOTIFY</code>, and nothing else changes. <strong>That is why it is a module with an interface rather than a <code>Set</code> inlined into the route.</strong></p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/hub.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Attach a listener. Returns the function that detaches it.
+ *
+ * Returning the unsubscribe rather than exposing `unsubscribe(board, listener)`
+ * removes the possibility of detaching the wrong one, which in a fan-out is a
+ * leak that only shows up as memory growth under load.
+ */
+export function subscribe(boardId: string, listener: Listener): () =&gt; void {
+	const listeners = boards.get(boardId) ?? new Set&lt;Listener&gt;();
+	listeners.add(listener);
+	boards.set(boardId, listeners);
+
+	return () =&gt; {
+		listeners.delete(listener);
+		// Drop the entry entirely when the last person leaves, so a server that has
+		// been up for a month is not holding an empty Set for every board ever opened.
+		if (listeners.size === 0) boards.delete(boardId);
+	};
+}
+
+/**
+ * Send an event to everybody watching a board.
+ *
+ * Each listener is called inside its own try/catch. One dead connection throwing
+ * on write must not stop the others being told — and a listener that throws is
+ * not hypothetical, it is what a closed stream does on the next enqueue.
+ */
+export function publish(boardId: string, event: ServerEvent): void {
+	const listeners = boards.get(boardId);
+	if (!listeners) return;
+
+	for (const listener of listeners) {
+		try {
+			listener(event);
+		} catch {
+			// The listener's own cleanup will remove it; there is nothing useful to do
+			// here, and logging every write to a closing stream is noise.
+		}
+	}
+}
+
+/** How many connections a board has. Used by the presence roster and by tests. */
+export function watcherCount(boardId: string): number {
+	return boards.get(boardId)?.size ?? 0;
+}</code></pre>
+</figure>
+<p>Two details. <code>subscribe</code> returns the *unsubscribe* rather than exposing <code>unsubscribe(board, listener)</code>, which removes the possibility of detaching the wrong one — in a fan-out that is a leak that only appears as memory growth under load. And <code>publish</code> wraps each listener in its own try/catch, because a listener that throws is not hypothetical: it is what a closed stream does on the next enqueue.</p>
+<h3 id="sse">Server-sent events, and why not a WebSocket</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/stream/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE OPERATION STREAM
+ * ====================
+ *
+ * Server-sent events, one connection per open board, carrying both the
+ * operations somebody else made and the presence roster.
+ *
+ * WHY NOT A WEBSOCKET
+ * -------------------
+ * Because nothing here needs one. The traffic is almost entirely
+ * server-to-client; the client's two outbound messages are ordinary
+ * `command()` calls that benefit from validation, CSRF protection and typing.
+ * SSE is a `GET` that never ends, so it works through every proxy that
+ * understands HTTP, reconnects on its own, and — the part that matters most —
+ * resumes from a cursor, because the client tells us where it got to.
+ *
+ * A WebSocket would need its own authentication, its own reconnect logic, its
+ * own framing, and adapter-specific support for the upgrade. It would earn all
+ * of that if the client were also sending sixty messages a second. It is not.
+ *
+ * WHY NOT `query.live`
+ * --------------------
+ * `query.live` streams *query results*, and re-running a query is the wrong
+ * shape for &quot;here are the fourteen operations you missed&quot;. `myBoards` uses it,
+ * because a board list genuinely is a query result. This is a log tail, and a
+ * log tail wants a cursor.
+ */</code></pre>
+</figure>
+<p>The traffic here is almost entirely server-to-client. The client’s two outbound messages are ordinary <code>command()</code> calls that benefit from validation, CSRF protection and typing. SSE is a <code>GET</code> that never ends, so it works through every proxy that understands HTTP, reconnects on its own, and — the part that matters most — <strong>resumes from a cursor</strong>, because the client tells us where it got to.</p>
+<aside class="callout callout--note"><p>The other question worth answering out loud: why not <code>query.live</code>? Because <code>query.live</code> streams *query results*, and re-running a query is the wrong shape for &quot;here are the fourteen operations you missed&quot;. The board *list* uses <code>query.live</code>, because a list genuinely is a query result. This is a log tail, and a log tail wants a cursor.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/stream/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, url, locals }) =&gt; {
+	if (!locals.user) error(401, 'Sign in to continue.');
+
+	const boardId = params.board;
+	await requireAccess(boardId, locals.user.id, 'viewer').catch((thrown: unknown) =&gt; {
+		if (thrown instanceof AccessError) error(thrown.status, thrown.message);
+		throw thrown;
+	});
+
+	/*
+	 * Where to start.
+	 *
+	 * `Number(...) || 0` rather than `parseInt`: a missing parameter, an empty
+	 * one and `&quot;abc&quot;` all become 0, which replays the board from the beginning.
+	 * That is the safe direction to be wrong in — a client that sends nonsense
+	 * gets a slow, correct answer instead of a fast, incomplete one.
+	 */
+	const cursor = Math.max(0, Math.floor(Number(url.searchParams.get('since')) || 0));
+	const actor = url.searchParams.get('actor') ?? '';
+
+	let unsubscribe: (() =&gt; void) | null = null;
+	let ping: ReturnType&lt;typeof setInterval&gt; | null = null;
+
+	const stream = new ReadableStream&lt;Uint8Array&gt;({
+		async start(controller) {
+			const encoder = new TextEncoder();
+			let closed = false;
+
+			const send = (event: ServerEvent) =&gt; {
+				if (closed) return;
+				try {
+					controller.enqueue(encoder.encode(frame(event)));
+				} catch {
+					// The client went away between the check and the write. Nothing to do;
+					// `cancel` will run and clean up.
+					closed = true;
+				}
+			};</code></pre>
+</figure>
+<p><code>Number(...) || 0</code> rather than <code>parseInt</code>: a missing parameter, an empty one and <code>&quot;abc&quot;</code> all become 0, which replays from the beginning. That is the safe direction to be wrong in — a client that sends nonsense gets a slow, correct answer instead of a fast, incomplete one.</p>
+<h3 id="the-hole">Subscribe before you read</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/stream/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * Subscribe BEFORE the catch-up read.
+	 *
+	 * The other order has a hole exactly one query wide: an operation
+	 * committed after the read and before the subscription reaches nobody,
+	 * and the client never learns about it until its next reconnect. Doing it
+	 * this way can deliver an operation twice instead, which every replica
+	 * here is built to shrug off.
+	 */
+	unsubscribe = subscribe(boardId, send);
+
+	send({ type: 'hello', watermark: await watermarkOf(boardId) });
+
+	/*
+	 * Catch up in pages.
+	 *
+	 * A client returning after a week may be tens of thousands of operations
+	 * behind. One array means the server builds the whole string in memory and
+	 * the browser parses it in a single blocking task — a spinner, then a
+	 * frozen tab. Each page carries its own watermark, so an interrupted
+	 * catch-up resumes rather than restarting.
+	 */
+	let seq = cursor;
+	for (;;) {
+		const page = await since(boardId, seq, CATCHUP_PAGE);
+		if (page.ops.length === 0) break;
+
+		send({ type: 'ops', ops: page.ops, watermark: page.watermark });
+		seq = page.watermark;
+
+		if (page.ops.length &lt; CATCHUP_PAGE) break;
+	}
+
+	send({ type: 'presence', peers: roster(boardId) });
+
+	/*
+	 * Keep-alive.
+	 *
+	 * Proxies close an idle connection after thirty to sixty seconds, and to
+	 * the browser that looks like a failure worth retrying — so a board nobody
+	 * is touching reconnects every minute forever, replaying a catch-up query
+	 * each time. A comment frame every twenty seconds ends the cycle for two
+	 * bytes.
+	 */
+	ping = setInterval(() =&gt; send({ type: 'ping' }), STREAM_PING_MS);
+},</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The order of those two lines is a correctness property, not a preference. Read first and then subscribe, and there is a hole exactly one query wide: an operation committed after the read and before the subscription reaches nobody, and the client never learns about it until its next reconnect. Doing it this way can deliver an operation <strong>twice</strong> instead — which every replica in this system is built to shrug off. Again: pick the failure direction that is already handled.</p></aside>
+<p>The catch-up is paged for the same reason the sync client batches: a client returning after a week may be tens of thousands of operations behind, and one array means the server builds the whole string in memory while the browser parses it in a single blocking task. A spinner, then a frozen tab.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/stream/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		cancel() {
+			/*
+			 * The tab closed, or the network dropped.
+			 *
+			 * Both the subscription and the presence entry go now rather than waiting
+			 * for the timeout, so the remaining collaborators see the avatar disappear
+			 * immediately instead of fifteen seconds later. The timeout still exists
+			 * for the case this does not fire — a laptop that goes to sleep holds the
+			 * connection nominally open for minutes.
+			 */
+			unsubscribe?.();
+			if (ping) clearInterval(ping);
+			if (actor) {
+				depart(boardId, actor);
+				publish(boardId, { type: 'presence', peers: roster(boardId) });
+			}
+		}
+	});
+
+	return new Response(stream, {
+		headers: {
+			'content-type': 'text/event-stream',
+			// Without this, a reverse proxy will happily buffer the whole stream and
+			// deliver it when the connection closes — which for an endless stream is
+			// never. The symptom is a board that works locally and is dead behind nginx.
+			'cache-control': 'no-store, no-transform',
+			'x-accel-buffering': 'no',
+			connection: 'keep-alive'
+		}
+	});
+};</code></pre>
+</figure>
+<p>And two operational details that are pure scar tissue. The keep-alive exists because proxies close an idle connection after thirty to sixty seconds, which the browser reads as a failure worth retrying — so a board nobody is touching reconnects every minute forever, replaying a catch-up query each time. And <code>x-accel-buffering: no</code> exists because a reverse proxy will otherwise buffer the whole stream and deliver it when the connection closes, which for an endless stream is never. The symptom is a board that works locally and is dead behind nginx.</p>
+<h3 id="presence">Presence is soft state</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/presence.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHO IS LOOKING AT THIS BOARD
+ * ============================
+ *
+ * Deliberately not in the database.
+ *
+ * A cursor position is true for about thirty milliseconds. Writing it down means
+ * sixty inserts a second per person, each one obsolete before the transaction
+ * commits, plus a delete for every one of them — to store something whose
+ * correct behaviour on a crash is to disappear. Presence *is* soft state, and
+ * the honest representation of soft state is memory.
+ *
+ * The consequences are all good ones. A server restart drops the roster and
+ * every client re-announces within a heartbeat. A process that runs out of
+ * memory is holding one small object per open tab. And there is no cleanup job,
+ * because expiry is a comparison rather than a delete.
+ */
+
+import { PRESENCE_TIMEOUT_MS, type Peer, type PresenceUpdate } from '#lib/sync/protocol.ts';
+
+/** board id → actor → peer */
+const boards = new Map&lt;string, Map&lt;string, Peer&gt;&gt;();
+
+/**
+ * A stable colour per person, derived rather than assigned.
+ *
+ * Assigning from a pool means the same colleague is amber today and cyan
+ * tomorrow, and two people can swap between reloads — which makes &quot;the green
+ * cursor&quot; useless as a way of referring to somebody mid-conversation. Hashing
+ * the user id gives everybody one colour forever, at the cost of the occasional
+ * collision, which is a much smaller problem than instability.
+ */
+export function hueFor(userId: string): number {
+	let hash = 2166136261;
+	for (let i = 0; i &lt; userId.length; i += 1) {
+		hash ^= userId.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash &gt;&gt;&gt; 0) % 360;
+}</code></pre>
+</figure>
+<p>A cursor position is true for about thirty milliseconds. Writing it down means sixty inserts a second per person, each obsolete before the transaction commits, to store something whose correct behaviour on a crash is *to disappear*. Presence is soft state, and the honest representation of soft state is memory.</p>
+<p>The colour is derived from the user id rather than assigned from a pool, and that is a genuinely good small idea. Assigning means the same colleague is amber today and cyan tomorrow, and two people can swap between reloads — which makes &quot;the green cursor&quot; useless as a way of referring to somebody mid-conversation. Hashing gives everybody one colour forever at the cost of occasional collisions, which is a much smaller problem than instability.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Losing every broadcast leaves the system correct, only slower.</li><li>You can explain the one-query-wide hole and which way you chose to be wrong.</li><li>You can say why presence is not in the database.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="ingestion.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The only way in</span>
+			</a>
+			<a class="pager__link pager__link--next" href="identity-and-the-wire.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A tab’s identity, and what crosses the network</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A database that stores operations — Building Tessera</title>
+<meta name="description" content="Tenancy, boards, and an append-only log whose primary key is the server’s total order — plus the unique index that makes a retry free.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 70.83333333333334%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html" aria-current="page"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>A database that stores operations</h1>
+			<p class="lede">Tenancy, boards, and an append-only log whose primary key is the server’s total order — plus the unique index that makes a retry free.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Model a collaborative document as rows nobody ever updates.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE DATABASE
+ * ============
+ *
+ * A board is its operations. Everything else in here is either a cache of them
+ * (`board.snapshot`), a label pointing into them (`checkpoint`), or something
+ * that was never part of the document in the first place (workspaces, members,
+ * comments).
+ *
+ * That ordering is deliberate and it is what makes the server simple: ingestion
+ * appends, reads replay, and there is no code anywhere that mutates a board's
+ * shape in place. The most dangerous thing a collaborative backend can do is
+ * hold an opinion about the document, because then two authorities have to agree
+ * and eventually they will not.
+ */</code></pre>
+</figure>
+<p>Read the last sentence twice, because it is the design rule for the whole tier. <strong>The most dangerous thing a collaborative backend can do is hold an opinion about the document.</strong> Once it does, there are two authorities — the server’s idea of the board and the clients’ — and they have to be reconciled, forever, in code nobody wants to own.</p>
+<h3 id="tenancy">Tenancy</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const workspace = sqliteTable('workspace', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	/** The URL segment. Unique, lowercase, and never reused after deletion. */
+	slug: text('slug').notNull().unique(),
+	createdAt
+});
+
+/*
+ * The four roles live in `../roles.ts` so the browser can import the type
+ * without dragging Drizzle and a native SQLite binding into the client bundle.
+ *
+ * Stored as text rather than an integer. A number would compare more cheaply and
+ * would make every migration that inserts a role a puzzle, and every row in the
+ * database unreadable without a lookup table in somebody's head.
+ */
+export { ROLES, type Role } from '../roles.ts';
+
+export const membership = sqliteTable(
+	'membership',
+	{
+		id: text('id').primaryKey(),
+		workspaceId: text('workspace_id')
+			.notNull()
+			.references(() =&gt; workspace.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		role: text('role').$type&lt;Role&gt;().notNull(),
+		createdAt
+	},
+	(table) =&gt; [
+		// One membership per person per workspace. Without this, an invitation
+		// accepted twice gives somebody two roles and the permission check answers
+		// whichever the query happened to return first.
+		uniqueIndex('membership_workspace_user_uidx').on(table.workspaceId, table.userId),
+		index('membership_user_idx').on(table.userId)
+	]
+);</code></pre>
+</figure>
+<p>One membership per person per workspace, enforced by a unique index. Without it, an invitation accepted twice gives somebody two roles, and the permission check answers whichever the query happened to return first. That is a security bug that presents as flakiness.</p>
+<aside class="callout callout--note"><p>Roles are stored as text, not an integer. A number compares more cheaply and makes every migration that inserts a role a puzzle, and every row in the database unreadable without a lookup table in somebody’s head. The comparison cost is nothing; the readability is worth a lot at 2am.</p></aside>
+<h3 id="the-board">A board is a cache and a pointer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const board = sqliteTable(
+	'board',
+	{
+		id: text('id').primaryKey(),
+		workspaceId: text('workspace_id')
+			.notNull()
+			.references(() =&gt; workspace.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+
+		/**
+		 * A cache of the document at `snapshotSeq`, as JSON.
+		 *
+		 * Null until the first compaction. Opening a board means loading this and
+		 * replaying operations with a greater `seq` — so a board with a million
+		 * operations opens in the time it takes to parse one blob plus whatever has
+		 * happened since the last compaction ran.
+		 *
+		 * Deleting this column's contents costs nothing but time: the log is
+		 * authoritative, and the snapshot can always be rebuilt from it.
+		 */
+		snapshot: text('snapshot'),
+		snapshotSeq: integer('snapshot_seq').default(0).notNull(),
+
+		/** Bumped on every accepted batch, so the board list can sort by activity. */
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).default(now).notNull(),
+		createdAt
+	},
+	(table) =&gt; [index('board_workspace_idx').on(table.workspaceId, table.updatedAt)]
+);</code></pre>
+</figure>
+<p><code>snapshot</code> is a *cache*, and the comment says so explicitly: deleting its contents costs nothing but time, because the log is authoritative and the snapshot can always be rebuilt. Any column you can truncate without losing data is a column you can reason about.</p>
+<h3 id="the-operation-table">The log</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The log.
+ *
+ * `seq` is an INTEGER PRIMARY KEY, which in SQLite is the rowid: monotonic,
+ * assigned inside the insert, and never reused while the row exists. It is the
+ * server's total order over a board's history, and it is what a client resumes
+ * from — not a timestamp, which two operations can share, and not the stamp,
+ * which is only totally ordered *within* an actor as far as the server is
+ * concerned.
+ */
+export const operation = sqliteTable(
+	'operation',
+	{
+		seq: integer('seq').primaryKey({ autoIncrement: true }),
+		boardId: text('board_id')
+			.notNull()
+			.references(() =&gt; board.id, { onDelete: 'cascade' }),
+
+		/** The CRDT stamp. Identity, timestamp and author, in 26 characters. */
+		stamp: text('stamp').notNull(),
+		/** Denormalised out of the stamp so the per-actor cursor query can use an index. */
+		actor: text('actor').notNull(),
+
+		/**
+		 * The signed-in person who sent it.
+		 *
+		 * Not the same as `actor`: one person with two tabs open is two actors, and
+		 * an actor id is minted in the browser and therefore cannot be trusted for
+		 * anything that matters. Attribution, rate limiting and &quot;who deleted this?&quot;
+		 * all use this column.
+		 */
+		authorId: text('author_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+
+		kind: text('kind').notNull(),
+		/** The operation itself, as JSON. Validated on the way in; trusted on the way out. */
+		payload: text('payload').notNull(),
+		createdAt
+	},
+	(table) =&gt; [
+		/*
+		 * Idempotent ingestion.
+		 *
+		 * A client that loses its connection mid-request does not know whether the
+		 * batch landed, so it sends it again. With this index that costs one
+		 * conflict per operation and changes nothing; without it the board grows a
+		 * duplicate of every operation sent during a flaky minute. The CRDT would
+		 * survive that — applying an operation twice is a no-op — but the log would
+		 * be wrong, and the log is the thing history is rebuilt from.
+		 */
+		uniqueIndex('operation_board_stamp_uidx').on(table.boardId, table.stamp),
+		index('operation_board_seq_idx').on(table.boardId, table.seq),
+		index('operation_board_actor_stamp_idx').on(table.boardId, table.actor, table.stamp)
+	]
+);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>seq</code> and not the stamp</h4>
+	<p><code>seq</code> is an <code>INTEGER PRIMARY KEY</code>, which in SQLite *is* the rowid: monotonic, assigned inside the insert, never reused. It is the <strong>server’s</strong> total order over a board’s history, and it is what a client resumes from. Not a timestamp, which two operations can share. And not the stamp — a stamp is totally ordered globally, but the server has no way to know it has *received* everything below a given stamp, which is exactly what &quot;resume from here&quot; needs.</p>
+</aside>
+<aside class="callout callout--warn"><p><code>actor</code> and <code>authorId</code> are different columns and confusing them gives you an audit log a client can write whatever it likes into. <code>actor</code> is minted in the browser: it is fine for ordering and for the per-actor cursor query, and it cannot be trusted. <code>authorId</code> comes from the session. Attribution, rate limiting and &quot;who deleted this?&quot; all use the second one.</p></aside>
+<p>And the unique index on <code>(board, stamp)</code> is what makes a retry free. A client whose connection dropped mid-request does not know whether the batch landed, so it sends it again. With the index that costs one conflict per operation and changes nothing. Without it, the board grows a duplicate of everything sent during a flaky minute — which the CRDT survives, since applying an operation twice is a no-op, but the <strong>log</strong> would be wrong, and the log is what history replays from.</p>
+<h3 id="checkpoints">Checkpoints are labels, not saves</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A named point in a board's history.
+ *
+ * Just a label on a `seq`. Restoring a checkpoint does not rewind the log — it
+ * replays the board as it was at that sequence and writes the difference as
+ * *new* operations. History is append-only, including the history of undoing
+ * things, which is the only way a restore can itself be undone.
+ */
+export const checkpoint = sqliteTable(
+	'checkpoint',
+	{
+		id: text('id').primaryKey(),
+		boardId: text('board_id')
+			.notNull()
+			.references(() =&gt; board.id, { onDelete: 'cascade' }),
+		label: text('label').notNull(),
+		seq: integer('seq').notNull(),
+		authorId: text('author_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		createdAt
+	},
+	(table) =&gt; [index('checkpoint_board_idx').on(table.boardId, table.seq)]
+);</code></pre>
+</figure>
+<p>Restoring does not rewind the log. It replays the board as it was at that sequence and writes the difference as *new* operations. History is append-only, including the history of undoing things — which is the only way a restore can itself be undone, and the only way it can be collaborative. Chapter 39 builds it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Nothing in this schema updates a board’s shape in place.</li><li>You can explain why the resume cursor is <code>seq</code> and not a stamp or a timestamp.</li><li>You can name the two identity columns on an operation and say what each is for.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="snapshots-and-compaction.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Snapshots, and what may never be forgotten</span>
+			</a>
+			<a class="pager__link pager__link--next" href="permissions.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Four roles, checked per operation</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

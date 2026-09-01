@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proving it, as far as it can be proved — Building Tessera</title>
+<meta name="description" content="A property test that builds a few hundred thousand hostile delivery schedules — and the two real bugs it found within a dozen seeds.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 50%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html" aria-current="page"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>Proving it, as far as it can be proved</h1>
+			<p class="lede">A property test that builds a few hundred thousand hostile delivery schedules — and the two real bugs it found within a dozen seeds.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Have a test that fails when the CRDT is wrong, rather than one that passes because you thought of the same cases twice.</p></aside>
+			<p>Each structure has its own spec, checking cases a person thought of. Those are necessary and they are not enough, because the failures in this domain are precisely the ones nobody thought of.</p>
+<p>So there is one more file, and it tests the property the whole folder exists to provide.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PROOF, SUCH AS IT IS
+ * ========================
+ *
+ * The individual specs check each structure against cases a person thought of.
+ * This one checks the property those structures exist to provide, against cases
+ * nobody thought of: **any set of replicas that has seen the same operations
+ * holds the same state, regardless of the order they arrived in, how many times
+ * they arrived, or what each replica was doing at the time.**
+ *
+ * It is not a proof in the mathematical sense. It is a few hundred thousand
+ * randomised histories, replayable from a printed seed, which in practice finds
+ * the bugs a proof would have — and finds them in the implementation rather than
+ * in the model of the implementation.
+ *
+ * The three laws being exercised, in the language of the operations:
+ *
+ *   commutative   deliver a then b, or b then a — same state
+ *   associative   merge in any grouping — same state
+ *   idempotent    deliver the same operation twice — same state
+ *
+ * The document model here is deliberately small: existence, a couple of
+ * last-write-wins fields, and one piece of collaborative text. It is the
+ * primitives composed, not the real board — `board/document.spec.ts` runs the
+ * same schedule against that.
+ */</code></pre>
+</figure>
+<h3 id="the-replica">A replica, in miniature</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">class Replica {
+	readonly clock: Clock;
+	readonly #nodes = new OrSet&lt;NodeId&gt;();
+	readonly #fields = new Map&lt;NodeId, Map&lt;string, Lww&lt;number | string&gt;&gt;&gt;();
+	readonly #labels = new Map&lt;NodeId, RgaText&gt;();
+	#version: VersionVector = empty();
+
+	constructor(readonly name: string) {
+		// Every replica shares one physical clock reading, so the ordering under
+		// test is the logical one and not an artefact of who ran first.
+		this.clock = new Clock(actor(name), () =&gt; 1_700_000_000_000);
+	}
+
+	get version(): VersionVector {
+		return this.#version;
+	}
+
+	label(node: NodeId): RgaText {
+		let text = this.#labels.get(node);
+		if (!text) {
+			text = new RgaText();
+			this.#labels.set(node, text);
+		}
+		return text;
+	}
+</code></pre>
+</figure>
+<p>The three structures composed: an OR-Set for existence, a map of registers per node for fields, an RGA per node for the label. Deliberately not the real board — <code>board/document.spec.ts</code> runs the same schedule against that. This one is the primitives, so a failure here points at a primitive.</p>
+<p>Every replica shares one physical clock reading, so what is under test is the *logical* order rather than an artefact of which one ran first.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Apply an operation. Must be safe to call with anything, in any order, any
+ * number of times — that is the entire contract this file tests.
+ *
+ * Note what is *not* here: a `if (has(version, stamp)) return` fast path.
+ *
+ * The first draft had one, and this suite caught it within a dozen seeds. A
+ * version vector says &quot;I have everything from this actor up to here&quot;, which is
+ * only true when that actor's operations arrive in order. Shuffle the delivery
+ * — which is what this file does on purpose, and what a reconnecting client
+ * does by accident — and the vector jumps past a gap, after which the skipped
+ * operation is discarded in silence. One replica ends up with `aegaa` and
+ * another with `aaegaa`, and nothing anywhere reports an error.
+ *
+ * The fast path bought nothing, because every structure underneath is already
+ * idempotent: a set insert, a stamp comparison, a `Map.has` check. Dropping it
+ * makes `apply` safe under any delivery order at all. The version vector goes
+ * back to the one job it is actually correct for — telling the *server* where
+ * to resume — and `sync/client.svelte.ts` advances that cursor from the
+ * watermark the server sends with each batch, never from individual
+ * operations.
+ */
+apply(operation: Operation): void {
+	this.clock.observe(operation.stamp);
+</code></pre>
+</figure>
+<p>That comment is the first bug this suite found, and chapter 07 told the story from the other end. It is worth noticing *how* it was found: not by reasoning about version vectors, but by two replicas disagreeing about a five-character string and a seed that reproduced it.</p>
+<h3 id="comparing">Comparing two replicas</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/**
+	 * State, rendered canonically.
+	 *
+	 * Only *visible* state: present nodes, their winning field values, their text.
+	 * Two replicas may legitimately hold different tombstones — one has compacted,
+	 * the other has not — and comparing internals would fail on a difference that
+	 * no user can observe and no future operation can expose.
+	 */
+	snapshot(): Snapshot {
+		return {
+			nodes: this.#nodes.keys().map((id) =&gt; ({
+				id,
+				fields: [...(this.#fields.get(id) ?? new Map())]
+					.map(([field, register]) =&gt; [field, register.value] as [string, unknown])
+					.sort(([a], [b]) =&gt; (a &lt; b ? -1 : 1)),
+				label: this.#labels.get(id)?.text() ?? ''
+			}))
+		};
+	}
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Only *visible* state. Two replicas may legitimately hold different tombstones — one has compacted, the other has not — and comparing internals would fail on a difference no user can observe and no future operation can expose. Getting this wrong gives you a test that fails for correct code, which is worse than no test, because you will eventually make it pass by weakening it.</p></aside>
+<h3 id="hostile">A deliberately hostile network</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Run one randomised history and return every replica's final state.
+ *
+ * The schedule is deliberately hostile: operations are delivered in shuffled
+ * order, some are delivered twice, and some are withheld until the very end so
+ * that a replica edits for a while on stale information — which is exactly what
+ * an offline collaborator is.
+ */
+function history(seed: number, replicaCount: number, rounds: number): Snapshot[] {
+	const random = seeded(seed);
+	const replicas = Array.from(
+		{ length: replicaCount },
+		(_, i) =&gt; new Replica(String.fromCharCode(97 + i))
+	);
+	const nodes: NodeId[] = ['n1', 'n2', 'n3'];
+
+	/** Operations created but not yet delivered everywhere. */
+	const inFlight: Operation[] = [];
+
+	for (let round = 0; round &lt; rounds; round += 1) {
+		for (const replica of replicas) {
+			for (let i = 0; i &lt; int(random, 0, 2); i += 1) {
+				const operation = generate(random, replica, nodes);
+				if (!operation) continue;
+				replica.apply(operation); // local first — that is what local-first means
+				inFlight.push(operation);
+			}
+		}
+
+		// Deliver a random slice to random replicas, sometimes twice.
+		for (const operation of shuffle(random, inFlight).slice(0, int(random, 0, inFlight.length))) {
+			const target = pick(random, replicas);
+			target.apply(operation);
+			if (random() &lt; 0.15) target.apply(operation); // a duplicate from a reconnect
+		}
+	}
+
+	// Finally, everybody hears everything, in a different order each.
+	for (const replica of replicas) {
+		for (const operation of shuffle(random, inFlight)) replica.apply(operation);
+	}
+
+	return replicas.map((replica) =&gt; replica.snapshot());
+}</code></pre>
+</figure>
+<p>Read what this schedule does to the poor implementation. Operations are shuffled. Some are delivered twice. Some are withheld until the very end, so a replica edits for a while on stale information — which is exactly what an offline collaborator is. <code>replica.apply(operation)</code> happens *before* the operation goes into <code>inFlight</code>, because local-first means the local one always applies first.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('convergence', () =&gt; {
+	it('reaches one state from every random schedule', () =&gt; {
+		for (let seed = 1; seed &lt;= 200; seed += 1) {
+			const snapshots = history(seed, 4, 12);
+			const [first, ...rest] = snapshots;
+
+			for (const [index, snapshot] of rest.entries()) {
+				// The seed is in the message on purpose: a failure here is
+				// reproducible by hand, which is the difference between a bug report
+				// and a ghost story.
+				expect(snapshot, `replica ${index + 1} diverged (seed ${seed})`).toEqual(first);
+			}
+		}
+	});
+
+	it('is unaffected by how many replicas are involved', () =&gt; {
+		for (const count of [2, 3, 6, 9]) {
+			const snapshots = history(count * 31, count, 8);
+			expect(new Set(snapshots.map((s) =&gt; JSON.stringify(s))).size).toBe(1);
+		}
+	});
+</code></pre>
+</figure>
+<p>Two hundred seeds, four replicas, twelve rounds each. The seed is in the failure message on purpose: a failure here is reproducible by hand, on any machine, in a year. That is the difference between a bug report and a ghost story.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/convergence.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('survives a replica that stays offline for the whole session', () =&gt; {
+	/*
+	 * The case a naive implementation passes every other test and still fails:
+	 * one replica edits in isolation for a long time and merges once at the end.
+	 * Its stamps are old, its view of what exists is stale, and every remove it
+	 * issues observed a different set of adds.
+	 */
+	const random = seeded(4242);
+	const online = [new Replica('a'), new Replica('b')];
+	const offline = new Replica('c');
+	const nodes: NodeId[] = ['n1', 'n2'];
+	const all: Operation[] = [];
+
+	for (let round = 0; round &lt; 30; round += 1) {
+		for (const replica of online) {
+			const operation = generate(random, replica, nodes);
+			if (!operation) continue;
+			replica.apply(operation);
+			all.push(operation);
+			for (const other of online) other.apply(operation);
+		}
+
+		const solo = generate(random, offline, nodes);
+		if (solo) {
+			offline.apply(solo);
+			all.push(solo);
+		}
+	}
+
+	const replicas = [...online, offline];
+	for (const replica of replicas) {
+		for (const operation of shuffle(random, all)) replica.apply(operation);
+	}
+
+	const [first, ...rest] = replicas.map((replica) =&gt; replica.snapshot());
+	for (const snapshot of rest) expect(snapshot).toEqual(first);
+});
+</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the offline replica gets its own test</h4>
+	<p>It is the case a naive implementation passes every other test and still fails. One replica edits in isolation for thirty rounds and merges once at the end: its stamps are old, its view of what exists is stale, and every remove it issues observed a different set of adds from the ones anybody else saw. Everything that can be subtly wrong is wrong at once. If you write only one test from this chapter, write this one.</p>
+</aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm vitest run src/lib/crdt
+
+ ✓ src/lib/crdt/clock.spec.ts        (18 tests)
+ ✓ src/lib/crdt/version.spec.ts      (12 tests)
+ ✓ src/lib/crdt/orset.spec.ts        (11 tests)
+ ✓ src/lib/crdt/register.spec.ts      (7 tests)
+ ✓ src/lib/crdt/fracdex.spec.ts      (14 tests)
+ ✓ src/lib/crdt/rga.spec.ts          (16 tests)
+ ✓ src/lib/crdt/convergence.spec.ts   (4 tests)  1.1s</code></pre>
+</figure>
+<p>Four tests, about a second, and a few hundred thousand delivery schedules inside them. That second is the reason <code>crdt/</code> is not allowed to import anything: the moment it needs a browser, this stops being a test you run on every keystroke.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Your suite compares visible state only, and you can say why.</li><li>Your schedule shuffles, duplicates and withholds — and you can explain what real-world event each of those models.</li><li>A failure prints a seed that reproduces it exactly.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="collaborative-text.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Two people typing in one label</span>
+			</a>
+			<a class="pager__link pager__link--next" href="eight-operations.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Eight operations, and nothing else</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

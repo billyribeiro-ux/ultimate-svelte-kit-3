@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eight operations, and nothing else — Building Tessera</title>
+<meta name="description" content="The vocabulary of a board, the operation algebra every change goes through, and why validation matters more in a CRDT than anywhere else.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 54.166666666666664%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html" aria-current="page"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>Eight operations, and nothing else</h1>
+			<p class="lede">The vocabulary of a board, the operation algebra every change goes through, and why validation matters more in a CRDT than anywhere else.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Define every possible change to a document as one of eight validated operations.</p></aside>
+			<p>Tessera draws system diagrams. Not &quot;shapes&quot; — the vocabulary is deliberately narrow, because a tool that can draw anything makes every diagram look different, and a tool with six nouns makes them all comparable.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/types.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT A BOARD IS
+ * ===============
+ *
+ * Tessera draws system diagrams: boxes that are services, cylinders that are
+ * datastores, arrows that are calls. Not &quot;shapes&quot; — the vocabulary is
+ * deliberately narrow, because a tool that can draw anything makes every
+ * diagram look different and a tool with six nouns makes them all comparable.
+ *
+ * Ids are `Stamp`s from the CRDT clock, which means an element's identity *is*
+ * the moment it was created, by whom. Two replicas offline in a tunnel cannot
+ * collide, no server round trip is needed to mint one, and sorting elements by
+ * id sorts them by age. A UUID would do the first two and none of the rest.
+ */
+
+import type { Stamp } from '#lib/crdt/index.ts';
+
+export type NodeId = Stamp;
+export type EdgeId = Stamp;
+
+/**
+ * The six things a node can be.
+ *
+ * `group` is the odd one out: it has no meaning of its own, it is a frame that
+ * other nodes declare as their parent. It exists because &quot;these four services
+ * are one bounded context&quot; is the single most common thing people reach for a
+ * whiteboard to say.
+ */
+export const NODE_KINDS = ['service', 'datastore', 'queue', 'external', 'note', 'group'] as const;
+export type NodeKind = (typeof NODE_KINDS)[number];
+
+/**
+ * How one node talks to another. The distinction is drawn, not written: a
+ * synchronous call is a solid arrow, asynchronous is dashed, a stream is a
+ * double line, a dependency has no arrowhead at all.
+ */
+export const EDGE_KINDS = ['sync', 'async', 'stream', 'dependency'] as const;
+export type EdgeKind = (typeof EDGE_KINDS)[number];
+
+/**
+ * Colour by name, never by hex.
+ *
+ * A board stores `'jade'`, and what jade *is* depends on the theme the viewer is
+ * using. Storing `#1f9d76` would freeze one person's light-mode palette into the
+ * document and make it unreadable for everybody in dark mode — a mistake that is
+ * invisible until somebody with different settings opens a board and finds it
+ * illegible.
+ */
+export const FILLS = ['slate', 'indigo', 'jade', 'amber', 'rose', 'cyan'] as const;
+export type Fill = (typeof FILLS)[number];
+
+/** Which side of a node an edge leaves from. `auto` picks the nearest. */
+export const PORTS = ['auto', 'top', 'right', 'bottom', 'left'] as const;
+export type Port = (typeof PORTS)[number];
+</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Ids are stamps, and that is a design decision</h4>
+	<p>An element’s identity <strong>is</strong> the moment it was created, by whom. Two replicas offline in a tunnel cannot collide. No round trip is needed to mint one. Sorting by id sorts by age, for free. A UUID gives you the first two and none of the rest — and, crucially, a UUID cannot be compared with an operation stamp, so you would need both.</p>
+</aside>
+<aside class="callout callout--warn"><p>Colour by name, never by hex. A board stores <code>'jade'</code>, and what jade *is* depends on the viewer’s theme. Store <code>#1f9d76</code> and you have frozen one person’s light-mode palette into the document, making it illegible for everybody in dark mode. This is invisible until somebody with different settings opens the board.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/types.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The smallest a node may be, in board units.
+ *
+ * Enforced when resizing rather than when rendering, so that a node cannot be
+ * dragged to zero and become unclickable — the classic way a shape is lost
+ * forever in a canvas tool, still present in the document and impossible to
+ * select.
+ */
+export const MIN_SIZE = 48;
+
+/** The largest, so one runaway drag cannot make the board's bounds meaningless. */
+export const MAX_SIZE = 8000;
+
+/** The board coordinate system. Not pixels: pixels depend on the zoom. */
+export interface Point {
+	readonly x: number;
+	readonly y: number;
+}
+
+export interface Rect extends Point {
+	readonly w: number;
+	readonly h: number;
+}
+
+/** Every scalar field of a node that a `node.set` operation can write. */
+export interface NodeFields {
+	readonly kind: NodeKind;
+	readonly x: number;
+	readonly y: number;
+	readonly w: number;
+	readonly h: number;
+	readonly fill: Fill;
+	/** Fractional index — stacking order. See `crdt/fracdex.ts`. */
+	readonly order: string;
+	/** The group this node sits inside, or `null` for the top level. */
+	readonly parent: NodeId | null;
+}
+
+export interface EdgeFields {
+	readonly from: NodeId;
+	readonly to: NodeId;
+	readonly kind: EdgeKind;
+	readonly fromPort: Port;
+	readonly toPort: Port;
+}
+
+export type NodeField = keyof NodeFields;
+export type EdgeField = keyof EdgeFields;
+
+/** Defaults for a freshly dropped node. */
+export const NODE_DEFAULTS = {
+	w: 168,
+	h: 88,
+	fill: 'slate'
+} as const satisfies Partial&lt;NodeFields&gt;;</code></pre>
+</figure>
+<p><code>MIN_SIZE</code> is enforced when *resizing*, not when rendering. A node dragged to zero would be present in the document, invisible, and impossible to select — the classic way a shape is lost forever in a canvas tool.</p>
+<h3 id="the-algebra">The algebra</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE OPERATION ALGEBRA
+ * =====================
+ *
+ * Every change to a board is one of eight operations. Nothing else can modify a
+ * document — not the editor, not the server, not a migration. That is a strong
+ * claim and it is what makes the rest of the system tractable: sync ships
+ * operations, history replays operations, undo emits inverse operations, and the
+ * permission check is a function from an operation to yes or no.
+ *
+ * TWO IDS, AND WHY THEY ARE NOT THE SAME FIELD
+ * --------------------------------------------
+ * `node.add` carries both a `stamp` and an `id`, which looks redundant, since a
+ * node's id is the stamp of the operation that created it.
+ *
+ * It is redundant exactly once — the first time. Undoing a delete re-adds the
+ * same node: same `id`, because it is the same node and everything pointing at
+ * it must keep pointing at it; new `stamp`, because it is a new event that no
+ * existing removal can have observed, which is what makes the node come back.
+ * Collapse the two fields and undo of a delete becomes impossible to express.
+ *
+ * ONE FIELD PER OPERATION
+ * -----------------------
+ * `node.set` writes a single field. Dragging a box emits an `x` and a `y`, not
+ * one `{x, y}`. It costs a few more bytes and it buys the merge that people
+ * expect: if you resize a box while I recolour it, both survive. Bundling
+ * fields makes the whole bundle last-write-wins, and somebody's work vanishes
+ * for no reason they can see.
+ *
+ * VALIDATION IS NOT OPTIONAL
+ * --------------------------
+ * These schemas run on the server against every operation from every client.
+ * A CRDT converges on whatever it is given, including nonsense: `w: -1e9`
+ * converges perfectly and makes the board unusable for everybody, permanently,
+ * with no way to select the shape and fix it. &quot;It's collaborative&quot; is not a
+ * reason to trust input; it is a reason to distrust it more, because a bad
+ * operation propagates.
+ */</code></pre>
+</figure>
+<p>Read the first paragraph again, because it is a strong claim and it is what makes the rest of the system tractable. <strong>Nothing else can modify a document.</strong> Sync ships operations. History replays operations. Undo emits inverse operations. The permission check is a function from an operation to yes or no. Every one of those is simple because there is exactly one way in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A `node.set` for each field, as a union.
+ *
+ * The mapped type distributes over the field names, so `field: 'x'` narrows
+ * `value` to `number` and `field: 'fill'` narrows it to `Fill`. Writing this as
+ * `{ field: NodeField; value: unknown }` would compile and would move every
+ * mistake to runtime.
+ */
+export type NodeSetOperation = {
+	[F in keyof NodeFields]: {
+		readonly kind: 'node.set';
+		readonly stamp: Stamp;
+		readonly target: NodeId;
+		readonly field: F;
+		readonly value: NodeFields[F];
+	};
+}[keyof NodeFields];
+
+export type EdgeSetOperation = {
+	[F in keyof EdgeFields]: {
+		readonly kind: 'edge.set';
+		readonly stamp: Stamp;
+		readonly target: EdgeId;
+		readonly field: F;
+		readonly value: EdgeFields[F];
+	};
+}[keyof EdgeFields];
+
+export type Operation =
+	| {
+			readonly kind: 'node.add';
+			readonly stamp: Stamp;
+			readonly id: NodeId;
+			readonly fields: NodeFields;
+	  }
+	| {
+			readonly kind: 'node.remove';
+			readonly stamp: Stamp;
+			readonly target: NodeId;
+			/**
+			 * The add stamps this removal observed. See `crdt/orset.ts`.
+			 *
+			 * A plain array, not `readonly Stamp[]`, and this is a boundary decision
+			 * rather than an oversight. valibot infers `Stamp[]` for the wire type, and
+			 * `readonly Stamp[]` is not assignable to it — so a `readonly` here makes
+			 * every call that sends an operation to the server need a cast. The
+			 * properties are still `readonly`, which is what stops an operation being
+			 * edited after it is created; only the array's own mutability is given up,
+			 * and nothing in the codebase mutates one.
+			 */
+			readonly observed: Stamp[];
+	  }</code></pre>
+</figure>
+<p>The mapped type is worth pausing on. It distributes over the field names, so <code>field: 'x'</code> narrows <code>value</code> to <code>number</code> and <code>field: 'fill'</code> narrows it to <code>Fill</code>. Writing it as <code>{ field: NodeField; value: unknown }</code> would compile fine and move every mistake to runtime.</p>
+
+<aside class="callout callout--why">
+	<h4>Two ids on one operation</h4>
+	<p><code>node.add</code> carries both a <code>stamp</code> and an <code>id</code>, which looks redundant — a node’s id *is* the stamp of the operation that created it. It is redundant exactly once: the first time. Undoing a delete re-adds the same node with the <strong>same id</strong>, because everything pointing at it must keep pointing at it, and a <strong>new stamp</strong>, because it must be an event no existing removal has observed. That is what makes it come back (chapter 09). Collapse the two fields and undo of a delete becomes inexpressible.</p>
+</aside>
+<h3 id="validation">Why validation matters more here</h3>
+<aside class="callout callout--warn"><p>A CRDT converges on whatever it is given, <strong>including nonsense</strong>. <code>w: -1e9</code> converges perfectly and makes the board unusable for everybody, permanently, with no way to select the shape and fix it. &quot;It’s collaborative&quot; is not a reason to trust input; it is a reason to distrust it more, because a bad operation *propagates*.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** 13 digits of milliseconds, 5 of counter, 8 of actor. See `crdt/clock.ts`. */
+const stamp = v.pipe(
+	v.string(),
+	v.regex(/^\d{18}[0-9a-z]{8}$/, 'Not a stamp'),
+	v.transform((value) =&gt; value as Stamp)
+);
+
+/**
+ * A coordinate.
+ *
+ * Finite, because `Infinity` and `NaN` both survive JSON round-trips as `null`
+ * in some encoders and as themselves in others, and a node at `NaN` disappears
+ * from the render and from every hit test — present in the document, invisible,
+ * unselectable.
+ *
+ * The bound is generous rather than tight: a board is not a photograph, and
+ * somebody laying out a large system legitimately spreads over a lot of space.
+ * It exists to keep the number in a range where floating-point arithmetic is
+ * still exact enough for snapping to work.
+ */
+const coordinate = v.pipe(v.number(), v.finite(), v.minValue(-1e7), v.maxValue(1e7));
+
+const dimension = v.pipe(v.number(), v.finite(), v.minValue(MIN_SIZE), v.maxValue(MAX_SIZE));
+
+const orderKey = v.pipe(
+	v.string(),
+	v.check((value) =&gt; isOrderKey(value), 'Not a fractional index')
+);</code></pre>
+</figure>
+<p>Each of those schemas encodes a failure somebody could otherwise cause. <code>v.finite()</code> because <code>NaN</code> survives a JSON round trip as <code>null</code> in some encoders and as itself in others, and a node at <code>NaN</code> vanishes from the render *and* from every hit test — present, invisible, unselectable. The coordinate bound is generous rather than tight, and exists to keep numbers in a range where floating-point arithmetic is still exact enough for snapping.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * One character.
+ *
+ * `[...value].length === 1` rather than `value.length === 1`, so an emoji is one
+ * character and a lone surrogate half is none. A surrogate half stored as its
+ * own CRDT item lets a concurrent insertion land between the halves, and the
+ * label renders as a replacement glyph on every replica from then on.
+ */
+const character = v.pipe(
+	v.string(),
+	v.check((value) =&gt; [...value].length === 1, 'Expected exactly one character')
+);</code></pre>
+</figure>
+<p>The emoji trap again, this time at the boundary: <code>[...value].length === 1</code>, so a lone surrogate half is *zero* characters and gets rejected before it can be stored as its own CRDT item.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * How many add-stamps a single removal may name.
+ *
+ * Unbounded, a client could send a removal naming a million stamps and make the
+ * server allocate them. The real number is the count of concurrent re-creations
+ * of one element, which is never more than the number of collaborators.
+ */
+const OBSERVED_LIMIT = 256;
+
+/** How many characters one `text.delete` may tombstone — a select-all of a label. */
+const CHARS_LIMIT = 4096;
+
+const observed = v.pipe(v.array(stamp), v.maxLength(OBSERVED_LIMIT));
+
+export const OperationSchema = v.variant('kind', [
+	v.object({ kind: v.literal('node.add'), stamp, id: stamp, fields: nodeFields }),
+	v.object({ kind: v.literal('node.remove'), stamp, target: stamp, observed }),
+
+	/*
+	 * `node.set` is a variant *within* a variant: one entry per field, so the
+	 * value is validated against that field's own rules. A single
+	 * `{ field: string, value: unknown }` schema would accept `x: 'left'` and
+	 * `fill: -3`, and a CRDT converges on those just as reliably as on good data.
+	 */
+	v.object({
+		kind: v.literal('node.set'),
+		stamp,
+		target: stamp,
+		field: v.literal('kind'),
+		value: v.picklist(NODE_KINDS)
+	}),
+	v.object({
+		kind: v.literal('node.set'),
+		stamp,
+		target: stamp,
+		field: v.literal('x'),
+		value: coordinate</code></pre>
+</figure>
+<p><code>node.set</code> is a variant *within* a variant — one schema entry per field, so each value is checked against that field’s own rules. A single <code>{ field: string, value: unknown }</code> would accept <code>x: 'left'</code> and <code>fill: -3</code>, and the CRDT would converge on those just as reliably as on good data.</p>
+<aside class="callout callout--note"><p>The three limits — <code>OBSERVED_LIMIT</code> at 256, <code>CHARS_LIMIT</code> at 4096, <code>BATCH_LIMIT</code> at 512 — each have a comment explaining what the real number is and what an attacker gets without the bound. That is the right way to write a limit: not a round number, but the largest legitimate case with a note about it.</p></aside>
+<h3 id="classification">Classifying an operation</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/ops.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Classification                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The element an operation acts on.
+ *
+ * Used by undo (to group operations that belong to one gesture) and by the
+ * permission layer (to answer &quot;may this person touch this element?&quot;). Written as
+ * an exhaustive switch so that adding a ninth operation is a type error here
+ * rather than a silent `undefined` in an authorisation check.
+ */
+export function targetOf(operation: Operation): Stamp {
+	switch (operation.kind) {
+		case 'node.add':
+		case 'edge.add':
+			return operation.id;
+		case 'node.remove':
+		case 'node.set':
+		case 'edge.remove':
+		case 'edge.set':
+		case 'text.insert':
+		case 'text.delete':
+			return operation.target;
+	}
+}
+
+/** Does this operation create an element? Creation is the one thing a `commenter` may never do. */
+export function isCreation(operation: Operation): boolean {
+	return operation.kind === 'node.add' || operation.kind === 'edge.add';
+}
+
+/** Does this operation destroy one? */
+export function isRemoval(operation: Operation): boolean {
+	return operation.kind === 'node.remove' || operation.kind === 'edge.remove';
+}</code></pre>
+</figure>
+<p>An exhaustive switch with no <code>default</code>, so adding a ninth operation is a <strong>type error here</strong> rather than a silent <code>undefined</code> in an authorisation check. That is not stylistic. <code>targetOf</code> is used by the permission layer to answer &quot;may this person touch this element?&quot;, and a new operation kind falling through to <code>undefined</code> is a permission bypass.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every change to a board is one of eight operations, and you can name them.</li><li>You can explain why <code>node.add</code> needs both <code>stamp</code> and <code>id</code>.</li><li>You can say why input validation is *more* important in a CRDT than in a request/response app.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="proving-convergence.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Proving it, as far as it can be proved</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-reactive-document.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The model and the projection</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

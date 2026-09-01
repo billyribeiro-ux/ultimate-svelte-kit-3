@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The outbox — Building Tessera</title>
+<meta name="description" content="Sixty lines of IndexedDB wrapper, one compound key, and the `oncomplete` that is the difference between &quot;saved&quot; being true and being a message.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">22 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 91.66666666666666%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html" aria-current="page"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 22</p>
+			<h1>The outbox</h1>
+			<p class="lede">Sixty lines of IndexedDB wrapper, one compound key, and the <code>oncomplete</code> that is the difference between &quot;saved&quot; being true and being a message.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make an edit survive the laptop closing, and make an acknowledgement delete exactly what was acknowledged.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/local.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * LOCAL-FIRST STORAGE
+ * ===================
+ *
+ * IndexedDB, directly, with about sixty lines of promise wrapper.
+ *
+ * The wrapper is worth writing rather than depending on. IndexedDB's awkwardness
+ * is almost entirely its event-based API; the transaction model underneath is
+ * good, and the popular wrappers hide it well enough that people stop
+ * understanding when their writes commit. Tessera cares a great deal about when
+ * its writes commit — that is the difference between &quot;your work is safe&quot; being
+ * true and being a message.
+ *
+ * WHAT IS STORED, AND WHY EACH
+ * ----------------------------
+ *   snapshots  the document as of a known server sequence. Opening a board reads
+ *              this first and renders immediately, before any network call.
+ *   outbox     operations made locally that the server has not acknowledged.
+ *              This is the whole of the offline guarantee: close the laptop
+ *              mid-edit, open it on a train, and the work is still there and
+ *              still queued.
+ *
+ * Not stored: the operation log. It is on the server, and a client that has a
+ * snapshot plus its outbox can reconstruct everything it needs. Keeping a local
+ * log too would mean two logs that can disagree.
+ */</code></pre>
+</figure>
+<p>The wrapper is written rather than installed, and the reason is specific: IndexedDB’s awkwardness is almost entirely its event-based API, but the <strong>transaction model underneath is good</strong>, and the popular wrappers hide it well enough that people stop understanding when their writes commit. This application cares a great deal about when its writes commit.</p>
+<p>Note what is *not* stored: the operation log. A client with a snapshot plus its outbox can reconstruct everything it needs, and keeping a local log too would mean two logs that can disagree.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/local.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function open(): Promise&lt;IDBDatabase&gt; {
+	opening ??= new Promise((resolve, reject) =&gt; {
+		const request = indexedDB.open(DATABASE, VERSION);
+
+		request.onupgradeneeded = () =&gt; {
+			const database = request.result;
+
+			if (!database.objectStoreNames.contains(SNAPSHOTS)) {
+				database.createObjectStore(SNAPSHOTS, { keyPath: 'boardId' });
+			}
+
+			if (!database.objectStoreNames.contains(OUTBOX)) {
+				/*
+				 * A compound key of (board, stamp).
+				 *
+				 * Storing the outbox as one row per board — an array of pending
+				 * operations — would be simpler and would make acknowledging *some* of
+				 * them a read-modify-write, which races with the editor appending to
+				 * the same array. One row per operation means an acknowledgement is a
+				 * delete of exactly the keys that were confirmed.
+				 */
+				const store = database.createObjectStore(OUTBOX, { keyPath: ['boardId', 'stamp'] });
+				store.createIndex('byBoard', 'boardId');
+			}
+		};
+
+		request.onsuccess = () =&gt; resolve(request.result);
+		request.onerror = () =&gt; reject(request.error ?? new Error('IndexedDB refused to open'));
+
+		/*
+		 * Another tab is holding an old version open.
+		 *
+		 * Without this the upgrade hangs forever and the board never loads, with no
+		 * error anywhere. Rejecting turns it into a message the application can show.
+		 */
+		request.onblocked = () =&gt;
+			reject(new Error('Tessera is open in another tab with an older version. Reload it.'));
+	});
+
+	return opening;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The compound key</h4>
+	<p>Storing the outbox as one row per board — an array of pending operations — is simpler and makes acknowledging *some* of them a read-modify-write, which races with the editor appending to the same array. One row per operation, keyed by <code>[boardId, stamp]</code>, means an acknowledgement is a delete of exactly the keys that were confirmed. No read, no merge, no race.</p>
+</aside>
+<p><code>onblocked</code> is a small thing that saves a support ticket. Another tab holding an old version open makes the upgrade hang forever, and the board never loads with no error anywhere. Rejecting turns it into a sentence a person can act on.</p>
+<h3 id="commit">The most common bug in hand-rolled IndexedDB</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/local.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Run a transaction and resolve when it *commits*, not when the request succeeds. */
+async function transact&lt;T&gt;(
+	stores: string | string[],
+	mode: IDBTransactionMode,
+	body: (transaction: IDBTransaction) =&gt; Promise&lt;T&gt; | T
+): Promise&lt;T&gt; {
+	const database = await open();
+	const transaction = database.transaction(stores, mode);
+
+	const done = new Promise&lt;void&gt;((resolve, reject) =&gt; {
+		/*
+		 * `oncomplete`, not the last request's `onsuccess`.
+		 *
+		 * A request succeeding means the value is staged; the transaction can still
+		 * abort afterwards — a quota error, or another handler throwing. Resolving
+		 * early is how &quot;saved&quot; becomes a lie, and it is the single most common bug
+		 * in hand-rolled IndexedDB code.
+		 */
+		transaction.oncomplete = () =&gt; resolve();
+		transaction.onerror = () =&gt; reject(transaction.error ?? new Error('Transaction failed'));
+		transaction.onabort = () =&gt; reject(transaction.error ?? new Error('Transaction aborted'));
+	});
+
+	const result = await body(transaction);
+	await done;
+	return result;
+}
+
+function request&lt;T&gt;(source: IDBRequest&lt;T&gt;): Promise&lt;T&gt; {
+	return new Promise((resolve, reject) =&gt; {
+		source.onsuccess = () =&gt; resolve(source.result);
+		source.onerror = () =&gt; reject(source.error ?? new Error('Request failed'));
+	});
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>transaction.oncomplete</code>, <strong>not</strong> the last request’s <code>onsuccess</code>. A request succeeding means the value is *staged*; the transaction can still abort afterwards — a quota error, another handler throwing. Resolving on <code>onsuccess</code> is how &quot;your work is saved&quot; becomes a lie, and it is the single most common bug in hand-rolled IndexedDB code.</p></aside>
+<h3 id="the-two-stores">Reading and writing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/local.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function enqueue(boardId: string, operations: readonly Operation[]): Promise&lt;void&gt; {
+	if (operations.length === 0) return;
+
+	await transact(OUTBOX, 'readwrite', (transaction) =&gt; {
+		const store = transaction.objectStore(OUTBOX);
+		const queuedAt = Date.now();
+		for (const operation of operations) {
+			store.put({ boardId, stamp: operation.stamp, operation, queuedAt } satisfies OutboxRow);
+		}
+	});
+}
+
+/** Everything still waiting, oldest first. */
+export async function pending(boardId: string): Promise&lt;Operation[]&gt; {
+	const rows = await transact(OUTBOX, 'readonly', (transaction) =&gt;
+		request&lt;OutboxRow[]&gt;(transaction.objectStore(OUTBOX).index('byBoard').getAll(boardId))
+	);
+
+	/*
+	 * Sorted by stamp, not by `queuedAt`.
+	 *
+	 * Two operations queued in the same millisecond have the same `queuedAt`, and
+	 * `getAll` returns them in key order — which for a compound key is board then
+	 * stamp, so this is usually already right. Sorting explicitly makes it right
+	 * by construction rather than by implementation detail, and stamp order is
+	 * the order the operations were created in.
+	 */
+	return rows.map((row) =&gt; row.operation).sort((a, b) =&gt; (a.stamp &lt; b.stamp ? -1 : 1));
+}
+
+export async function acknowledge(
+	boardId: string,
+	operations: readonly Operation[]
+): Promise&lt;void&gt; {
+	if (operations.length === 0) return;
+
+	await transact(OUTBOX, 'readwrite', (transaction) =&gt; {
+		const store = transaction.objectStore(OUTBOX);
+		for (const operation of operations) store.delete([boardId, operation.stamp]);
+	});
+}
+
+export async function outboxSize(boardId: string): Promise&lt;number&gt; {
+	return transact(OUTBOX, 'readonly', (transaction) =&gt;
+		request&lt;number&gt;(transaction.objectStore(OUTBOX).index('byBoard').count(boardId))
+	);
+}</code></pre>
+</figure>
+<p><code>pending</code> sorts by <strong>stamp</strong>, not <code>queuedAt</code>. Two operations queued in the same millisecond share a <code>queuedAt</code>, and <code>getAll</code> returns them in key order — which for a compound key is board-then-stamp, so this is usually already right. Sorting explicitly makes it right by construction rather than by implementation detail, and stamp order is the order the operations were created in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/local.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Forget a board entirely — used when the server says it is gone. */
+export async function forget(boardId: string): Promise&lt;void&gt; {
+	const operations = await pending(boardId);
+	await transact([SNAPSHOTS, OUTBOX], 'readwrite', (transaction) =&gt; {
+		transaction.objectStore(SNAPSHOTS).delete(boardId);
+		const store = transaction.objectStore(OUTBOX);
+		for (const operation of operations) store.delete([boardId, operation.stamp]);
+	});
+}
+
+/** Is IndexedDB usable at all? Some privacy modes expose it and then throw. */
+export function available(): boolean {
+	try {
+		return typeof indexedDB !== 'undefined' &amp;&amp; indexedDB !== null;
+	} catch {
+		return false;
+	}
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>available()</code> is a <code>try</code>/<code>catch</code> around a <code>typeof</code> check, which looks paranoid and is not. Some privacy modes *expose* <code>indexedDB</code> and then throw when you touch it, so the honest test is to touch it inside a guard.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>An edit is in IndexedDB before any request is made.</li><li><code>writeSnapshot</code> resolves only when the transaction has committed.</li><li>Acknowledging four of six operations leaves exactly two.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="identity-and-the-wire.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A tab’s identity, and what crosses the network</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-sync-engine.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The sync engine</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

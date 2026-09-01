@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who decides who wins — Building Tessera</title>
+<meta name="description" content="Three designs for two people editing one thing, why the first two are the ones everybody builds, and what a conflict-free type actually promises.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 8.333333333333332%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html" aria-current="page"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>Who decides who wins</h1>
+			<p class="lede">Three designs for two people editing one thing, why the first two are the ones everybody builds, and what a conflict-free type actually promises.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Be able to argue for local-first from first principles, and know precisely what has to be true for it to work.</p></aside>
+			<p>Two people drag the same box at the same moment. Ada moves it left; Mo moves it up. What should the board look like afterwards?</p>
+<p>There is no universally right answer, and that is the point. What matters is that <strong>both screens agree</strong>, and that neither person loses work they would be surprised to lose. There are three ways to get there.</p>
+<h3 id="design-one">Design one: ask the server</h3>
+<p>The obvious one. A drag sends a request; the server writes the new position; the response comes back; the screen updates. The server is the truth, so the two screens cannot disagree.</p>
+<p>It works, and it is what most applications should do. It fails here for one reason: <strong>the drag has to feel instant</strong>, and a round trip is not instant. At 60fps you have 16 milliseconds per frame; a good network round trip is thirty to eighty. The box would trail your finger by three to five frames, forever, and no amount of engineering elsewhere would hide it.</p>
+<p>And with the network down, there is no application at all.</p>
+<h3 id="design-two">Design two: ask the server, but lie in the meantime</h3>
+<p>The one everybody builds second. Move the box immediately, send the request, and if the server disagrees, put it back. Optimistic updates. It feels instant and it works offline for about ninety seconds.</p>
+<p>Then the trouble starts, and it is worth being specific about what kind of trouble, because &quot;it gets complicated&quot; is not an argument.</p>
+<ul><li><strong>Rollback is visible.</strong> The box snaps back to where it was while you are still looking at it. Twice in a session, people stop trusting the tool.</li><li><strong>Rollback is not local.</strong> By the time the server disagrees, you have made four more edits *on top of* the one being undone. Undoing the first without undoing the others requires knowing which of them depended on it — which is a dependency graph you did not build.</li><li><strong>Offline is unbounded.</strong> Ten minutes offline is six hundred queued mutations, applied in an order the server has never seen, against a board that moved on without you. &quot;Retry the queue&quot; is not a merge strategy.</li><li><strong>Every conflict becomes a product decision.</strong> Ada moved it left and Mo moved it up: does somebody get a dialog? Does the last write win? Does the *first*? You will answer this question separately for every field of every object, and you will get some of them wrong.</li></ul>
+<aside class="callout callout--note"><p>None of this makes optimistic updates a bad pattern. Halfpast, the booking application earlier in this series, uses them heavily and is right to: bookings are *transactional* — the server genuinely must arbitrate, and a rejection is meaningful information. The difference is that a rejected booking is a real answer, and a rejected box-drag is a bug.</p></aside>
+<h3 id="design-three">Design three: do not ask</h3>
+<p>Make the data structure itself have the property that concurrent edits merge. Not &quot;merge with a strategy&quot; — merge, unconditionally, arriving at the same result on every replica regardless of what order the edits show up in.</p>
+<p>A structure with that property is a <strong>conflict-free replicated data type</strong>, and the property is precise:</p>
+<ol><li><strong>Commutative</strong> — applying edit A then edit B gives the same result as B then A.</li><li><strong>Associative</strong> — how you group them into batches does not matter.</li><li><strong>Idempotent</strong> — applying the same edit twice is the same as applying it once.</li></ol>
+<p>Those three together buy something enormous: <strong>the network can do anything at all</strong>. Reorder messages, duplicate them, deliver them in batches, deliver them a week late, deliver them to one replica and not another — and as long as every replica eventually sees every edit, every replica ends up identical. No acknowledgements, no ordering guarantees, no retry-with-idempotency-key ceremony. The transport can be sloppy because the data does not care.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this is not free</h4>
+	<p>CRDTs trade *space* and *design work* for that guarantee. A deleted shape usually cannot be forgotten immediately — something has to remember it was deleted, or a late-arriving &quot;add&quot; resurrects it. Every field needs a rule chosen deliberately. And &quot;both edits survive&quot; is not always what a human wants: two people typing into one label produce a correct interleaving that may still read as nonsense. The structure guarantees *convergence*, not *good taste*. Knowing exactly where that line is is most of what this course teaches.</p>
+</aside>
+<h3 id="so-what-do-we-need">What that means we have to build</h3>
+<p>Work backwards from &quot;the same result in any order&quot; and the rest of the project falls out of it.</p>
+<ul><li>To decide a winner without asking anybody, every edit needs a <strong>timestamp that is comparable across machines</strong> and never ties. Wall clocks are not that. Chapter 06.</li><li>To know what a replica already has, we need a compact summary of &quot;everything I have seen&quot;. Chapter 07.</li><li>To keep an ordering stable when two people insert in the same gap, positions must be <strong>densely orderable</strong> — there must always be a value between any two. Chapter 08.</li><li>Each kind of state needs its own type: a set for shapes, registers for fields, a sequence for text. Chapters 10 to 12.</li><li>And all of it needs to be tested against a network that behaves as badly as a real one, which turns out to be a *property* test rather than an example. Chapter 09.</li></ul>
+<p>That is the next two parts of this course, and none of it mentions Svelte. That is deliberate too: the interesting half of a local-first application is framework-independent, and you should be able to lift it out.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why optimistic updates are right for a booking system and wrong for a canvas.</li><li>You can state the three algebraic properties a CRDT needs, and say what each one buys.</li><li>You can name what a CRDT does *not* promise.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="setting-up.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Setting up: a SvelteKit 3 project</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

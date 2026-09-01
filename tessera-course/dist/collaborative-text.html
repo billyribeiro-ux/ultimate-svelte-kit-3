@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two people typing in one label — Building Tessera</title>
+<meta name="description" content="RGA — an identity per character, a tree rather than the famous scan, and the counterexample that shows why.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">11 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 45.83333333333333%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html" aria-current="page"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 11</p>
+			<h1>Two people typing in one label</h1>
+			<p class="lede">RGA — an identity per character, a tree rather than the famous scan, and the counterexample that shows why.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Implement a sequence CRDT that interleaves concurrent typing correctly, including from a replica that was offline.</p></aside>
+			<p>Labels are text, and text is the one place where last-write-wins is *visibly* wrong. Two people typing at opposite ends of a label should end up with both sentences — not with one person’s work discarded because their stamp lost by four milliseconds.</p>
+<p>A <strong>replicated growable array</strong> gives every character a permanent identity and a permanent parent: &quot;the character I typed after *that* character&quot;.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * RGA — A SEQUENCE CRDT FOR TEXT
+ * ==============================
+ *
+ * Node labels are text, and text is the one place where &quot;last write wins&quot; is
+ * visibly wrong. Two people typing at opposite ends of a label should end up
+ * with both sentences, not with one person's work silently discarded because
+ * their stamp lost by four milliseconds.
+ *
+ * A **replicated growable array** gives every character a permanent identity and
+ * a permanent parent: &quot;the character I typed after *that* character&quot;. Deletion
+ * is a tombstone, so a character that somebody else's edit still refers to never
+ * disappears out from under them. Because identity is a stamp from `clock.ts`,
+ * concurrent insertions after the same parent have a definite order on every
+ * replica: higher stamp first.
+ *
+ * THE TREE, AND WHY WE DO NOT USE THE FAMOUS SHORTCUT
+ * ---------------------------------------------------
+ * Nearly every RGA write-up implements insertion as: find the parent, then walk
+ * forward skipping every item whose id is greater than the new one, and insert
+ * there. It is short, it is fast, and it is wrong in a case that a diagram tool
+ * hits regularly.
+ *
+ * Take a document whose flattened order is `B X A C`, where X is a child of B
+ * and C is a child of A, with ids B=20, X=40, A=10, C=30. Now insert Y as a
+ * child of B with id 5. The scan starts after B and skips X (40 &gt; 5), then A
+ * (10 &gt; 5), then C (30 &gt; 5), and lands at the end: `B X A C Y`.
+ *
+ * Y has been dragged out of B's subtree and past two elements it has nothing to
+ * do with. The correct answer is `B X Y A C` — Y sorts below its sibling X, and
+ * B's subtree ends before A begins. The shortcut works only while every id
+ * happens to be larger than its parent's, which is true right up until somebody
+ * edits offline and rejoins with older stamps.
+ *
+ * So this implementation stores the tree it actually means: children per parent,
+ * sorted by stamp descending, flattened depth-first on read. Correct by
+ * inspection, and the counterexample above is `rga.spec.ts`'s first test.
+ *
+ * COST, HONESTLY
+ * --------------
+ * Flattening is O(n) and memoised until the next edit; insertion is O(siblings).
+ * For labels — tens of characters, occasionally hundreds — that is free. A
+ * document-sized editor would need block-wise items and a balanced index, which
+ * is most of what makes Yjs large. Tessera does not need it, and building it
+ * anyway would be the expensive kind of foresight.
+ */</code></pre>
+</figure>
+<h3 id="the-counterexample">The counterexample</h3>
+<p>This is the most important thing in the chapter, so work through it on paper.</p>
+<p>Nearly every RGA write-up implements insertion as a <strong>scan</strong>: find the parent, walk forward skipping every item whose id is greater than the new one, insert there. Short, fast, and wrong.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>ids:      B=20   X=40   A=10   C=30
+tree:     B ── X          A ── C
+flat:     B  X  A  C
+
+insert Y (id 5) as a child of B
+
+the scan:  start after B
+           skip X   (40 &gt; 5)
+           skip A   (10 &gt; 5)   ← already outside B's subtree
+           skip C   (30 &gt; 5)
+           insert   →  B X A C Y      ✗
+
+the tree:  B's children sorted by id descending: [X=40, Y=5]
+           flatten depth-first        →  B X Y A C   ✓</code></pre>
+</figure>
+<p>Y has been dragged out of B’s subtree and past two elements it has nothing to do with. The scan works only while every id happens to be larger than its parent’s — which is true right up until somebody edits offline and rejoins with older stamps. <strong>Low ids are not exotic; they are what an offline replica produces.</strong></p>
+<p>So this implementation stores the tree it actually means. It is the first test in the file:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the counterexample the naive scan gets wrong', () =&gt; {
+	it('keeps an insertion inside its parent’s subtree', () =&gt; {
+		/*
+		 * Nearly every RGA write-up inserts by walking forward from the parent and
+		 * skipping everything with a greater id. Build `B X A C` — X under B, C
+		 * under A — and insert Y under B with an id lower than all of them, and that
+		 * shortcut walks straight out of B's subtree and puts Y at the very end.
+		 *
+		 * Low ids are not exotic: they are what an offline replica produces when it
+		 * rejoins. This is the test that pins the tree-based implementation in place.
+		 */
+		const text = new RgaText();
+		text.insert(item(20, null, 'B'));
+		text.insert(item(40, 20, 'X'));
+		text.insert(item(10, null, 'A'));
+		text.insert(item(30, 10, 'C'));
+
+		expect(text.text()).toBe('BXAC');
+
+		text.insert(item(5, 20, 'Y'));
+
+		expect(text.text()).toBe('BXYAC');
+		expect(text.text()).not.toBe('BXACY'); // what the shortcut produces
+	});
+});</code></pre>
+</figure>
+<h3 id="the-fields">Three fields, and a bug in the third</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class RgaText {
+	/** Every item ever seen, tombstones included, keyed by id. */
+	readonly #items = new Map&lt;Stamp, RgaItem&gt;();
+
+	/**
+	 * Children by parent, each list sorted by stamp descending.
+	 *
+	 * Keyed by `Stamp | null`, and an entry may exist for a parent that has not
+	 * arrived yet. That is deliberate: an operation can outrun the one it depends
+	 * on when a snapshot is applied out of causal order, and rather than reject it
+	 * we let the subtree sit here, unreachable from the root and therefore
+	 * invisible, until its parent shows up and the whole branch appears at once.
+	 * Self-healing beats an error path nobody can reproduce.
+	 */
+	readonly #children = new Map&lt;Stamp | null, Stamp[]&gt;();
+
+	/**
+	 * Deletions for characters that have not arrived yet.
+	 *
+	 * Found by `convergence.spec.ts` on its first run, and worth spelling out
+	 * because it is the bug that makes people distrust CRDTs.
+	 *
+	 * A delete used to be a no-op for an unknown id — reasonable-looking, since
+	 * you cannot tombstone something you do not have. But an operation pair can
+	 * reach a replica in either order, and when the delete lost the race the
+	 * character came back to life: one replica showed `g`, another `ga`, both
+	 * insisted they had applied every operation, and both were telling the truth.
+	 *
+	 * Remembering the deletion until its character shows up costs one `Set` and
+	 * removes the entire class of failure. Note that `orset.ts` never had this bug:
+	 * a remove there records stamps whether or not the matching add is present,
+	 * because membership is computed rather than stored. Storing derived state is
+	 * what created the ordering dependency here, and this set is the price of it.
+	 */
+	readonly #pendingDeletes = new Set&lt;Stamp&gt;();
+
+	/** Flattened document order, rebuilt lazily after any change. */
+	#order: RgaItem[] | null = null;</code></pre>
+</figure>
+<p><code>#children</code> may hold an entry for a parent that has not arrived. That is deliberate: the subtree sits there, unreachable from the root and therefore invisible, until the parent shows up and the whole branch appears at once. Self-healing beats an error path nobody can reproduce.</p>
+<aside class="callout callout--warn"><p><code>#pendingDeletes</code> is the bug that makes people distrust CRDTs, and it was found by the property test in the next chapter on its first run. A delete used to be a no-op for an unknown id — perfectly reasonable, since you cannot tombstone something you do not have. But an insert/delete pair can arrive in either order, and when the delete lost the race the character <strong>came back to life</strong>. One replica showed <code>g</code>, another <code>ga</code>, both had applied every operation, and both were telling the truth.</p></aside>
+<p>Notice the diagnosis in the comment: <code>orset.ts</code> never had this bug, because membership there is *computed* rather than stored. Storing derived state is what created the ordering dependency, and a <code>Set</code> of unresolved deletions is the price of it. That is a general lesson about caches, arriving in an unusual place.</p>
+<h3 id="insert">Insertion</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Apply an insertion. Returns false if it was already known. */
+insert(item: RgaItem): boolean {
+	if (this.#items.has(item.id)) return false;
+
+	// A deletion that outran this insertion is applied now, at the moment the
+	// character it refers to finally exists.
+	const deleted = item.deleted || this.#pendingDeletes.delete(item.id);
+	this.#items.set(item.id, { ...item, deleted });
+
+	const siblings = this.#children.get(item.after) ?? [];
+
+	// Descending, so the highest stamp among concurrent siblings comes first.
+	// Two replicas run this same insertion-sort over the same set and get the
+	// same list, which is the entire convergence argument for this file.
+	let index = 0;
+	while (index &lt; siblings.length &amp;&amp; siblings[index]! &gt; item.id) index += 1;
+	siblings.splice(index, 0, item.id);
+
+	this.#children.set(item.after, siblings);
+	this.#order = null;
+	return true;
+}
+
+/**
+ * Tombstone a character. Idempotent, and safe for a character that has not
+ * arrived yet — see `#pendingDeletes`.
+ */
+delete(id: Stamp): boolean {
+	const item = this.#items.get(id);
+
+	if (!item) {
+		if (this.#pendingDeletes.has(id)) return false;
+		this.#pendingDeletes.add(id);
+		return true;
+	}
+
+	if (item.deleted) return false;
+
+	item.deleted = true;
+	this.#order = null;
+	return true;
+}</code></pre>
+</figure>
+<p>The insertion sort over siblings is the entire convergence argument for this file: two replicas run the same sort over the same set of siblings and get the same list. Descending, so the higher stamp among concurrent siblings comes first — an arbitrary choice that only has to be *the same* everywhere.</p>
+<h3 id="flatten">Reading it back</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Every item in document order, tombstones included. */
+items(): readonly RgaItem[] {
+	if (this.#order) return this.#order;
+
+	const order: RgaItem[] = [];
+
+	/*
+	 * Iterative rather than recursive.
+	 *
+	 * A label built one character at a time is a chain a thousand deep, and a
+	 * recursive flatten blows the stack on a document that is otherwise
+	 * perfectly ordinary. The failure arrives as `RangeError: Maximum call
+	 * stack size exceeded` from inside a render, which is a bad afternoon.
+	 */
+	const stack: Stamp[] = [...(this.#children.get(null) ?? [])].reverse();
+
+	while (stack.length &gt; 0) {
+		const id = stack.pop()!;
+		const item = this.#items.get(id);
+		if (!item) continue;
+
+		order.push(item);
+
+		const children = this.#children.get(id);
+		if (children) {
+			for (let i = children.length - 1; i &gt;= 0; i -= 1) stack.push(children[i]!);
+		}
+	}
+
+	this.#order = order;
+	return order;
+}
+
+/** The readable text. */
+text(): string {
+	let out = '';
+	for (const item of this.items()) {
+		if (!item.deleted) out += item.value;
+	}
+	return out;
+}
+
+/** The visible characters, in order. */
+visible(): readonly RgaItem[] {
+	return this.items().filter((item) =&gt; !item.deleted);
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Iterative, not recursive, and this is not premature caution. A label typed one character at a time is a chain a thousand nodes deep, because each character’s parent is the one before it. A recursive flatten blows the stack on a perfectly ordinary label, and the failure arrives as <code>RangeError: Maximum call stack size exceeded</code> from inside a render.</p></aside>
+<h3 id="the-caret">The caret, which is the part users notice</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The id a character typed at caret `offset` should hang off — the visible
+ * character immediately to the left, or `null` at the start of the text.
+ */
+idBefore(offset: number): Stamp | null {
+	if (offset &lt;= 0) return null;
+	const visible = this.visible();
+	const item = visible[Math.min(offset, visible.length) - 1];
+	return item ? item.id : null;
+}
+
+/** The ids of the visible characters in `[from, to)`, for a range delete. */
+idsBetween(from: number, to: number): Stamp[] {
+	return this.visible()
+		.slice(Math.max(0, from), Math.max(0, to))
+		.map((item) =&gt; item.id);
+}
+
+/**
+ * Where a given character sits in the visible text.
+ *
+ * This is what keeps a caret still while somebody else types above it. The
+ * editor remembers the id under the caret, not the offset — an offset is
+ * invalidated by any remote insertion before it, and chasing that with
+ * arithmetic is how collaborative editors end up jumping the cursor around.
+ *
+ * Returns the offset *after* the character, since that is where a caret
+ * anchored to it belongs. A tombstoned or unknown id gives `null`, and the
+ * caller falls back to clamping.
+ */
+offsetAfter(id: Stamp | null): number | null {
+	if (id === null) return 0;
+
+	let offset = 0;
+	for (const item of this.items()) {
+		if (item.deleted) {
+			if (item.id === id) return null;
+			continue;
+		}
+		offset += 1;
+		if (item.id === id) return offset;
+	}
+	return null;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the editor remembers an id and not an offset</h4>
+	<p>An offset is invalidated by any remote insertion before it. Chase that with arithmetic — &quot;they inserted three characters at position 2, so add three to my caret&quot; — and you have signed up for tracking every concurrent edit’s effect on your position, forever, correctly. That is how collaborative editors end up jumping the cursor around. Anchoring the caret to a <strong>character id</strong> makes the whole problem disappear: the character does not move, so neither does the caret, and <code>offsetAfter</code> recomputes where that now is.</p>
+</aside>
+<h3 id="code-points">One last trap: emoji</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/rga.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Seed a fresh text from a plain string, one item per character.
+ *
+ * &quot;Character&quot; means code point, not UTF-16 code unit — `[...value]`, not
+ * `value.split('')`. An emoji is one thing a person can delete with one press
+ * of backspace, and splitting it into surrogate halves lets a concurrent edit
+ * land between them and produce a replica whose label is a replacement
+ * character. `value.length` is therefore the wrong count to validate against,
+ * which is why this counts the spread array instead.
+ */
+static from(value: string, stamps: readonly Stamp[]): RgaText {
+	const characters = [...value];
+
+	if (stamps.length !== characters.length) {
+		throw new RangeError(
+			`need one stamp per character: ${characters.length} vs ${stamps.length}`
+		);
+	}
+
+	const text = new RgaText();
+	let after: Stamp | null = null;
+
+	for (const [index, character] of characters.entries()) {
+		const id = stamps[index]!;
+		text.insert({ id, after, value: character, deleted: false });
+		after = id;
+	}
+
+	return text;
+}</code></pre>
+</figure>
+<p><code>[...value]</code>, not <code>value.split('')</code>. An emoji is one thing a person deletes with one press of backspace; split it into surrogate halves and a concurrent edit can land *between them*, producing a replica whose label contains a replacement character. <code>value.length</code> is the wrong count to validate against, which is why this counts the spread array.</p>
+<aside class="callout callout--note"><p>Honest cost accounting, from the top of the file: flattening is O(n), memoised until the next edit; insertion is O(siblings). For labels — tens of characters, occasionally hundreds — that is free. A document-sized editor would need block-wise items and a balanced index, which is most of what makes Yjs large. Tessera does not need it, and building it anyway would be the expensive kind of foresight.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can draw the <code>B X Y A C</code> counterexample and explain why the scan fails it.</li><li>You can say why a delete for an unknown character must be remembered rather than dropped.</li><li>You can explain why the caret is anchored to a character id.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="last-write-wins-registers.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The fields on a shape</span>
+			</a>
+			<a class="pager__link pager__link--next" href="proving-convergence.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Proving it, as far as it can be proved</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

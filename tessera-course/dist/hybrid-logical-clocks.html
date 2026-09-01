@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time that cannot go backwards — Building Tessera</title>
+<meta name="description" content="Why `Date.now()` cannot decide who wins, what a hybrid logical clock is, and the drift guard that was in the wrong tier for a fortnight.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 25%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html" aria-current="page"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>Time that cannot go backwards</h1>
+			<p class="lede">Why <code>Date.now()</code> cannot decide who wins, what a hybrid logical clock is, and the drift guard that was in the wrong tier for a fortnight.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a timestamp that gives a total order, respects causality, and still reads as a date to a human.</p></aside>
+			<p>Ada and Mo both drag the same box. Two edits, two timestamps, one has to win. Reach for <code>Date.now()</code> and you have three separate problems, only one of which is obvious.</p>
+<ol><li><strong>Ties.</strong> Two machines produce the same millisecond routinely. &quot;Last write wins&quot; then means &quot;whichever one the map iterated first&quot;, and two machines do not iterate the same way. The board diverges.</li><li><strong>Causality inverted.</strong> Mo’s laptop is two minutes slow. Ada draws a box; Mo *sees it* and draws an arrow to it. Mo’s arrow carries an earlier timestamp than the box it points at. Sort by time and the reply comes before the message.</li><li><strong>Nobody’s clock is right.</strong> A laptop resuming from sleep is minutes off until NTP catches up. A VM can be years off. There is no authority to appeal to, because appealing to one is the round trip we removed in chapter 02.</li></ol>
+<p>A <strong>Lamport counter</strong> fixes 1 and 2 — a plain integer that increments locally and jumps forward whenever you see a bigger one. It also produces <code>4417</code>, which tells version history nothing and a support engineer less.</p>
+<p>A <strong>hybrid logical clock</strong> (Kulkarni et al., 2014) fixes all three. It is a wall-clock reading dragged forward — never backward — by the messages it receives, with a counter to break ties inside a millisecond.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * HYBRID LOGICAL CLOCKS
+ * =====================
+ *
+ * Every operation in Tessera carries a timestamp. That timestamp has three jobs
+ * at once, and no ordinary clock does all three.
+ *
+ *   1. **Total order.** Two edits must have a definite winner, on every replica,
+ *      forever. `Date.now()` fails this: two machines produce the same
+ *      millisecond routinely, and then &quot;last write wins&quot; means &quot;whichever one
+ *      your map iterated first wins&quot;, which is not the same on two machines.
+ *
+ *   2. **Causality.** If your edit arrived at my screen before I made mine, my
+ *      timestamp must be greater than yours — even if my laptop's clock is two
+ *      minutes behind yours. A pure wall clock fails this and produces the
+ *      infuriating bug where your reply to my message sorts before my message.
+ *
+ *   3. **Meaning to a human.** A Lamport counter satisfies (1) and (2) and reads
+ *      `4417`, which tells a support engineer nothing. Version history wants to
+ *      say &quot;3 March, 14:02&quot;.
+ *
+ * A **hybrid logical clock** (Kulkarni et al., 2014) does all three. It is a
+ * wall-clock reading that is dragged forward — never backward — by the messages
+ * it receives, with a counter to break ties inside one millisecond.
+ *
+ *   wall     the greatest physical time this replica has seen, its own or anyone's
+ *   counter  how many events have happened at that same `wall`
+ *   actor    who produced it, which breaks the last tie and makes the id unique
+ *
+ * The `actor` component matters more than it looks. Because it is part of the
+ * timestamp, **every HLC this replica produces is globally unique**, which is
+ * why the rest of the CRDT can use a timestamp as an identity: an RGA character
+ * id, an OR-Set dot, and a last-write-wins stamp are all the same type here.
+ * That is not a shortcut; it is the reason the version vector in `version.ts`
+ * can be four lines long.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The third component does more than break ties</h4>
+	<p>Because <code>actor</code> is *part of* the timestamp, every stamp a replica produces is globally unique. That means a stamp can be used as an <strong>identity</strong>, not just an ordering — and it is, everywhere. An RGA character id, an OR-Set dot, and a last-write-wins version are all the same type in this codebase. That is not a shortcut taken to save typing; it is the reason the version vector in the next chapter is four lines long.</p>
+</aside>
+<h3 id="the-encoding">The encoding is the interesting part</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A replica identity. Eight lowercase base-36 characters, fixed width so that
+ * comparing two encoded timestamps as plain strings gives the same answer as
+ * comparing them field by field.
+ *
+ * Not the user id. One person with the board open in two tabs is two actors,
+ * because two tabs can genuinely edit concurrently and a CRDT that pretends
+ * otherwise loses one of them.
+ */
+export type ActorId = string &amp; { readonly __brand: 'ActorId' };
+
+/** A hybrid logical clock reading, decoded. */
+export interface Hlc {
+	/** Milliseconds since the epoch — the greatest seen, not necessarily local. */
+	readonly wall: number;
+	/** Events at this same `wall`, on this replica. */
+	readonly counter: number;
+	readonly actor: ActorId;
+}
+
+/**
+ * The encoded form: a fixed-width string that sorts lexicographically in exactly
+ * the same order as `compare()` sorts the decoded form.
+ *
+ * This is the type that travels and gets stored. It is a string because SQLite
+ * indexes strings, `Map` keys them without boxing, JSON carries them unchanged,
+ * and a human reading a log can see the date in it.
+ */
+export type Stamp = string &amp; { readonly __brand: 'Stamp' };
+
+const WALL_DIGITS = 13; // Decimal ms fits 13 digits until 20 November 2286.
+const COUNTER_DIGITS = 5; // 99,999 events in one millisecond on one replica.
+const ACTOR_LENGTH = 8;
+
+/** Beyond this the counter cannot be encoded, so `wall` borrows a millisecond. */
+const MAX_COUNTER = 10 ** COUNTER_DIGITS - 1;</code></pre>
+</figure>
+<p>A stamp is a <strong>fixed-width string</strong>: 13 digits of milliseconds, 5 of counter, 8 of actor. Twenty-six characters, and the field order is the sort order.</p>
+<p>That is the design decision the whole file exists to make. Because the widths are fixed, comparing two stamps *as strings* gives exactly the same answer as comparing them field by field. Which means:</p>
+<ul><li>SQLite can <code>ORDER BY stamp</code> on an ordinary text index.</li><li><code>Array#sort()</code> with no comparator is correct.</li><li>A <code>Map</code> keys them without boxing.</li><li>JSON carries them unchanged — no encode step, no decode step, no drift between the two.</li><li>A human reading a log can see the date in the first thirteen characters.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Encode to the sortable string form.
+ *
+ * The padding is the whole point. `1756...` and `999...` compare correctly as
+ * numbers and incorrectly as strings unless both are the same width, and every
+ * consumer downstream — SQLite's `ORDER BY`, `Array#sort`, a `Map` iterated in
+ * insertion order — compares strings.
+ */
+export function encode(hlc: Hlc): Stamp {
+	if (hlc.wall &lt; 0 || hlc.wall &gt;= 10 ** WALL_DIGITS) {
+		throw new RangeError(`wall ${hlc.wall} does not fit in ${WALL_DIGITS} digits`);
+	}
+	if (hlc.counter &lt; 0 || hlc.counter &gt; MAX_COUNTER) {
+		throw new RangeError(`counter ${hlc.counter} does not fit in ${COUNTER_DIGITS} digits`);
+	}
+	if (hlc.actor.length !== ACTOR_LENGTH) {
+		throw new RangeError(`actor &quot;${hlc.actor}&quot; is not ${ACTOR_LENGTH} characters`);
+	}
+
+	return (String(hlc.wall).padStart(WALL_DIGITS, '0') +
+		String(hlc.counter).padStart(COUNTER_DIGITS, '0') +
+		hlc.actor) as Stamp;
+}
+
+/** Decode the string form back to fields. */
+export function decode(stamp: Stamp): Hlc {
+	if (stamp.length !== WALL_DIGITS + COUNTER_DIGITS + ACTOR_LENGTH) {
+		throw new RangeError(`&quot;${stamp}&quot; is not a stamp`);
+	}
+	return {
+		wall: Number(stamp.slice(0, WALL_DIGITS)),
+		counter: Number(stamp.slice(WALL_DIGITS, WALL_DIGITS + COUNTER_DIGITS)),
+		actor: stamp.slice(WALL_DIGITS + COUNTER_DIGITS) as ActorId
+	};
+}
+
+/**
+ * Who produced this stamp, without decoding the rest.
+ *
+ * Called on every incoming operation to index it by actor, so it avoids
+ * allocating an object thirty thousand times during a catch-up sync.
+ */
+export function actorOf(stamp: Stamp): ActorId {
+	return stamp.slice(WALL_DIGITS + COUNTER_DIGITS) as ActorId;
+}
+
+/** The wall-clock reading inside a stamp, for display. */
+export function wallOf(stamp: Stamp): number {
+	return Number(stamp.slice(0, WALL_DIGITS));
+}</code></pre>
+</figure>
+<p>Note <code>actorOf</code> and <code>wallOf</code>: they slice rather than decode. Both are called on every incoming operation, and a catch-up sync can be thirty thousand of them — allocating an object each time to read one field of it is the kind of thing that turns a fast path into a slow one for no reason at all.</p>
+<h3 id="the-clock">The clock itself</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A replica's clock.
+ *
+ * Mutable and single-threaded by design: there is exactly one of these per
+ * replica, and every operation that replica creates draws its stamp from it.
+ * Two clocks for one actor would issue duplicate stamps, which breaks the
+ * uniqueness the rest of the CRDT is built on — so the constructor takes the
+ * actor id rather than minting one, and the document owns the only instance.
+ */
+export class Clock {
+	#wall: number;
+	#counter: number;
+	readonly #now: () =&gt; number;
+
+	readonly actor: ActorId;
+
+	/**
+	 * Fields and assignments written out, rather than TypeScript's parameter
+	 * properties.
+	 *
+	 * `constructor(readonly actor: ActorId)` is the same thing in four fewer
+	 * characters, and it is one of the three constructs — with `enum` and
+	 * namespaces — that TypeScript has to *emit* code for rather than erase. Node
+	 * strips types without a compiler, so a file using them cannot be run with
+	 * `node file.ts`, and `scripts/seed.ts` does exactly that with this module in
+	 * its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at
+	 * runtime, from a file that type-checks perfectly.
+	 */
+	constructor(
+		actor: ActorId,
+		now: () =&gt; number = Date.now,
+		/** Resume from a persisted state so a reload cannot go backwards. */
+		resume?: Hlc
+	) {
+		this.actor = actor;
+		this.#now = now;
+		this.#wall = resume?.wall ?? 0;
+		this.#counter = resume?.counter ?? 0;
+	}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>That comment about parameter properties is not padding. <code>constructor(readonly actor: ActorId)</code> is one of three TypeScript constructs — with <code>enum</code> and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with <code>node file.ts</code>, and <code>scripts/seed.ts</code> does exactly that with this module in its import graph. The failure is <code>ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX</code>, at runtime, from a file that type-checks perfectly.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Issue a stamp for a locally generated operation.
+ *
+ * Physical time only ever *raises* the clock. If the machine's clock has gone
+ * backwards — NTP correcting a drift, a user changing the date, a VM
+ * migrating — `wall` stays where it was and `counter` takes the strain. The
+ * document keeps a consistent order; it simply records a few operations as
+ * having happened in the same millisecond, which is a far smaller lie than
+ * letting time run backwards inside a version history.
+ */
+tick(): Stamp {
+	const physical = this.#now();
+
+	if (physical &gt; this.#wall) {
+		this.#wall = physical;
+		this.#counter = 0;
+	} else if (this.#counter &gt;= MAX_COUNTER) {
+		// 100,000 operations inside one millisecond means something is looping,
+		// but borrowing a millisecond is still the correct answer: the order
+		// stays right and the timestamp is off by less than a frame.
+		this.#wall += 1;
+		this.#counter = 0;
+	} else {
+		this.#counter += 1;
+	}
+
+	return encode(this.peek());
+}</code></pre>
+</figure>
+<p>Read the three branches as a policy: physical time only ever *raises* the clock. If the machine’s clock goes backwards — NTP correcting, a user changing the date, a VM migrating — <code>wall</code> stays and <code>counter</code> absorbs it. The document keeps a consistent order and simply records a few operations as having happened in the same millisecond, which is a much smaller lie than letting time run backwards inside a version history.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/**
+	 * Fold a stamp into this clock — one received from the network, or one read
+	 * back out of our own persisted state.
+	 *
+	 * This is the step that buys causality. After observing your operation, every
+	 * stamp I issue is greater than yours, so an edit I made *because* I saw
+	 * yours can never sort before it — regardless of what our two machines think
+	 * the time is.
+	 *
+	 * It never refuses. See the note on drift above: refusing here protects
+	 * nothing and breaks the replica with the slow clock rather than the one with
+	 * the wrong one.
+	 */
+	observe(stamp: Stamp): void {
+		const remote = decode(stamp);
+		const physical = this.#now();
+		const wall = Math.max(this.#wall, remote.wall, physical);
+
+		if (wall === this.#wall &amp;&amp; wall === remote.wall) {
+			this.#counter = Math.max(this.#counter, remote.counter) + 1;
+		} else if (wall === this.#wall) {
+			this.#counter += 1;
+		} else if (wall === remote.wall) {
+			this.#counter = remote.counter + 1;
+		} else {
+			// Physical time overtook both; nothing to disambiguate.
+			this.#counter = 0;
+		}
+
+		this.#wall = wall;
+
+		// The counter can overflow through `remote.counter + 1`; normalise rather
+		// than letting `encode` throw at the next `tick()`, three frames later and
+		// nowhere near the cause.
+		if (this.#counter &gt; MAX_COUNTER) {
+			this.#wall += 1;
+			this.#counter = 0;
+		}
+	}
+}</code></pre>
+</figure>
+<p><code>observe</code> is the step that buys causality, and it is worth being slow about. After I have observed your stamp, <strong>every stamp I issue is greater than yours</strong>. So an edit I made *because* I saw yours can never sort before it, no matter what our two machines believe the time is. That single property is what makes &quot;Mo’s arrow sorts before Ada’s box&quot; impossible.</p>
+<h3 id="drift">The drift guard, and why it moved</h3>
+<p>One replica with a badly wrong clock can poison every other one. An HLC only moves forward, so a single stamp claiming to be from 2039 drags everybody’s <code>wall</code> there permanently. Version history then reads as 2039 and no amount of correct local time undoes it.</p>
+<p>The first version of this file guarded against that inside <code>observe()</code>, which threw on a stamp too far ahead. It was the wrong tier, for two reasons that are worth internalising.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * CLOCK DRIFT, AND WHERE THE GUARD BELONGS
+ * ----------------------------------------
+ * A replica with a badly wrong clock is not hypothetical: a laptop resuming from
+ * sleep before NTP catches up is minutes ahead, and a virtual machine can be
+ * years ahead. One such stamp drags every replica's `wall` to that value
+ * permanently — an HLC only moves forward — so version history reads as 2039 and
+ * no amount of correct local time undoes it.
+ *
+ * The first version of this file guarded against that inside `observe()`, which
+ * threw on a stamp too far ahead. It was the wrong tier, for two reasons.
+ *
+ *   - It protects nothing. By the time a client sees the stamp, the operation is
+ *     already in the shared log and on everybody's screen. Refusing to advance
+ *     past it does not un-publish it; it only leaves this replica free to reissue
+ *     a stamp it has already used.
+ *   - It breaks the innocent party. The comparison is &quot;remote ahead of me&quot;, so a
+ *     user whose own clock is *slow* rejects every operation from everyone. Their
+ *     board silently stops updating, and the machine at fault is not theirs.
+ *
+ * So the client never refuses: `observe()` always advances. The check lives at
+ * the one boundary where poison can still be kept out of the log — the server's
+ * ingestion path, whose clock is the one everybody has implicitly agreed to
+ * trust. `isPlausible()` is that check, and `sync/ingest.ts` is its only caller.
+ *
+ * Five minutes is generous for real skew and far tighter than the failure.
+ */
+export const MAX_DRIFT_MS = 5 * 60 * 1000;
+
+/** How far ahead of `now` a stamp claims to be. Negative means it is in the past. */
+export function driftMs(stamp: Stamp, now: number): number {
+	return wallOf(stamp) - now;
+}
+
+/** Is this stamp close enough to the given time to be worth accepting? */
+export function isPlausible(stamp: Stamp, now: number = Date.now()): boolean {
+	return driftMs(stamp, now) &lt;= MAX_DRIFT_MS;
+}
+
+/** Thrown by the server when an incoming stamp is too far in the future to believe. */
+export class ClockDriftError extends Error {
+	readonly stamp: Stamp;
+	readonly now: number;
+
+	constructor(stamp: Stamp, now: number) {
+		super(
+			`Operation is ${Math.round(driftMs(stamp, now) / 1000)}s ahead of server time; ` +
+				`refusing it (limit ${MAX_DRIFT_MS / 1000}s). Check the sending machine's clock.`
+		);
+		this.name = 'ClockDriftError';
+		this.stamp = stamp;
+		this.now = now;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The general shape of that mistake</h4>
+	<p>A validation that runs *after* the damage is done protects nothing, and a validation phrased as &quot;is the other side ahead of me?&quot; punishes whoever is behind. Both are easy to write and hard to see, because the code reads defensively and the tests pass. The question to ask of any guard is: <strong>at this point, can the bad thing still be prevented, and is the party I am refusing the party at fault?</strong> Here the answer was no and no, and the check belonged at the server’s ingestion path — the one boundary where poison can still be kept out of the log, and whose clock everybody has implicitly agreed to trust.</p>
+</aside>
+<h3 id="testing-a-clock">Testing a clock</h3>
+<p>A clock test that calls <code>Date.now()</code> passes on a fast machine and fails on a slow one, and cannot express drift at all. So time is injected.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/testing.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A clock whose &quot;physical time&quot; is a counter you control.
+ *
+ * Real time in a test means a suite that passes on a fast machine and fails on a
+ * slow one, and a drift test that cannot be written at all.
+ */
+export function fakeClock(who: string, start = 1_000_000_000_000) {
+	let now = start;
+	const clock = new Clock(actor(who), () =&gt; now);
+	return {
+		clock,
+		advance(ms: number) {
+			now += ms;
+		},
+		set(ms: number) {
+			now = ms;
+		},
+		get now() {
+			return now;
+		}
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/clock.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('observing', () =&gt; {
+	it('makes a reply sort after the message it replies to', () =&gt; {
+		// The causality property, stated the way it actually bites.
+		const mine = fakeClock('a', 1_000); // my laptop is two minutes slow
+		const yours = fakeClock('b', 121_000);
+
+		const yourEdit = yours.clock.tick();
+		mine.clock.observe(yourEdit);
+		const myReply = mine.clock.tick();
+
+		expect(compare(yourEdit, myReply)).toBeLessThan(0);
+	});
+
+	it('breaks a dead heat with the actor id', () =&gt; {
+		const a = new Clock(actor('a'), () =&gt; 1_000);
+		const b = new Clock(actor('b'), () =&gt; 1_000);
+		expect(compare(a.tick(), b.tick())).toBeLessThan(0);
+	});
+
+	it('never refuses, however wrong the other machine’s clock is', () =&gt; {
+		/*
+		 * The client's job is to stay consistent, not to police. By the time a stamp
+		 * reaches here the operation is already in the shared log; refusing to
+		 * advance would only let this replica reissue a stamp it has already used.
+		 */
+		const harness = fakeClock('a', 1_000_000);
+		const fromTheFuture = stamp(1_000_000 + MAX_DRIFT_MS * 100, 0, 'b');
+
+		expect(() =&gt; harness.clock.observe(fromTheFuture)).not.toThrow();
+		expect(harness.clock.peek().wall).toBe(1_000_000 + MAX_DRIFT_MS * 100);
+	});
+
+	it('keeps working when it is our own clock that is slow', () =&gt; {
+		/*
+		 * The bug the first design had. The comparison is &quot;remote ahead of me&quot;, so a
+		 * user whose machine is behind rejects everybody — and the machine at fault
+		 * is not theirs. Their board just silently stops updating.
+		 */
+		const behind = fakeClock('a', 1_000);
+		const fromCorrectClock = stamp(1_000 + MAX_DRIFT_MS * 10, 0, 'b');
+
+		behind.clock.observe(fromCorrectClock);
+		expect(compare(fromCorrectClock, behind.clock.tick())).toBeLessThan(0);
+	});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm vitest run src/lib/crdt/clock.spec.ts
+
+ ✓ src/lib/crdt/clock.spec.ts (18 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why a stamp is a fixed-width string rather than an object.</li><li>You can say what <code>observe</code> buys that <code>tick</code> alone does not.</li><li>You can state the rule for where a guard belongs: where the bad thing can still be prevented, and where the party being refused is the party at fault.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-map.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The map of the project</span>
+			</a>
+			<a class="pager__link pager__link--next" href="version-vectors.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">What have I already seen?</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

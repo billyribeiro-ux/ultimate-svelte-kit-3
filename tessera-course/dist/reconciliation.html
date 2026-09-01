@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keeping the projection honest — Building Tessera</title>
+<meta name="description" content="Model to view: writing the smallest possible amount into `$state`, and the ordering detail that stops a half-built node reaching a component.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">15 / 24</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 62.5%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html" aria-current="page"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 15</p>
+			<h1>Keeping the projection honest</h1>
+			<p class="lede">Model to view: writing the smallest possible amount into <code>$state</code>, and the ordering detail that stops a half-built node reaching a component.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Update one number in the interface when one number changes in the model.</p></aside>
+			<p>The model changed. Now the projection has to match it, and the goal is to write as little as possible — because every <code>$state</code> write schedules work, and a drag produces a hundred and twenty of them a second.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Create, delete or fully refresh a node's view to match the model. */
+#reconcileNode(id: NodeId): void {
+	const present = this.#nodes.has(id);
+	const view = this.nodes.get(id);
+
+	if (!present) {
+		if (view) this.nodes.delete(id);
+		return;
+	}
+
+	const target = view ?? new NodeView(id);
+	const fields = this.#nodeFields.get(id);
+
+	if (fields) {
+		for (const field of fields.keys()) this.#reconcileNodeField(id, field, target);
+	}
+	target.label = this.#labels.get(id)?.text() ?? '';
+
+	// Set last: a component that reacts to the map gaining a key should find a
+	// fully populated view, not one whose fields arrive a microtask later.
+	if (!view) this.nodes.set(id, target);
+}</code></pre>
+</figure>
+<p>Three cases in <code>#reconcileNode</code>, and they are the three things that can happen to an element: it is gone (delete the view), it is new (build one), or it exists (refresh it).</p>
+<aside class="callout callout--warn"><p>Look at the last two lines. The view is populated <strong>before</strong> it is put into the map. A component reacting to <code>nodes</code> gaining a key must find a fully populated view — not one whose fields arrive a microtask later. Put the <code>set</code> first and you get a frame where every new node renders at the origin with default size, which reads as a flicker and is very hard to attribute.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#reconcileNodeField(id: NodeId, field: NodeField, into?: NodeView): void {
+	const view = into ?? this.nodes.get(id);
+	if (!view) return; // A field write for a node that is not present. Kept in the model.
+
+	const winner = this.#nodeFields.get(id)?.get(field);
+	if (!winner) return;
+
+	switch (field) {
+		case 'kind':
+			view.kind = winner.value as NodeKind;
+			break;
+		case 'x':
+			view.x = winner.value as number;
+			break;
+		case 'y':
+			view.y = winner.value as number;
+			break;
+		case 'w':
+			view.w = winner.value as number;
+			break;
+		case 'h':
+			view.h = winner.value as number;
+			break;
+		case 'fill':
+			view.fill = winner.value as Fill;
+			break;
+		case 'order':
+			view.order = winner.value as OrderKey;
+			break;
+		case 'parent':
+			view.parent = winner.value as NodeId | null;
+			break;
+	}</code></pre>
+</figure>
+<p>A long switch that could have been <code>view[field] = winner.value</code>. It is written out because the one-liner needs a cast to <code>any</code> to compile — the union of field names does not distribute over the view’s property types on its own — and an <code>any</code> in the one function that writes every field of every element is exactly the wrong place to put one. Twenty tedious lines, checked by the compiler.</p>
+<p>Also note the early return: <code>if (!view) return;</code> — *a field write for a node that is not present*. That is not an error. An operation can legitimately arrive for a node whose <code>add</code> has not shown up yet, or for one that has been deleted. The write goes into the model and the projection simply has nothing to update. When the add arrives, <code>#reconcileNode</code> reads every field it finds and the node appears complete.</p>
+<h3 id="batching">Applying a batch</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Apply many, reconciling once per element rather than once per operation. */
+applyAll(operations: Iterable&lt;Operation&gt;): ApplyResult {
+	let changed = false;
+	for (const operation of operations) {
+		changed = this.apply(operation).changed || changed;
+	}
+	return { changed };
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Svelte 5 batches signal writes within a microtask, so a catch-up of thirty thousand operations produces one render rather than thirty thousand — without any explicit batching in this code. It is worth knowing that is *why* this loop is allowed to be naive, rather than assuming it is fine.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>One field changing in the model writes exactly one signal.</li><li>A new view is fully populated before it enters the reactive map.</li><li>You can explain why a field write for an absent element is not an error.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-reactive-document.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The model and the projection</span>
+			</a>
+			<a class="pager__link pager__link--next" href="snapshots-and-compaction.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Snapshots, and what may never be forgotten</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
