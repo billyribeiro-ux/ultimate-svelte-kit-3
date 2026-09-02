@@ -62,7 +62,23 @@ import { DEFAULT_RANGE, resolve } from '#lib/time/range.ts';
  * pastes straight into a script. Sharing the vocabulary is most of what makes an
  * API feel like the same product.
  */
-const RequestSchema = v.object({
+/**
+ * `_`-prefixed, so it can be tested from the file next door.
+ *
+ * SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP
+ * methods plus `prerender`, `config` and a few others — with one deliberate
+ * escape hatch: `if (key[0] === '_' … ) continue`. The underscore is the
+ * convention for "this is not a route contract, it is an implementation detail
+ * somebody needs to reach".
+ *
+ * What it is reached *by* is the new part. `+server.test.ts` sitting beside this
+ * file used to be a build error: every `+`-prefixed file in `src/routes` was a
+ * route, so a test named after the thing it tests became a route that exported
+ * `describe`. SvelteKit 3.0.0-next.19 excludes `+` files containing `.test.`,
+ * `.spec.` or `.stories.` from routing, which is what lets the test live where
+ * the reader is already looking.
+ */
+export const _RequestSchema = v.object({
 	q: v.pipe(v.string(), v.minLength(1, 'Send a query in `q`.'), v.maxLength(4_000)),
 	range: v.optional(v.pipe(v.string(), v.maxLength(64)), DEFAULT_RANGE),
 	/**
@@ -109,7 +125,7 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 		return json({ message: 'Body is not valid JSON.' }, { status: 400 });
 	}
 
-	const parsed = v.safeParse(RequestSchema, body);
+	const parsed = v.safeParse(_RequestSchema, body);
 	if (!parsed.success) {
 		return json(
 			{

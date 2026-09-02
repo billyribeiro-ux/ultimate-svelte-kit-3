@@ -1,13 +1,15 @@
 <script lang="ts">
 	import type { SyncClient } from '#lib/sync/client.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 
 	interface Props {
 		sync: SyncClient;
-		t: Messages;
 	}
 
-	let { sync, t }: Props = $props();
+	let { sync }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/**
 	 * Say what is true, not what is reassuring.

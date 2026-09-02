@@ -4,7 +4,7 @@
 	import { isTyping, panZoom, pointOf, viewportSize } from '#lib/canvas/gestures.ts';
 	import type { BoardEditor } from '#lib/canvas/editor.svelte.ts';
 	import type { SyncClient } from '#lib/sync/client.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 	import NodeShape from './NodeShape.svelte';
 	import EdgeLine from './EdgeLine.svelte';
 	import PresenceLayer from './PresenceLayer.svelte';
@@ -12,10 +12,13 @@
 	interface Props {
 		editor: BoardEditor;
 		sync: SyncClient;
-		t: Messages;
 	}
 
-	let { editor, sync, t }: Props = $props();
+	let { editor, sync }: Props = $props();
+
+	// The catalogue comes from the workspace above, not from a prop nobody chose.
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/*
 	 * Read once, deliberately.

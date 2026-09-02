@@ -307,12 +307,12 @@ pnpm install`
 			},
 
 			{ type: 'h3', id: 'two-test-projects', text: 'Two test projects, and why' },
-			code('vite.config.ts', 113, 120),
+			code('vite.config.ts', 196, 203),
 			{
 				type: 'p',
 				text: 'A real Chromium for component tests, not a DOM emulator, and the reason is specific: the virtualizer in chapter 28 measures rows with `getBoundingClientRect()`. jsdom has no layout, so every element is 0×0 — a virtualizer under jsdom renders zero rows and passes every assertion you thought to write.'
 			},
-			code('vite.config.ts', 122, 145, { partial: true }),
+			code('vite.config.ts', 205, 228, { partial: true }),
 			{
 				type: 'p',
 				text: 'And the server project runs one file at a time. SQLite allows exactly one writer; two specs that both seed rows meet `SQLITE_BUSY` in parallel, and the symptom is a dozen unrelated assertions failing at random in whichever file lost the race.'

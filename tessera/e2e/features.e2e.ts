@@ -90,4 +90,27 @@ test.describe('the embeddable viewer', () => {
 		await expect(svg).toBeVisible({ timeout: 20_000 });
 		await expect(page.locator('tessera-board text', { hasText: 'API gateway' })).toBeVisible();
 	});
+
+	test('reads its strings from the catalogue with no provider above it', async ({ page }) => {
+		await signIn(page, OWNER);
+		await page.goto(`/embed/${BOARD}`);
+
+		/*
+		 * The `has` half of `createContext`.
+		 *
+		 * A custom element is its own Svelte root: nothing of ours is above it, so
+		 * the strict accessor would throw during initialisation and the element
+		 * would render nothing at all. `useMessages()` asks whether a catalogue was
+		 * provided before reading one, and falls back to English when it was not.
+		 *
+		 * Asserting the `aria-label` is what makes this a test of the accessor
+		 * rather than of the markup: it is built by `t.embed.label(board)`, so it
+		 * can only be right if the catalogue was reached.
+		 */
+		await expect(page.locator('tessera-board svg')).toHaveAttribute('aria-label', `Board ${BOARD}`);
+
+		// And the element mounted at all — which it would not have done if reading
+		// context had thrown.
+		await expect(page.locator('tessera-board svg')).toBeVisible();
+	});
 });

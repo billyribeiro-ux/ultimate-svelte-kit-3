@@ -92,6 +92,89 @@ export default defineConfig(({ mode }) => {
 					// A broken internal link fails the build instead of shipping a 404.
 					handleHttpError: 'fail',
 					handleMissingId: 'fail'
+				},
+
+				/*
+				 * CONTENT SECURITY POLICY
+				 * =======================
+				 *
+				 * The last line of defence for a product whose pages are made of other
+				 * people's logs. Everything upstream — the projection in `storage.ts`,
+				 * the escaping Svelte does, the fact that log bodies are rendered as
+				 * text — already stops a log line from becoming a script. A CSP is what
+				 * stands there when one of those is wrong.
+				 *
+				 * `mode: 'auto'`, and the reason is a bug the end-to-end test found.
+				 *
+				 * `'hash'` was the first choice, on the argument that hashes are fixed at
+				 * build time while nonces are per-response and make a page uncacheable.
+				 * That argument is sound and does not apply here, which is the sort of
+				 * thing only a test notices. This application **streams**: a page renders
+				 * its shell, and each `await` in markup resolves later by appending a
+				 * `<script>__sveltekit_….resolve(1, …)</script>` to the response body.
+				 * Those scripts are generated *after* the header has been sent, so no
+				 * hash for them can possibly be in it — and the browser blocks every one,
+				 * which means every streamed result silently never arrives.
+				 *
+				 * `'auto'` is the answer SvelteKit already has: hashes for prerendered
+				 * pages, where the whole document is known at build time, and nonces for
+				 * dynamically rendered ones, where it is not. The cacheability argument
+				 * costs nothing here, because these pages carry `Vary: Cookie` and are
+				 * per-tenant — a shared cache was never going to hold them.
+				 *
+				 * Svelte 5.57 types the hash half: `Sha256Source`, a template literal
+				 * type of `sha256-${string}` from `svelte/server`. `src/lib/security
+				 * /csp.ts` uses it so the policy's shape is checked by the compiler and a
+				 * unit test rather than by reading the header and squinting.
+				 *
+				 * DIRECTIVE BY DIRECTIVE, BECAUSE EACH ONE IS A DECISION
+				 * ------------------------------------------------------
+				 *   `default-src 'self'`   nothing loads from anywhere else by default.
+				 *   `script-src 'self'`    plus the hashes SvelteKit adds. No `unsafe-
+				 *                          inline`, which is the directive that makes the
+				 *                          whole policy decorative.
+				 *   `style-src` with `'unsafe-inline'` — and this one is a genuine
+				 *                          compromise, not an oversight. Svelte writes
+				 *                          `style="..."` attributes for the virtualizer's
+				 *                          transforms and the waterfall's bar widths,
+				 *                          recomputed per frame; hashing them is not
+				 *                          possible and a nonce does not apply to
+				 *                          attributes. The exposure is CSS injection,
+				 *                          which is real but is not script execution.
+				 *   `img-src` with `data:` for the canvas charts, which read themselves
+				 *                          back as data URLs for the "copy as image".
+				 *   `font-src` with `data:` — found by the end-to-end test rather than
+				 *                          by reasoning. Vite inlines any asset under
+				 *                          `assetsInlineLimit` (4KB), and one JetBrains
+				 *                          Mono subset is under it, so the built
+				 *                          stylesheet carries a `src:url(data:font/woff2
+				 *                          ;base64,…)`. With `font-src 'self'` the
+				 *                          browser blocks it and the monospace column of
+				 *                          every log line falls back — silently, because
+				 *                          a blocked font is a console message nobody is
+				 *                          watching in production.
+				 *   `connect-src 'self'`   the tail stream and remote functions, and
+				 *                          nothing else — so an injected script cannot
+				 *                          exfiltrate a query result to another host.
+				 *   `frame-ancestors 'none'` and `object-src 'none'`: this application is
+				 *                          never framed and has no plugins.
+				 *   `base-uri 'self'`      stops an injected `<base>` from repointing
+				 *                          every relative URL on the page.
+				 */
+				csp: {
+					mode: 'auto',
+					directives: {
+						'default-src': ['self'],
+						'script-src': ['self'],
+						'style-src': ['self', 'unsafe-inline'],
+						'img-src': ['self', 'data:'],
+						'font-src': ['self', 'data:'],
+						'connect-src': ['self'],
+						'form-action': ['self'],
+						'frame-ancestors': ['none'],
+						'object-src': ['none'],
+						'base-uri': ['self']
+					}
 				}
 			}),
 

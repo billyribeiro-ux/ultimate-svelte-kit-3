@@ -21,9 +21,20 @@
 		use:enhance={({ formElement }) => {
 			submitting = true;
 			return async ({ update }) => {
-				// `reset: false` keeps what was typed when the submission failed. The
-				// default clears the whole form, which on a failed sign-in means
-				// retyping an email address that was correct.
+				/*
+				 * `reset: false` keeps what was typed when the submission failed. The
+				 * default clears the whole form, which on a failed sign-in means
+				 * retyping an email address that was correct.
+				 *
+				 * `navigate` is deliberately left alone. SvelteKit 3.0.0-next.17 made
+				 * `update` follow the browser and navigate to the page a submission
+				 * lands on — on failure as well as success — which is a breaking change
+				 * for any form whose action is on a different route. This one posts to
+				 * `?/signIn`, the same page, so the destination is where we already
+				 * are and nothing moves. `navigate: false` here would be a line that
+				 * looks like it is preventing something and is not, which is worse than
+				 * no line at all; `e2e/auth.e2e.ts` asserts the URL instead.
+				 */
 				await update({ reset: false });
 				submitting = false;
 

@@ -7,6 +7,7 @@
 	import { connect, type SyncClient } from '#lib/sync/client.svelte.ts';
 	import { save, toPng, toSvg } from '#lib/export/index.ts';
 	import { theme } from '#lib/theme.svelte.ts';
+	import { setMessages } from '#lib/i18n/context.ts';
 	import Button from './Button.svelte';
 	import type { Locale, Messages } from '#lib/i18n/index.ts';
 	import type { Peer } from '#lib/sync/protocol.ts';
@@ -34,6 +35,21 @@
 	}
 
 	let { loaded, t, locale }: Props = $props();
+
+	/*
+	 * One provider, at the top of the board tree.
+	 *
+	 * `t` stays a prop *here* because this is the boundary: the page knows the
+	 * locale, this component turns it into something its whole subtree can read.
+	 * Below this line nothing forwards it, and nothing can forward the wrong one.
+	 *
+	 * A getter, not the catalogue. Context is set once and never again, but `t`
+	 * is a prop that changes: SvelteKit reuses this component when the URL goes
+	 * from `/boards/abc` to `/fr/boards/abc`, because that is the same route.
+	 * Storing `t` would pin whichever language happened to be first; storing
+	 * `() => t` stores something that genuinely never changes.
+	 */
+	setMessages(() => t);
 
 	/*
 	 * The camera and the history stack outlive any one connection, so they are
@@ -157,8 +173,8 @@
 
 		<div class="workspace__status">
 			{#if sync}
-				<SyncBadge {sync} {t} />
-				<Peers peers={sync.peers} {t} onfollow={follow} />
+				<SyncBadge {sync} />
+				<Peers peers={sync.peers} onfollow={follow} />
 			{/if}
 
 			<div class="workspace__export">
@@ -173,10 +189,10 @@
 	<div class="workspace__body">
 		<main class="workspace__canvas">
 			{#if editor && sync}
-				<Board {editor} {sync} {t} />
+				<Board {editor} {sync} />
 
 				<div class="workspace__toolbar">
-					<Toolbar {editor} {t} />
+					<Toolbar {editor} />
 				</div>
 			{:else}
 				<!--
@@ -205,13 +221,13 @@
 				</div>
 
 				{#if panel === 'inspector'}
-					<Inspector {editor} {t} />
+					<Inspector {editor} />
 				{:else if panel === 'outline'}
-					<Outline {editor} {t} />
+					<Outline {editor} />
 				{:else if panel === 'comments'}
-					<Comments boardId={loaded.id} {anchor} {t} />
+					<Comments boardId={loaded.id} {anchor} />
 				{:else}
-					<HistoryPanel boardId={loaded.id} {locale} {t} readOnly={loaded.readOnly} />
+					<HistoryPanel boardId={loaded.id} {locale} readOnly={loaded.readOnly} />
 				{/if}
 			</aside>
 		{/if}

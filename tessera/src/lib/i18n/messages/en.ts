@@ -104,6 +104,21 @@ export const en = {
 		skip: 'Skip to the board'
 	},
 
+	/**
+	 * The embeddable viewer.
+	 *
+	 * These three used to be English literals inside `TesseraBoard.svelte`,
+	 * outside the catalogue entirely — which is how a string stays untranslated
+	 * for two years without anybody filing it. They live here now, and the embed
+	 * reads them through the same accessor as everything else. It just happens to
+	 * be the one tree with no provider above it, which is what `has()` is for.
+	 */
+	embed: {
+		loading: 'Loading…',
+		unavailable: 'This board is not available.',
+		label: (board: string) => `Board ${board}`
+	},
+
 	errors: {
 		notFound: 'That board does not exist, or you do not have access to it.',
 		forbidden: 'You do not have permission to do that.',

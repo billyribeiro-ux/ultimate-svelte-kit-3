@@ -43,6 +43,29 @@ export function messages(locale: Locale | undefined): Messages {
  * phone. The cache is keyed by locale and never invalidated, because the set of
  * locales is fixed at build time.
  */
+/**
+ * Read, or build and remember.
+ *
+ * Svelte 5.57 added exactly this to `SvelteMap`, as `getOrInsertComputed`, and
+ * these two caches are *not* SvelteMaps on purpose: a formatter cache is not
+ * state anything should re-render for, and reading one inside a `$derived` must
+ * not make that derived depend on which languages have been formatted so far.
+ * So the shape is borrowed and the reactivity is not.
+ *
+ * It replaces a `get(…) ?? new …` followed by an unconditional `set`, which put
+ * a write on the hot path of every timestamp on the page to re-store a value
+ * that was already there. Nobody would have noticed; that is rather the point of
+ * having a name for the pattern.
+ */
+function cached<K, V>(store: Map<K, V>, key: K, build: () => V): V {
+	const existing = store.get(key);
+	if (existing !== undefined) return existing;
+
+	const built = build();
+	store.set(key, built);
+	return built;
+}
+
 const relative = new Map<Locale, Intl.RelativeTimeFormat>();
 const dates = new Map<Locale, Intl.DateTimeFormat>();
 
@@ -65,17 +88,19 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 
 	for (const [limit, divisor, unit] of UNITS) {
 		if (magnitude < limit) {
-			const formatter =
-				relative.get(locale) ?? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-			relative.set(locale, formatter);
-			return formatter.format(Math.round(elapsed / divisor), unit);
+			return cached(
+				relative,
+				locale,
+				() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+			).format(Math.round(elapsed / divisor), unit);
 		}
 	}
 
-	const formatter =
-		dates.get(locale) ?? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' });
-	dates.set(locale, formatter);
-	return formatter.format(when);
+	return cached(
+		dates,
+		locale,
+		() => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' })
+	).format(when);
 }
 
 export { DEFAULT_LOCALE, ENDONYM, HTML_LANG, LOCALES, isLocale, negotiate } from './locales.ts';

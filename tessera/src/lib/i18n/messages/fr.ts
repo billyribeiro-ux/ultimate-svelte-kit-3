@@ -97,6 +97,12 @@ export const fr = {
 		skip: 'Aller au tableau'
 	},
 
+	embed: {
+		loading: 'Chargement…',
+		unavailable: 'Ce tableau n’est pas disponible.',
+		label: (board: string) => `Tableau ${board}`
+	},
+
 	errors: {
 		notFound: 'Ce tableau n’existe pas, ou vous n’y avez pas accès.',
 		forbidden: 'Vous n’avez pas la permission de faire cela.',

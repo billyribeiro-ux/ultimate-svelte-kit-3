@@ -12,14 +12,16 @@
 	import CornersOutIcon from 'phosphor-svelte/lib/CornersOut';
 	import type { Component } from 'svelte';
 	import type { BoardEditor, Tool } from '#lib/canvas/editor.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 
 	interface Props {
 		editor: BoardEditor;
-		t: Messages;
 	}
 
-	let { editor, t }: Props = $props();
+	let { editor }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/**
 	 * The tools, as data.

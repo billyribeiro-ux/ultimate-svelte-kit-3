@@ -5,14 +5,16 @@
 	import ArrowLineDownIcon from 'phosphor-svelte/lib/ArrowLineDown';
 	import { FILLS, NODE_KINDS, type Fill, type NodeKind } from '#lib/board/index.ts';
 	import type { BoardEditor } from '#lib/canvas/editor.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 
 	interface Props {
 		editor: BoardEditor;
-		t: Messages;
 	}
 
-	let { editor, t }: Props = $props();
+	let { editor }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	const selected = $derived(editor.selectedNodes);
 	const one = $derived(selected.length === 1 ? selected[0] : null);

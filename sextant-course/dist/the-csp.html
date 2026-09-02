@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A content security policy, and the test that wrote it — Building Sextant</title>
+<meta name="description" content="The last line of defence for a product made of other people’s logs — configured, audited by code, and corrected twice by an end-to-end test.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">45 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 97.82608695652173%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html" aria-current="page"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 45</p>
+			<h1>A content security policy, and the test that wrote it</h1>
+			<p class="lede">The last line of defence for a product made of other people’s logs — configured, audited by code, and corrected twice by an end-to-end test.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Ship a policy that is still a policy after somebody has had to make an error go away.</p></aside>
+			<p>Everything upstream already stops a log line from becoming a script: the projection in chapter 24 hands out documented columns, Svelte escapes what it renders, and a log body is text in a cell. A CSP is what stands there when one of those is wrong — which is the only reason to have one, and the reason it belongs in a product whose pages are made of other people’s data.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:164-178</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">csp: {
+	mode: 'auto',
+	directives: {
+		'default-src': ['self'],
+		'script-src': ['self'],
+		'style-src': ['self', 'unsafe-inline'],
+		'img-src': ['self', 'data:'],
+		'font-src': ['self', 'data:'],
+		'connect-src': ['self'],
+		'form-action': ['self'],
+		'frame-ancestors': ['none'],
+		'object-src': ['none'],
+		'base-uri': ['self']
+	}
+}</code></pre>
+</figure>
+<p>Every directive is a decision. <code>script-src</code> with no <code>unsafe-inline</code>, because that keyword is what makes the whole policy decorative. <code>connect-src 'self'</code>, so a script that somehow does run cannot post a query result to another host. <code>object-src 'none'</code> and <code>base-uri 'self'</code> because both are ways *around* <code>script-src</code> rather than risks of their own: a plugin document runs code outside it, and an injected <code>&lt;base&gt;</code> repoints every relative URL the policy is trusting.</p>
+<aside class="callout callout--warn"><p><code>style-src</code> allows <code>'unsafe-inline'</code>, and that is a genuine compromise rather than an oversight. Svelte writes <code>style=&quot;…&quot;</code> attributes for the virtualizer’s transforms and the waterfall’s bar widths, recomputed per frame; an attribute cannot carry a nonce and cannot usefully be hashed. The exposure is CSS injection, which is real and is not script execution. Writing it down is the difference between a trade and an accident.</p></aside>
+<h3 id="the-mode"><code>hash</code> was wrong, and only a test could say so</h3>
+<p>The first version used <code>mode: 'hash'</code>, on an argument that is entirely sound: SvelteKit computes a sha256 for each inline script it emits, hashes are fixed at build time, and a nonce must be unique per response — so nonces make every page uncacheable. It was also completely wrong for this application.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec playwright test e2e/csp.e2e.ts
+
+  Error: an inline script is covered by neither the nonce nor a hash:
+         __sveltekit_1xjukmv.resolve(1, () =&gt; [[&quot;gateway&quot;,&quot;payments-a…
+
+  1 failed</code></pre>
+</figure>
+<p>This application <strong>streams</strong>. A page renders its shell, and each <code>await</code> in markup resolves later by appending a <code>&lt;script&gt;__sveltekit_….resolve(1, …)&lt;/script&gt;</code> to the response body — *after* the header has been sent. No hash for those can possibly be in it, so the browser blocks every one, and every streamed result on the page silently never arrives. There is no error a person would see; the table is simply empty.</p>
+<p><code>mode: 'auto'</code> is the answer SvelteKit already has: hashes for prerendered pages, whose whole document is known at build time, and nonces for dynamically rendered ones, where it is not. The cacheability argument costs nothing here — these pages carry <code>Vary: Cookie</code> and are per-tenant, so a shared cache was never going to hold them.</p>
+<h3 id="auditing">A policy that degrades quietly needs code to notice</h3>
+<p>A CSP does not break loudly when it stops working. Somebody adds a snippet, hits the console error, adds <code>'unsafe-inline'</code> to make it go away, and the header is still there, still long, still looks like a security control. Nothing fails. So the audit is code, the rules are named, and the messages are the words somebody would need to fix it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/security/csp.ts<span class="code__lines">:59-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The sha256 sources in a directive, typed as Svelte types them.
+ *
+ * Quoted in the header — `'sha256-abc…'` — and unquoted in `hashes.script`, so
+ * the quotes come off before the check. The predicate is what earns the return
+ * type: nothing reaches the array without the compiler agreeing it matches
+ * `sha256-${string}`.
+ */
+export function hashesIn(policy: Policy, directive = 'script-src'): Sha256Source[] {
+	return (policy.get(directive) ?? [])
+		.map((source) =&gt; source.replace(/^'|'$/g, ''))
+		.filter((source): source is Sha256Source =&gt; source.startsWith('sha256-'));
+}</code></pre>
+</figure>
+<p><code>Sha256Source</code> comes from <code>svelte/server</code>, exported in Svelte 5.57: a template literal type of `<code> </code>sha256-${string}<code> </code><code>. It is the type of the entries in a render’s </code>hashes.script<code>, which is exactly what hash-mode puts into </code>script-src<code>. Using Svelte’s own type rather than a local </code>string<code> alias means the compiler checks the narrowing rather than trusting the comment above it — </code>hashesIn<code> cannot quietly start returning </code>'unsafe-inline'`.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/security/csp.ts<span class="code__lines">:87-124</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What is wrong with this policy, in the words somebody would need to fix it.
+ *
+ * Returns problems rather than a boolean. &quot;The CSP is bad&quot; is not something a
+ * person can act on at four in the morning; &quot;script-src allows 'unsafe-inline',
+ * which lets an injected &lt;script&gt; run&quot; is.
+ *
+ * The rules are the ones that decide whether a policy does anything at all —
+ * not a general CSP linter, which would flag things this application has
+ * decided about on purpose. `style-src 'unsafe-inline'` is absent from the list
+ * for that reason: it is a deliberate trade, written down in `vite.config.ts`,
+ * and a check that fires on a documented decision is a check people learn to
+ * skip.
+ */
+export function auditPolicy(policy: Policy): string[] {
+	const problems: string[] = [];
+	const scripts = policy.get('script-src');
+
+	if (!policy.has('default-src')) {
+		problems.push('No `default-src`, so anything without its own directive is unrestricted.');
+	}
+
+	if (!scripts) {
+		problems.push(
+			'No `script-src`, so scripts fall back to `default-src` by accident rather than by decision.'
+		);
+	} else {
+		if (scripts.includes(&quot;'unsafe-inline'&quot;)) {
+			problems.push(&quot;`script-src` allows 'unsafe-inline', which lets an injected &lt;script&gt; run.&quot;);
+		}
+		if (scripts.includes(&quot;'unsafe-eval'&quot;)) {
+			problems.push(
+				&quot;`script-src` allows 'unsafe-eval', which lets an injected string become code.&quot;
+			);
+		}
+		if (scripts.includes('*')) {
+			problems.push('`script-src` allows any host, so a script can be loaded from anywhere.');
+		}</code></pre>
+</figure>
+<p>Problems, not a boolean. &quot;The CSP is bad&quot; is not something anybody can act on at four in the morning; &quot;<code>script-src</code> allows <code>'unsafe-inline'</code>, which lets an injected <code>&lt;script&gt;</code> run&quot; is. And <code>style-src</code> is deliberately absent from the rules, because a check that fires on a decision somebody already made and documented is a check people learn to skip.</p>
+<h3 id="proving-it">Two tests, because the harness is inside the picture</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/csp.e2e.ts<span class="code__lines">:54-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('every inline script the server emits is one the policy allows', async ({ request }) =&gt; {
+	/*
+	 * The check a browser cannot do cleanly.
+	 *
+	 * Playwright injects its own inline scripts for tracing and screenshots, and a
+	 * policy strict enough to be worth having blocks those too — so watching the
+	 * console for `script-src` violations reports the harness, every time, and
+	 * says nothing about the application.
+	 *
+	 * Fetching the HTML and checking what is in it has no harness in the way.
+	 * Every inline `&lt;script&gt;` must be covered, or the page is broken for real
+	 * people the moment it ships. Covered means one of two things, and both are
+	 * checked because `mode: 'auto'` can emit either: the script carries the
+	 * response's nonce, or its sha256 is listed in `script-src`.
+	 *
+	 * This is the test that found the bug. Under `mode: 'hash'` the shell's
+	 * bootstrap matched and every streamed `resolve(…)` script did not — which is
+	 * every result on the page, arriving nowhere, with no error a user could see.
+	 */
+	const response = await request.get('/demo/explore');
+	const html = await response.text();
+	const policy = parsePolicy(response.headers()['content-security-policy']!);
+	const allowed = new Set&lt;string&gt;(hashesIn(policy));</code></pre>
+</figure>
+<p>Playwright injects its own inline scripts for tracing and screenshots, and a policy strict enough to be worth having blocks those too — so watching the console for <code>script-src</code> violations reports the harness, every time, and says nothing about the application. The first version of this test did exactly that, and reported two violations before anything on the page had loaded.</p>
+<p>Fetching the HTML and checking it has no harness in the way. Every inline <code>&lt;script&gt;</code> must be covered — carrying the response’s nonce, or listed as a hash — and that is the check that found the streaming bug. The browser half is still worth having for everything that is not a script, and that half found the second bug.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>&quot;Loading the font 'data:font/woff2;base64,d09GMgABAAAAAAfsABQ…'
+ violates the following Content Security Policy directive:
+ \&quot;font-src 'self'\&quot;. The action has been blocked.&quot;</code></pre>
+</figure>
+<p>Vite inlines any asset under <code>assetsInlineLimit</code>, which is four kilobytes, and one JetBrains Mono subset is under it — so the built stylesheet carries a <code>src:url(data:font/woff2;base64,…)</code> that <code>font-src 'self'</code> refuses. In production that is a monospace column falling back to a system font, silently, because a blocked font is a console message nobody is watching. Reading the policy would never have found it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every page carries a policy, and <code>auditPolicy</code> returns nothing on it.</li><li>A signed-in page gets a nonce; switching to <code>mode: 'hash'</code> fails a test rather than a user.</li><li>Loading the application under the policy produces no violations at all.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-seed.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The seed, and why the data tells a story</span>
+			</a>
+			<a class="pager__link pager__link--next" href="verifying-it.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Verifying it, and the six bugs the tests found</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

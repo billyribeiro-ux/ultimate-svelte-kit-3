@@ -493,7 +493,7 @@ prerender: {
 			},
 			{
 				type: 'p',
-				text: '`dynamicCompileOptions` is the seam that lets exactly one component in the codebase be compiled as a custom element. We will come back to it in chapter 40; note for now that it is called per file **and per environment**, so a compile option can be scoped to one folder and to the browser, rather than applied to the whole application everywhere.'
+				text: '`dynamicCompileOptions` is the seam that lets exactly one component in the codebase be compiled as a custom element. We will come back to it in chapter 39; note for now that it is called per file **and per environment**, so a compile option can be scoped to one folder and to the browser, rather than applied to the whole application everywhere.'
 			},
 
 			{ type: 'h3', id: 'strictness', text: 'TypeScript, on hard mode' },

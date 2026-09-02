@@ -196,6 +196,84 @@ export function negotiate(header: string | null): Locale {
 }</code></pre>
 </figure>
 <p>Quality values honoured, a bare tag matching a regional one so <code>fr-CA</code> finds <code>fr</code>, and anything unrecognised falling through to the default rather than erroring. A visitor with an exotic locale should get the app in English, not a 406.</p>
+<h3 id="context"><code>createContext</code>, and the third function it returns</h3>
+<p><code>t</code> was a prop. It was declared on eight components and written out at seventeen call sites, and every one of them said the same thing: *whatever my parent has*. A prop that is only ever forwarded is not a prop — it is a global with extra steps and a rename that touches eight files.</p>
+<p>Svelte 5.57 added <code>createContext</code>, and it is not sugar for <code>getContext</code>. <code>getContext('messages')</code> is a string key and an <code>any</code>: two components can disagree about what is under it, a typo is a runtime <code>undefined</code>, and the type has to be re-asserted at every call. <code>createContext</code> hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/context.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { createContext } from 'svelte';
+import { en, type Messages } from './messages/en.ts';
+
+const [read, provide, has] = createContext&lt;() =&gt; Messages&gt;();
+
+/**
+ * Provide the catalogue to everything below. Called once, in `Workspace.svelte`.
+ *
+ * Takes a getter rather than a value — see the note above. Must run during
+ * component initialisation, the same rule as `setContext`, because it *is*
+ * `setContext` with the key and the type already decided.
+ */
+export function setMessages(catalogue: () =&gt; Messages): void {
+	provide(catalogue);
+}
+
+/**
+ * The catalogue getter, for a component that is only ever inside the workspace.
+ * Throws during initialisation if no ancestor provided one, which is the point.
+ *
+ *     const catalogue = requireMessages();
+ *     const t = $derived(catalogue());
+ */
+export const requireMessages = read;
+
+/**
+ * The catalogue getter, or the default one.
+ *
+ * The fallback is not laziness. Two trees render translated strings: the
+ * application, which always provides, and the embedded custom element, which
+ * cannot. Throwing is correct for the first and wrong for the second, and
+ * `has()` is what tells them apart — at initialisation, before anything has a
+ * chance to throw.
+ *
+ * `en` directly rather than `messages(DEFAULT_LOCALE)`: importing the barrel
+ * would pull French and Japanese into the embed bundle, and the embed's whole
+ * argument for existing is that it is small.
+ */
+export function useMessages(): () =&gt; Messages {
+	return has() ? read() : () =&gt; en;
+}
+
+/** Whether an ancestor provided a catalogue. Exported so tests can assert it. */
+export const hasMessages = has;</code></pre>
+</figure>
+<p>Three functions, and the third is the new one. <code>read()</code> returns the value <strong>or throws</strong> when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent <code>undefined</code> surfaces as <code>Cannot read properties of undefined</code> three frames later in a component that is not the problem. <code>provide(value)</code> sets it. <code>has()</code> answers *without* throwing, which is the only way to ask whether you are inside a provider at all.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the context value is a function</h4>
+	<p>Context is set once, at initialisation, and never again — but the catalogue is <code>$derived(messages(data.locale))</code>, and SvelteKit <strong>reuses</strong> a component across navigations that match the same route. Going from <code>/boards/abc</code> to <code>/fr/boards/abc</code> updates the prop in place on the component that is already mounted. Storing the catalogue would pin English forever; storing <code>() =&gt; t</code> stores something that genuinely never changes, and consumers wrap the call in <code>$derived</code>. <code>svelte-check</code> says so out loud if you get it wrong — &quot;This reference only captures the initial value of <code>t</code>&quot; — and it was right.</p>
+</aside>
+<h3 id="has">Where <code>has</code> earns its place</h3>
+<p>The embeddable viewer. <code>TesseraBoard.svelte</code> is a custom element: its own Svelte root, mounted by a page we do not control, with no ancestor of ours above it. It had three English literals in its markup — a loading line, a failure line and an <code>aria-label</code> — sitting outside the catalogue entirely, which is how a string stays untranslated for two years without anybody filing it.</p>
+<p>The strict accessor cannot be used there: it throws during initialisation, and a custom element whose setup throws never defines itself at all. <code>useMessages()</code> asks <code>has()</code> first and falls back to the English catalogue — imported directly rather than through the barrel, because pulling French and Japanese into the embed bundle would undo the reason the embed exists.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # swap useMessages() for requireMessages() in the custom element
+$ pnpm exec playwright test e2e/features.e2e.ts -g &quot;catalogue with no provider&quot;
+
+  Error: expect(locator).toHaveAttribute(expected) failed
+  Error: element(s) not found          ← it never mounted at all
+
+  1 failed</code></pre>
+</figure>
+<aside class="callout callout--note"><p>That is the whole argument for <code>has</code> in one command. Without it the element does not render a fallback — it does not render.</p></aside>
 <h3 id="formatters">The <code>Intl</code> cache</h3>
 
 <figure class="code">
@@ -204,13 +282,28 @@ export function negotiate(header: string | null): Locale {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Locale-aware formatters, built once per language.
+ * Read, or build and remember.
  *
- * `Intl.DateTimeFormat` is expensive to construct and cheap to reuse, and a
- * board list rebuilding one per row per render is a measurable cost on a slow
- * phone. The cache is keyed by locale and never invalidated, because the set of
- * locales is fixed at build time.
+ * Svelte 5.57 added exactly this to `SvelteMap`, as `getOrInsertComputed`, and
+ * these two caches are *not* SvelteMaps on purpose: a formatter cache is not
+ * state anything should re-render for, and reading one inside a `$derived` must
+ * not make that derived depend on which languages have been formatted so far.
+ * So the shape is borrowed and the reactivity is not.
+ *
+ * It replaces a `get(…) ?? new …` followed by an unconditional `set`, which put
+ * a write on the hot path of every timestamp on the page to re-store a value
+ * that was already there. Nobody would have noticed; that is rather the point of
+ * having a name for the pattern.
  */
+function cached&lt;K, V&gt;(store: Map&lt;K, V&gt;, key: K, build: () =&gt; V): V {
+	const existing = store.get(key);
+	if (existing !== undefined) return existing;
+
+	const built = build();
+	store.set(key, built);
+	return built;
+}
+
 const relative = new Map&lt;Locale, Intl.RelativeTimeFormat&gt;();
 const dates = new Map&lt;Locale, Intl.DateTimeFormat&gt;();
 
@@ -233,20 +326,27 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 
 	for (const [limit, divisor, unit] of UNITS) {
 		if (magnitude &lt; limit) {
-			const formatter =
-				relative.get(locale) ?? new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-			relative.set(locale, formatter);
-			return formatter.format(Math.round(elapsed / divisor), unit);
+			return cached(
+				relative,
+				locale,
+				() =&gt; new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+			).format(Math.round(elapsed / divisor), unit);
 		}
 	}
 
-	const formatter =
-		dates.get(locale) ?? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' });
-	dates.set(locale, formatter);
-	return formatter.format(when);
+	return cached(
+		dates,
+		locale,
+		() =&gt; new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' })
+	).format(when);
 }</code></pre>
 </figure>
 <p><code>Intl.DateTimeFormat</code> is expensive to construct and cheap to reuse, and a board list rebuilding one per row per render is a measurable cost on a slow phone. The cache is keyed by locale and never invalidated, because the set of locales is fixed at build time.</p>
+
+<aside class="callout callout--why">
+	<h4><code>getOrInsertComputed</code>, borrowed rather than called</h4>
+	<p>Svelte 5.57 added exactly this shape to <code>SvelteMap</code>: <code>getOrInsertComputed(key, build)</code> reads, or builds and remembers. These two caches are deliberately <strong>not</strong> <code>SvelteMap</code>s, so <code>cached</code> is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a <code>$derived</code> must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a <code>get(…) ?? new …</code> followed by an *unconditional* <code>set</code>, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.</p>
+</aside>
 <p>And the cut-off is a product decision worth copying: anything older than a week becomes an absolute date, because &quot;47 weeks ago&quot; is a number people have to convert and &quot;12 October&quot; is one they can read.</p>
 
 <aside class="callout callout--check">

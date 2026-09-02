@@ -44,6 +44,19 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
+	/*
+	 * `useMessages`, not `requireMessages`.
+	 *
+	 * This component is a custom element: its own Svelte root, mounted by a page
+	 * we do not control, with no ancestor of ours above it. The strict accessor
+	 * throws when nothing has provided a catalogue, which is correct everywhere
+	 * else in the application and fatal here. `useMessages` asks first — that is
+	 * the `has` function `createContext` returns — and falls back to English.
+	 *
+	 * The alternative was what this file used to do: three English literals in
+	 * the markup, outside the catalogue, invisible to whoever adds a language.
+	 */
+	import { useMessages } from '#lib/i18n/context.ts';
 	import { bounds, roundedPath, route } from '#lib/board/index.ts';
 	import type { BoardSnapshot, NodeFields } from '#lib/board/index.ts';
 
@@ -149,15 +162,18 @@
 			});
 	});
 
+	const catalogue = useMessages();
+	const t = $derived(catalogue());
+
 	/** The viewBox, so the whole diagram fits whatever box the host gives it. */
 	const frame = $derived(bounds(nodes) ?? { x: 0, y: 0, w: 100, h: 100 });
 	const view = $derived(`${frame.x - 24} ${frame.y - 24} ${frame.w + 48} ${frame.h + 48}`);
 </script>
 
 {#if failed}
-	<p class="message">This board is not available.</p>
+	<p class="message">{t.embed.unavailable}</p>
 {:else if snapshot}
-	<svg viewBox={view} style="height: {height}px" role="img" aria-label="Board {board}">
+	<svg viewBox={view} style="height: {height}px" role="img" aria-label={t.embed.label(board)}>
 		{#each edges as edge (edge.id)}
 			<path d={edge.d} class="edge" />
 		{/each}
@@ -172,7 +188,7 @@
 		{/each}
 	</svg>
 {:else}
-	<p class="message">Loading…</p>
+	<p class="message">{t.embed.loading}</p>
 {/if}
 
 <style>

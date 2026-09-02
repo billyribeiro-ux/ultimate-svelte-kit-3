@@ -1,5 +1,5 @@
 /**
- * PART 7 — The rest of the product, and proving it (chapters 42–45)
+ * PART 7 — The rest of the product, and proving it (chapters 42–46)
  *
  * Alerts end to end, the settings nobody thinks about until they matter, a seed
  * that tells a story, and the verification pass — which is where six real bugs
@@ -207,10 +207,104 @@ write status AND outbox row in one transaction; a worker delivers
 	},
 
 	{
+		slug: 'the-csp',
+		title: 'A content security policy, and the test that wrote it',
+		summary:
+			'The last line of defence for a product made of other people’s logs — configured, audited by code, and corrected twice by an end-to-end test.',
+		goal: 'Ship a policy that is still a policy after somebody has had to make an error go away.',
+		blocks: [
+			{
+				type: 'p',
+				text: 'Everything upstream already stops a log line from becoming a script: the projection in chapter 24 hands out documented columns, Svelte escapes what it renders, and a log body is text in a cell. A CSP is what stands there when one of those is wrong — which is the only reason to have one, and the reason it belongs in a product whose pages are made of other people’s data.'
+			},
+			code('vite.config.ts', 164, 178),
+			{
+				type: 'p',
+				text: 'Every directive is a decision. `script-src` with no `unsafe-inline`, because that keyword is what makes the whole policy decorative. `connect-src \'self\'`, so a script that somehow does run cannot post a query result to another host. `object-src \'none\'` and `base-uri \'self\'` because both are ways *around* `script-src` rather than risks of their own: a plugin document runs code outside it, and an injected `<base>` repoints every relative URL the policy is trusting.'
+			},
+			{
+				type: 'warn',
+				text: '`style-src` allows `\'unsafe-inline\'`, and that is a genuine compromise rather than an oversight. Svelte writes `style="…"` attributes for the virtualizer’s transforms and the waterfall’s bar widths, recomputed per frame; an attribute cannot carry a nonce and cannot usefully be hashed. The exposure is CSS injection, which is real and is not script execution. Writing it down is the difference between a trade and an accident.'
+			},
+
+			{ type: 'h3', id: 'the-mode', text: '`hash` was wrong, and only a test could say so' },
+			{
+				type: 'p',
+				text: 'The first version used `mode: \'hash\'`, on an argument that is entirely sound: SvelteKit computes a sha256 for each inline script it emits, hashes are fixed at build time, and a nonce must be unique per response — so nonces make every page uncacheable. It was also completely wrong for this application.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ pnpm exec playwright test e2e/csp.e2e.ts
+
+  Error: an inline script is covered by neither the nonce nor a hash:
+         __sveltekit_1xjukmv.resolve(1, () => [["gateway","payments-a…
+
+  1 failed`
+			},
+			{
+				type: 'p',
+				text: 'This application **streams**. A page renders its shell, and each `await` in markup resolves later by appending a `<script>__sveltekit_….resolve(1, …)</script>` to the response body — *after* the header has been sent. No hash for those can possibly be in it, so the browser blocks every one, and every streamed result on the page silently never arrives. There is no error a person would see; the table is simply empty.'
+			},
+			{
+				type: 'p',
+				text: '`mode: \'auto\'` is the answer SvelteKit already has: hashes for prerendered pages, whose whole document is known at build time, and nonces for dynamically rendered ones, where it is not. The cacheability argument costs nothing here — these pages carry `Vary: Cookie` and are per-tenant, so a shared cache was never going to hold them.'
+			},
+
+			{ type: 'h3', id: 'auditing', text: 'A policy that degrades quietly needs code to notice' },
+			{
+				type: 'p',
+				text: 'A CSP does not break loudly when it stops working. Somebody adds a snippet, hits the console error, adds `\'unsafe-inline\'` to make it go away, and the header is still there, still long, still looks like a security control. Nothing fails. So the audit is code, the rules are named, and the messages are the words somebody would need to fix it.'
+			},
+			code('src/lib/security/csp.ts', 59, 71),
+			{
+				type: 'p',
+				text: '`Sha256Source` comes from `svelte/server`, exported in Svelte 5.57: a template literal type of `` `sha256-${string}` ``. It is the type of the entries in a render’s `hashes.script`, which is exactly what hash-mode puts into `script-src`. Using Svelte’s own type rather than a local `string` alias means the compiler checks the narrowing rather than trusting the comment above it — `hashesIn` cannot quietly start returning `\'unsafe-inline\'`.'
+			},
+			code('src/lib/security/csp.ts', 87, 124, { partial: true }),
+			{
+				type: 'p',
+				text: 'Problems, not a boolean. "The CSP is bad" is not something anybody can act on at four in the morning; "`script-src` allows `\'unsafe-inline\'`, which lets an injected `<script>` run" is. And `style-src` is deliberately absent from the rules, because a check that fires on a decision somebody already made and documented is a check people learn to skip.'
+			},
+
+			{ type: 'h3', id: 'proving-it', text: 'Two tests, because the harness is inside the picture' },
+			code('e2e/csp.e2e.ts', 54, 76, { partial: true }),
+			{
+				type: 'p',
+				text: 'Playwright injects its own inline scripts for tracing and screenshots, and a policy strict enough to be worth having blocks those too — so watching the console for `script-src` violations reports the harness, every time, and says nothing about the application. The first version of this test did exactly that, and reported two violations before anything on the page had loaded.'
+			},
+			{
+				type: 'p',
+				text: 'Fetching the HTML and checking it has no harness in the way. Every inline `<script>` must be covered — carrying the response’s nonce, or listed as a hash — and that is the check that found the streaming bug. The browser half is still worth having for everything that is not a script, and that half found the second bug.'
+			},
+			{
+				type: 'terminal',
+				code: `
+"Loading the font 'data:font/woff2;base64,d09GMgABAAAAAAfsABQ…'
+ violates the following Content Security Policy directive:
+ \\"font-src 'self'\\". The action has been blocked."`
+			},
+			{
+				type: 'p',
+				text: 'Vite inlines any asset under `assetsInlineLimit`, which is four kilobytes, and one JetBrains Mono subset is under it — so the built stylesheet carries a `src:url(data:font/woff2;base64,…)` that `font-src \'self\'` refuses. In production that is a monospace column falling back to a system font, silently, because a blocked font is a console message nobody is watching. Reading the policy would never have found it.'
+			},
+
+			{
+				type: 'checkpoint',
+				items: [
+					'Every page carries a policy, and `auditPolicy` returns nothing on it.',
+					'A signed-in page gets a nonce; switching to `mode: \'hash\'` fails a test rather than a user.',
+					'Loading the application under the policy produces no violations at all.'
+				]
+			}
+		]
+	},
+
+	{
 		slug: 'verifying-it',
 		title: 'Verifying it, and the six bugs the tests found',
 		summary:
-			'316 unit tests, 75 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
+			'337 unit tests, 83 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
 		goal: 'Get to green, and understand what each kind of test is actually for.',
 		blocks: [
 			{
@@ -274,6 +368,34 @@ write status AND outbox row in one transaction; a worker delivers
 				text: 'The first version of that test opened traces one by one until it found an incomplete one — a coin toss it could not see. The seed now plants one at a fixed id, and the case becomes something a test can name. A flaky test is worse than no test, because it teaches people to re-run the suite.'
 			},
 
+			{ type: 'h3', id: 'co-located', text: 'A test that lives next to what it tests' },
+			{
+				type: 'p',
+				text: 'The read API’s body schema is a contract with people writing scripts against a documented endpoint, and its *defaults* are the part nobody reads and everybody depends on — `maxRows` quietly becoming twenty thousand would turn one scheduled report into an outage. That belongs in a fast unit test, beside the thing it describes.'
+			},
+			{
+				type: 'p',
+				text: 'It could not live there before. Every `+`-prefixed file under `src/routes` was a route, so `+server.test.ts` would have been an endpoint exporting `describe` and `it`, and `svelte-kit sync` would have refused it. SvelteKit 3.0.0-next.19 skips `+` files whose names contain `.test.`, `.spec.` or `.stories.` when the route table is built.'
+			},
+			code('src/routes/api/v1/query/+server.test.ts', 28, 49),
+			{
+				type: 'p',
+				text: 'The schema is exported as `_RequestSchema`, and the underscore is not decoration. SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP methods plus `prerender`, `config` and a few others — with one deliberate escape hatch, `if (key[0] === \'_\') continue`. It is the convention for "not a route contract, but something somebody needs to reach".'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ npx svelte-kit sync && grep -r "server.test" .svelte-kit/generated .svelte-kit/types
+  (nothing)                       ← not a route
+
+$ npx vitest run src/routes/api/v1/query
+  ✓ 9 passed                      ← still a test`
+			},
+			{
+				type: 'note',
+				text: 'The end-to-end tests in `e2e/query-api.e2e.ts` still exist and still matter — they cover authentication, scopes and the `QUERY` method reaching the handler. This covers the shape of what that handler is handed, in nine milliseconds rather than two minutes.'
+			},
+
 			{ type: 'h3', id: 'the-course-too', text: 'And the course is checked too' },
 			{
 				type: 'p',
@@ -283,15 +405,15 @@ write status AND outbox row in one transaction; a worker delivers
 				type: 'terminal',
 				code: `
 $ node sextant-course/verify.js
-45 chapters · 223 blocks quoted from sextant/ by line range · 0 illustrative
+46 chapters · 228 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
 ✓ svelte-check     0 errors, 0 warnings
 ✓ eslint           clean
-✓ vitest           316 passed
+✓ vitest           337 passed
 ✓ vite build       done
-✓ playwright       75 passed, 4 skipped, 2 viewports`
+✓ playwright       83 passed, 4 skipped, 2 viewports`
 			},
 
 			{

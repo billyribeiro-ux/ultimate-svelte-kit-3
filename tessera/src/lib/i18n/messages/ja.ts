@@ -99,6 +99,12 @@ export const ja = {
 		skip: 'ボードへスキップ'
 	},
 
+	embed: {
+		loading: '読み込み中…',
+		unavailable: 'このボードは利用できません。',
+		label: (board: string) => `ボード ${board}`
+	},
+
 	errors: {
 		notFound: 'そのボードは存在しないか、アクセス権がありません。',
 		forbidden: 'その操作を行う権限がありません。',

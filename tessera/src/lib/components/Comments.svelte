@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { postComment, resolveThread, threads } from '#lib/remote/comments.remote.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 	import Button from './Button.svelte';
 
 	interface Props {
 		boardId: string;
 		/** The selected shape, so a new thread anchors to it. */
 		anchor: string | null;
-		t: Messages;
 	}
 
-	let { boardId, anchor, t }: Props = $props();
+	let { boardId, anchor }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/*
 	 * `$derived`, not a plain `const`.

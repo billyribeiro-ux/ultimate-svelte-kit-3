@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { Peer } from '#lib/sync/protocol.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 
 	interface Props {
 		peers: readonly Peer[];
-		t: Messages;
 		onfollow?: (peer: Peer) => void;
 	}
 
-	let { peers, t, onfollow }: Props = $props();
+	let { peers, onfollow }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/** Four faces, then a count. Beyond that they stop being recognisable anyway. */
 	const shown = $derived(peers.slice(0, 4));

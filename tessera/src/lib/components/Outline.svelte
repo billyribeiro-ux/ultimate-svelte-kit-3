@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { BoardEditor } from '#lib/canvas/editor.svelte.ts';
-	import type { Messages } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 	import type { NodeView } from '#lib/board/index.ts';
 
 	interface Props {
 		editor: BoardEditor;
-		t: Messages;
 	}
 
-	let { editor, t }: Props = $props();
+	let { editor }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	/**
 	 * THE BOARD, AS A TREE

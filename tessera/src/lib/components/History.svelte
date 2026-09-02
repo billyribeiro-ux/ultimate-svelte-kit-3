@@ -1,16 +1,19 @@
 <script lang="ts">
 	import { restoreTo, revisions, saveCheckpoint } from '#lib/remote/history.remote.ts';
-	import type { Locale, Messages } from '#lib/i18n/index.ts';
+	import type { Locale } from '#lib/i18n/index.ts';
+	import { requireMessages } from '#lib/i18n/context.ts';
 	import Button from './Button.svelte';
 
 	interface Props {
 		boardId: string;
 		locale: Locale;
-		t: Messages;
 		readOnly?: boolean;
 	}
 
-	let { boardId, locale, t, readOnly = false }: Props = $props();
+	let { boardId, locale, readOnly = false }: Props = $props();
+
+	const catalogue = requireMessages();
+	const t = $derived(catalogue());
 
 	// `$derived` so that opening a different board re-runs the query. See the same
 	// note in `Comments.svelte`.
