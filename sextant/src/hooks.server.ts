@@ -143,4 +143,25 @@ export const init: ServerInit = async () => {
 	const { db } = await import('#lib/server/db/index.ts');
 	const { sql } = await import('drizzle-orm');
 	await db.run(sql`select 1`);
+
+	/*
+	 * The background loops start here, after the database has answered.
+	 *
+	 * Starting them at module scope would run them during the build — `init` is the
+	 * hook that says "a real server is coming up" — and starting them before the
+	 * `select 1` would have the first alert evaluation racing a database that is
+	 * not there yet.
+	 *
+	 * BOTH ASSUME A SINGLE PROCESS, AND THAT IS A REAL LIMIT.
+	 *
+	 * Two instances behind a load balancer would each evaluate every rule and each
+	 * drain the same outbox, so every alert is delivered twice. Making this
+	 * multi-process needs a lease — a row somebody holds for thirty seconds and
+	 * renews — and that is genuinely the next piece of work rather than something
+	 * this comment can wave away. Saying so here is better than a deployment
+	 * discovering it.
+	 */
+	const { startAlertLoop, startOutboxWorker } = await import('#lib/server/alerts.ts');
+	startAlertLoop();
+	startOutboxWorker();
 };
