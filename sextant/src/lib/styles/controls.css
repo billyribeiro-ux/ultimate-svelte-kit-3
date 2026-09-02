@@ -1,0 +1,228 @@
+/*
+ * CONTROLS
+ * ========
+ *
+ * Buttons, inputs and the two or three bits of chrome that appear on every
+ * screen. Global rather than a component, and that is a deliberate exception to
+ * the rule the rest of this design system follows.
+ *
+ * A `<Button>` component is the usual answer and it costs something real: every
+ * button becomes an import, a props interface, and a decision about how to
+ * forward `type`, `disabled`, `aria-*`, `form`, `formaction` and the twenty
+ * other attributes a `<button>` already has. Most such components end up
+ * spreading `...rest` onto a `<button>`, at which point they are a class name
+ * with extra steps.
+ *
+ * A class is the right size for this, on two conditions: the classes are few,
+ * and they never encode layout. `.btn` says what a button looks like; where it
+ * sits is the caller's grid.
+ */
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	/*
+	 * 2.25rem is 36px, which is below the 44px touch target guideline — so the
+	 * media query at the bottom raises it on coarse pointers rather than making
+	 * every button on a dense desktop tool finger-sized. Being honest about which
+	 * one you are designing for beats a compromise that suits neither.
+	 */
+	min-height: 2.25rem;
+	padding-inline: var(--space-3);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	background: var(--surface-raised);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--fs-sm);
+	font-weight: var(--weight-medium);
+	cursor: pointer;
+	white-space: nowrap;
+	transition:
+		background var(--fast) var(--ease),
+		border-color var(--fast) var(--ease),
+		color var(--fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+	background: var(--surface-hover);
+	border-color: var(--border-focus);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn--primary {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--on-accent);
+	font-weight: var(--weight-semibold);
+}
+
+.btn--primary:hover:not(:disabled) {
+	background: var(--accent-strong);
+	border-color: var(--accent-strong);
+	color: var(--on-accent);
+}
+
+.btn--danger {
+	background: transparent;
+	border-color: var(--danger);
+	color: var(--danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+	background: var(--danger-bg);
+	border-color: var(--danger);
+}
+
+/** No border, no fill. For the actions that sit next to content rather than under it. */
+.btn--ghost {
+	border-color: transparent;
+	background: transparent;
+	color: var(--text-muted);
+}
+
+.btn--ghost:hover:not(:disabled) {
+	background: var(--surface-hover);
+	border-color: transparent;
+	color: var(--text);
+}
+
+.btn--sm {
+	min-height: 1.75rem;
+	padding-inline: var(--space-2);
+	font-size: var(--fs-xs);
+}
+
+/** An icon-only button. Square, and it must carry an `aria-label`. */
+.btn--icon {
+	padding-inline: 0;
+	width: 2.25rem;
+	flex: none;
+}
+
+.btn--sm.btn--icon {
+	width: 1.75rem;
+}
+
+/* ---- Fields ---------------------------------------------------------- */
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.field > label {
+	font-size: var(--fs-sm);
+	font-weight: var(--weight-medium);
+	color: var(--text-muted);
+}
+
+.input,
+.select {
+	min-height: 2.25rem;
+	padding: var(--space-1) var(--space-2);
+	background: var(--surface-sunken);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--fs-sm);
+	/*
+	 * 16px minimum on a phone, because iOS Safari zooms the page when a field
+	 * with smaller text is focused — and a zoomed dashboard with a soft keyboard
+	 * over it is unusable. Raised in the coarse-pointer query below rather than
+	 * everywhere, so the dense desktop layout keeps its scale.
+	 */
+	width: 100%;
+}
+
+.input:focus-visible,
+.select:focus-visible {
+	border-color: var(--border-focus);
+}
+
+.input[aria-invalid='true'] {
+	border-color: var(--danger);
+}
+
+/** The message under an invalid field. Always adjacent, never a tooltip. */
+.field__error {
+	margin: 0;
+	font-size: var(--fs-xs);
+	color: var(--danger);
+}
+
+.field__hint {
+	margin: 0;
+	font-size: var(--fs-xs);
+	color: var(--text-faint);
+}
+
+/* ---- Chips and badges ------------------------------------------------- */
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: 0 var(--space-2);
+	min-height: 1.5rem;
+	border-radius: var(--radius-full);
+	border: 1px solid var(--border-strong);
+	background: var(--surface-raised);
+	font-size: var(--fs-xs);
+	color: var(--text-muted);
+}
+
+.chip--ok {
+	border-color: transparent;
+	background: var(--ok-bg);
+	color: var(--ok);
+}
+
+.chip--warn {
+	border-color: transparent;
+	background: var(--warn-bg);
+	color: var(--warn);
+}
+
+.chip--danger {
+	border-color: transparent;
+	background: var(--danger-bg);
+	color: var(--danger);
+}
+
+.chip--info {
+	border-color: transparent;
+	background: var(--info-bg);
+	color: var(--info);
+}
+
+/*
+ * Bigger targets where a finger is doing the pointing.
+ *
+ * `pointer: coarse` rather than a width breakpoint: the thing that decides how
+ * big a target must be is what is touching it, not how wide the window is. A
+ * tablet in landscape is 1024px wide and still operated with a thumb.
+ */
+@media (pointer: coarse) {
+	.btn {
+		min-height: 2.75rem;
+	}
+
+	.btn--sm {
+		min-height: 2.25rem;
+	}
+
+	.input,
+	.select {
+		min-height: 2.75rem;
+		font-size: 1rem;
+	}
+}

@@ -28,6 +28,7 @@
 
 <script lang="ts">
 	import type { SpanNode, Trace } from '#lib/trace/assemble.ts';
+	import { hueFor } from '#lib/trace/colour.ts';
 	import { formatDuration } from '#lib/time/range.ts';
 
 	/**
@@ -69,27 +70,6 @@
 	let { trace, selected = null, onselect }: Props = $props();
 
 	const span = $derived(Math.max(1, trace.end - trace.start));
-
-	/**
-	 * A stable colour per service.
-	 *
-	 * Derived from the name rather than assigned from a pool, for the same reason
-	 * presence colours were in the last project: assigning means the same service
-	 * is teal in one trace and amber in the next, and "the teal one" stops being a
-	 * way to refer to anything.
-	 *
-	 * Hue only — saturation and lightness are fixed — so every bar has the same
-	 * contrast against the ground and against its own label. A palette that varies
-	 * lightness produces bars whose text is unreadable on some of them.
-	 */
-	function hueFor(service: string): number {
-		let hash = 2166136261;
-		for (let i = 0; i < service.length; i += 1) {
-			hash ^= service.charCodeAt(i);
-			hash = Math.imul(hash, 16777619);
-		}
-		return (hash >>> 0) % 360;
-	}
 
 	/** Fraction of the trace's width. Clamped, and never narrower than a hairline. */
 	function widthOf(node: SpanNode): number {

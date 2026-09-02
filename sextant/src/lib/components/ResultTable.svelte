@@ -232,20 +232,22 @@
 	}
 
 	/*
-	 * The header and the rows share one grid definition through a custom property
-	 * so their columns line up. Defining it twice is how a table ends up with a
-	 * header that drifts from its body by a pixel per column.
+	 * Mobile first: one column per row, and no header.
+	 *
+	 * A six-column grid at 390px gives each column sixty pixels, which is narrower
+	 * than a timestamp. Stacked, each row is a small record — which is how a log
+	 * line reads on a phone anyway. The columns arrive at 48rem, below.
 	 */
 	.table__head,
 	.tr {
 		display: grid;
-		grid-template-columns: var(--result-columns, repeat(auto-fit, minmax(6rem, 1fr)));
-		gap: var(--space-3);
+		grid-template-columns: 1fr;
 		padding: 0 var(--space-3);
 		align-items: start;
 	}
 
 	.table__head {
+		display: none;
 		position: sticky;
 		top: 0;
 		z-index: var(--z-sticky);
@@ -281,6 +283,7 @@
 		position: absolute;
 		inset-inline: 0;
 		top: 0;
+		padding-block: var(--space-2);
 		/*
 		 * `transform` rather than `top`.
 		 *
@@ -289,7 +292,6 @@
 		 * the difference between smooth and visibly stepping.
 		 */
 		will-change: transform;
-		padding-block: var(--space-1);
 		border-bottom: 1px solid var(--border);
 		font-family: var(--font-mono);
 		font-size: var(--fs-sm);
@@ -312,8 +314,6 @@
 	}
 
 	.cell--number {
-		/* Right-aligned so the digits line up in a column somebody scans downwards. */
-		text-align: right;
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -359,24 +359,30 @@
 	}
 
 	/*
-	 * On a phone the grid collapses to one column per row and the header goes
-	 * away: a six-column grid at 390px gives each column sixty pixels, which is
-	 * narrower than a timestamp. Stacked, each row is a small record — which is
-	 * how a log line reads on a phone anyway.
+	 * From 48rem it becomes a table.
+	 *
+	 * The header and the rows share one grid definition through a custom property
+	 * so their columns line up. Defining it twice is how a table ends up with a
+	 * header that drifts from its body by a pixel per column.
 	 */
-	@media (max-width: 47.99rem) {
+	@media (min-width: 48rem) {
+		.table__head,
+		.tr {
+			grid-template-columns: var(--result-columns, repeat(auto-fit, minmax(6rem, 1fr)));
+			gap: var(--space-3);
+		}
+
 		.table__head {
-			display: none;
+			display: grid;
 		}
 
 		.tr {
-			grid-template-columns: 1fr;
-			gap: 0;
-			padding-block: var(--space-2);
+			padding-block: var(--space-1);
 		}
 
 		.cell--number {
-			text-align: left;
+			/* Right-aligned so the digits line up in a column somebody scans downwards. */
+			text-align: right;
 		}
 	}
 </style>
