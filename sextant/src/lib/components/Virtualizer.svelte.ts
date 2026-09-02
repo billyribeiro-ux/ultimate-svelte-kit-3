@@ -79,7 +79,15 @@ export class Virtualizer {
 	 * pass rather than mutated. A `SvelteMap` would make every `set` a reactive
 	 * write, and a measurement pass sets thirty of them in a loop — thirty
 	 * invalidations for one visual change, in the hot path of scrolling.
+	 *
+	 * `svelte/prefer-svelte-reactivity` flags exactly this and is right nearly
+	 * every time: a plain `Map` in `$state` is usually somebody expecting `.set()`
+	 * to be reactive, and it silently is not. Here the non-reactivity is the point,
+	 * the `Map` is never mutated after it is stored, and the reactive write is the
+	 * assignment to `#heights`. The rule is suppressed at each of the three sites
+	 * rather than for the file, so a fourth `Map` added later still gets checked.
 	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- see above
 	#heights = $state.raw(new Map<number, number>());
 
 	/** Running total, so the average does not walk the map on every read. */
@@ -166,6 +174,7 @@ export class Virtualizer {
 		const previous = this.#heights.get(index);
 		if (previous === rounded) return false;
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- see `#heights`
 		const next = new Map(this.#heights);
 		next.set(index, rounded);
 
@@ -177,6 +186,7 @@ export class Virtualizer {
 	/** Forget every measurement. Called when the result set changes underneath. */
 	reset(count: number): void {
 		this.count = count;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- see `#heights`
 		this.#heights = new Map();
 		this.#measuredTotal = 0;
 	}
