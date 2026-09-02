@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The lexer — Building Sextant</title>
+<meta name="description" content="A hand-written scanner: why not regular expressions, how a duration differs from a number, and why an unterminated string must not eat the rest of the query.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 54.54545454545454%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html" aria-current="page"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>The lexer</h1>
+			<p class="lede">A hand-written scanner: why not regular expressions, how a duration differs from a number, and why an unterminated string must not eat the rest of the query.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Turn text into tokens, with recovery, so that a query with three mistakes reports three.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE LEXER
+ * =========
+ *
+ * Source text to tokens. A hand-written scanner rather than a regular expression
+ * per token kind, for two reasons that both come down to error messages.
+ *
+ * A regex-based lexer that fails to match anything can only say &quot;unexpected
+ * character&quot; and point at one position. A scanner that knows it is halfway
+ * through a string literal can say &quot;unterminated string, opened here&quot; and point
+ * at the quote — which is the difference between a message that helps and one
+ * that makes you count characters.
+ *
+ * The second reason is that two of SQF's token kinds are context-sensitive in a
+ * way regexes handle badly. `5m` is a duration and `5` followed by the column
+ * `m` is not; `1.5` is a number and `svc.name` is two idents around a dot. Both
+ * are one lookahead in a scanner and a mess of negative lookbehind in a regex.
+ *
+ * The lexer NEVER throws for an unknown character. It emits nothing for it and
+ * records an error, then keeps going — so a query with three mistakes reports
+ * three, not the first one and then silence. Recovery is the whole reason a
+ * language front end is pleasant to use rather than merely correct.
+ */</code></pre>
+</figure>
+<p>Read the last paragraph twice. <strong>The lexer never throws.</strong> It records an error, skips the character, and keeps going. That single decision is most of what makes a language front end pleasant to use rather than merely correct — an error list that shrinks as you type beats one that reveals your mistakes one at a time.</p>
+<h3 id="the-loop">The loop</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:44-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function lex(source: string): LexResult {
+	const tokens: Token[] = [];
+	const errors: SqfError[] = [];
+
+	let at = 0;
+
+	const peek = (offset = 0): string =&gt; source[at + offset] ?? '';
+	const span = (start: number): Span =&gt; ({ start, end: at });
+
+	const push = (kind: TokenKind, start: number, value?: string | number): void =&gt; {
+		tokens.push({ kind, text: source.slice(start, at), value, span: span(start) });
+	};
+
+	while (at &lt; source.length) {
+		const start = at;
+		const char = peek();
+
+		/* ---- whitespace and comments ---------------------------------- */
+
+		if (char === ' ' || char === '\t' || char === '\r' || char === '\n') {
+			at += 1;
+			continue;
+		}</code></pre>
+</figure>
+<p>Three closures over <code>at</code>, and then a <code>while</code> that dispatches on the first character. <code>push</code> slices the original text for <code>text</code> and records the span, so no branch has to remember to do either.</p>
+<h3 id="durations">Numbers, and the thing that makes them durations</h3>
+<p>This is the first of the two places a regular-expression lexer struggles. <code>5m</code> is a duration; <code>5</code> followed by a column named <code>m</code> is not. One lookahead in a scanner:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:75-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---- numbers and durations ------------------------------------ */
+
+if (isDigit(char)) {
+	at = readNumberBody(source, at);
+	const digits = source.slice(start, at);
+
+	const unit = readDurationUnit(source, at);
+	if (unit) {
+		at += unit.suffix.length;
+		push('duration', start, Number(digits) * unit.ms);
+	} else {
+		push('number', start, Number(digits));
+	}
+	continue;
+}</code></pre>
+</figure>
+<p>And the unit table decodes to milliseconds <strong>here</strong>, not in the parser, so that <code>5m</code> and <code>300s</code> are indistinguishable by the time anything downstream sees them — and so the units live in exactly one place.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:28-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Milliseconds per duration suffix. Longest suffix first — see `readDuration`. */
+const DURATION_UNITS: readonly (readonly [suffix: string, ms: number])[] = [
+	['ms', 1],
+	['s', 1_000],
+	['m', 60_000],
+	['h', 3_600_000],
+	['d', 86_400_000],
+	['w', 604_800_000]
+];</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Longest suffix first is not decoration. <code>ms</code> and <code>m</code> are both valid, and a table scanned in the wrong order reads <code>500ms</code> as five hundred *minutes* followed by a stray <code>s</code>.</p></aside>
+<h3 id="strings">Strings, and the newline that saves the query</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:93-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">if (char === '&quot;' || char === &quot;'&quot;) {
+	const quote = char;
+	at += 1;
+	let value = '';
+	let terminated = false;
+
+	while (at &lt; source.length) {
+		const current = peek();
+
+		if (current === '\\') {
+			const escape = peek(1);
+			const decoded = ESCAPES[escape];
+			if (decoded === undefined) {
+				errors.push(
+					new SqfError(
+						`Unknown escape \\${escape}`,
+						{ start: at, end: at + 2 },
+						`Valid escapes are ${Object.keys(ESCAPES)
+							.map((e) =&gt; '\\' + e)
+							.join(', ')}`
+					)
+				);
+				// Keep the character as itself and carry on, so one bad escape does
+				// not turn the rest of the query into string contents.
+				value += escape;
+			} else {
+				value += decoded;
+			}
+			at += 2;
+			continue;
+		}
+
+		if (current === quote) {
+			at += 1;
+			terminated = true;
+			break;
+		}</code></pre>
+</figure>
+<p>The interesting part is what happens at a newline. A naive loop consumes to the end of the input looking for a closing quote, swallows the rest of the query, and reports one error at the very end — which tells you nothing about where the mistake is.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:131-155</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		/*
+		 * A newline inside a string is almost always a missing closing quote
+		 * rather than a deliberate multi-line literal.
+		 *
+		 * Stopping here means the error points at the quote that was never
+		 * closed, and the next line lexes normally. Consuming to the end of the
+		 * file instead — which is what a naive loop does — swallows the rest of
+		 * the query and reports one error at the very end, which tells you
+		 * nothing about where the mistake is.
+		 */
+		if (current === '\n') break;
+
+		value += current;
+		at += 1;
+	}
+
+	if (!terminated) {
+		errors.push(
+			new SqfError('Unterminated string', { start, end: at }, `Add a closing ${quote}`)
+		);
+	}
+
+	push('string', start, value);
+	continue;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why this matters more than it looks</h4>
+	<p>An unterminated string is *the* most common thing somebody has in their editor at any given moment, because it is the state of every string halfway through being typed. Getting it wrong means the whole query goes red between the opening quote and the closing one, on every keystroke.</p>
+</aside>
+<h3 id="recovery">The unknown character</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.ts<span class="code__lines">:181-193</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		/*
+		 * Unknown character.
+		 *
+		 * Recorded, skipped, and lexing continues. A single stray `$` should not
+		 * cost you the eleven other errors in the query.
+		 */
+		at += 1;
+		errors.push(new SqfError(`Unexpected character ${JSON.stringify(char)}`, span(start)));
+	}
+
+	tokens.push({ kind: 'eof', text: '', span: { start: source.length, end: source.length } });
+	return { tokens, errors };
+}</code></pre>
+</figure>
+<p>Recorded, skipped, and lexing continues — and then an <code>eof</code> token is always pushed, which is why every <code>peek()</code> downstream is total and no caller has to check for the end of the array.</p>
+<h3 id="testing">Testing a lexer</h3>
+<p>The tests that matter are not &quot;it lexes <code>from</code>&quot;. They are the ones that pin the decisions above:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/lexer.spec.ts<span class="code__lines">:40-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('durations', () =&gt; {
+	it('decodes every unit to milliseconds', () =&gt; {
+		expect(values('1ms 1s 1m 1h 1d 1w')).toEqual([
+			1, 1_000, 60_000, 3_600_000, 86_400_000, 604_800_000
+		]);
+	});
+
+	it('reads ms before m', () =&gt; {
+		/*
+		 * The bug this pins: with the units tested in the wrong order, `5ms` lexes
+		 * as five *minutes* followed by the identifier `s`. It parses, it runs, and
+		 * the answer is off by a factor of sixty thousand.
+		 */
+		expect(kinds('5ms')).toEqual(['duration']);
+		expect(values('5ms')).toEqual([5]);
+	});
+
+	it('does not treat a longer word as a unit', () =&gt; {
+		// `5min` is a number and an identifier, not five minutes and a stray `in`.
+		expect(kinds('5min')).toEqual(['number', 'ident']);
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>lex(&quot;from logs | take 5&quot;)</code> gives you tokens with correct spans.</li><li><code>lex(&quot;5m&quot;)</code> is one duration token worth 300000, and <code>lex(&quot;5 m&quot;)</code> is two tokens.</li><li>A query with three unknown characters reports three errors, not one.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="tokens.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Tokens, and why every one carries a position</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-ast.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The syntax tree</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The schema: what a column is, and what a function promises — Building Sextant</title>
+<meta name="description" content="Three tables, a function table, and the parameter type that exists solely to make one error message lead somewhere.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 90.9090909090909%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html" aria-current="page"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>The schema: what a column is, and what a function promises</h1>
+			<p class="lede">Three tables, a function table, and the parameter type that exists solely to make one error message lead somewhere.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write the single source of truth that the checker, the planner, completion and the documentation all read.</p></aside>
+			<p>Everything the language knows about the world is in one file. A column has a name, a type, and a sentence; a function has parameters, a return type and a sentence. Four consumers read it and none of them has its own copy.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/schema.ts<span class="code__lines">:42-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type SqfType = 'string' | 'number' | 'duration' | 'timestamp' | 'boolean' | 'dynamic';
+
+export interface ColumnDef {
+	readonly name: string;
+	readonly type: SqfType;
+	readonly doc: string;
+	/** A dynamic key/value bag rather than a scalar — `attributes.http.method`. */
+	readonly bag?: boolean;
+	/** Shown in completion above the rest. The columns people actually filter on. */
+	readonly common?: boolean;
+}
+
+export interface TableDef {
+	readonly name: Source;
+	readonly doc: string;
+	readonly columns: readonly ColumnDef[];
+}</code></pre>
+</figure>
+<p><code>bag: true</code> marks a column you can path into — <code>attributes.http.status</code> — and <code>common: true</code> marks the handful worth putting at the top of a completion list. Both are metadata *for other code*, which is the whole point of a schema.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/schema.ts<span class="code__lines">:101-131</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">{
+	name: 'spans',
+	doc: 'Units of work inside a trace.',
+	columns: [
+		TIMESTAMP,
+		{ name: 'trace_id', type: 'string', doc: 'The trace this span belongs to.', common: true },
+		{ name: 'span_id', type: 'string', doc: 'This span.' },
+		{ name: 'parent_id', type: 'string', doc: 'The span that caused this one, or empty.' },
+		{ name: 'service', type: 'string', doc: 'The service that ran it.', common: true },
+		{ name: 'name', type: 'string', doc: 'What it was doing.', common: true },
+		{
+			name: 'duration',
+			type: 'duration',
+			doc: 'How long it took. Compare against a duration: `&gt; 200ms`.',
+			common: true
+		},
+		{ name: 'status', type: 'string', doc: 'ok | error.', common: true },
+		{ name: 'attributes', type: 'dynamic', doc: 'Span attributes.', bag: true }
+	]
+},
+{
+	name: 'metrics',
+	doc: 'Numeric samples on a named series.',
+	columns: [
+		TIMESTAMP,
+		{ name: 'metric', type: 'string', doc: 'The series name.', common: true },
+		{ name: 'value', type: 'number', doc: 'The sample.', common: true },
+		{ name: 'service', type: 'string', doc: 'The service that reported it.', common: true },
+		{ name: 'labels', type: 'dynamic', doc: 'Series labels.', bag: true, common: true }
+	]
+}</code></pre>
+</figure>
+<h3 id="functions">Functions, and a return type that depends on its argument</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/schema.ts<span class="code__lines">:167-183</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface FunctionDef {
+	readonly name: string;
+	/** Aggregations may only appear in `summarize`; scalars may appear anywhere. */
+	readonly aggregate: boolean;
+	readonly params: readonly ParamType[];
+	readonly returns: SqfType;
+	readonly doc: string;
+	/**
+	 * A return type that depends on the arguments.
+	 *
+	 * `min(duration)` is a duration and `min(value)` is a number. Without this the
+	 * aggregate would have to return `dynamic`, and every unit check downstream of
+	 * a `summarize` would be lost — which is exactly where people compare a p95
+	 * against a threshold.
+	 */
+	readonly returnsArg?: number;
+}</code></pre>
+</figure>
+<p><code>returnsArg</code> is the mechanism that keeps units alive through an aggregation. <code>min(duration)</code> is a duration and <code>min(value)</code> is a number; without this the aggregate would have to return <code>dynamic</code>, and every unit check downstream of a <code>summarize</code> would be lost — which is exactly where people compare a p95 against a threshold.</p>
+<h3 id="numeric">The parameter type that exists for one message</h3>
+<p>There is a <code>ParamType</code> called <code>numeric</code> that is neither <code>number</code> nor <code>any</code>, and it exists entirely so that one error message leads somewhere useful.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/schema.ts<span class="code__lines">:148-165</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A parameter's type, plus two that only make sense on a parameter.
+ *
+ * `'any'` means the function does not look at the value: `dcount` hashes it,
+ * `min` orders it, and both are meaningful for a string.
+ *
+ * `'numeric'` means number-or-duration-or-timestamp, and it exists because
+ * `'any'` and `'number'` are both wrong for `percentile`. `'any'` allows
+ * `percentile(service, 95)`, which runs, sorts strings, and returns a service
+ * name where a latency belongs. `'number'` would work — a duration is assignable
+ * to a number — but it makes the error message for the string case say &quot;needs a
+ * number&quot;, which sends people towards `toint(service)` rather than towards
+ * realising the question is wrong.
+ *
+ * That distinction is the whole reason this is a separate type rather than a
+ * comment: the checker's job is to produce the message that leads somewhere.
+ */
+export type ParamType = SqfType | 'any' | 'numeric';</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The checker’s job is to produce the message that leads somewhere</h4>
+	<p><code>any</code> would let <code>percentile(service, 95)</code> through — it runs, sorts strings, and returns a service name where a latency belongs. <code>number</code> would reject it and say &quot;needs a number&quot;, which sends somebody towards <code>toint(service)</code> rather than towards realising the question is wrong. <code>numeric</code> rejects it and says the argument has to be something you can take a percentile *of*.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You have three tables and a function list in one file.</li><li>You can explain what <code>returnsArg</code> preserves and where it would otherwise be lost.</li><li>You can say why <code>numeric</code> is not the same as <code>number</code> or <code>any</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="errors-that-point.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Errors that point at something</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-type-checker.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The type checker</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

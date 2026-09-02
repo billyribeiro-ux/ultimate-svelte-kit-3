@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The environment, declared once — Building Sextant</title>
+<meta name="description" content="`defineEnvVars`, valibot schemas that run at boot, and the four numbers that decide whether this survives a bad day.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">04 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 36.36363636363637%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html" aria-current="page"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 04</p>
+			<h1>The environment, declared once</h1>
+			<p class="lede"><code>defineEnvVars</code>, valibot schemas that run at boot, and the four numbers that decide whether this survives a bad day.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Set up typed, validated environment variables — and choose the limits that make a flood a refusal rather than an outage.</p></aside>
+			<p>SvelteKit 3 replaced the <code>$env/*</code> magic modules with a single declaration file. A variable that is not declared cannot be imported — a type error at build time, rather than an <code>undefined</code> that surfaces in production three weeks later.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every environment variable this app reads, declared once.
+ *
+ * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * declared here cannot be imported — a type error at build time rather than an
+ * `undefined` that surfaces in production three weeks later — and `public: true`
+ * is something you have to type, so a secret cannot reach the browser by
+ * accident.
+ *
+ * The schemas are valibot. They run once, at boot, against the real environment.
+ */
+import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+/** A positive integer read from a string, with a default and a reason for it. */
+function count(fallback: string, minimum: number, why: string) {
+	return v.optional(
+		v.pipe(v.string(), v.transform(Number), v.number(), v.integer(), v.minValue(minimum, why)),
+		fallback
+	);
+}</code></pre>
+</figure>
+<p>The schemas are valibot, and they run <strong>once, at boot, against the real environment</strong>. A missing <code>DATABASE_URL</code> is a process that refuses to start, not a request that fails at 4am.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:25-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description: 'libSQL connection string. `file:local.db` in development.',
+		schema: required
+	},
+
+	PUBLIC_ORIGIN: {
+		description: 'Where the app is served from, with no trailing slash. Used for CSRF checks.',
+		public: true,
+
+		/*
+		 * `static: true` means the value is inlined at build time rather than read
+		 * from the environment at runtime. It has to be: `paths.origin` in
+		 * `vite.config.ts` reads the same variable during the build, and a value
+		 * that could differ between build and run would make the CSRF check compare
+		 * two different origins.
+		 */
+		static: true,
+		schema: v.pipe(
+			required,
+			v.url('Must be an absolute URL'),
+			v.transform((value) =&gt; value.replace(/\/+$/, ''))
+		)
+	},</code></pre>
+</figure>
+<p><code>public: true</code> is something you have to type, which is the point: a secret cannot reach the browser by accident. And <code>static: true</code> on the origin is the other half of the build-time story from the last chapter — the value is inlined rather than read at runtime, because <code>vite.config.ts</code> reads the same variable during the build and a value that could differ between the two would make the CSRF check compare two different origins.</p>
+<h3 id="the-limits">The four numbers</h3>
+<p>An observability platform fails in a specific way, and it is worth stating before we choose any numbers.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:55-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * THE FOUR NUMBERS THAT DECIDE WHETHER THIS SURVIVES A BAD DAY
+ * -----------------------------------------------------------
+ * An observability platform fails in a specific way: the thing it is watching
+ * breaks, the volume of telemetry goes up by two orders of magnitude, and the
+ * platform falls over at the exact moment somebody needs it. Every limit below
+ * exists to make that a refusal with a `Retry-After` rather than an outage.
+ */</code></pre>
+</figure>
+<p>Every limit below exists to make that minute a refusal with a <code>Retry-After</code> rather than an outage. Two of them are ordinary; one of them is the most important number in the system.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:64-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">INGEST_MAX_BATCH: {
+	description: 'Most events one ingest request may carry.',
+	schema: count(
+		'5000',
+		1,
+		'A batch of zero is a client bug; refusing it is more useful than accepting it'
+	)
+},
+
+INGEST_RATE_PER_MINUTE: {
+	description: 'Events per minute per tenant before ingest starts refusing.',
+	schema: count('600000', 60, 'Below one per second the limiter is the outage')
+},</code></pre>
+</figure>
+<p>And the important one:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:78-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">SERIES_CARDINALITY_LIMIT: {
+	description: 'Distinct label combinations a tenant may create per metric.',
+
+	/*
+	 * The single most important number in a metrics system.
+	 *
+	 * One well-meaning `user_id` label turns one series into a million, and a
+	 * million series is not &quot;a bigger bill&quot; — it is a query planner choosing a
+	 * different plan, a rollup table larger than the raw data, and a dashboard
+	 * that stops loading. The limit has to exist, it has to be per metric rather
+	 * than global so one bad metric cannot starve the rest, and exceeding it has
+	 * to be *visible* rather than silently dropped, which is what
+	 * `series_rejected` in the schema is for.
+	 */
+	schema: count('10000', 100, 'Below a hundred series, ordinary labels break')
+},</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why cardinality is the number that matters</h4>
+	<p>A metric with a <code>user_id</code> label is one series per user. A million series is not &quot;a bigger bill&quot; — it is a query planner choosing a different plan, a rollup table larger than the raw data, and a dashboard that stops loading. The limit has to exist, it has to be <strong>per metric</strong> so that one bad metric cannot starve the rest, and exceeding it has to be visible rather than silently dropped. Chapter 23 is where we build that, and where the strangest bug in this project lives.</p>
+</aside>
+<h3 id="why-not-process-env">Why not just read <code>process.env</code></h3>
+<p>Because of the three properties this file has that <code>process.env</code> does not: a variable cannot be read without being declared, a value cannot be wrong in a way that survives boot, and a secret cannot be imported into client code. Each of those replaces a class of incident with a build error.</p>
+<p>There is one place in the project that reads <code>process.env</code> directly, and it is <code>drizzle.config.ts</code> — because drizzle-kit runs as its own process, outside SvelteKit, where the generated module does not exist. Naming the exception is how you keep it to one.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>cp .env.example .env
+# fill in BETTER_AUTH_SECRET with: openssl rand -base64 32
+pnpm db:push</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Your project boots and refuses to boot with a variable missing.</li><li>You can explain why <code>PUBLIC_ORIGIN</code> is both public and static.</li><li>You can say why the cardinality limit is per metric rather than per tenant.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-toolchain.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The toolchain, and one config file</span>
+			</a>
+			<a class="pager__link pager__link--next" href="tokens.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Tokens, and why every one carries a position</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

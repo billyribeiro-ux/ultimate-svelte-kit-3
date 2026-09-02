@@ -53,8 +53,8 @@ export const variables = defineEnvVars({
 	},
 
 	/*
-	 * THE THREE NUMBERS THAT DECIDE WHETHER THIS SURVIVES A BAD DAY
-	 * ------------------------------------------------------------
+	 * THE FOUR NUMBERS THAT DECIDE WHETHER THIS SURVIVES A BAD DAY
+	 * -----------------------------------------------------------
 	 * An observability platform fails in a specific way: the thing it is watching
 	 * breaks, the volume of telemetry goes up by two orders of magnitude, and the
 	 * platform falls over at the exact moment somebody needs it. Every limit below

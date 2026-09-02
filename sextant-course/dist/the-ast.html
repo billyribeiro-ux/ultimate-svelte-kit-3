@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The syntax tree — Building Sextant</title>
+<meta name="description" content="A source and a pipeline of stages — and why pipelines rather than SQL’s clause order is the decision that makes completion possible.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 63.63636363636363%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html" aria-current="page"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>The syntax tree</h1>
+			<p class="lede">A source and a pipeline of stages — and why pipelines rather than SQL’s clause order is the decision that makes completion possible.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Define the node types, and understand what the shape of the tree buys the editor.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/ast.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SYNTAX TREE
+ * ===============
+ *
+ * A query is a **source** followed by a pipeline of **stages**:
+ *
+ *   from logs
+ *   | where level == &quot;error&quot; and duration &gt; 200ms
+ *   | summarize p95 = percentile(duration, 95), n = count() by service
+ *   | sort by p95 desc
+ *   | take 20
+ *
+ * The pipeline shape is chosen over SQL's `SELECT … FROM … WHERE … GROUP BY`
+ * for one reason that matters at a keyboard: **it reads in execution order**, so
+ * completion has something to offer. After `| where ` the editor knows the
+ * available columns because everything before it has already been resolved. In
+ * SQL, `SELECT ` comes first and the tables are named last, which is why SQL
+ * completion is either wrong or has to parse ahead speculatively.
+ *
+ * Every node carries a `span`. That is not free — it is a field on twenty types
+ * — and it is what lets the checker underline `percentile(duration, 95)` rather
+ * than the whole query.
+ */</code></pre>
+</figure>
+<p>The paragraph about completion is the whole argument for the shape. After <code>| where </code> the editor knows which columns exist, because everything before that point has already been resolved. In SQL, <code>SELECT</code> comes first and the tables are named last — which is why SQL completion is either wrong or has to parse ahead speculatively and guess.</p>
+<h3 id="expressions">Expressions</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/ast.ts<span class="code__lines">:50-86</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type Expr =
+	| {
+			readonly kind: 'literal';
+			readonly value: string | number | boolean | null;
+			readonly span: Span;
+	  }
+	/** A duration keeps its own node so the checker can insist on one where a window is wanted. */
+	| { readonly kind: 'duration'; readonly ms: number; readonly span: Span }
+	| { readonly kind: 'column'; readonly name: string; readonly span: Span }
+	/** `attributes.http.status` — a path into a nested attribute bag. */
+	| {
+			readonly kind: 'path';
+			readonly root: string;
+			readonly parts: readonly string[];
+			readonly span: Span;
+	  }
+	| {
+			readonly kind: 'unary';
+			readonly op: 'not' | '-';
+			readonly operand: Expr;
+			readonly span: Span;
+	  }
+	| {
+			readonly kind: 'binary';
+			readonly op: BinaryOp;
+			readonly left: Expr;
+			readonly right: Expr;
+			readonly span: Span;
+	  }
+	| {
+			readonly kind: 'call';
+			readonly name: string;
+			readonly args: readonly Expr[];
+			readonly span: Span;
+	  }
+	/** `[1, 2, 3]`, only ever the right-hand side of `in`. */
+	| { readonly kind: 'list'; readonly items: readonly Expr[]; readonly span: Span };</code></pre>
+</figure>
+<p>Two of those nodes exist for reasons worth naming. A <code>duration</code> is its own kind rather than a number with a flag, so the checker can *insist* on one where a window is wanted. And a <code>path</code> — <code>attributes.http.status</code> — is its own kind rather than a chain of binary <code>.</code> operators, because a bag lookup is a different operation from a field access and pretending otherwise pushes the difference into the evaluator.</p>
+<h3 id="aliases">Aliases, and a field that only exists for an error message</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/ast.ts<span class="code__lines">:92-105</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** `p95 = percentile(duration, 95)` — a named output of `summarize` or `project`. */
+export interface Aliased {
+	readonly name: string;
+	readonly expr: Expr;
+	readonly span: Span;
+	/**
+	 * Whether the name was written or inferred.
+	 *
+	 * Inferred names get a worse error message on collision — &quot;two outputs are
+	 * both called `count`, name one of them&quot; — and that is only sayable if the
+	 * checker knows the person did not choose it.
+	 */
+	readonly explicit: boolean;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A field that exists purely to make one message better</h4>
+	<p><code>explicit</code> changes nothing about evaluation. It exists so that when two outputs collide, the checker can say &quot;two outputs are both called <code>count</code>, name one of them&quot; — which is only sayable if it knows the person did not choose the name. That is a fair trade: one boolean for a message that tells somebody what to type.</p>
+</aside>
+<h3 id="walking">Walking the tree</h3>
+<p>Two helpers, and the choice of generators over visitors is deliberate.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/ast.ts<span class="code__lines">:140-171</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every expression in a tree, parents before children.
+ *
+ * Written as a generator rather than a visitor with callbacks, so a caller can
+ * `break` out of it — which the completion code does constantly, since it wants
+ * the innermost node containing a cursor and nothing else. A visitor would
+ * either run to completion or need an exception to stop it.
+ */
+export function* walkExpr(expr: Expr): Generator&lt;Expr&gt; {
+	yield expr;
+
+	switch (expr.kind) {
+		case 'unary':
+			yield* walkExpr(expr.operand);
+			break;
+		case 'binary':
+			yield* walkExpr(expr.left);
+			yield* walkExpr(expr.right);
+			break;
+		case 'call':
+			for (const arg of expr.args) yield* walkExpr(arg);
+			break;
+		case 'list':
+			for (const item of expr.items) yield* walkExpr(item);
+			break;
+		case 'literal':
+		case 'duration':
+		case 'column':
+		case 'path':
+			break;
+	}
+}</code></pre>
+</figure>
+<p>A generator can be <code>break</code>-ed out of, which the completion code does constantly: it wants the innermost node containing a cursor and nothing else. A visitor with callbacks would have to run to completion and throw to stop early.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You have an <code>Expr</code> union and a <code>Stage</code> union, every node carrying a span.</li><li>You can explain why pipeline order rather than SQL clause order makes completion possible.</li><li>You can say why <code>walkExpr</code> is a generator.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-lexer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The lexer</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-pratt-parser.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The Pratt parser</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

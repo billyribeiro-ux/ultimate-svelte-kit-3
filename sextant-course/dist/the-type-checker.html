@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The type checker — Building Sextant</title>
+<meta name="description" content="Scope threading through pipeline stages, aggregates that may only appear in `summarize`, and units as a type error.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">11 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html" aria-current="page"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 11</p>
+			<h1>The type checker</h1>
+			<p class="lede">Scope threading through pipeline stages, aggregates that may only appear in <code>summarize</code>, and units as a type error.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Reject the four things the language must refuse, with a message that says what to type instead.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/check.ts<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE CHECKER
+ * ===========
+ *
+ * Between parsing and running: resolve names, check types, and refuse the
+ * queries that would otherwise run and return something wrong.
+ *
+ * WHAT A CHECKER IS ACTUALLY FOR
+ * ------------------------------
+ * Not &quot;catching errors early&quot; in the abstract. It is for the specific class of
+ * mistake that a dynamic evaluator turns into a *plausible answer* rather than a
+ * crash. Three of them, in the order they bite:
+ *
+ *   `duration &gt; 200`            runs, compares against 200ms, and is off by
+ *                               a factor of a thousand from what was meant
+ *   `percentile(service, 95)`   runs, sorts strings, returns a service name
+ *                               where a latency belongs
+ *   `where count() &gt; 5`         runs on some engines by silently ignoring the
+ *                               aggregate; the rows it returns are arbitrary
+ *
+ * None of those throws at runtime. All three produce a number on a dashboard
+ * that somebody will make a decision with. That is what this file is for.
+ *
+ * THE PIPELINE CHANGES THE SCHEMA
+ * -------------------------------
+ * A `summarize` replaces the available columns entirely; a `project` narrows
+ * them. So the checker walks the stages carrying a `Scope`, and each stage
+ * returns the scope the next one sees. That is the part a checker for a
+ * non-pipelined language does not need, and it is what makes column completion
+ * after the fourth stage correct instead of hopeful.
+ */</code></pre>
+</figure>
+<p>The checker walks the stages in order, carrying a <strong>scope</strong>: the columns that exist at this point in the pipeline, and their types. That is the piece of state that makes a pipeline language checkable at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/check.ts<span class="code__lines">:38-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Scope {
+	/** Column name to type. Ordered, because `project` output order is visible. */
+	readonly columns: ReadonlyMap&lt;string, SqfType&gt;;
+	/** Names that are dynamic bags, so `x.y.z` is legal on them. */
+	readonly bags: ReadonlySet&lt;string&gt;;
+}
+
+export interface CheckResult {
+	/** The scope the last stage produces — the shape of the result set. */
+	readonly scope: Scope;
+	readonly errors: readonly SqfError[];
+}</code></pre>
+</figure>
+<h3 id="scope-threading">How a stage changes the scope</h3>
+<p><code>where</code> leaves the scope alone. <code>project</code> <strong>replaces</strong> it with exactly the columns it names. <code>summarize</code> replaces it with the aggregations plus the grouping keys — which is why a <code>where</code> after a <code>summarize</code> can only see the summary’s columns, and why a query that filters on <code>service</code> after summarising by <code>bucket</code> is an error rather than a filter that matches nothing.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>from logs                                   scope: timestamp, service, level, …
+| where level == &quot;error&quot;                    scope: unchanged
+| summarize n = count() by service          scope: service, n
+| where message contains &quot;timeout&quot;          ← error: no column `message`
+                 ^^^^^^^                       hint: it was dropped by the summarize</code></pre>
+</figure>
+<h3 id="aggregates">Aggregates, and where they may appear</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/check.ts<span class="code__lines">:168-182</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Expressions                                                         */
+/* ------------------------------------------------------------------ */
+
+interface ExprContext {
+	/** Whether an aggregate call is legal here. Only `summarize` says yes. */
+	readonly aggregates: boolean;
+}
+
+function checkExpr(expr: Expr, scope: Scope, errors: SqfError[], context: ExprContext): SqfType {
+	switch (expr.kind) {
+		case 'literal':
+			return expr.value === null
+				? 'dynamic'
+				: typeof expr.value === 'string'</code></pre>
+</figure>
+<p>An <code>ExprContext</code> carries one boolean down the expression walk: whether an aggregation is legal here. <code>summarize</code>’s aggregation list sets it; every other position clears it. <code>where count() &gt; 5</code> therefore fails in the checker with a sentence, rather than in the evaluator with something.</p>
+<h3 id="units">Units, as a type error</h3>
+<p>This is the rule from chapter 2, finally written down. It is about forty lines, and it removes the whole class of &quot;the threshold was in the wrong unit&quot;.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/check.ts<span class="code__lines">:244-262</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	expr: Extract&lt;Expr, { kind: 'binary' }&gt;,
+	scope: Scope,
+	errors: SqfError[],
+	context: ExprContext
+): SqfType {
+	const left = checkExpr(expr.left, scope, errors, context);
+	const right = checkExpr(expr.right, scope, errors, context);
+
+	switch (expr.op) {
+		case 'and':
+		case 'or':
+			expect(left, 'boolean', expr.left.span, errors, `\`${expr.op}\` needs a condition`);
+			expect(right, 'boolean', expr.right.span, errors, `\`${expr.op}\` needs a condition`);
+			return 'boolean';
+
+		case '==':
+		case '!=':
+		case '&lt;':
+		case '&lt;=':</code></pre>
+</figure>
+<p>A <code>timestamp</code> compared against a bare number is *allowed* — epoch milliseconds are how a range arrives from a URL, and refusing it would make the common case awkward. A <code>duration</code> against a bare number is not, because there is no default unit anybody agrees on.</p>
+<aside class="callout callout--note"><p>That asymmetry looks arbitrary until you notice which one has a universal convention and which one does not. Rules like this are worth stating in the code, because the next person will read it as an inconsistency and &quot;fix&quot; it.</p></aside>
+<h3 id="testing">The tests are the specification</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/check.spec.ts<span class="code__lines">:67-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('keeps the unit through an aggregate', () =&gt; {
+	/*
+	 * `returnsArg` doing its job. Without it `max(duration)` would be a plain
+	 * number and every comparison downstream of a summarize would lose the unit
+	 * check — which is exactly where people compare a p95 against a threshold.
+	 */
+	expect(shape('from spans | summarize slowest = max(duration) by service')).toEqual([
+		['service', 'string'],
+		['slowest', 'duration']
+	]);
+	clean('from spans | summarize slowest = max(duration) by service | where slowest &gt; 1s');
+});</code></pre>
+</figure>
+<p>A checker’s test suite is the only readable statement of what a language rejects. Each of these is one sentence of the specification, and they are worth writing before the code they check.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>from logs | summarize n = count() by service | where message == &quot;x&quot;</code> is an error naming the column.</li><li><code>where count() &gt; 5</code> is an error that says where an aggregation may appear.</li><li><code>where duration &gt; 500</code> is an error and <code>where duration &gt; 500ms</code> is not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-schema.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The schema: what a column is, and what a function promises</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

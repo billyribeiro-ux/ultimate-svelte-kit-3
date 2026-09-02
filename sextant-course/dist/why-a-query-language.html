@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why a query language, and what it must refuse — Building Sextant</title>
+<meta name="description" content="The four things a search box cannot do, the three properties a language for telemetry needs, and the decision to make units part of the type system.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 18.181818181818183%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html" aria-current="page"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>Why a query language, and what it must refuse</h1>
+			<p class="lede">The four things a search box cannot do, the three properties a language for telemetry needs, and the decision to make units part of the type system.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Be able to justify writing a language instead of borrowing one — and know which decisions have to be made before the first line of the lexer.</p></aside>
+			<p>Every observability product starts with a search box, and every one of them grows a language within two years. It is worth understanding why, because the reasons are the requirements.</p>
+<h3 id="what-a-search-box-cannot-do">What a search box cannot do</h3>
+<ol><li><strong>Aggregate.</strong> &quot;How many errors per service per minute&quot; is not a filter. The moment somebody wants a number rather than a list, the box needs a second concept, and there is nowhere to put it.</li><li><strong>Compose.</strong> Filter, then group, then filter *the groups* — &quot;services whose p95 went above a second&quot; — is three operations in a fixed order. A box has one.</li><li><strong>Be typed.</strong> <code>duration:500</code> means nothing without a unit, and a box that silently picks one is a box that lies to somebody at 3am.</li><li><strong>Be pushed down.</strong> A box is matched by scanning. A language has a *shape* the planner can read, which is the difference between a query that stays fast as the data grows and one that does not.</li></ol>
+
+<aside class="callout callout--why">
+	<h4>The real reason, which is none of those</h4>
+	<p>A language is a contract. Once &quot;what can I ask&quot; is written down as a grammar and a schema, every part of the product can read it: completion, documentation, the planner, the error messages, the alert rules. A search box has no contract, so each of those has to be built by hand and they drift.</p>
+</aside>
+<h3 id="three-properties">Three properties, chosen deliberately</h3>
+<p><strong>Pipelines, not nesting.</strong> Each stage takes rows and gives rows. You can read a query out loud in the order it happens, and you can delete the last line and get a valid, simpler query — which is exactly what somebody does when they are exploring.</p>
+<p><strong>A closed schema.</strong> Three sources — <code>logs</code>, <code>spans</code>, <code>metrics</code> — each with a fixed column list. Not because dynamic columns are impossible, but because a typo in a column name should be an error with a suggestion rather than a filter that silently matches nothing. &quot;It returned no rows&quot; is the most expensive wrong answer this product can give.</p>
+<p><strong>Units in the type system.</strong> A <code>duration</code> is not a <code>number</code>, and a <code>timestamp</code> is not a <code>duration</code>. This is the decision that costs the most and pays the most, and it is worth being specific about what it buys.</p>
+<h3 id="units">The units decision, concretely</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>from spans | where duration &gt; 500
+                              ^^^
+A duration cannot be compared with a plain number.
+  hint: write a duration, like `500ms` or `2s`
+
+from spans | where duration &gt; 500ms      ← what they meant
+from spans | where duration &gt; 2s         ← also fine</code></pre>
+</figure>
+<p>Every telemetry system in the world has a story about somebody who set a threshold in the wrong unit. The alert did not fire, or fired constantly; either way the fix was one character and the discovery took a week. Making it a type error costs about forty lines in the checker and removes the whole class.</p>
+<p>It also has a second-order effect that is easy to miss. Because a duration keeps its type through an aggregation — <code>max(duration)</code> is a duration, not a number — the *interface* can format it as <code>1.2s</code> rather than <code>1200</code>, everywhere, without anybody configuring a column. Types earn their keep twice.</p>
+<h3 id="what-it-must-refuse">What the language must refuse</h3>
+<p>A language is defined at least as much by what it rejects. Four refusals, decided now:</p>
+<ul><li><strong>An aggregate outside <code>summarize</code>.</strong> <code>where count() &gt; 5</code> has no meaning — count of what? — and the checker says so rather than the evaluator returning something.</li><li><strong>A bare column in a <code>summarize</code> that is not grouped.</strong> Classic SQL lets you do this and returns an arbitrary row’s value.</li><li><strong><code>=</code> where <code>==</code> is meant.</strong> Having both in a language is a well-known source of bugs. The mitigation here is that they are never interchangeable: <code>=</code> is legal only in an alias position and <code>==</code> only in an expression, so writing the wrong one is always a parse error with a specific message rather than a query that runs and means something else.</li><li><strong>A comparison between incompatible units</strong>, as above.</li></ul>
+<aside class="callout callout--note"><p>Notice that three of the four are *checker* rules rather than *grammar* rules. A grammar that tried to encode them would be unreadable and would give terrible errors. Deciding what belongs in the parser and what belongs in the checker is most of language design.</p></aside>
+<h3 id="the-source-of-truth">One source of truth for the schema</h3>
+<p>Here is the whole schema for one source, and it is worth reading now even though nothing uses it yet. Every column carries a type and a sentence, and both are load-bearing: the type is what the checker enforces, and the sentence is what completion shows.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/schema.ts<span class="code__lines">:76-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">{
+	name: 'logs',
+	doc: 'Log lines. The widest and cheapest of the three.',
+	columns: [
+		TIMESTAMP,
+		{ name: 'service', type: 'string', doc: 'The service that emitted the line.', common: true },
+		{
+			name: 'level',
+			type: 'string',
+			doc: 'debug | info | warn | error | fatal.',
+			common: true
+		},
+		{ name: 'message', type: 'string', doc: 'The line itself.', common: true },
+		{ name: 'trace_id', type: 'string', doc: 'The trace this line belongs to, if any.' },
+		{ name: 'span_id', type: 'string', doc: 'The span this line was emitted inside.' },
+		{ name: 'host', type: 'string', doc: 'The machine it came from.' },
+		{
+			name: 'attributes',
+			type: 'dynamic',
+			doc: 'Everything else the sender attached.',
+			bag: true,
+			common: true
+		}
+	]
+},</code></pre>
+</figure>
+<p>One table like that per source, and one list of functions beside it. Completion reads it, the checker reads it, the planner reads it, and the documentation *is* it. That is the contract a search box does not have.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name four things a search box cannot do, and say which one is really about the planner.</li><li>You can explain what putting units in the type system buys, twice over.</li><li>You can say which of the four refusals belong in the parser and which in the checker, and why.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-toolchain.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The toolchain, and one config file</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

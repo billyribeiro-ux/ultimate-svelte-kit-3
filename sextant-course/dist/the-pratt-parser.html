@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Pratt parser — Building Sextant</title>
+<meta name="description" content="One loop and a table instead of six near-identical functions — and the guard that was written in the wrong place and could never fire.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 11</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 72.72727272727273%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html" aria-current="page"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>The Pratt parser</h1>
+			<p class="lede">One loop and a table instead of six near-identical functions — and the guard that was written in the wrong place and could never fire.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Parse the pipeline with recursive descent and expressions with Pratt, recovering at each <code>|</code>.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.ts<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PARSER
+ * ==========
+ *
+ * Recursive descent for the pipeline, **Pratt** for expressions.
+ *
+ * WHY PRATT
+ * ---------
+ * The textbook alternative is one function per precedence level — `parseOr`
+ * calls `parseAnd` calls `parseComparison` calls `parseAdditive` — which works
+ * and produces one function per level, each nearly identical to the last. SQF
+ * has six levels, so that is six near-duplicate functions, and adding an
+ * operator means inserting a seventh in the right place and rewiring its
+ * neighbours.
+ *
+ * Pratt parsing replaces all of them with one loop and a table. `parseExpr(0)`
+ * parses a prefix, then keeps absorbing infix operators while their binding
+ * power exceeds the caller's. Adding an operator is a row in `INFIX`. That is
+ * not merely tidier — it is the difference between precedence being *data* you
+ * can print and read, and precedence being an emergent property of a call graph.
+ *
+ * ERROR RECOVERY
+ * --------------
+ * The parser never throws on the first mistake. Each stage is parsed inside a
+ * try, and a failure records the error and **skips to the next `|`**, so a
+ * four-stage query with a broken second stage still reports the error in the
+ * fourth. That single decision is most of what makes an editor pleasant: an
+ * error list that shrinks as you type beats one that reveals mistakes one at a
+ * time.
+ */</code></pre>
+</figure>
+<p>The textbook alternative is one function per precedence level: <code>parseOr</code> calls <code>parseAnd</code> calls <code>parseComparison</code> calls <code>parseAdditive</code>. It works, and it produces six near-identical functions, and adding an operator means inserting a seventh in the right place and rewiring its neighbours.</p>
+<h3 id="the-table">Precedence as data</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.ts<span class="code__lines">:46-79</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Infix operators and their binding power.
+ *
+ * The whole precedence table of the language, readable top to bottom. Higher
+ * binds tighter, so `a or b and c` parses as `a or (b and c)`.
+ *
+ * Comparison sits at 30, above `and`, so `a == 1 and b == 2` needs no
+ * parentheses — which is the single most common thing anybody writes and the
+ * place a language that gets precedence &quot;technically right&quot; (C's `&amp;` below
+ * `==`) annoys people forever.
+ */
+const INFIX: Readonly&lt;Partial&lt;Record&lt;TokenKind, { op: BinaryOp; power: number }&gt;&gt;&gt; = {
+	or: { op: 'or', power: 10 },
+	and: { op: 'and', power: 20 },
+
+	'==': { op: '==', power: 30 },
+	'!=': { op: '!=', power: 30 },
+	'&lt;': { op: '&lt;', power: 30 },
+	'&lt;=': { op: '&lt;=', power: 30 },
+	'&gt;': { op: '&gt;', power: 30 },
+	'&gt;=': { op: '&gt;=', power: 30 },
+	'=~': { op: '=~', power: 30 },
+	'!~': { op: '!~', power: 30 },
+	contains: { op: 'contains', power: 30 },
+	startswith: { op: 'startswith', power: 30 },
+	in: { op: 'in', power: 30 },
+
+	'+': { op: '+', power: 40 },
+	'-': { op: '-', power: 40 },
+	'*': { op: '*', power: 50 },
+	'/': { op: '/', power: 50 }
+};
+
+/** Unary `not` binds looser than comparison, so `not a == b` is `not (a == b)`. */</code></pre>
+</figure>
+<p>Read it top to bottom: that is the entire precedence of the language, printable and arguable. Comparison sits at 30, <strong>above</strong> <code>and</code>, so <code>a == 1 and b == 2</code> needs no parentheses — which is the single most common thing anybody writes, and the place where a language that gets precedence &quot;technically right&quot; (C, where <code>&amp;</code> binds looser than <code>==</code>) annoys people forever.</p>
+<h3 id="the-loop">The whole of precedence, in eight lines</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.ts<span class="code__lines">:322-358</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#parseExpr(minPower: number): Expr {
+	let left = this.#parsePrefix();
+
+	for (;;) {
+		/*
+		 * `=` in operator position.
+		 *
+		 * This case belongs *here*, not in `#parsePrefix`, and getting that wrong
+		 * is instructive: `where level = &quot;error&quot;` never reaches the prefix parser
+		 * with a `=`, because `level` is consumed first and the `=` is then in
+		 * infix position. A guard in the prefix parser looks right, compiles, and
+		 * never fires — the query instead fails much later with &quot;Expected `|`
+		 * before the next stage&quot;, which points at the wrong thing entirely.
+		 *
+		 * The rule: put the error where the token actually appears.
+		 */
+		if (this.#at_('=')) {
+			throw new SqfError(
+				'`=` assigns a name; it does not compare',
+				this.#peek().span,
+				'Use `==` to compare, or write this in `summarize`/`project` where a name is allowed'
+			);
+		}
+
+		const entry = INFIX[this.#peek().kind];
+		if (!entry || entry.power &lt; minPower) return left;
+
+		this.#next();
+
+		// Left-associative: the right operand must bind *strictly* tighter, so
+		// `a - b - c` is `(a - b) - c` and not `a - (b - c)`. Passing `power`
+		// rather than `power + 1` makes subtraction right-associative and the
+		// arithmetic wrong, which is a one-character bug with a wrong answer.
+		const right = this.#parseExpr(entry.power + 1);
+		left = { kind: 'binary', op: entry.op, left, right, span: joinSpans(left.span, right.span) };
+	}
+}</code></pre>
+</figure>
+<p>Parse a prefix; then, while the next infix operator binds at least as tightly as the caller asked for, consume it and parse a right operand that must bind *strictly* tighter. That last word is the associativity: passing <code>power</code> instead of <code>power + 1</code> makes subtraction right-associative, so <code>a - b - c</code> becomes <code>a - (b - c)</code> and the arithmetic is silently wrong.</p>
+<h3 id="the-guard-in-the-wrong-place">A guard that could never fire</h3>
+<p>The <code>=</code> check inside that loop is the most instructive twenty lines in the file, and it was originally somewhere else.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>from logs | where level = &quot;error&quot;
+                        ^
+first attempt: a guard in #parsePrefix
+        result: never fires. `level` is consumed as a prefix,
+                so the `=` is reached in INFIX position.
+      symptom: &quot;Expected `|` before the next stage&quot;, pointing
+                at the end of the query rather than at the `=`.</code></pre>
+</figure>
+<p>The guard compiled. It read correctly. It was in the wrong position in the grammar, so the error surfaced twenty tokens later pointing at something unrelated. The rule that comes out of it is general: <strong>put the error where the token actually appears.</strong></p>
+<aside class="callout callout--note"><p>This is a good argument for writing the test that produces the *message* rather than the one that produces the failure. A test asserting &quot;this query fails&quot; passed the whole time.</p></aside>
+<h3 id="recovery">Recovery at the pipe, and nothing else</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.ts<span class="code__lines">:166-191</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	const stages: Stage[] = [];
+
+	while (this.#eat('|')) {
+		try {
+			stages.push(this.#parseStage());
+		} catch (thrown) {
+			if (!(thrown instanceof SqfError)) throw thrown;
+			this.errors.push(thrown);
+			this.#recover();
+		}
+	}
+
+	if (!this.#at_('eof')) {
+		const token = this.#peek();
+		this.errors.push(
+			new SqfError('Expected `|` before the next stage', token.span, describeFound(token))
+		);
+	}
+
+	return {
+		source,
+		sourceSpan: sourceToken.span,
+		stages,
+		span: joinSpans(start, this.#peek().span)
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.ts<span class="code__lines">:193-203</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Skip to the start of the next stage.
+ *
+ * The recovery point is `|` and nothing else. Trying to be cleverer — resuming
+ * at the next keyword, say — produces cascading nonsense, because the token
+ * that follows a mistake is usually part of the mistake. One unambiguous
+ * synchronisation point is worth more than a clever one.
+ */
+#recover(): void {
+	while (!this.#at_('|') &amp;&amp; !this.#at_('eof')) this.#next();
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why one dumb synchronisation point beats a clever one</h4>
+	<p>Trying to resume at the next keyword produces cascading nonsense, because the token after a mistake is usually still part of the mistake. <code>|</code> is unambiguous, it is where a stage begins, and a person editing a broken query is nearly always inside one stage.</p>
+</aside>
+<h3 id="testing-a-parser">Testing a parser</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/parser.spec.ts<span class="code__lines">:77-101</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('binds comparison tighter than `and`', () =&gt; {
+	// The one everybody writes. If this needed parentheses the language would
+	// be wrong regardless of what a precedence table says.
+	expect(predicate('from logs | where a == 1 and b == 2')).toBe('(and (== a 1) (== b 2))');
+});
+
+it('binds `not` looser than comparison', () =&gt; {
+	expect(predicate('from logs | where not a == b')).toBe('(not (== a b))');
+});
+
+it('binds unary minus tighter than multiplication', () =&gt; {
+	expect(predicate('from logs | where -a * b &gt; 0')).toBe('(&gt; (* (- a) b) 0)');
+});
+
+it('binds multiplication tighter than addition', () =&gt; {
+	expect(predicate('from logs | where a + b * c &gt; 0')).toBe('(&gt; (+ a (* b c)) 0)');
+});
+
+it('keeps subtraction left-associative', () =&gt; {
+	/*
+	 * The one-character bug: passing `power` instead of `power + 1` to the
+	 * recursive call makes this `(- a (- b c))`, which is a different number.
+	 */
+	expect(predicate('from logs | where a - b - c &gt; 0')).toBe('(&gt; (- (- a b) c) 0)');
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>parse(&quot;from logs | where a == 1 and b == 2&quot;)</code> gives one <code>and</code> with two comparisons under it.</li><li>A four-stage query with a broken second stage still reports an error in the fourth.</li><li><code>where level = &quot;error&quot;</code> produces a message about <code>=</code> that points at the <code>=</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-ast.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The syntax tree</span>
+			</a>
+			<a class="pager__link pager__link--next" href="errors-that-point.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Errors that point at something</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
