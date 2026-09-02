@@ -64,15 +64,15 @@ export const runQuery = query(RequestSchema, async ({ tenant, q, range }) => {
 	 * nobody.
 	 *
 	 * The other one is `getAbortSignal()` from `svelte`, which is a **client**
-	 * API: it lives inside an async `$derived` and is aborted when that derived's
-	 * dependencies change. `ExplorePage.svelte` uses it to cancel the in-flight
-	 * query when the time range moves under it.
+	 * API: it lives inside a `$derived` or an `$effect` and is aborted when that
+	 * reaction re-runs or is destroyed. `LiveTail.svelte` uses it to tear down the
+	 * streaming fetch the moment the query changes underneath it.
 	 *
 	 * They are easy to confuse and they solve opposite halves of the same problem.
 	 * The client one stops the browser waiting for an answer it no longer wants;
-	 * this one stops the server computing it. Dragging a time range fires a query
-	 * per frame, and without *both* the last position waits behind forty queries
-	 * nobody wants and the answer arrives seconds after the pointer stopped.
+	 * this one stops the server computing it. Editing a query while a tail is open
+	 * needs *both* — otherwise the browser drops a stream the server is still
+	 * happily filling, one abandoned subscription per keystroke.
 	 */
 	const result = await run(parsed.query, {
 		tenantId: access.tenantId,
