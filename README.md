@@ -52,6 +52,12 @@ No build step, no server. Each chapter is a real page with prev/next links, so
 you can bookmark where you are and Ctrl+F the chapter you are actually reading.
 Rebuild any of them with `node build.js` in its folder.
 
+The Tessera course also ships `node tessera-course/verify.js`, which checks that
+every code block naming a file appears **verbatim** in that file. A course that
+quotes a codebase drifts from it the first time somebody refactors, and the
+drift is invisible — the prose still reads correctly and is simply no longer
+what the project does. This makes that a property rather than a promise.
+
 ## Project 1 — StrikeFlow
 
 A marketing site, taken seriously.
