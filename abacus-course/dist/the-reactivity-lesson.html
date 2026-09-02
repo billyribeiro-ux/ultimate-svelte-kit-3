@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The lesson: the same engine, out of $derived — Building Abacus</title>
+<meta name="description" content="Nine cells whose values are `$derived`s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 43.58974358974359%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html" aria-current="page"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>The lesson: the same engine, out of $derived</h1>
+			<p class="lede">Nine cells whose values are <code>$derived</code>s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>See that Svelte’s runtime is a spreadsheet engine with the cells hidden, and know the two things a runtime cannot give a spreadsheet.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SAME ENGINE, OUT OF RUNES
+ * =============================
+ *
+ * Chapter 10 built a dependency graph by hand: cells, edges, a dirty set,
+ * a topological sort. Svelte's runtime *is* one of those. This file proves
+ * it by building a small sheet where every cell's value is a `$derived`
+ * that reads other cells — and nothing else. No edges are recorded, no
+ * order is computed; Svelte tracks what each cell read and recomputes,
+ * in dependency order, exactly the cells that need it.
+ *
+ * WHAT IT SHOWS
+ * -------------
+ *   - A `$derived` is a formula cell. Its dependencies are whatever it read.
+ *   - Change an input and only the deriveds downstream re-run — Svelte's
+ *     &quot;push-pull&quot; scheduling is the incremental recalculation of chapter 10.
+ *   - Diamonds are fine: a cell that reads two cells that read one input
+ *     recomputes once, not twice, because updates are glitch-free.
+ *   - A cycle is not fine: Svelte throws rather than marking `#CYCLE!`,
+ *     because a derived that reads itself is a bug in a program, not a
+ *     mistake in a sheet.
+ *
+ * WHAT IT SHOWS ABOUT THE ENGINE, TOO
+ * -----------------------------------
+ * The hand-written engine exists because a spreadsheet needs what a
+ * runtime cannot give: cycles as values, a million cells that are not each
+ * a signal, undo, and a graph that can be serialised. The lesson is that
+ * both are the same algorithm, and knowing one is knowing the other.
+ */</code></pre>
+</figure>
+<p>The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:37-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class ReactiveCell {
+	readonly name: string;
+	input = $state('');
+
+	/** How many times this cell has been evaluated. Bumped inside the derived — a side effect, kept only because counting is the lesson. */
+	evaluations = 0;
+
+	readonly #lookup: (name: string) =&gt; Scalar;
+
+	/**
+	 * The cell's value: a `$derived` over `input` and, through `lookup`,
+	 * over whichever other cells the formula reads. Svelte records those
+	 * reads as dependencies; there is no code here that says &quot;A3 depends on
+	 * A1&quot;, and yet A3 will recompute when A1 changes.
+	 */
+	readonly value: Scalar = $derived.by(() =&gt; {
+		this.evaluations += 1;
+		const text = this.input;
+		if (!text.startsWith('=')) return parseCanonical(text);
+		try {
+			const ctx: Context = {
+				cell: (row, col) =&gt; this.#lookup(`${String.fromCharCode(65 + col)}${row + 1}`),
+				// A fresh Date per evaluation, never mutated: a plain Date is right.
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity
+				now: () =&gt; new Date(),
+				random: Math.random,
+				locale: 'en-US'
+			};
+			const result = evaluate(parse(text.slice(1)), ctx);
+			return result instanceof Object &amp;&amp; !(result instanceof ErrorValue)
+				? new ErrorValue('#VALUE!', 'A range cannot be shown in one cell')
+				: result;
+		} catch (e) {
+			return new ErrorValue('#ERROR!', (e as Error).message);
+		}
+	});
+
+	constructor(name: string, lookup: (name: string) =&gt; Scalar) {
+		this.name = name;
+		this.#lookup = lookup;
+	}
+}</code></pre>
+</figure>
+<p><code>value</code> is a <code>$derived.by</code> <strong>as a class field</strong>. It reads <code>this.input</code> and, through <code>#lookup</code>, whichever other cells the formula references — and those reads are the dependencies. Svelte records them as the derived runs. Change A1 and every derived that read A1, transitively, is marked and recomputed in dependency order, once each. That is steps one to three of chapter 09 with no code for any of them.</p>
+<p><code>evaluations += 1</code> inside a derived is a side effect, and the comment admits it: counting is the lesson. The page shows, after every edit, how many cells each side evaluated, and they agree.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:80-115</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A three-by-three sheet of reactive cells. */
+export class ReactiveSheet {
+	readonly names: string[];
+	/** Filled in the constructor and never changed after; the cells inside are the reactive part. */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	readonly cells = new Map&lt;string, ReactiveCell&gt;();
+
+	constructor(rows = 3, cols = 3) {
+		this.names = [];
+		for (let r = 0; r &lt; rows; r += 1) {
+			for (let c = 0; c &lt; cols; c += 1) {
+				const name = `${String.fromCharCode(65 + c)}${r + 1}`;
+				this.names.push(name);
+				this.cells.set(name, new ReactiveCell(name, (other) =&gt; this.read(other)));
+			}
+		}
+	}
+
+	read(name: string): Scalar {
+		const cell = this.cells.get(name.toUpperCase());
+		if (cell) return cell.value;
+		return parseA1(name) ? null : new ErrorValue('#REF!', `${name} is outside this little sheet`);
+	}
+
+	set(name: string, input: string): void {
+		const cell = this.cells.get(name);
+		if (cell) cell.input = input;
+	}
+
+	/** Total evaluations across every cell — the number the lesson compares. */
+	get evaluations(): number {
+		let n = 0;
+		for (const cell of this.cells.values()) n += cell.evaluations;
+		return n;
+	}
+}</code></pre>
+</figure>
+<h3 id="the-page">The page</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:17-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const starting: Record&lt;string, string&gt; = {
+	A1: '10',
+	B1: '=A1*2',
+	C1: '=B1+A1',
+	A2: '5',
+	B2: '=A2+B1',
+	C2: '=SUM(A1:B2)',
+	A3: '=IF(A1&gt;A2,&quot;A1&quot;,&quot;A2&quot;)',
+	B3: '=C1-C2',
+	C3: '=AVERAGE(A1:C2)'
+};
+
+const reactive = new ReactiveSheet();
+const engine = new Engine();
+
+for (const [name, input] of Object.entries(starting)) {
+	reactive.set(name, input);
+	const { row, col } = parseA1(name)!;
+	engine.set(row, col, input);
+}
+
+let engineVersion = $state(engine.version);
+let engineEvaluated = $state(0);
+let reactiveEvaluated = $state(0);
+let lastReactive = 0;
+
+function edit(name: string, input: string) {
+	const { row, col } = parseA1(name)!;
+	const before = reactive.evaluations;
+	reactive.set(name, input);
+	engineEvaluated = engine.set(row, col, input).evaluated;
+	engineVersion = engine.version;
+	// Read every reactive value so that the deriveds run now, then count.
+	for (const cell of reactive.cells.values()) void cell.value;
+	reactiveEvaluated = reactive.evaluations - before;
+	lastReactive = reactive.evaluations;
+}
+
+const show = (value: unknown) =&gt;
+	value === null ? '' : value instanceof ErrorValue ? value.code : String(value);
+
+// Silence the &quot;assigned but never read&quot; warning honestly: it is read by `edit`.
+void lastReactive;</code></pre>
+</figure>
+<p>Both sheets start from the same nine formulas. <code>edit</code> writes the same input into both and records how many cells each evaluated — the engine reports it in its <code>Recalc</code>; the reactive side is read in full so the deriveds run now, and the difference in the counter is the answer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:112-148</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	&lt;div class=&quot;twin card stack&quot;&gt;
+		&lt;h3&gt;Nine &lt;code&gt;$derived&lt;/code&gt;s&lt;/h3&gt;
+		&lt;table class=&quot;mini&quot;&gt;
+			&lt;tbody&gt;
+				{#each [1, 2, 3] as r (r)}
+					&lt;tr&gt;
+						{#each ['A', 'B', 'C'] as c (c)}
+							{@const name = `${c}${r}`}
+							{@const cell = reactive.cells.get(name)!}
+							&lt;td&gt;
+								&lt;label&gt;
+									&lt;span class=&quot;visually-hidden&quot;&gt;{name}&lt;/span&gt;
+									&lt;input
+										class=&quot;cell&quot;
+										value={cell.input}
+										onchange={(e) =&gt; edit(name, e.currentTarget.value)}
+									/&gt;
+								&lt;/label&gt;
+								&lt;svelte:boundary&gt;
+									&lt;output class={['shown', { error: cell.value instanceof ErrorValue }]}
+										&gt;{show(cell.value)}&lt;/output
+									&gt;
+									{#snippet failed(error)}
+										&lt;output class=&quot;shown error&quot; title={(error as Error).message}&gt;cycle!&lt;/output&gt;
+									{/snippet}
+								&lt;/svelte:boundary&gt;
+							&lt;/td&gt;
+						{/each}
+					&lt;/tr&gt;
+				{/each}
+			&lt;/tbody&gt;
+		&lt;/table&gt;
+		&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;
+			Last edit evaluated &lt;strong&gt;{reactiveEvaluated}&lt;/strong&gt; deriveds.
+		&lt;/p&gt;
+	&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why each reactive cell is wrapped in a boundary</h4>
+	<p>Type <code>=C3</code> into A1 and the hand-written engine marks a cycle and carries on. The reactive sheet *throws* — a derived that reads itself is a bug in a program, not a mistake in a sheet — and the <code>&lt;svelte:boundary&gt;</code> around that one cell catches it and renders <code>cycle!</code> in its place while the other eight keep working. That is the first thing a runtime cannot give a spreadsheet: a cycle as a value. The second is a million cells that are not each a signal, which is chapter 15’s line. Both are why the engine exists; neither makes it a different algorithm.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/lesson.e2e.ts<span class="code__lines">:12-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the engine and the deriveds agree after an edit on either side', async ({ page }) =&gt; {
+	await page.goto('/lesson');
+	const engine = page.locator('.twin').nth(0);
+	const reactive = page.locator('.twin').nth(1);
+
+	const values = async () =&gt; ({
+		engine: await engine.locator('output').allTextContents(),
+		reactive: await reactive.locator('output').allTextContents()
+	});
+
+	const before = await values();
+	expect(before.engine).toHaveLength(9);
+	expect(before.engine.map((s) =&gt; s.trim())).toEqual(before.reactive.map((s) =&gt; s.trim()));
+
+	// Edit A1 on the engine's side.
+	await engine.getByLabel('A1').fill('100');
+	await engine.getByLabel('A1').press('Enter');
+	await expect(engine.locator('output').nth(2)).not.toHaveText(before.engine[2]!.trim());
+	await expect(engine.locator('p.hint')).toContainText('evaluated');
+
+	// Edit B2 on the reactive side.
+	await reactive.getByLabel('B2').fill('=A1*3');
+	await reactive.getByLabel('B2').press('Enter');
+
+	await expect
+		.poll(async () =&gt; {
+			const now = await values();
+			return (
+				now.engine.map((s) =&gt; s.trim()).join('|') === now.reactive.map((s) =&gt; s.trim()).join('|')
+			);
+		})
+		.toBe(true);
+});</code></pre>
+</figure>
+<p>The end-to-end test edits one side, then the other, and asserts all eighteen outputs agree. It is the test that says the two are the same thing.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say where the dependency edges are in <code>ReactiveCell</code> and why there is no code for them.</li><li>You can explain why the reactive sheet throws on a cycle where the engine does not, and which is right for which job.</li><li>You can name the two reasons the hand-written engine exists even though <code>$derived</code> does the same thing.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="commands-with-inverses.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Commands with inverses: undo, structure, clipboard, fill, sort</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-axis.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The axis: where row 40,000 starts</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

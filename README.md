@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Six complete projects, each with its own build-along course.
+Seven complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -16,9 +16,11 @@ Six complete projects, each with its own build-along course.
 | [`sextant-course/`](./sextant-course) | Its 46-chapter course, for somebody who has finished project 4. Open `sextant-course/dist/index.html`. |
 | [`ostinato/`](./ostinato) | **Project 6** — Ostinato, a groovebox in the browser. A step sequencer with a two-clock scheduler and synthesised instruments, patterns that fit in a URL, a gallery with vanity addresses, live jam rooms, an embeddable custom element, and an adapter written from scratch — every feature of Svelte 5 and SvelteKit 3, each one used for something. |
 | [`ostinato-course/`](./ostinato-course) | Its 39-chapter course, for somebody who has finished project 5. Open `ostinato-course/dist/index.html`. |
+| [`abacus/`](./abacus) | **Project 7** — Abacus, a spreadsheet in the browser. A formula language with a Pratt parser and fifty functions, an engine that recalculates only what changed and is property-tested against a from-scratch evaluator, a grid that scrolls a million rows, passkeys instead of passwords, a second person editing beside you over a live query, CSV in a worker, and a container that migrates before it listens — and a lesson page where the same engine is written out of `$derived`. |
+| [`abacus-course/`](./abacus-course) | Its 39-chapter course, for somebody who has finished project 6. Open `abacus-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All six pin it in `.nvmrc` and `engines`.
+All seven pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -45,6 +47,10 @@ pnpm run db:push && pnpm run db:seed && pnpm run dev
 # Project 6 — the groovebox. Open /studio, or /jam/lobby in two windows.
 cd ostinato && pnpm install && cp .env.example .env
 pnpm run db:push && pnpm run db:seed && pnpm run dev
+
+# Project 7 — the spreadsheet. Open /sheet/local, or sign in with a passkey.
+cd abacus && pnpm install && cp .env.example .env
+pnpm run db:push && pnpm run db:seed && pnpm run dev
 ```
 
 Each seed prints what you need to open the thing it built: Halfpast prints the
@@ -52,7 +58,8 @@ demo studio's booking page, both sign-ins and a customer manage link; Tessera
 prints an owner, a viewer, and a board short link worth opening twice; Sextant
 prints a workspace, a sign-in, an ingest key, and the twenty minutes of its six
 hours of telemetry during which `payments-api` is timing out; Ostinato publishes
-three grooves under `@ostinato` and opens the lobby jam room.
+three grooves under `@ostinato` and opens the lobby jam room; Abacus publishes
+one sheet per template at `/s/seedbudget`, `/s/seedloan00` and `/s/seedgrades`.
 
 ## Reading the courses
 
@@ -63,6 +70,7 @@ open sequent-course/dist/index.html
 open tessera-course/dist/index.html
 open sextant-course/dist/index.html
 open ostinato-course/dist/index.html
+open abacus-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
@@ -87,6 +95,12 @@ The Ostinato course is built the same way — 294 blocks quoted from the project
 by line range, `node ostinato-course/verify.js` to check the ranges — and adds
 `tools/snapfile.js`, which snaps every range in a chapter file to whole
 statements so that fixing thirty of them after a refactor is one command.
+
+The Abacus course uses the same tooling — 287 blocks quoted by line range,
+`node abacus-course/verify.js` for the ranges, `tools/check-dist.js` for the
+built pages — and its `verify` and `build` run in CI beside the project's own
+suite, with `git diff --exit-code` on `dist/` so the committed pages are always
+the ones the build produces.
 
 ## Project 1 — StrikeFlow
 
@@ -308,5 +322,67 @@ needs `$host` to dispatch an event.
 
 ```bash
 cd ostinato
+pnpm run verify   # check, lint, unit + browser, build, e2e
+```
+
+## Project 7 — Abacus
+
+A spreadsheet. Type a number into a cell, type `=A1*2` into the next one, and
+the second cell follows the first. That is the whole idea, and it is where
+reactivity was invented — so this is the project where the framework's own
+subject is the domain. When you have written a dependency graph by hand, with a
+dirty set and a topological sort and cycle detection, `$derived` stops being
+magic; the lesson page puts the two side by side and lets you edit either.
+
+- **A formula language.** A hand-rolled lexer with spans, a Pratt parser whose
+  precedence table is the readable part (`-2^2` is 4, because every
+  spreadsheet says so), an evaluator that receives its arguments as thunks so
+  `IF` is lazy and `IFERROR` can catch, fifty-odd functions with signatures the
+  completion list reads, criteria (`">5"`, `"a*"`), decimal rounding that
+  shifts the point as text, and serial dates in UTC.
+- **An engine that recalculates only what changed.** Cells in a plain `Map`,
+  edges recorded when a formula is compiled, Kahn's algorithm over the dirty
+  set, Tarjan for cycle members so `#CYCLE!` is a value everything downstream
+  can see, and reference rewriting when rows are inserted, deleted or copied.
+  Property-tested: a thousand random sheets and ten thousand random edits
+  against a from-scratch evaluator, from a printed seed.
+- **One number between the engine and the grid.** The `Sheet` class is a few
+  `$state` fields and a `version`; every cell read touches the version first,
+  so ten thousand visible cells subscribe to one signal instead of being ten
+  thousand proxies. Undo is commands with inverses — a deleted row remembers
+  its cells and every formula the deletion rewrote.
+- **A grid that scrolls a million rows.** Prefix-sum axes for resizable rows,
+  two-axis virtualisation, frozen panes as zero-sized sticky layers, one
+  `cell` snippet rendered in five layers, an ARIA grid keyboard model, a fill
+  handle, two clipboard formats, and a formula bar whose coloured references
+  are a mirror under a transparent input. Assignable `$derived`s where the
+  autofixer said an effect was wrong.
+- **No account, or a passkey.** The local sheet lives in the Origin Private
+  File System with two tabs in step over a `BroadcastChannel`. Accounts are
+  WebAuthn: single-use challenges, a cloned-key counter, the relying-party id
+  from a `static` environment variable, and a valibot schema for the browser's
+  answer that matches the library's types with no casts.
+- **A second person editing beside you.** Numbered operations over a
+  `query.live` with a coalescing mailbox that closes on the request's abort
+  signal, presence chips, other people's cursors on the grid, a shared
+  document the server keeps current without running the engine.
+- **The rest of SvelteKit 3**: `router.resolution: 'server'`, `csr = false`
+  pages that ship no JavaScript, templates prerendered from `entries()`, a
+  `+page@.svelte` embed with its own `frame-ancestors`, a streamed CSV
+  response, a `QUERY` handler, `handleError` by `kind`, a font `preload`
+  filter by source filename, `transport` for an error class, and a universal
+  `load` beside component-level queries — with the chapter that says which of
+  the three each piece of data should come from.
+- **Shipped as a container.** A three-stage Dockerfile that bakes the origin
+  in, runs as `node`, migrates with `node --import` before it listens and
+  answers `SIGTERM`; a workflow that runs the suite, builds the image, probes
+  the health check and checks the exit code.
+- 86 unit and browser tests, 23 end-to-end scenarios run on desktop and a Pixel
+  7 profile with real passkey ceremonies on a virtual authenticator. Writing
+  them found five real bugs, each now a comment in the code that names the
+  test that caught it.
+
+```bash
+cd abacus
 pnpm run verify   # check, lint, unit + browser, build, e2e
 ```

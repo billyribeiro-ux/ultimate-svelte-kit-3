@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where next — Building Abacus</title>
+<meta name="description" content="How the project was scaffolded and checked, the `verify` gate, and five directions it could go: charts, conditional formatting, a shared broadcaster, an interval tree, spilling.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">39 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html" aria-current="page"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 39</p>
+			<h1>Where next</h1>
+			<p class="lede">How the project was scaffolded and checked, the <code>verify</code> gate, and five directions it could go: charts, conditional formatting, a shared broadcaster, an interval tree, spilling.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Leave with a list of things worth building next, each with the file it would start in.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">AGENTS.md<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+
+## Available Svelte MCP Tools:
+
+### 1. list-sections
+
+Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
+When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+
+### 2. get-documentation
+
+Retrieves full documentation content for specific sections. Accepts single or multiple sections.
+After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+
+### 3. svelte-autofixer
+
+Analyzes Svelte code and returns issues and suggestions.
+You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+
+### 4. playground-link
+
+Generates a Svelte Playground link with the provided code.
+After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:11-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;vite dev&quot;,
+	&quot;build&quot;: &quot;vite build&quot;,
+	&quot;preview&quot;: &quot;vite preview&quot;,
+	&quot;start&quot;: &quot;node build&quot;,
+	&quot;prepare&quot;: &quot;svelte-kit sync || echo ''&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json &amp;&amp; tsc --noEmit -p tsconfig.worker.json&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;format&quot;: &quot;prettier --write .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test:e2e&quot;: &quot;playwright test&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
+	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
+	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
+	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
+	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;
+},</code></pre>
+</figure>
+<p><code>sv create</code> with the <code>ai-tools</code> add-on wrote <code>AGENTS.md</code>, which tells an AI assistant how to use the Svelte MCP server — the documentation and an autofixer. The autofixer earned its place while writing this project: it flagged two pieces of state assigned inside effects, and both became the assignable deriveds of chapter 21. <code>verify</code> is the gate, and everything in this course passed it.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run verify
+  check     svelte-check: 0 errors, 0 warnings · tsc (worker): clean
+  lint      prettier + eslint: clean
+  test:unit 86 passed  (server: node · client: chromium)
+  build     adapter-node · 11 routes · 5 prerendered · precompressed
+  test:e2e  46 passed  (23 scenarios × desktop, phone)</code></pre>
+</figure>
+<h3 id="five-directions">Five directions</h3>
+<ol><li><strong>Charts from a range.</strong> A <code>chart</code> cell format, a <code>&lt;canvas&gt;</code> drawn from <code>tabulate</code>’s rows, and the same <code>sheet.version</code> subscription the grid uses. Everything it needs already exists in chapter 15.</li><li><strong>Conditional formatting.</strong> A rule is a criterion (ch. 08) applied to a rectangle; the grid already turns cell facts into classes. <code>CellFormat</code> grows a <code>rules</code> array and <code>formatScalar</code> stays as it is.</li><li><strong>A shared broadcaster.</strong> <code>live.ts</code> is in-process. Postgres <code>NOTIFY</code> or a Redis stream makes it work across instances, and the mailbox and the generator stay exactly as they are.</li><li><strong>An interval tree for ranges.</strong> The engine scans its range list per changed cell (ch. 09). The property test in chapter 12 is what lets you replace that with a tree and know you did not break anything.</li><li><strong>Spilling.</strong> <code>=A1:A3</code> in one cell is an error today (<code>toScalar</code>). Writing the range into the cells below, and marking them as spilled so a person cannot type over them, is a project of its own — and the engine’s <code>Recalc.changed</code> list is where it starts.</li></ol>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can run <code>pnpm run verify</code> from a fresh clone and get green.</li><li>You can point at the file where each of the five directions would start.</li><li>You have opened every file this course quoted, and one it did not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="deploying.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Deploying: a container that migrates, listens and stops</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

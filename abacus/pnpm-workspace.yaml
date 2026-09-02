@@ -1,0 +1,14 @@
+# Not a workspace — a single package. This file exists for one line.
+#
+# pnpm 11 refuses to run a dependency's install scripts unless you say so by
+# name, which is the correct default: `postinstall` is arbitrary code from a
+# transitive dependency you have never read. esbuild needs it to unpack its
+# platform binary, and Vite needs esbuild, so without this the dev server
+# starts and then dies on the first transform.
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@libsql/client@0.18.0'
+  - '@libsql/core@0.18.0'
+  - '@simplewebauthn/browser@14.0.0'
+  - '@simplewebauthn/server@14.0.0'

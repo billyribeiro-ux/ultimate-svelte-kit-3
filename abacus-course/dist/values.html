@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Values: what a cell can hold — Building Abacus</title>
+<meta name="description" content="A number, a string, a boolean, nothing, or an error — and, during evaluation, a range of those. Coercion rules every spreadsheet shares, and an ordering for comparisons.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 12.82051282051282%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html" aria-current="page"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>Values: what a cell can hold</h1>
+			<p class="lede">A number, a string, a boolean, nothing, or an error — and, during evaluation, a range of those. Coercion rules every spreadsheet shares, and an ordering for comparisons.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know the value types, why errors are a class, what <code>null</code> means, and the exact rules that turn <code>&quot;3&quot;</code> into 3 and <code>TRUE</code> into 1.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:1-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT A CELL CAN HOLD
+ * ====================
+ *
+ * A number, a string, a boolean, nothing, or an error — and, while a formula
+ * is being evaluated, a range of those. Numbers, strings and booleans are the
+ * JavaScript primitives, because there is no reason to wrap them. Empty is
+ * `null`. Errors and ranges are classes, so `instanceof` tells them apart
+ * from a string that happens to say `#REF!`, and so the `transport` hook in
+ * `src/hooks.ts` can carry an error across the wire as itself.
+ *
+ * DATES ARE NUMBERS
+ * -----------------
+ * As in every spreadsheet: a date is the number of days since an epoch, with
+ * the time of day as the fraction. `DATE(2026, 9, 2)` is 46267, and
+ * `DATE(2026, 9, 2) + 7` is a week later without a date library. Which epoch
+ * — and what a person sees — is `src/lib/sheet/dates.ts` and `format.ts`.
+ */
+
+export type ErrorCode =
+	'#DIV/0!' | '#REF!' | '#NAME?' | '#VALUE!' | '#CYCLE!' | '#N/A' | '#NUM!' | '#ERROR!';
+
+export class ErrorValue {
+	constructor(
+		readonly code: ErrorCode,
+		readonly message = ''
+	) {}
+
+	toString(): string {
+		return this.code;
+	}
+
+	toJSON(): { code: ErrorCode; message: string } {
+		return { code: this.code, message: this.message };
+	}
+}
+
+/** A scalar: what a cell holds after evaluation. */
+export type Scalar = number | string | boolean | null | ErrorValue;</code></pre>
+</figure>
+<p>Numbers, strings and booleans are the JavaScript primitives, because wrapping them would buy nothing. Empty is <code>null</code>. Errors are a *class* so that <code>instanceof</code> tells <code>#REF!</code> the error apart from <code>&quot;#REF!&quot;</code> the text somebody typed — and so that the <code>transport</code> hook in chapter 29 can carry an error across the wire as itself. <code>toJSON</code> exists for the same reason: a published sheet’s values are serialised, and an error must serialise as something a reader can recognise.</p>
+<p>The second comment is the one people miss: <strong>dates are numbers</strong>. <code>DATE(2026, 9, 2)</code> is 46267, and adding 7 is a week later without a date library. Which epoch — and what a person sees — is chapter 13.</p>
+<h3 id="ranges">A range, only while evaluating</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:41-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A rectangle of scalars, row-major, produced only while evaluating a
+ * formula. `SUM(A1:B2)` receives one of these; a cell never stores one.
+ */
+export class RangeValue {
+	constructor(
+		readonly rows: number,
+		readonly cols: number,
+		readonly cells: readonly Scalar[]
+	) {
+		if (cells.length !== rows * cols) {
+			throw new RangeError(
+				`A ${rows}×${cols} range needs ${rows * cols} cells, not ${cells.length}`
+			);
+		}
+	}
+
+	get(row: number, col: number): Scalar {
+		return this.cells[row * this.cols + col] ?? null;
+	}
+
+	get size(): number {
+		return this.cells.length;
+	}
+}
+
+export type Value = Scalar | RangeValue;
+
+export const isError = (v: unknown): v is ErrorValue =&gt; v instanceof ErrorValue;
+export const isRange = (v: Value): v is RangeValue =&gt; v instanceof RangeValue;
+
+export const DIV0 = () =&gt; new ErrorValue('#DIV/0!', 'Division by zero');
+export const REF = (message = 'A reference is not valid') =&gt; new ErrorValue('#REF!', message);
+export const NAME = (name: string) =&gt; new ErrorValue('#NAME?', `Unknown function ${name}`);
+export const VALUE = (message = 'Wrong type of value') =&gt; new ErrorValue('#VALUE!', message);
+export const CYCLE = () =&gt; new ErrorValue('#CYCLE!', 'This cell depends on itself');
+export const NA = (message = 'Not available') =&gt; new ErrorValue('#N/A', message);
+export const NUM = (message = 'Not a valid number') =&gt; new ErrorValue('#NUM!', message);</code></pre>
+</figure>
+<p><code>SUM(A1:B2)</code> receives a <code>RangeValue</code>; a cell never stores one. The constructor checks that the cell count matches the shape, because a range with the wrong number of cells is a bug that would otherwise show up as a wrong total three functions later. The error constructors are functions, not constants, so that every error has its own message.</p>
+<h3 id="coercion">Coercion: the rules every spreadsheet shares</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:84-101</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The rules every spreadsheet shares: in arithmetic, empty is zero, a boolean
+ * is one or zero, and a string is a number if it *looks* like one and an
+ * error if it does not. A range where a scalar was expected is an error —
+ * there is no implicit intersection here, because nobody can explain it.
+ */
+export function toNumber(v: Value): number | ErrorValue {
+	if (typeof v === 'number') return Number.isFinite(v) ? v : NUM();
+	if (v === null) return 0;
+	if (typeof v === 'boolean') return v ? 1 : 0;
+	if (v instanceof ErrorValue) return v;
+	if (v instanceof RangeValue) return VALUE('A range was used where one value was expected');
+	const text = v.trim();
+	if (text === '') return VALUE(`&quot;${v}&quot; is not a number`);
+	const n = Number(text.endsWith('%') ? text.slice(0, -1) : text);
+	if (!Number.isFinite(n)) return VALUE(`&quot;${v}&quot; is not a number`);
+	return text.endsWith('%') ? n / 100 : n;
+}</code></pre>
+</figure>
+<p>In arithmetic, empty is zero, a boolean is one or zero, and a string is a number if it *looks* like one and an error if it does not — <code>&quot;12%&quot;</code> is 0.12, <code>&quot;twelve&quot;</code> is <code>#VALUE!</code>. A range where a scalar was expected is an error; there is no implicit intersection here, because nobody can explain it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:103-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Text. Numbers print with fifteen significant digits, which is what turns
+ * `0.1 + 0.2` into `0.3` rather than `0.30000000000000004` — the same
+ * rounding every spreadsheet applies at the edge.
+ */
+export function toText(v: Value): string | ErrorValue {
+	if (typeof v === 'string') return v;
+	if (typeof v === 'number') return plainNumber(v);
+	if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+	if (v === null) return '';
+	if (v instanceof ErrorValue) return v;
+	return VALUE('A range was used where text was expected');
+}
+
+export function plainNumber(n: number): string {
+	if (!Number.isFinite(n)) return String(n);
+	const fixed = Number(n.toPrecision(15));
+	return Object.is(fixed, -0) ? '0' : String(fixed);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why toText rounds to fifteen significant digits</h4>
+	<p><code>0.1 + 0.2</code> is <code>0.30000000000000004</code> in floating point, and always will be. Every spreadsheet hides that at the *edge* — when a number becomes text — by printing fifteen significant digits, which is exactly the precision a double reliably carries. The engine never rounds; only the text does. That keeps <code>=A1*3</code> exact and <code>A1 &amp; &quot;&quot;</code> readable, which is the right pair.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:123-138</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function toBoolean(v: Value): boolean | ErrorValue {
+	if (typeof v === 'boolean') return v;
+	if (typeof v === 'number') return v !== 0;
+	if (v === null) return false;
+	if (v instanceof ErrorValue) return v;
+	if (v instanceof RangeValue) return VALUE('A range was used where a condition was expected');
+	const upper = v.trim().toUpperCase();
+	if (upper === 'TRUE') return true;
+	if (upper === 'FALSE') return false;
+	return VALUE(`&quot;${v}&quot; is not TRUE or FALSE`);
+}
+
+/** Every scalar in a value, in row-major order: a range's cells, or the one scalar. */
+export function flatten(v: Value): Scalar[] {
+	return v instanceof RangeValue ? [...v.cells] : [v];
+}</code></pre>
+</figure>
+<h3 id="ordering">An ordering for comparisons and sorting</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/values.ts<span class="code__lines">:140-168</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Ordering for comparisons and sorting, as spreadsheets do it: numbers first,
+ * then text (case-insensitive), then booleans. Empty compares as zero against
+ * a number and as the empty string against text.
+ */
+export function compare(a: Scalar, b: Scalar): number | ErrorValue {
+	if (a instanceof ErrorValue) return a;
+	if (b instanceof ErrorValue) return b;
+	const ra = rank(a, b);
+	const rb = rank(b, a);
+	if (ra !== rb) return ra - rb;
+	if (typeof a === 'number' || a === null) {
+		return (a ?? 0) - ((b as number | null) ?? 0);
+	}
+	if (typeof a === 'string') {
+		const x = a.toLowerCase();
+		const y = String(b ?? '').toLowerCase();
+		return x &lt; y ? -1 : x &gt; y ? 1 : 0;
+	}
+	return Number(a) - Number(b);
+}
+
+/** Empty takes the rank of whatever it is compared against. */
+function rank(v: Scalar, other: Scalar): number {
+	if (v === null) return other === null ? 0 : rank(other, null);
+	if (typeof v === 'number') return 0;
+	if (typeof v === 'string') return 1;
+	return 2;
+}</code></pre>
+</figure>
+<p>Numbers sort before text, text before booleans, and text compares case-insensitively — the spreadsheet convention, and the reason <code>2 &lt; &quot;a&quot;</code> is <code>TRUE</code>. Empty takes the rank of whatever it is compared against: zero next to a number, the empty string next to text. <code>rank</code> is recursive for exactly that case and nothing else.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>toNumber(&quot;&quot;)</code>, <code>toNumber(null)</code> and <code>toNumber(TRUE)</code> return, and why they differ.</li><li>You can explain why <code>ErrorValue</code> is a class and a string would not do.</li><li>You can predict the result of <code>=&quot;b&quot; &gt; 10</code> and <code>=&quot;&quot; = 0</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="addresses.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Addresses: where a cell is</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-lexer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The lexer: characters into tokens</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

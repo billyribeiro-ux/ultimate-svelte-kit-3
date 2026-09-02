@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moving references: insert, delete, copy — Building Abacus</title>
+<meta name="description" content="Insert a row above `A5` and every `A5` becomes `A6`. Delete the column a formula reads and the reference becomes `#REF!`. Copy `=A1*2` one row down and it becomes `=A2*2` — unless it said `$A$1`. One mechanism does all three.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">11 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 28.205128205128204%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html" aria-current="page"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 11</p>
+			<h1>Moving references: insert, delete, copy</h1>
+			<p class="lede">Insert a row above <code>A5</code> and every <code>A5</code> becomes <code>A6</code>. Delete the column a formula reads and the reference becomes <code>#REF!</code>. Copy <code>=A1*2</code> one row down and it becomes <code>=A2*2</code> — unless it said <code>$A$1</code>. One mechanism does all three.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand how a formula’s text is rewritten without disturbing the parts a person wrote, and what the engine does to the whole sheet when its shape changes.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/rewrite.ts<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * REWRITING REFERENCES
+ * ====================
+ *
+ * A formula is text, and the text has to change when the sheet around it
+ * changes. Insert a row above `A5` and every `A5` becomes `A6`; delete the
+ * column a formula reads and the reference becomes `#REF!`; copy `=A1*2` one
+ * row down and it becomes `=A2*2` — unless it said `$A$1`, in which case it
+ * stays.
+ *
+ * Every rewrite here works the same way: parse the formula, walk its
+ * references in source order, decide the new text of each one, and splice it
+ * back into the original string *from the end*, so that earlier spans stay
+ * valid. The rest of the formula — spacing, casing, the parts a person wrote
+ * — is left exactly as it was.
+ */
+
+import {
+	formatRef,
+	isRangeRef,
+	references,
+	type CellRef,
+	type RangeRef
+} from '#lib/formula/ast.ts';
+import { parse } from '#lib/formula/parser.ts';
+import { MAX_COLS, MAX_ROWS } from '#lib/sheet/address.ts';
+
+export type Shift =
+	| { kind: 'insert-rows'; at: number; count: number }
+	| { kind: 'delete-rows'; at: number; count: number }
+	| { kind: 'insert-cols'; at: number; count: number }
+	| { kind: 'delete-cols'; at: number; count: number };
+
+type Mapper = (ref: CellRef | RangeRef) =&gt; CellRef | RangeRef | null;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/rewrite.ts<span class="code__lines">:36-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The formula with every reference passed through `mapper`. `null` from the
+ * mapper means the reference no longer points anywhere, and `#REF!` is
+ * written in its place — a value the evaluator understands, so the cell shows
+ * the error rather than a parse failure.
+ */
+export function rewriteFormula(source: string, mapper: Mapper): string {
+	let root;
+	try {
+		root = parse(source);
+	} catch {
+		// A formula that does not parse has no references to move. Leave it.
+		return source;
+	}
+
+	let out = source;
+	for (const { ref, span } of references(root).reverse()) {
+		const next = mapper(ref);
+		const text = next === null ? '#REF!' : formatRef(next);
+		out = out.slice(0, span.start) + text + out.slice(span.end);
+	}
+	return out;
+}</code></pre>
+</figure>
+<p>The mechanism: parse, walk the references in source order, decide the new text of each, and splice it back into the original string *from the end* so that earlier spans stay valid. Everything that is not a reference — spacing, casing, the person’s own choices — is left as it was. <code>null</code> from the mapper means “this reference points nowhere now”, and <code>#REF!</code> is written in its place: a value the evaluator understands, so the cell shows an error rather than failing to parse.</p>
+<h3 id="structural">A structural change</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/rewrite.ts<span class="code__lines">:60-81</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Where a row index lands after a shift, or `null` if it was deleted. */
+export function shiftIndex(
+	index: number,
+	at: number,
+	count: number,
+	insert: boolean
+): number | null {
+	if (index &lt; at) return index;
+	if (insert) return index + count;
+	if (index &lt; at + count) return null;
+	return index - count;
+}
+
+/** One cell reference after a structural change. */
+export function shiftCellRef(ref: CellRef, shift: Shift): CellRef | null {
+	const rows = shift.kind === 'insert-rows' || shift.kind === 'delete-rows';
+	const insert = shift.kind === 'insert-rows' || shift.kind === 'insert-cols';
+	const index = shiftIndex(rows ? ref.row : ref.col, shift.at, shift.count, insert);
+	if (index === null) return null;
+	if (rows ? index &gt;= MAX_ROWS : index &gt;= MAX_COLS) return null;
+	return rows ? { ...ref, row: index } : { ...ref, col: index };
+}</code></pre>
+</figure>
+<p><code>shiftIndex</code> is the one function every structural change reduces to: where does an index land after inserting or deleting <code>count</code> at <code>at</code>? Before the change, unchanged; inserted, moved by <code>count</code>; inside a deleted band, gone; after it, moved back by <code>count</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/rewrite.ts<span class="code__lines">:83-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A range after a structural change. A range shrinks when part of it is
+ * deleted and vanishes only when all of it is — `SUM(A1:A10)` with row 5
+ * deleted becomes `SUM(A1:A9)`, which is what a person means.
+ */
+export function shiftRangeRef(range: RangeRef, shift: Shift): RangeRef | null {
+	const rows = shift.kind === 'insert-rows' || shift.kind === 'delete-rows';
+	const insert = shift.kind === 'insert-rows' || shift.kind === 'insert-cols';
+	const from = rows ? range.start.row : range.start.col;
+	const to = rows ? range.end.row : range.end.col;
+
+	let newFrom: number;
+	let newTo: number;
+	if (insert) {
+		// An insertion inside the range grows it; at or before the start moves it.
+		newFrom = from &gt;= shift.at ? from + shift.count : from;
+		newTo = to &gt;= shift.at ? to + shift.count : to;
+	} else {
+		const end = shift.at + shift.count; // exclusive
+		if (from &gt;= shift.at &amp;&amp; to &lt; end) return null; // wholly deleted
+		newFrom = from &lt; shift.at ? from : from &lt; end ? shift.at : from - shift.count;
+		newTo = to &lt; shift.at ? to : to &lt; end ? shift.at - 1 : to - shift.count;
+	}
+	if (rows ? newTo &gt;= MAX_ROWS : newTo &gt;= MAX_COLS) return null;
+
+	return rows
+		? { start: { ...range.start, row: newFrom }, end: { ...range.end, row: newTo } }
+		: { start: { ...range.start, col: newFrom }, end: { ...range.end, col: newTo } };
+}
+
+export function shiftFormula(source: string, shift: Shift): string {
+	return rewriteFormula(source, (ref) =&gt;
+		isRangeRef(ref) ? shiftRangeRef(ref, shift) : shiftCellRef(ref, shift)
+	);
+}</code></pre>
+</figure>
+<p>A range is subtler than a cell. Deleting row 5 from <code>SUM(A1:A10)</code> gives <code>SUM(A1:A9)</code> — the range *shrinks* — and it vanishes only when all of it is deleted. An insertion inside a range grows it; at or before its start moves it. Those are what a person means, and they are the cases the property test in the next chapter checks by inserting rows and deleting them again.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:256-287</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Insert or delete rows or columns. Every cell moves, every formula in
+ * the sheet is rewritten (see `rewrite.ts`), and everything is
+ * recalculated. Rare enough that a full pass is the right price for a
+ * procedure with no special cases.
+ */
+shift(change: Shift): Recalc {
+	const rows = change.kind === 'insert-rows' || change.kind === 'delete-rows';
+	const insert = change.kind === 'insert-rows' || change.kind === 'insert-cols';
+	const moved = new Map&lt;number, Cell&gt;();
+
+	for (const [k, cell] of this.cells) {
+		const a = unkey(k);
+		const index = shiftIndex(rows ? a.row : a.col, change.at, change.count, insert);
+		if (index === null) continue; // deleted with its row or column
+		if (rows ? index &gt;= MAX_ROWS : index &gt;= MAX_COLS) continue; // pushed off the edge
+		const target = rows ? key(index, a.col) : key(a.row, index);
+		const input = cell.formula ? `=${shiftFormula(cell.input.slice(1), change)}` : cell.input;
+		moved.set(target, input === cell.input ? cell : this.#compile(input, cell.format));
+	}
+
+	this.cells.clear();
+	this.#direct.clear();
+	this.#ranges.clear();
+	this.#volatile.clear();
+	for (const [k, cell] of moved) {
+		this.cells.set(k, cell);
+		this.#index(k, cell);
+	}
+
+	return this.recalculateAll();
+}</code></pre>
+</figure>
+<p>The engine’s side of a shift is deliberately blunt: every cell moves, every formula is rewritten, and everything is recalculated. A structural change is rare, and a full pass is the right price for a procedure with no special cases — the comment says so, and the alternative (tracking exactly which formulas a shift touched) is the kind of cleverness that arrives with its own bugs.</p>
+<h3 id="copy">Copying: relative and absolute</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/rewrite.ts<span class="code__lines">:119-139</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A reference as it reads after the formula is copied `dRow` rows and `dCol`
+ * columns away. Relative parts move; absolute parts (`$`) stay. A reference
+ * pushed off the top or left of the sheet becomes `#REF!` — the same thing
+ * every spreadsheet shows when you paste `=A1` into row 1 from row 2.
+ */
+export function translateCellRef(ref: CellRef, dRow: number, dCol: number): CellRef | null {
+	const row = ref.absRow ? ref.row : ref.row + dRow;
+	const col = ref.absCol ? ref.col : ref.col + dCol;
+	if (row &lt; 0 || col &lt; 0 || row &gt;= MAX_ROWS || col &gt;= MAX_COLS) return null;
+	return { ...ref, row, col };
+}
+
+export function translateFormula(source: string, dRow: number, dCol: number): string {
+	return rewriteFormula(source, (ref) =&gt; {
+		if (!isRangeRef(ref)) return translateCellRef(ref, dRow, dCol);
+		const start = translateCellRef(ref.start, dRow, dCol);
+		const end = translateCellRef(ref.end, dRow, dCol);
+		return start &amp;&amp; end ? { start, end } : null;
+	});
+}</code></pre>
+</figure>
+<p>Copying a formula is *translation*: relative parts move by the distance, absolute parts (<code>$</code>) stay. A reference pushed off the top or left of the sheet becomes <code>#REF!</code>, which is what every spreadsheet shows when you paste <code>=A1</code> into row 1 from row 2. The sheet model uses this for paste, for the fill handle and for sorting rows (ch. 16).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.spec.ts<span class="code__lines">:202-225</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('rewriting', () =&gt; {
+	it('translates relative parts and keeps absolute ones', () =&gt; {
+		expect(translateFormula('A1 + $B$2 + C$3 + $D4', 1, 1)).toBe('B2 + $B$2 + D$3 + $D5');
+		expect(translateFormula('SUM(A1:B2)', 2, 0)).toBe('SUM(A3:B4)');
+		expect(translateFormula('A1', -1, 0)).toBe('#REF!');
+		expect(translateFormula('1 +', 1, 1)).toBe('1 +'); // unparseable: untouched
+	});
+
+	it('preserves spacing and casing while shifting', () =&gt; {
+		expect(shiftFormula('sum( A1 : A3 )*2', { kind: 'insert-rows', at: 0, count: 1 })).toBe(
+			'sum( A2:A4 )*2'
+		);
+	});
+
+	it('handles every way a range can meet a deletion', () =&gt; {
+		const del = { kind: 'delete-rows', at: 2, count: 2 } as const; // rows 3 and 4
+		expect(shiftFormula('SUM(A1:A2)', del)).toBe('SUM(A1:A2)'); // above
+		expect(shiftFormula('SUM(A5:A6)', del)).toBe('SUM(A3:A4)'); // below
+		expect(shiftFormula('SUM(A1:A6)', del)).toBe('SUM(A1:A4)'); // spanning
+		expect(shiftFormula('SUM(A2:A3)', del)).toBe('SUM(A2:A2)'); // overlapping the top
+		expect(shiftFormula('SUM(A4:A5)', del)).toBe('SUM(A3:A3)'); // overlapping the bottom
+		expect(shiftFormula('SUM(A3:A4)', del)).toBe('SUM(#REF!)'); // wholly inside
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>SUM(B2:B9)</code> becomes after inserting two rows at row 4, and after deleting rows 8–12.</li><li>You can explain why references are spliced from the end of the string.</li><li>You can predict what <code>=$A1+B$2</code> becomes when copied one row down and one column right.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="cycles.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Cycles: an error that is a value</span>
+			</a>
+			<a class="pager__link pager__link--next" href="proving-the-engine.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Proving the engine: a from-scratch evaluator and ten thousand random edits</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

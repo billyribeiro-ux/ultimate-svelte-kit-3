@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The shell: layouts, tokens, toasts — Building Abacus</title>
+<meta name="description" content="A root layout that is almost empty so the embed can reset to it, an app layout with the header and the “new version” banner, design tokens that are light first with `light-dark()`, forced colours, print, and toasts mounted imperatively.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">30 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 76.92307692307693%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html" aria-current="page"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 30</p>
+			<h1>The shell: layouts, tokens, toasts</h1>
+			<p class="lede">A root layout that is almost empty so the embed can reset to it, an app layout with the header and the “new version” banner, design tokens that are light first with <code>light-dark()</code>, forced colours, print, and toasts mounted imperatively.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Structure layouts so a page can opt out of the chrome, and build a token layer that survives dark mode, high contrast and paper.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:1-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import '../app.css';
+	import { onNavigate } from '$app/navigation';
+	import { navigating } from '$app/state';
+	import { prefersReducedMotion } from 'svelte/motion';
+
+	/**
+	 * THE ROOT LAYOUT
+	 * ===============
+	 *
+	 * Deliberately almost empty: the stylesheet, the view transitions, and a
+	 * progress bar. The header lives one level down, in `(app)/+layout.svelte`,
+	 * so that a page which must have *no* chrome — the embed, which lives in
+	 * somebody else's iframe — can reset to this layout with a `+page@.svelte`.
+	 */
+	let { children } = $props();
+
+	/**
+	 * `onNavigate` returns a promise SvelteKit awaits before completing the
+	 * navigation; wrapping it in `startViewTransition` gives the browser both
+	 * states of the page and lets it cross-fade. A transition must never hold
+	 * a navigation hostage, so it is released the moment the update callback
+	 * runs, or after a third of a second, whichever is first.
+	 */
+	onNavigate((navigation) =&gt; {
+		if (!document.startViewTransition) return;
+		if (prefersReducedMotion.current) return;
+		if (document.visibilityState !== 'visible') return;
+
+		return new Promise((resolve) =&gt; {
+			const fallback = setTimeout(resolve, 300);
+			let transition: ViewTransition;
+			try {
+				transition = document.startViewTransition(async () =&gt; {
+					clearTimeout(fallback);
+					resolve();
+					await navigation.complete;
+				});
+			} catch {
+				clearTimeout(fallback);
+				resolve();
+				return;
+			}
+			transition.ready.catch(() =&gt; {
+				clearTimeout(fallback);
+				resolve();
+			});
+		});
+	});
+&lt;/script&gt;</code></pre>
+</figure>
+<p>The root layout is deliberately almost empty, so that a page which must have *no* chrome — the embed — can reset to it with <code>+page@.svelte</code>. What it does own is the view transition: <code>onNavigate</code> returns a promise SvelteKit awaits, <code>startViewTransition</code> gives the browser both states to cross-fade, and a fallback timer makes sure a transition can never hold a navigation hostage.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { beforeNavigate } from '$app/navigation';
+	import { page, updated } from '$app/state';
+	import { fly } from 'svelte/transition';
+	import Logo from '#lib/components/Logo.svelte';
+	import { whoAmI } from '#lib/remote/auth.remote.ts';
+
+	/**
+	 * THE APP LAYOUT
+	 * ==============
+	 *
+	 * Everything inside the `(app)` group gets this header. The parentheses
+	 * make it a *layout group*: a folder that adds a layout without adding a
+	 * segment to the URL. The embed page escapes it with `+page@.svelte`.
+	 */
+	let { children } = $props();
+
+	const links = [
+		{ href: '/sheets', label: 'Sheets' },
+		{ href: '/templates', label: 'Templates' },
+		{ href: '/lesson', label: 'The lesson' }
+	] as const;
+
+	/**
+	 * With async Svelte a navigation's state changes wait for the new page's
+	 * `await`s, so the interface never shows half an update. Right for
+	 * content, wrong for the link somebody just clicked: `$state.eager` reads
+	 * the *incoming* pathname now, for this one attribute.
+	 */
+	const pathname = $derived(page.url.pathname);
+
+	/**
+	 * `version.pollInterval` makes SvelteKit check for a new build every
+	 * minute; when there is one, the next navigation becomes a full load so
+	 * it never asks for JavaScript that no longer exists.
+	 */
+	beforeNavigate(({ willUnload, to }) =&gt; {
+		if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) location.href = to.url.href;
+	});
+&lt;/script&gt;</code></pre>
+</figure>
+<p>The parentheses in <code>(app)</code> make it a layout group: a folder that adds a layout without adding a segment to the URL. <code>beforeNavigate</code> with <code>updated.current</code> is the versioning story from chapter 02 finishing: when a new build has been deployed, the next navigation becomes a full load.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:42-98</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
+
+{#if updated.current}
+	&lt;div class=&quot;updated no-print&quot; role=&quot;status&quot; transition:fly={{ y: -16, duration: 240 }}&gt;
+		&lt;span&gt;A new version of Abacus is ready.&lt;/span&gt;
+		&lt;a class=&quot;btn btn--sm btn--primary&quot; href={page.url.href} data-sveltekit-reload&gt;Reload&lt;/a&gt;
+	&lt;/div&gt;
+{/if}
+
+&lt;header class=&quot;topbar no-print&quot;&gt;
+	&lt;a class=&quot;brand&quot; href=&quot;/&quot; aria-label=&quot;Abacus home&quot;&gt;
+		&lt;Logo /&gt;
+		&lt;span class=&quot;brand__name&quot;&gt;Abacus&lt;/span&gt;
+	&lt;/a&gt;
+
+	&lt;nav aria-label=&quot;Primary&quot;&gt;
+		&lt;ul class=&quot;nav&quot;&gt;
+			{#each links as link (link.href)}
+				&lt;li&gt;
+					&lt;a
+						href={link.href}
+						class={[
+							'nav__link',
+							{ 'nav__link--current': $state.eager(pathname).startsWith(link.href) }
+						]}
+						aria-current={$state.eager(pathname).startsWith(link.href) ? 'page' : undefined}
+					&gt;
+						{link.label}
+					&lt;/a&gt;
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
+	&lt;/nav&gt;
+
+	&lt;div class=&quot;topbar__end&quot;&gt;
+		&lt;!--
+			Who this browser is, as a remote query rather than layout data: the
+			passkey commands and the sign-out form call `whoAmI().refresh()`, and
+			the new answer arrives in the same response.
+		--&gt;
+		&lt;svelte:boundary&gt;
+			{const me = $derived(await whoAmI())}
+			{#if me}
+				&lt;a class=&quot;chip chip--on&quot; href=&quot;/settings&quot;&gt;{me.name}&lt;/a&gt;
+			{:else}
+				&lt;a class=&quot;chip&quot; href=&quot;/signin&quot;&gt;Sign in&lt;/a&gt;
+			{/if}
+			{#snippet pending()}
+				&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+	&lt;/div&gt;
+&lt;/header&gt;
+
+&lt;main id=&quot;main&quot;&gt;
+	{@render children()}
+&lt;/main&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the header asks whoAmI instead of reading layout data</h4>
+	<p>The person’s name could be layout <code>data</code>. It is a remote query instead, awaited in markup inside a boundary, because the passkey commands and the sign-out form call <code>whoAmI().refresh()</code> — and a query awaited in a component updates in place, in the same response, while layout data would need a page invalidation. <code>$state.eager(pathname)</code> on the current-link class is the one place the *incoming* pathname is wanted before the new page’s awaits settle.</p>
+</aside>
+<h3 id="tokens">Tokens</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-60</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Every colour, size and duration the interface uses, as a custom property, in
+ * one place. Components never write a hex value; they write `var(--accent)`,
+ * and the accent can change here without a search-and-replace.
+ *
+ * LIGHT FIRST, DARK BY `light-dark()`
+ * -----------------------------------
+ * A spreadsheet is a sheet of paper, so the light theme is the design and the
+ * dark theme is a translation of it — the opposite of project 6, and for the
+ * same reason: design the one people will live in. `color-scheme: light dark`
+ * tells the browser both are supported, and every colour token is a
+ * `light-dark(light, dark)` pair the browser picks from by system setting.
+ *
+ * FORCED COLOURS
+ * --------------
+ * Windows High Contrast replaces every colour with a system one. The grid
+ * still needs its lines and its selection to be visible, so the rules that
+ * matter are restated in `@media (forced-colors: active)` using the system
+ * keywords (`CanvasText`, `Highlight`) that survive the replacement.
+ */
+
+:root {
+	color-scheme: light dark;
+
+	/* ---- Surfaces ---------------------------------------------------- */
+	--bg: light-dark(#f7f7f5, #111214);
+	--surface: light-dark(#ffffff, #18191c);
+	--surface-raised: light-dark(#ffffff, #1e2024);
+	--surface-hover: light-dark(#f0f0ed, #25272c);
+	--surface-active: light-dark(#e6e7e3, #2e3037);
+	--border: light-dark(#e2e2de, #2a2c31);
+	--border-strong: light-dark(#c4c5c0, #3f424a);
+
+	/* ---- The grid ---------------------------------------------------- */
+	--grid-line: light-dark(#e2e2de, #2a2c31);
+	--grid-head: light-dark(#f3f3f1, #1c1d21);
+	--grid-head-text: light-dark(#5c5f66, #9a9ea8);
+	--grid-cell: light-dark(#ffffff, #141518);
+	--grid-cell-alt: light-dark(#fbfbfa, #17181b);
+	--selection: light-dark(rgb(36 87 214 / 0.12), rgb(122 167 255 / 0.18));
+	--selection-border: light-dark(#2457d6, #7aa7ff);
+	--remote-flash: light-dark(#fff2c2, #4a3d12);
+
+	/* ---- Text -------------------------------------------------------- */
+	--text: light-dark(#1a1b1e, #ecedef);
+	--text-muted: light-dark(#5c5f66, #a3a7b0);
+	--text-faint: light-dark(#8b8e95, #6b6f78);
+
+	/* ---- Accent: ledger blue ----------------------------------------- */
+	--accent: light-dark(#2457d6, #7aa7ff);
+	--accent-strong: light-dark(#1a44ad, #9dbcff);
+	--accent-soft: light-dark(#e6edfd, #1d2a4a);
+	--on-accent: light-dark(#ffffff, #0b1330);
+
+	/* ---- Status ------------------------------------------------------ */
+	--ok: light-dark(#1f8a5b, #5fd39a);
+	--warn: light-dark(#b8860b, #f0b90b);</code></pre>
+</figure>
+<p>A spreadsheet is a sheet of paper, so the light theme is the design and the dark theme is a translation — the opposite of project 6, for the same reason: design the one people will live in. Every colour is a <code>light-dark()</code> pair and the browser picks by system setting. Windows High Contrast replaces every colour with a system one, so the rules that matter are restated in <code>forced-colors</code> with keywords that survive.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:138-151</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">@media (min-width: 40rem) {
+	:root {
+		--gutter: var(--space-6);
+	}
+}
+
+@media (forced-colors: active) {
+	:root {
+		--grid-line: CanvasText;
+		--selection: Highlight;
+		--selection-border: Highlight;
+		--accent: LinkText;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:181-201</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * PRINT
+ * =====
+ * A published sheet is something people print. The app chrome goes, the grid
+ * stays, and nothing is allowed to split a row across two pages.
+ */
+@media print {
+	body {
+		background: white;
+		color: black;
+	}
+
+	.no-print {
+		display: none !important;
+	}
+
+	tr,
+	.row {
+		break-inside: avoid;
+	}
+}</code></pre>
+</figure>
+<p>A published sheet is something people print. The app chrome goes, the table stays, and nothing splits a row across two pages.</p>
+<h3 id="toasts">Toasts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/toast/toast.ts<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TOASTS, IMPERATIVELY
+ * ====================
+ *
+ * `toast('Saved')` from anywhere — an event handler, a form's `enhance`
+ * callback, a catch block — with no `&lt;Toasts /&gt;` host to remember to render.
+ *
+ * `mount` creates a component instance at a target, `unmount` removes it, and
+ * `{ outro: true }` lets its `transition:fly` play on the way out. The same
+ * two functions SvelteKit itself uses to start the app, used here for the one
+ * component that genuinely does not belong to any page.
+ */
+
+import { mount, unmount } from 'svelte';
+import Toast from './Toast.svelte';
+
+let current: ReturnType&lt;typeof mount&gt; | null = null;
+let timer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+
+export function toast(message: string, tone: 'info' | 'error' = 'info'): void {
+	if (typeof document === 'undefined') return;
+
+	// One at a time. A second toast replaces the first rather than stacking;
+	// two overlapping status messages are one too many to read.
+	if (current) void unmount(current, { outro: false });
+	if (timer) clearTimeout(timer);
+
+	current = mount(Toast, { target: document.body, props: { message, tone } });
+
+	timer = setTimeout(() =&gt; {
+		if (current) void unmount(current, { outro: true });
+		current = null;
+	}, 2800);
+}</code></pre>
+</figure>
+<p><code>toast('Saved')</code> from anywhere, with no <code>&lt;Toasts /&gt;</code> host to remember to render. <code>mount</code> creates a component at a target and <code>unmount</code> removes it, with <code>{ outro: true }</code> so its <code>transition:fly</code> plays on the way out — the same two functions SvelteKit uses to start the app, used for the one component that belongs to no page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+error.svelte<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+
+	/**
+	 * The error page for anything a route throws — a `404` from `error(404)`,
+	 * or a genuine failure that `handleError` turned into a message and an id.
+	 * With SvelteKit 3 this is a real `&lt;svelte:boundary&gt;` around the page
+	 * below it, on the server as well as the client.
+	 */
+	const title = $derived(
+		page.status === 404
+			? 'Nothing here'
+			: page.status &gt;= 500
+				? 'Something broke'
+				: 'That did not work'
+	);
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{page.status} — Abacus&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;section class=&quot;error page&quot;&gt;
+	&lt;p class=&quot;error__status mono&quot;&gt;{page.status}&lt;/p&gt;
+	&lt;h1&gt;{title}&lt;/h1&gt;
+	&lt;p class=&quot;error__message&quot;&gt;{page.error?.message}&lt;/p&gt;
+	{#if page.error?.id}
+		&lt;p class=&quot;hint&quot;&gt;Reference &lt;code&gt;{page.error.id}&lt;/code&gt; if you report this.&lt;/p&gt;
+	{/if}
+	&lt;p&gt;&lt;a class=&quot;btn&quot; href=&quot;/&quot;&gt;Back to Abacus&lt;/a&gt;&lt;/p&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the header lives in <code>(app)/+layout.svelte</code> and not the root.</li><li>You can explain how a page resets to the root layout.</li><li>You can say what <code>light-dark()</code> does and what <code>forced-colors</code> is for.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hooks.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Hooks: identity, headers, one framed route, errors by kind</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-landing-and-templates.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The landing page and the prerendered templates</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

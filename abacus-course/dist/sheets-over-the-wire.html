@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sheets over the wire: queries, forms, commands — Building Abacus</title>
+<meta name="description" content="Every read and write of a stored sheet as a remote function: `query` for reads, `form` for anything a page without JavaScript must still do, `command` for the rest. Access checks that answer 404 for “not yours”, a version check on save, and a cell limit.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 69.23076923076923%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html" aria-current="page"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>Sheets over the wire: queries, forms, commands</h1>
+			<p class="lede">Every read and write of a stored sheet as a remote function: <code>query</code> for reads, <code>form</code> for anything a page without JavaScript must still do, <code>command</code> for the rest. Access checks that answer 404 for “not yours”, a version check on save, and a cell limit.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Choose between query, form and command for each operation, and refresh exactly the queries a write invalidates.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:1-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SHEETS IN THE DATABASE
+ * ======================
+ *
+ * Reads and writes for the `sheets` table. Remote functions call these;
+ * nothing else touches the table. Every read that hands back a sheet checks
+ * who is asking, so an id in a URL is never enough on its own.
+ */
+
+import { error } from '@sveltejs/kit';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
+import { CELL_LIMIT } from '$app/env/private';
+import { applyOps } from '#lib/sheet/apply.ts';
+import { emptyDocument, parseDocument, type Document } from '#lib/sheet/document.ts';
+import type { Op } from '#lib/sheet/ops.ts';
+import { db, schema } from './db/index.ts';
+import type { User } from './identity.ts';</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:88-112</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A sheet, if this person may open it: its owner, or — when the owner has
+ * turned link access on — anybody signed in. A 404 either way, because &quot;it
+ * exists but not for you&quot; is a fact a stranger has no business learning.
+ */
+export async function getSheet(id: string, user: User | null): Promise&lt;SheetRecord | null&gt; {
+	const row = await db.query.sheets.findFirst({ where: eq(schema.sheets.id, id) });
+	if (!row) return null;
+	if (!user) return null;
+	if (row.ownerId !== user.id &amp;&amp; row.access !== 'link') return null;
+	return record(row);
+}
+
+export async function requireSheet(id: string, user: User | null): Promise&lt;SheetRecord&gt; {
+	const sheet = await getSheet(id, user);
+	if (!sheet) error(404, 'No such sheet');
+	return sheet;
+}
+
+/** Owner-only changes: rename, access, delete, publish. */
+async function requireOwned(id: string, user: User): Promise&lt;Row&gt; {
+	const row = await db.query.sheets.findFirst({ where: eq(schema.sheets.id, id) });
+	if (!row || row.ownerId !== user.id) error(404, 'No such sheet');
+	return row;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why “it exists but not for you” is a 404</h4>
+	<p>A sheet somebody else owns returns the same 404 as a sheet that does not exist. A 403 would confirm the id is real, and an id in a URL is never enough on its own. <code>requireOwned</code> does the same for the owner-only operations — rename, access, delete, publish — and <code>requireSheetRow</code> for the ones a link-holder may do.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:135-170</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Save a whole document — the autosave path when nobody else is on the
+ * sheet. `baseVersion` is the version the browser last saw; if the row has
+ * moved on, somebody else saved first and this save is refused rather than
+ * silently overwriting theirs.
+ */
+export async function saveDocument(
+	id: string,
+	user: User,
+	doc: Document,
+	baseVersion: number
+): Promise&lt;{ version: number }&gt; {
+	const row = await requireSheetRow(id, user);
+	if (row.version !== baseVersion)
+		error(409, 'Somebody else saved this sheet first — reload to see their changes');
+	if (doc.cells.length &gt; CELL_LIMIT)
+		error(413, `A sheet may hold at most ${CELL_LIMIT.toLocaleString()} cells`);
+	const version = row.version + 1;
+	await db
+		.update(schema.sheets)
+		.set({
+			doc: JSON.stringify(doc),
+			title: doc.title,
+			version,
+			cellCount: doc.cells.length,
+			updatedAt: Date.now()
+		})
+		.where(eq(schema.sheets.id, id));
+	return { version };
+}
+
+async function requireSheetRow(id: string, user: User): Promise&lt;Row&gt; {
+	const row = await db.query.sheets.findFirst({ where: eq(schema.sheets.id, id) });
+	if (!row || (row.ownerId !== user.id &amp;&amp; row.access !== 'link')) error(404, 'No such sheet');
+	return row;
+}</code></pre>
+</figure>
+<p><code>saveDocument</code> is the autosave path when nobody else is on the sheet. <code>baseVersion</code> is what the browser last saw; if the row has moved on, somebody else saved first and this save is refused with a 409 rather than silently overwriting theirs. <code>CELL_LIMIT</code> — the environment variable from chapter 03 — keeps one paste from turning the database into a swap file.</p>
+<h3 id="the-remote-file">The remote file</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sheets.remote.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SHEETS, OVER THE WIRE
+ * =====================
+ *
+ * Every read and write of a stored sheet. Creating, renaming and deleting
+ * are forms — they work with JavaScript off and `remove.for(id)` gives each
+ * card its own pending state. Saving a document is a command with a version
+ * check. Publishing is a command that returns the public address.
+ */
+
+import * as v from 'valibot';
+import { error, invalid, redirect } from '@sveltejs/kit';
+import { command, form, query, requested } from '$app/server';
+import { DocumentSchema } from '#lib/sheet/document.ts';
+import { TEMPLATES, templateDocument } from '#lib/sheet/templates.ts';
+import * as store from '#lib/server/sheets.ts';
+import { currentUser, requireUser } from '#lib/server/session.ts';
+
+const TitleSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	v.minLength(1, 'Give it a title'),
+	v.maxLength(120)
+);
+
+export const getMine = query(async () =&gt; {
+	const user = currentUser();
+	return user ? store.listSheets(user.id) : [];
+});
+
+/** A sheet to open — owner, or link access. A 404 for everybody else. */
+export const getSheet = query(v.string(), (id) =&gt; store.requireSheet(id, currentUser()));</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sheets.remote.ts<span class="code__lines">:34-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const create = form(
+	v.object({
+		title: TitleSchema,
+		template: v.optional(v.picklist(Object.keys(TEMPLATES) as [string, ...string[]])),
+		/** A whole document, as JSON — the local sheet being saved to an account. */
+		_doc: v.optional(v.pipe(v.string(), v.maxLength(4_000_000)))
+	}),
+	async ({ title, template, _doc }, issue) =&gt; {
+		const user = requireUser();
+		let doc = template ? templateDocument(template) : undefined;
+		if (_doc) {
+			try {
+				doc = v.parse(DocumentSchema, JSON.parse(_doc));
+			} catch {
+				invalid(issue._doc('That sheet could not be read'));
+			}
+		}
+		const sheet = await store.createSheet(user, title, doc);
+		void getMine().refresh();
+		redirect(303, `/sheet/${sheet.id}`);
+	}
+);</code></pre>
+</figure>
+<p><code>create</code> is a form: it works with JavaScript off, and it *redirects* from inside the handler to the new sheet, which is what a form submission that made something should do. It accepts a template name or a whole document — the local sheet being saved to an account — and <code>invalid(issue._doc(…))</code> is how a handler reports a field-level problem the page can show beside the field.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sheets.remote.ts<span class="code__lines">:57-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const rename = form(
+	v.object({ id: v.string(), title: TitleSchema }),
+	async ({ id, title }) =&gt; {
+		await store.renameSheet(id, requireUser(), title);
+		void getMine().refresh();
+		void getSheet(id).refresh();
+	}
+);
+
+export const setAccess = form(
+	v.object({ id: v.string(), access: v.picklist(['private', 'link']) }),
+	async ({ id, access }) =&gt; {
+		await store.setAccess(id, requireUser(), access);
+		void getSheet(id).refresh();
+		void getMine().refresh();
+	}
+);
+
+export const remove = form(v.object({ id: v.string() }), async ({ id }) =&gt; {
+	await store.deleteSheet(id, requireUser());
+	await requested(getMine, 1).refreshAll();
+});</code></pre>
+</figure>
+<p>Every write ends by refreshing the queries it invalidated: <code>getMine()</code> for the workspace list, <code>getSheet(id)</code> for the open page. <code>remove</code> uses <code>requested(getMine, 1).refreshAll()</code> — refresh the query *as the requesting page has it*, in the same response, which is what makes a delete feel instant with no JavaScript at all. On the page (ch. 34), <code>remove.for(id)</code> gives each card its own pending state.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sheets.remote.ts<span class="code__lines">:80-113</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Save the whole document. `baseVersion` is what the browser last saw; a
+ * 409 means somebody saved first. The new version comes back so the next
+ * save knows its base.
+ */
+export const save = command(
+	v.object({ id: v.string(), doc: DocumentSchema, baseVersion: v.pipe(v.number(), v.integer()) }),
+	async ({ id, doc, baseVersion }) =&gt; {
+		const result = await store.saveDocument(id, requireUser(), doc, baseVersion);
+		void getMine().refresh();
+		return result;
+	}
+);
+
+export const publish = command(v.string(), async (id) =&gt; {
+	const published = await store.publishSheet(id, requireUser());
+	void getSheet(id).refresh();
+	void getMine().refresh();
+	void getPublished(id).refresh();
+	return { url: `/s/${published.id}` };
+});
+
+export const unpublish = command(v.string(), async (id) =&gt; {
+	await store.unpublishSheet(id, requireUser());
+	void getSheet(id).refresh();
+	void getMine().refresh();
+});
+
+/** Anybody may read a published sheet; that is what published means. */
+export const getPublished = query(v.string(), async (id) =&gt; {
+	const published = await store.getPublished(id);
+	if (!published) error(404, 'No such published sheet');
+	return published;
+});</code></pre>
+</figure>
+<p>Publishing is a command because it is a button with a result — the public address — and not a form because nothing about it needs to work without JavaScript. <code>getPublished</code> is a query anybody may call, because that is what published means, and the page that shows it ships no JavaScript at all (ch. 35).</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>create</code> is a form and <code>publish</code> is a command.</li><li>You can explain what <code>baseVersion</code> prevents and what the browser does with a 409.</li><li>You can list which queries <code>rename</code> refreshes and why each.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="passkeys.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Passkeys: signing in without a password</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-collaboration.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Live collaboration: a live query, a mailbox, and numbered operations</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

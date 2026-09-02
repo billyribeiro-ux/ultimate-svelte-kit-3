@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The map: every feature, and where it earns its place — Building Abacus</title>
+<meta name="description" content="A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September 2026 additions — and the chapter where each one is for something.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">03 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 7.6923076923076925%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html" aria-current="page"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 03</p>
+			<h1>The map: every feature, and where it earns its place</h1>
+			<p class="lede">A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September 2026 additions — and the chapter where each one is for something.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Have a map of the framework as this project uses it, so you can read the course in any order and know what you are looking at.</p></aside>
+			<p>This is the chapter to come back to. Each row is a feature, what it is *for* in Abacus, and where it lives. Nothing here is a demo; if you cannot find the row that names a feature, the project does not use it, and that is deliberate too.</p>
+<h3 id="svelte">Svelte 5</h3>
+<ul><li><strong><code>$state</code></strong> — the sheet’s selection, title, version and editing state (ch. 15); toasts; every page’s local state. <strong><code>$state.eager</code></strong> is not used: nothing here reads a state in the same tick it was written and needs the old value.</li><li><strong><code>$derived</code> and <code>$derived.by</code></strong> — the grid’s geometry from scroll position and sizes (ch. 19); the formula bar’s coloured segments, the syntax error, the completion list (ch. 21); and, as *fields of a class*, the nine cells of the reactivity lesson (ch. 17). A <code>$derived</code> that a handler assigns to — the completion highlight, the find index — as a reset without an effect.</li><li><strong><code>$effect</code></strong> — exactly where a side effect is the point: scrolling the active cell into view, clearing flash highlights after a timer, applying a live message when <code>stream.current</code> changes, and tearing the live connection down (ch. 19, 33).</li><li><strong><code>$props</code> and <code>$bindable</code></strong> — every component; <code>bind:this</code> on a component to call its exported <code>insertAtCaret</code> (ch. 21).</li><li><strong>Snippets with parameters</strong> — the grid renders one <code>cell</code> snippet in five layers: the body, frozen rows, frozen columns, the frozen corner (ch. 19). <code>{@render extra?.()}</code> lets a page put its own buttons in the toolbar.</li><li><strong>Attachments</strong> — <code>{@attach cinematic()}</code> on the landing page (ch. 31); focusing an input on mount in the cell editor and find bar (ch. 21, 22).</li><li><strong>Function bindings</strong> — <code>bind:textContent={get, set}</code> on the editable title (ch. 32).</li><li><strong><code>bind:files</code></strong> with a <code>DataTransfer</code> to clear a file input so the same file can be chosen twice (ch. 22).</li><li><strong><code>&lt;svelte:boundary&gt;</code></strong> with <code>pending</code> and <code>failed</code> — around every <code>await</code> in markup, and around each reactive cell in the lesson so a cycle throws into a boundary instead of the page (ch. 17, 34).</li><li><strong><code>await</code> in markup and <code>{const x = $derived(await …)}</code></strong> — the workspace list, the settings profile, “who am I” in the header (ch. 30, 34).</li><li><strong><code>SvelteMap</code>/<code>SvelteSet</code></strong> — column widths, row heights and flash highlights, where fine-grained reactivity is wanted; a plain <code>Map</code> in the engine, where it is not (ch. 15).</li><li><strong><code>untrack</code></strong> — reading the initial <code>data</code> once so a later change cannot throw away edits (ch. 33).</li><li><strong><code>hydratable</code></strong> — the landing page’s random dots, computed once on the server and reused by the client so hydration does not repaint them (ch. 31).</li><li><strong><code>createSubscriber</code></strong> is not used; the live connection is a <code>query.live</code>, which does that job.</li></ul>
+<h3 id="kit">SvelteKit 3</h3>
+<ul><li><strong>The environment layer</strong> — <code>defineEnvVars</code> in <code>src/env.ts</code>, with valibot schemas, a <code>public</code> flag you have to type, and a <code>static</code> variable that is inlined at build time (this chapter, below).</li><li><strong>Remote functions</strong> — <code>query</code> for reads, <code>form</code> for anything a page without JavaScript must still be able to do, <code>command</code> for everything else, and <code>query.live</code> for the collaboration stream (ch. 26–28). <code>requested(q, n).refreshAll()</code>, <code>withOverride</code>, <code>.for(id)</code>, <code>.preflight()</code>, <code>.enhance()</code>, <code>invalid(issue.field(…))</code>, and <code>redirect</code> from inside a form handler all appear where they are needed (ch. 27, 34).</li><li><strong>Hooks from <code>@sveltejs/kit/hooks</code></strong> — <code>sequence</code>, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route Content Security Policy swap, <code>handleFetch</code>, <code>handleError</code> told apart by <code>kind</code>, <code>init</code>, <code>transport</code> (ch. 29).</li><li><strong>Universal <code>load</code> that calls remote queries</strong> — the sheet page (ch. 33); <code>csr = false</code> pages that ship no JavaScript (ch. 35); <code>prerender</code> with <code>entries()</code> for the templates (ch. 31).</li><li><strong>A layout reset</strong> — <code>+page@.svelte</code> for the embed, which must not inherit the app shell (ch. 35).</li><li><strong><code>+server.ts</code> handlers</strong> — a streamed CSV response, a <code>QUERY</code> handler, a health check (ch. 35).</li><li><strong><code>$app/state</code></strong> — <code>page</code>, <code>navigating</code>, <code>updated</code>; the version poll that offers a reload after a deploy (ch. 30).</li><li><strong>adapter-node 6</strong> — <code>paths.origin</code> baked in, <code>SHUTDOWN_TIMEOUT</code>, <code>BODY_SIZE_LIMIT</code>, a Dockerfile that runs as <code>node</code> and migrates before it listens (ch. 38).</li></ul>
+<h3 id="september">What the September 2026 releases added, and where</h3>
+<ul><li><strong><code>router.resolution: 'server'</code></strong> — the config, and the navigation test that proves it (ch. 02, 37).</li><li><strong>Fonts in the <code>preload</code> filter with their source <code>filename</code></strong> — <code>hooks.server.ts</code> names the two files the first paint needs (ch. 29).</li><li><strong><code>handleError</code> with <code>kind</code> and <code>issues</code></strong> — a validation failure logs the field path and answers with a plain message; only an <code>unknown</code> error gets a correlation id (ch. 29).</li><li><strong>Hook types from <code>@sveltejs/kit/hooks</code></strong> — every hook file imports them from there, and the comment in <code>hooks.server.ts</code> says what silently goes wrong if you import them from <code>@sveltejs/kit</code> instead (ch. 29).</li><li><strong><code>query.live</code></strong> with <code>.current</code>, <code>.connected</code> and <code>.reconnect()</code> — the whole of chapter 28, and the reconnect button on the sheet page (ch. 33).</li><li><strong><code>requested(q, n).refreshAll()</code></strong> in a form handler — deleting a sheet from the workspace (ch. 27).</li></ul>
+<h3 id="env">The environment layer, since every chapter reads it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:12-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description: 'libSQL connection string. `file:local.db` in development.',
+		schema: required
+	},
+
+	PUBLIC_ORIGIN: {
+		description:
+			'Where the app is served from, with no trailing slash. The CSRF origin and the passkey relying party.',
+		public: true,
+
+		/*
+		 * `static: true` means the value is inlined at build time rather than read
+		 * from the environment at runtime. It has to be: `paths.origin` in
+		 * `vite.config.ts` reads the same variable during the build, and a value
+		 * that could differ between build and run would make the CSRF check compare
+		 * two different origins — and would let a passkey be registered for one
+		 * hostname and asserted against another.
+		 */
+		static: true,
+		schema: v.pipe(
+			required,
+			v.url('Must be an absolute URL'),
+			v.transform((value) =&gt; value.replace(/\/+$/, ''))
+		)
+	},
+
+	SESSION_SECRET: {
+		description: 'Signs the session cookie. Generate with `openssl rand -base64 32`.',
+		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+	},</code></pre>
+</figure>
+<p>A variable not declared here cannot be imported — a type error at build time rather than an <code>undefined</code> in production three weeks later. <code>public: true</code> is something you have to type, so a secret cannot reach the browser by accident. <code>PUBLIC_ORIGIN</code> is <code>static</code>, and the comment gives the two reasons: the CSRF check and the passkey relying-party id both need build and run to agree.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:49-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	CELL_LIMIT: {
+		description: 'The largest sheet the server will store, in cells.',
+		/*
+		 * A string in, a number out. Environment variables are always strings, and
+		 * the place to turn one into a number is here — once — rather than in every
+		 * file that reads it with a `Number()` and a hopeful default.
+		 */
+		schema: v.optional(
+			v.pipe(
+				v.string(),
+				v.transform(Number),
+				v.number(),
+				v.integer(),
+				v.minValue(1000, 'A thousand cells is the smallest useful sheet'),
+				v.maxValue(5_000_000, 'Five million cells is a database, not a sheet')
+			),
+			'200000'
+		)
+	}
+});</code></pre>
+</figure>
+<p>Environment variables are always strings, and the place to turn one into a number is here — once — rather than in every file that reads it with a <code>Number()</code> and a hopeful default. The bounds are opinions with reasons attached, which is what a bound should be.</p>
+<h3 id="tooling">The toolchain</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:11-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;vite dev&quot;,
+	&quot;build&quot;: &quot;vite build&quot;,
+	&quot;preview&quot;: &quot;vite preview&quot;,
+	&quot;start&quot;: &quot;node build&quot;,
+	&quot;prepare&quot;: &quot;svelte-kit sync || echo ''&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json &amp;&amp; tsc --noEmit -p tsconfig.worker.json&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;format&quot;: &quot;prettier --write .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test:e2e&quot;: &quot;playwright test&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
+	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
+	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
+	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
+	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;
+},</code></pre>
+</figure>
+<p><code>check</code> type-checks the app *and* the worker — the CSV importer runs where <code>window</code> does not exist, so it has its own <code>tsconfig.worker.json</code> with the WebWorker library instead of the DOM one. <code>verify</code> is the gate: type-check, lint, unit and browser tests, build, and the end-to-end suite on a desktop and a phone profile. Everything in this course passed it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json<span class="code__lines">:5-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+&quot;compilerOptions&quot;: {
+	&quot;sourceMap&quot;: true,
+
+	// strictNullChecks, noImplicitAny and friends.
+	&quot;strict&quot;: true,
+
+	// `array[0]` is typed `T | undefined` rather than `T`.
+	//
+	// A spreadsheet is a grid of maybes: a row that may not exist, a cell in
+	// it that may be empty, a token after the last token. Every one of those
+	// is a crash at runtime or a red squiggle now, and this flag picks now.
+	&quot;noUncheckedIndexedAccess&quot;: true,
+
+	// An overriding method must say `override`.
+	&quot;noImplicitOverride&quot;: true,
+
+	// A `case` that falls through must be deliberate. The evaluator is a
+	// switch over node kinds; a missing `break` there evaluates an addition as
+	// a subtraction and looks like a rounding error.
+	&quot;noFallthroughCasesInSwitch&quot;: true,
+
+	// Every path through a value-returning function must return.
+	&quot;noImplicitReturns&quot;: true,
+
+	// Unused locals and parameters are errors.
+	&quot;noUnusedLocals&quot;: true,
+	&quot;noUnusedParameters&quot;: true
+},</code></pre>
+</figure>
+<p><code>noUncheckedIndexedAccess</code> is the flag this project would choose if it could choose one. A spreadsheet is a grid of maybes — a row that may not exist, a token after the last token — and every one of those is a crash at runtime or a red squiggle now.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name, from memory, three Svelte 5 features and the chapter where each is used for something.</li><li>You can say why <code>PUBLIC_ORIGIN</code> is <code>static: true</code> and <code>SESSION_SECRET</code> is not <code>public</code>.</li><li>You know which file type-checks the worker and why it needs a different library.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-config.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">One file to configure everything</span>
+			</a>
+			<a class="pager__link pager__link--next" href="addresses.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Addresses: where a cell is</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

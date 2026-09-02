@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The dependency graph — Building Abacus</title>
+<meta name="description" content="A spreadsheet is a graph that recalculates itself. Cells in a `Map`, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 23.076923076923077%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html" aria-current="page"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>The dependency graph</h1>
+			<p class="lede">A spreadsheet is a graph that recalculates itself. Cells in a <code>Map</code>, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand incremental recalculation well enough to explain why a <code>$derived</code> recomputes when it does, and read the engine’s <code>evaluated</code> count as proof.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE ENGINE
+ * ==========
+ *
+ * A spreadsheet is a dependency graph that recalculates itself. This class is
+ * that graph: cells, the formulas in them, which cells each formula reads,
+ * and the procedure that — when one cell changes — recomputes exactly the
+ * cells that depended on it, in an order that never reads a stale value.
+ *
+ * It is plain TypeScript with no Svelte in it, on purpose. Chapter 12 builds
+ * the same thing out of `$derived` and shows that Svelte's runtime *is* one
+ * of these; the reason to write it by hand first is that the algorithm is
+ * the lesson, and a lesson hidden inside a framework is a lesson missed.
+ *
+ * HOW A RECALCULATION WORKS
+ * -------------------------
+ *   1. Start from the cells that were edited, plus every volatile cell
+ *      (`RAND()`, `NOW()`), and collect everything that depends on them,
+ *      transitively. That is the *dirty set*; nothing outside it is touched.
+ *   2. Count, for each dirty formula, how many *dirty* cells it reads. That is
+ *      its in-degree within the dirty set.
+ *   3. Evaluate every formula whose in-degree is zero, then decrement the
+ *      in-degree of the formulas that read it, and repeat. This is Kahn's
+ *      topological sort, and it guarantees that a formula is evaluated only
+ *      after everything it reads has been.
+ *   4. Anything still unevaluated when the queue empties is in a cycle, or
+ *      downstream of one. It is marked `#CYCLE!`.
+ *
+ * A change notifies dependents through two indexes: single-cell references
+ * are a `Map` from cell to the formulas that read it, and range references
+ * are a list of rectangles scanned per changed cell. The scan is linear in
+ * the number of range formulas, which is the honest trade for a sheet of the
+ * size a browser holds; an interval tree is the upgrade, and the tests in
+ * `engine.spec.ts` are what would let you make it safely.
+ */</code></pre>
+</figure>
+<p>Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a <code>Map</code> from cell to readers, but *range* references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.</p>
+<h3 id="a-cell">What a cell is</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:55-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Cell {
+	/** What the person typed: `=SUM(A1:A3)`, `12`, `hello`. The truth; everything else is derived. */
+	input: string;
+	format: CellFormat;
+	/** The parsed formula, or `null` for a literal. */
+	formula: Node | null;
+	/** Why the formula did not parse, if it did not. */
+	error: string | null;
+	/** The current value. */
+	value: Scalar;
+	/** The rectangles this formula reads. Empty for a literal. */
+	precedents: Rect[];
+	volatile: boolean;
+}
+
+export interface Edit {
+	row: number;
+	col: number;
+	/** `undefined` leaves the input alone; `''` or `null` clears it. */
+	input?: string | null;
+	format?: CellFormat;
+}
+
+export interface Recalc {
+	/** Cells whose value changed, including cleared ones. */
+	changed: number[];
+	/** Cells marked #CYCLE! in this pass. */
+	cycles: number[];
+	/** How many formulas were evaluated — the number that proves the engine is incremental. */
+	evaluated: number;
+}
+
+export interface EngineOptions {
+	/** How a typed literal becomes a value. The locale layer provides this; the default is canonical. */
+	parseLiteral?: (text: string) =&gt; Scalar;
+	now?: () =&gt; Date;
+	random?: () =&gt; number;
+	locale?: string;
+}</code></pre>
+</figure>
+<p><code>input</code> is the truth: what the person typed. Everything else — the parsed formula, the value, the rectangles it reads — is derived from it and can be rebuilt. <code>Recalc</code> is what a batch of edits returns, and its <code>evaluated</code> count is the number that proves the engine is incremental: change one cell in a thousand and it should be small.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:95-130</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The canonical literal parser: numbers with `.`, TRUE/FALSE, a leading `'` for text. */
+export function parseCanonical(text: string): Scalar {
+	if (text === '') return null;
+	if (text.startsWith(&quot;'&quot;)) return text.slice(1);
+	const trimmed = text.trim();
+	if (/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(trimmed)) return Number(trimmed);
+	const upper = trimmed.toUpperCase();
+	if (upper === 'TRUE') return true;
+	if (upper === 'FALSE') return false;
+	return text;
+}
+
+export class Engine {
+	readonly cells = new Map&lt;number, Cell&gt;();
+
+	/** Cell → formulas that read it by a single reference. */
+	#direct = new Map&lt;number, Set&lt;number&gt;&gt;();
+	/** Formula → the rectangles it reads by range. Scanned, see the header. */
+	#ranges = new Map&lt;number, Rect[]&gt;();
+	#volatile = new Set&lt;number&gt;();
+
+	/** Goes up by one per recalculation. The grid watches this, and nothing else. */
+	version = 0;
+
+	readonly #parseLiteral: (text: string) =&gt; Scalar;
+	readonly #context: Context;
+
+	constructor(options: EngineOptions = {}) {
+		this.#parseLiteral = options.parseLiteral ?? parseCanonical;
+		this.#context = {
+			cell: (row, col) =&gt; this.value(row, col),
+			now: options.now ?? (() =&gt; new Date()),
+			random: options.random ?? Math.random,
+			locale: options.locale ?? 'en-US'
+		};
+	}</code></pre>
+</figure>
+<p>The engine is plain TypeScript. <code>version</code> is a number, not <code>$state</code> — the sheet model in chapter 15 mirrors it into a rune. The <code>Context</code> handed to the evaluator closes over <code>this.value</code>, which is how <code>=A1</code> reaches another cell without the evaluator ever knowing what a sheet is.</p>
+<h3 id="editing">Editing is a batch</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:182-226</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** One edit. `apply` is the general form and the one the sheet model uses. */
+set(row: number, col: number, input: string | null, format?: CellFormat): Recalc {
+	return this.apply([{ row, col, input, format }]);
+}
+
+/**
+ * Many edits, one recalculation. A paste of a hundred cells is one batch,
+ * one topological sort and one version bump, rather than a hundred.
+ */
+apply(edits: Edit[]): Recalc {
+	const seeds = new Set&lt;number&gt;();
+
+	for (const edit of edits) {
+		if (edit.row &lt; 0 || edit.col &lt; 0 || edit.row &gt;= MAX_ROWS || edit.col &gt;= MAX_COLS) {
+			throw new RangeError(`Cell (${edit.row}, ${edit.col}) is outside the sheet`);
+		}
+		const k = key(edit.row, edit.col);
+		const existing = this.cells.get(k);
+		const input = edit.input === undefined ? (existing?.input ?? '') : (edit.input ?? '');
+		const format = edit.format ?? existing?.format ?? GENERAL;
+
+		if (input === '' &amp;&amp; format.kind === 'general') {
+			// Nothing left to store. Empty is the absence of an entry.
+			if (existing) {
+				this.#unindex(k);
+				this.cells.delete(k);
+				seeds.add(k);
+			}
+			continue;
+		}
+
+		if (existing &amp;&amp; existing.input === input) {
+			existing.format = format;
+			continue;
+		}
+
+		if (existing) this.#unindex(k);
+		const cell = this.#compile(input, format);
+		this.cells.set(k, cell);
+		this.#index(k, cell);
+		seeds.add(k);
+	}
+
+	return this.#recalculate(seeds);
+}</code></pre>
+</figure>
+<p>A paste of a hundred cells is one batch, one topological sort and one version bump, rather than a hundred. Note the three outcomes per edit: an empty input with a general format *deletes* the entry — empty is the absence of a cell — an unchanged input keeps the compiled cell and only updates its format, and anything else is compiled, indexed and added to the seeds.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:293-337</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#compile(input: string, format: CellFormat): Cell {
+	if (!input.startsWith('=')) {
+		return {
+			input,
+			format,
+			formula: null,
+			error: null,
+			value: this.#parseLiteral(input),
+			precedents: [],
+			volatile: false
+		};
+	}
+
+	try {
+		const formula = parse(input.slice(1));
+		const precedents: Rect[] = references(formula).map(({ ref }) =&gt;
+			isRangeRef(ref)
+				? { top: ref.start.row, left: ref.start.col, bottom: ref.end.row, right: ref.end.col }
+				: { top: ref.row, left: ref.col, bottom: ref.row, right: ref.col }
+		);
+		return {
+			input,
+			format,
+			formula,
+			error: null,
+			value: null,
+			precedents,
+			volatile: isVolatile(formula)
+		};
+	} catch (e) {
+		const message =
+			e instanceof FormulaSyntaxError
+				? `${e.message} (at character ${e.position + 1})`
+				: String(e);
+		return {
+			input,
+			format,
+			formula: null,
+			error: message,
+			value: new ErrorValue('#ERROR!', message),
+			precedents: [],
+			volatile: false
+		};
+	}
+}</code></pre>
+</figure>
+<p>Compiling a formula parses it once and turns its references into rectangles. A formula that does not parse becomes an <code>#ERROR!</code> cell with the syntax error’s message and position in it — the person sees where, and the rest of the sheet keeps working.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:339-381</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#index(k: number, cell: Cell): void {
+	if (cell.volatile) this.#volatile.add(k);
+	const rects: Rect[] = [];
+	for (const rect of cell.precedents) {
+		if (rect.top === rect.bottom &amp;&amp; rect.left === rect.right) {
+			const target = key(rect.top, rect.left);
+			let set = this.#direct.get(target);
+			if (!set) {
+				set = new Set();
+				this.#direct.set(target, set);
+			}
+			set.add(k);
+		} else {
+			rects.push(rect);
+		}
+	}
+	if (rects.length &gt; 0) this.#ranges.set(k, rects);
+}
+
+#unindex(k: number): void {
+	const cell = this.cells.get(k);
+	if (!cell) return;
+	this.#volatile.delete(k);
+	this.#ranges.delete(k);
+	for (const rect of cell.precedents) {
+		if (rect.top === rect.bottom &amp;&amp; rect.left === rect.right) {
+			const set = this.#direct.get(key(rect.top, rect.left));
+			set?.delete(k);
+			if (set?.size === 0) this.#direct.delete(key(rect.top, rect.left));
+		}
+	}
+}
+
+#dependents(k: number): Set&lt;number&gt; {
+	const out = new Set(this.#direct.get(k) ?? []);
+	if (this.#ranges.size &gt; 0) {
+		const a = unkey(k);
+		for (const [formula, rects] of this.#ranges) {
+			if (rects.some((rect) =&gt; inRect(rect, a))) out.add(formula);
+		}
+	}
+	return out;
+}</code></pre>
+</figure>
+<p>The two indexes. A one-cell rectangle goes into <code>#direct</code> under the cell it reads; anything bigger goes into <code>#ranges</code> under the formula. <code>#dependents</code> combines them: the direct readers of a cell, plus every range formula whose rectangle contains it. Unindexing on edit is what keeps a deleted formula from being notified forever.</p>
+<h3 id="recalculation">The recalculation</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:383-461</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#recalculate(seeds: Set&lt;number&gt;): Recalc {
+	// 1. The dirty set: seeds, volatile cells, and everything downstream.
+	const dirty = new Set&lt;number&gt;();
+	const stack = [...seeds, ...this.#volatile];
+	while (stack.length &gt; 0) {
+		const k = stack.pop()!;
+		if (dirty.has(k)) continue;
+		dirty.add(k);
+		for (const f of this.#dependents(k)) stack.push(f);
+	}
+
+	// 2. In-degree of each dirty formula: how many dirty *formulas* it reads.
+	//    A dirty literal is already final — it was just typed — so it does not
+	//    hold anything back; only a formula that has yet to be evaluated does.
+	const indegree = new Map&lt;number, number&gt;();
+	for (const k of dirty) if (this.cells.get(k)?.formula) indegree.set(k, 0);
+	for (const k of indegree.keys()) {
+		for (const f of this.#dependents(k)) {
+			const n = indegree.get(f);
+			if (n !== undefined) indegree.set(f, n + 1);
+		}
+	}
+
+	// 3. Kahn's algorithm: evaluate whatever has no unevaluated precedents,
+	//    then release its dependents.
+	const changed: number[] = [...seeds].filter((k) =&gt; !this.cells.get(k)?.formula);
+	const queue = [...indegree].filter(([, n]) =&gt; n === 0).map(([k]) =&gt; k);
+	const done = new Set&lt;number&gt;();
+	let evaluated = 0;
+
+	const release = (k: number) =&gt; {
+		for (const f of this.#dependents(k)) {
+			const n = indegree.get(f);
+			if (n === undefined || done.has(f)) continue;
+			indegree.set(f, n - 1);
+			if (n - 1 === 0) queue.push(f);
+		}
+	};
+
+	const drain = () =&gt; {
+		while (queue.length &gt; 0) {
+			const k = queue.shift()!;
+			if (done.has(k)) continue;
+			done.add(k);
+			const cell = this.cells.get(k)!;
+			const before = cell.value;
+			cell.value = toScalar(evaluate(cell.formula!, this.#context));
+			evaluated += 1;
+			if (!same(before, cell.value)) changed.push(k);
+			release(k);
+		}
+	};
+
+	drain();
+
+	// 4. Whatever is left is in a cycle, or downstream of one. The members of
+	//    each cycle — the strongly connected components of what remains — are
+	//    marked #CYCLE!; everything downstream is then evaluated normally and
+	//    sees that error as a value, exactly as it would see #DIV/0!.
+	const cycles: number[] = [];
+	const remaining = new Set([...indegree.keys()].filter((k) =&gt; !done.has(k)));
+	if (remaining.size &gt; 0) {
+		const members = cyclicMembers(remaining, (k) =&gt;
+			[...this.#dependents(k)].filter((f) =&gt; remaining.has(f))
+		);
+		for (const k of members) {
+			const cell = this.cells.get(k)!;
+			if (!(cell.value instanceof ErrorValue &amp;&amp; cell.value.code === '#CYCLE!')) changed.push(k);
+			cell.value = CYCLE();
+			cycles.push(k);
+			done.add(k);
+		}
+		for (const k of members) release(k);
+		drain();
+	}
+
+	this.version += 1;
+	return { changed, cycles, evaluated };
+}</code></pre>
+</figure>
+<p>Step one collects the dirty set: the seeds, every volatile cell (<code>RAND()</code>, <code>NOW()</code>), and everything downstream, transitively. Step two counts in-degrees — but only among dirty *formulas*. A dirty literal was just typed and is already final; it holds nothing back. That distinction is the bug the first version had, and the comment is where it was fixed.</p>
+<p>Step three is Kahn’s algorithm. Evaluate every formula with no unevaluated precedents, then <code>release</code> its dependents — decrement their counts and enqueue any that reach zero. A formula is evaluated only after everything it reads has been, which is the guarantee that makes the value right the first time rather than eventually.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this is what $derived does</h4>
+	<p>Svelte’s runtime keeps, for each <code>$derived</code>, the set of signals it read last time. When a signal changes, the runtime marks the deriveds that read it dirty, transitively, and recomputes them on demand in dependency order — never reading a stale value, never computing a diamond twice. Rename <code>Map</code> to “signal”, <code>#direct</code> to “reactions”, and the dirty set to “marked”, and this function is the scheduler. The difference is that the framework discovers edges by running the function, where the engine reads them out of a parsed formula — and that the framework has no notion of a cycle being a *value*. Chapter 17 puts the two next to each other.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:438-461</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	// 4. Whatever is left is in a cycle, or downstream of one. The members of
+	//    each cycle — the strongly connected components of what remains — are
+	//    marked #CYCLE!; everything downstream is then evaluated normally and
+	//    sees that error as a value, exactly as it would see #DIV/0!.
+	const cycles: number[] = [];
+	const remaining = new Set([...indegree.keys()].filter((k) =&gt; !done.has(k)));
+	if (remaining.size &gt; 0) {
+		const members = cyclicMembers(remaining, (k) =&gt;
+			[...this.#dependents(k)].filter((f) =&gt; remaining.has(f))
+		);
+		for (const k of members) {
+			const cell = this.cells.get(k)!;
+			if (!(cell.value instanceof ErrorValue &amp;&amp; cell.value.code === '#CYCLE!')) changed.push(k);
+			cell.value = CYCLE();
+			cycles.push(k);
+			done.add(k);
+		}
+		for (const k of members) release(k);
+		drain();
+	}
+
+	this.version += 1;
+	return { changed, cycles, evaluated };
+}</code></pre>
+</figure>
+<p>Step four is the leftovers, and it is the next chapter.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what the dirty set contains after editing A1 when B1 reads A1 and C1 reads B1.</li><li>You can explain why a dirty *literal* has no in-degree entry and what goes wrong if it does.</li><li>You can point at the line where a formula is evaluated and the line that releases its dependents.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="evaluation-and-functions.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Evaluation and the function library</span>
+			</a>
+			<a class="pager__link pager__link--next" href="cycles.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Cycles: an error that is a value</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

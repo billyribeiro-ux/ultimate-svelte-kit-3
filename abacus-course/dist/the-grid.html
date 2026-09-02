@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The grid: a thousand cells out of a million — Building Abacus</title>
+<meta name="description" content="Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One `cell` snippet, five layers.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">19 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 48.717948717948715%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html" aria-current="page"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 19</p>
+			<h1>The grid: a thousand cells out of a million</h1>
+			<p class="lede">Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One <code>cell</code> snippet, five layers.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a two-axis virtualised grid with frozen panes as sticky layers, and know exactly what is reactive in it and what is not.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:20-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE GRID
+ * ========
+ *
+ * A million rows and sixteen thousand columns, of which about a thousand
+ * cells are on screen. Only those exist in the DOM: the grid works out
+ * which rows and columns the scroll position reveals, renders exactly
+ * those, and positions each one absolutely inside a canvas the size of the
+ * whole sheet. Scrolling changes two numbers, and the two numbers change
+ * which cells are rendered.
+ *
+ * WHAT IS REACTIVE HERE, AND WHAT IS NOT
+ * --------------------------------------
+ * `scrollTop`, `scrollLeft`, the viewport size, the selection, the frozen
+ * counts and `sheet.version` are `$state`. Cell *values* are not: the
+ * body reads `sheet.version` once, which subscribes it, and then reads
+ * every visible cell straight from the engine. One signal redraws the
+ * viewport; the engine is never proxied.
+ *
+ * EVERYTHING IS A CELL CLASS
+ * --------------------------
+ * Selection, the formula-reference colours, other people's cursors and
+ * the &quot;changed by somebody else&quot; flash are all classes on cells, not
+ * overlays drawn on top. Overlays would need their own copy of the
+ * geometry and would come apart at the frozen panes, where a cell's
+ * screen position is not its canvas position.
+ */
+let {
+	sheet,
+	readonly = false,
+	cursors = [],
+	onactivate
+}: {
+	sheet: Sheet;
+	readonly?: boolean;
+	/** Other people's selections, from the live query. */
+	cursors?: { client: string; name: string; cell: string | null }[];
+	/** The active cell changed — the page sends it to the room. */
+	onactivate?: (cell: Address) =&gt; void;
+} = $props();</code></pre>
+</figure>
+<p>Three ideas in the header. Only visible cells exist. Cell values are not reactive — one signal, <code>sheet.version</code>, redraws the viewport. And every decoration — selection, formula-reference colours, other people’s cursors, the “changed by somebody else” flash — is a *class on a cell*, not an overlay, because an overlay would need its own copy of the geometry and would come apart at the frozen panes.</p>
+<h3 id="geometry">Geometry</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:61-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const HEADER_HEIGHT = 26;
+const HEADER_WIDTH = 52;
+
+let viewport = $state&lt;HTMLDivElement&gt;();
+let grid = $state&lt;HTMLDivElement&gt;();
+let editor = $state&lt;CellEditor&gt;();
+let width = $state(0);
+let height = $state(0);
+let scrollTop = $state(0);
+let scrollLeft = $state(0);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:72-120</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/* ---------------------------------------------------------------- */
+/* Geometry                                                          */
+/* ---------------------------------------------------------------- */
+
+// Iterating a SvelteMap is tracked, so a resize rebuilds the axis.
+const rowAxis = $derived(new Axis(DEFAULT_ROW_HEIGHT, sheet.rows));
+const colAxis = $derived(new Axis(DEFAULT_COLUMN_WIDTH, sheet.columns));
+
+/** The sheet is as big as its contents, plus room to grow, plus what has been scrolled to. */
+const rowCount = $derived.by(() =&gt; {
+	void sheet.version;
+	const extent = sheet.engine.extent();
+	return Math.max(
+		100,
+		(extent?.row ?? 0) + 40,
+		rowAxis.indexAt(scrollTop + height) + 40,
+		sheet.anchor.row + 20
+	);
+});
+const colCount = $derived.by(() =&gt; {
+	void sheet.version;
+	const extent = sheet.engine.extent();
+	return Math.max(
+		26,
+		(extent?.col ?? 0) + 10,
+		colAxis.indexAt(scrollLeft + width) + 10,
+		sheet.anchor.col + 5
+	);
+});
+
+const totalHeight = $derived(rowAxis.total(rowCount));
+const totalWidth = $derived(colAxis.total(colCount));
+
+const frozenHeight = $derived(rowAxis.total(sheet.frozen.rows));
+const frozenWidth = $derived(colAxis.total(sheet.frozen.cols));
+
+/** The rows and columns the scroll position reveals, with a little overscan. */
+const rows = $derived.by(() =&gt; {
+	const first = Math.max(sheet.frozen.rows, rowAxis.indexAt(scrollTop + frozenHeight) - 2);
+	const last = Math.min(rowCount - 1, rowAxis.indexAt(scrollTop + height) + 2);
+	return Array.from({ length: Math.max(0, last - first + 1) }, (_, i) =&gt; first + i);
+});
+const cols = $derived.by(() =&gt; {
+	const first = Math.max(sheet.frozen.cols, colAxis.indexAt(scrollLeft + frozenWidth) - 1);
+	const last = Math.min(colCount - 1, colAxis.indexAt(scrollLeft + width) + 1);
+	return Array.from({ length: Math.max(0, last - first + 1) }, (_, i) =&gt; first + i);
+});
+const frozenRows = $derived(Array.from({ length: sheet.frozen.rows }, (_, i) =&gt; i));
+const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&gt; i));</code></pre>
+</figure>
+<p>The axes are <code>$derived</code> from the sheet’s <code>SvelteMap</code>s — iterating a <code>SvelteMap</code> is tracked, so a resize rebuilds them. The row and column counts grow with the content, with the scroll position, and with the active cell, so a sheet is always a little bigger than what is in it and never smaller than what has been reached. <code>rows</code> and <code>cols</code> are the indexes the scroll reveals, with two rows of overscan so a fast scroll does not show a blank band.</p>
+
+<aside class="callout callout--why">
+	<h4>Why scroll position is state and not read from the element</h4>
+	<p>Every visible cell’s position depends on where the viewport is scrolled. If the grid read <code>element.scrollTop</code> inside the template, nothing would re-run when it changed. Two <code>$state</code> numbers written by an <code>onscroll</code> handler are what let a scroll be a reactive event: the numbers change, <code>rows</code> and <code>cols</code> re-derive, and the each blocks add and remove cells. <code>bind:scrollTop</code> does not exist on elements — the first version tried it — so the handler is the honest way.</p>
+</aside>
+<h3 id="the-cell">One snippet, five layers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:589-646</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	ondblclick={dblclick}
+&gt;
+	&lt;div
+		class=&quot;canvas&quot;
+		style:width=&quot;{HEADER_WIDTH + totalWidth}px&quot;
+		style:height=&quot;{HEADER_HEIGHT + totalHeight}px&quot;
+	&gt;
+		{#snippet cell(r: number, c: number, top: number, left: number)}
+			{@const k = key(r, c)}
+			{@const value = sheet.value(r, c)}
+			{@const selected = inRect(selection, { row: r, col: c })}
+			{@const anchor = sheet.anchor.row === r &amp;&amp; sheet.anchor.col === c}
+			{@const highlight = highlights.find((h) =&gt; inRect(h.rect, { row: r, col: c }))}
+			{@const cursor = cursorsByCell.get(k)}
+			{@const editing = sheet.editing?.row === r &amp;&amp; sheet.editing.col === c}
+			{@const filling =
+				fillTarget !== null &amp;&amp; inRect(fillTarget, { row: r, col: c }) &amp;&amp; !selected}
+			&lt;div
+				id=&quot;cell-{r}-{c}&quot;
+				class={[
+					'cell',
+					{
+						'cell--num': typeof value === 'number',
+						'cell--bool': typeof value === 'boolean',
+						'cell--error': value !== null &amp;&amp; typeof value === 'object',
+						'cell--selected': selected,
+						'cell--anchor': anchor,
+						'cell--editing': editing,
+						'cell--flash': sheet.flashes.has(k),
+						'cell--filling': filling,
+						'cell--top': selected &amp;&amp; r === selection.top,
+						'cell--bottom': selected &amp;&amp; r === selection.bottom,
+						'cell--left': selected &amp;&amp; c === selection.left,
+						'cell--right': selected &amp;&amp; c === selection.right,
+						'cell--hl-top': highlight &amp;&amp; r === highlight.rect.top,
+						'cell--hl-bottom': highlight &amp;&amp; r === highlight.rect.bottom,
+						'cell--hl-left': highlight &amp;&amp; c === highlight.rect.left,
+						'cell--hl-right': highlight &amp;&amp; c === highlight.rect.right
+					}
+				]}
+				role=&quot;gridcell&quot;
+				aria-rowindex={r + 1}
+				aria-colindex={c + 1}
+				aria-selected={selected}
+				style:top=&quot;{top}px&quot;
+				style:left=&quot;{left}px&quot;
+				style:width=&quot;{widthOf(c)}px&quot;
+				style:height=&quot;{rowAxis.size(r)}px&quot;
+				style:--hl={highlight ? `var(--ref-hue-${highlight.hue})` : undefined}
+				style:--cursor-hue={cursor?.hue}
+			&gt;
+				{#if editing &amp;&amp; !readonly}
+					&lt;CellEditor bind:this={editor} {sheet} oncommit={commit} oncancel={cancel} /&gt;
+				{:else}
+					{sheet.display(r, c)}
+				{/if}
+				{#if cursor &amp;&amp; !editing}
+					&lt;span class=&quot;cursor-name&quot; style:--cursor-hue={cursor.hue}&gt;{cursor.name}&lt;/span&gt;</code></pre>
+</figure>
+<p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position; its <code>{@const}</code>s compute everything the cell shows from the sheet and the decorations. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:693-745</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- The corner, above everything. --&gt;
+&lt;div class=&quot;layer layer--corner&quot;&gt;
+	&lt;div class=&quot;corner&quot; style:width=&quot;{HEADER_WIDTH}px&quot; style:height=&quot;{HEADER_HEIGHT}px&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Frozen rows: sticky below the column headers. --&gt;
+{#if sheet.frozen.rows &gt; 0}
+	&lt;div class=&quot;layer layer--frozen-rows&quot; style:top=&quot;{HEADER_HEIGHT}px&quot;&gt;
+		{#each frozenRows as r (r)}
+			{#each cols as c (c)}
+				{@render cell(r, c, rowAxis.offset(r), HEADER_WIDTH + colAxis.offset(c))}
+			{/each}
+		{/each}
+	&lt;/div&gt;
+{/if}
+
+&lt;!-- Frozen columns: sticky right of the row headers. --&gt;
+{#if sheet.frozen.cols &gt; 0}
+	&lt;div class=&quot;layer layer--frozen-cols&quot; style:left=&quot;{HEADER_WIDTH}px&quot;&gt;
+		{#each rows as r (r)}
+			{#each frozenCols as c (c)}
+				{@render cell(r, c, HEADER_HEIGHT + rowAxis.offset(r), colAxis.offset(c))}
+			{/each}
+		{/each}
+	&lt;/div&gt;
+{/if}
+
+&lt;!-- Where frozen rows and columns meet. --&gt;
+{#if sheet.frozen.rows &gt; 0 &amp;&amp; sheet.frozen.cols &gt; 0}
+	&lt;div
+		class=&quot;layer layer--frozen-corner&quot;
+		style:top=&quot;{HEADER_HEIGHT}px&quot;
+		style:left=&quot;{HEADER_WIDTH}px&quot;
+	&gt;
+		{#each frozenRows as r (r)}
+			{#each frozenCols as c (c)}
+				{@render cell(r, c, rowAxis.offset(r), colAxis.offset(c))}
+			{/each}
+		{/each}
+	&lt;/div&gt;
+{/if}
+
+&lt;!-- The body: every cell the scroll position reveals. --&gt;
+&lt;div class=&quot;body&quot;&gt;
+	{#each rows as r (r)}
+		{#each cols as c (c)}
+			{@render cell(
+				r,
+				c,
+				HEADER_HEIGHT + rowAxis.offset(r),
+				HEADER_WIDTH + colAxis.offset(c)
+			)}
+		{/each}</code></pre>
+</figure>
+<p>Frozen panes are the same snippet rendered in extra layers: frozen rows at the top, frozen columns at the left, and the corner where they meet, each with a different origin. The layers are sticky, and the trick that makes that work is in the stylesheet.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:779-821</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	scrollbar-gutter: stable;
+}
+
+.canvas {
+	position: relative;
+}
+
+/*
+ * The sticky layers. Each is zero-sized so it takes no space in the
+ * canvas's flow; its absolutely positioned children overflow visibly and
+ * move with the canvas on the other axis.
+ */
+.layer {
+	position: sticky;
+	width: 0;
+	height: 0;
+}
+
+.layer--top {
+	top: 0;
+	z-index: 4;
+}
+
+.layer--left {
+	left: 0;
+	z-index: 3;
+}
+
+.layer--corner {
+	top: 0;
+	left: 0;
+	z-index: 6;
+}
+
+.layer--frozen-rows {
+	z-index: 2;
+}
+
+.layer--frozen-cols {
+	z-index: 2;
+}
+
+.layer--frozen-corner {</code></pre>
+</figure>
+<p>Each sticky layer is *zero-sized*: it takes no space in the canvas’s flow, and its absolutely positioned children overflow visibly and move with the canvas on the other axis. That is how the column headers stay at the top while scrolling down and still scroll sideways — with no JavaScript synchronising two scrollers, which is the way every grid used to do it and the way every grid got out of step.</p>
+<h3 id="effects">The two effects</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:152-183</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Cells somebody else changed flash for a moment, then the set is cleared. */
+$effect(() =&gt; {
+	if (sheet.flashes.size === 0) return;
+	const timer = setTimeout(() =&gt; sheet.flashes.clear(), 900);
+	return () =&gt; clearTimeout(timer);
+});
+
+/** Keep the active cell on screen. */
+$effect(() =&gt; {
+	const { row, col } = sheet.anchor;
+	const el = untrack(() =&gt; viewport);
+	if (!el) return;
+	untrack(() =&gt; {
+		const top = rowAxis.offset(row);
+		const bottom = top + rowAxis.size(row);
+		const left = colAxis.offset(col);
+		const right = left + colAxis.size(col);
+		const viewTop = scrollTop + frozenHeight;
+		const viewBottom = scrollTop + height - HEADER_HEIGHT;
+		const viewLeft = scrollLeft + frozenWidth;
+		const viewRight = scrollLeft + width - HEADER_WIDTH;
+		if (row &gt;= sheet.frozen.rows) {
+			if (top &lt; viewTop) el.scrollTop = top - frozenHeight;
+			else if (bottom &gt; viewBottom) el.scrollTop = bottom - (height - HEADER_HEIGHT);
+		}
+		if (col &gt;= sheet.frozen.cols) {
+			if (left &lt; viewLeft) el.scrollLeft = left - frozenWidth;
+			else if (right &gt; viewRight) el.scrollLeft = right - (width - HEADER_WIDTH);
+		}
+	});
+	onactivate?.({ row, col });
+});</code></pre>
+</figure>
+<p>Both are real side effects, which is what <code>$effect</code> is for. The first clears the flash set after a timer and cancels the timer if the set changes first. The second keeps the active cell on screen by writing to the element’s <code>scrollTop</code> — <code>untrack</code> around the reads so that the effect depends only on <code>sheet.anchor</code>, not on the scroll position it is about to change, which would otherwise loop.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:553-588</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The grid is the keyboard target; the viewport scrolls; the canvas is the
+	size of the sheet. Sticky, zero-size layers hold the headers and the frozen
+	panes in place while their absolutely positioned children move with the
+	canvas — which is the whole trick, and the reason no overlay is needed.
+--&gt;
+&lt;div
+	bind:this={grid}
+	class={['grid', { 'grid--readonly': readonly, 'grid--dragging': drag !== null }]}
+	role=&quot;grid&quot;
+	aria-label=&quot;Spreadsheet&quot;
+	aria-rowcount={rowCount}
+	aria-colcount={colCount}
+	aria-multiselectable=&quot;true&quot;
+	aria-activedescendant=&quot;cell-{sheet.anchor.row}-{sheet.anchor.col}&quot;
+	aria-readonly={readonly || undefined}
+	tabindex=&quot;0&quot;
+	onkeydown={keydown}
+	{oncopy}
+	{oncut}
+	{onpaste}
+&gt;
+	&lt;div
+		bind:this={viewport}
+		class=&quot;viewport&quot;
+		role=&quot;presentation&quot;
+		bind:clientWidth={width}
+		bind:clientHeight={height}
+		onscroll={(event) =&gt; {
+			scrollTop = event.currentTarget.scrollTop;
+			scrollLeft = event.currentTarget.scrollLeft;
+		}}
+		onpointerdown={pointerdown}
+		onpointermove={pointermove}
+		onpointerup={pointerup}
+		onpointercancel={pointerup}</code></pre>
+</figure>
+<p>The outer element is <code>role=&quot;grid&quot;</code> with <code>aria-rowcount</code>, <code>aria-colcount</code>, <code>aria-multiselectable</code> and <code>aria-activedescendant</code> pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is. A polite live region at the bottom announces the active cell’s address, value and formula on every move.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which four things are <code>$state</code> in the grid and why cell values are not.</li><li>You can explain how a sticky zero-sized layer keeps column headers at the top while scrolling sideways.</li><li>You can say why the scroll-into-view effect wraps its reads in <code>untrack</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-axis.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The axis: where row 40,000 starts</span>
+			</a>
+			<a class="pager__link pager__link--next" href="keyboard-and-pointer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Keyboard, pointer, clipboard</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

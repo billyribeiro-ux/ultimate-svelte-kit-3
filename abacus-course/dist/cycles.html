@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cycles: an error that is a value — Building Abacus</title>
+<meta name="description" content="`A1 = B1 + 1`, `B1 = A1 + 1`. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 25.64102564102564%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html" aria-current="page"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>Cycles: an error that is a value</h1>
+			<p class="lede"><code>A1 = B1 + 1</code>, <code>B1 = A1 + 1</code>. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know how the engine finds cycle members precisely — not just “something is left over” — and why cells downstream of a cycle are evaluated normally.</p></aside>
+			<p>When Kahn’s queue empties, anything still unevaluated has an in-degree that never reached zero. That means it is on a cycle — or merely *downstream* of one, which is a different thing. <code>=A1+1</code> where A1 is in a cycle is not itself circular; it should evaluate, see <code>#CYCLE!</code> as a value, and produce <code>#CYCLE!</code> the way it would produce <code>#DIV/0!</code> from a division by zero next door.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:438-461</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	// 4. Whatever is left is in a cycle, or downstream of one. The members of
+	//    each cycle — the strongly connected components of what remains — are
+	//    marked #CYCLE!; everything downstream is then evaluated normally and
+	//    sees that error as a value, exactly as it would see #DIV/0!.
+	const cycles: number[] = [];
+	const remaining = new Set([...indegree.keys()].filter((k) =&gt; !done.has(k)));
+	if (remaining.size &gt; 0) {
+		const members = cyclicMembers(remaining, (k) =&gt;
+			[...this.#dependents(k)].filter((f) =&gt; remaining.has(f))
+		);
+		for (const k of members) {
+			const cell = this.cells.get(k)!;
+			if (!(cell.value instanceof ErrorValue &amp;&amp; cell.value.code === '#CYCLE!')) changed.push(k);
+			cell.value = CYCLE();
+			cycles.push(k);
+			done.add(k);
+		}
+		for (const k of members) release(k);
+		drain();
+	}
+
+	this.version += 1;
+	return { changed, cycles, evaluated };
+}</code></pre>
+</figure>
+<p>So the leftovers are split. The strongly connected components of the remaining graph with more than one node — plus any node that reads itself — are the cycle members. They are marked, counted as done, and *released*, and the queue is drained again. The downstream cells evaluate with the error as an input.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:464-509</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The nodes that lie on a cycle: every member of a strongly connected
+ * component with more than one node, plus any node that points at itself.
+ * Tarjan's algorithm, which finds the components in one depth-first pass.
+ */
+export function cyclicMembers(nodes: Set&lt;number&gt;, edges: (k: number) =&gt; number[]): Set&lt;number&gt; {
+	const index = new Map&lt;number, number&gt;();
+	const low = new Map&lt;number, number&gt;();
+	const onStack = new Set&lt;number&gt;();
+	const stack: number[] = [];
+	const members = new Set&lt;number&gt;();
+	let counter = 0;
+
+	const visit = (v: number) =&gt; {
+		index.set(v, counter);
+		low.set(v, counter);
+		counter += 1;
+		stack.push(v);
+		onStack.add(v);
+
+		for (const w of edges(v)) {
+			if (!index.has(w)) {
+				visit(w);
+				low.set(v, Math.min(low.get(v)!, low.get(w)!));
+			} else if (onStack.has(w)) {
+				low.set(v, Math.min(low.get(v)!, index.get(w)!));
+			}
+		}
+
+		if (low.get(v) === index.get(v)) {
+			const component: number[] = [];
+			let w: number;
+			do {
+				w = stack.pop()!;
+				onStack.delete(w);
+				component.push(w);
+			} while (w !== v);
+			if (component.length &gt; 1 || edges(v).includes(v)) {
+				for (const m of component) members.add(m);
+			}
+		}
+	};
+
+	for (const v of nodes) if (!index.has(v)) visit(v);
+	return members;
+}</code></pre>
+</figure>
+<p>Tarjan’s algorithm in thirty lines: one depth-first pass, an index and a low-link per node, and a stack. When a node’s low-link equals its own index it is the root of a component, and everything above it on the stack belongs to that component. A component of one node is a cycle only if the node points at itself.</p>
+
+<aside class="callout callout--why">
+	<h4>Why IFERROR can catch a cycle</h4>
+	<p>Because <code>#CYCLE!</code> is an <code>ErrorValue</code> like any other. <code>=IFERROR(A1, 0)</code> where A1 is circular gives 0; <code>=COUNT(A1:A3)</code> skips the circular cell and counts the rest. The first version of the engine marked everything left over as circular and stopped, which made a single mistake poison every total in the sheet. The test in <code>engine.spec.ts</code> that asserts <code>cycles</code> has exactly three members — and that a downstream <code>IFERROR</code> recovers — is the test that forced the split.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.spec.ts<span class="code__lines">:113-149</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('cycles', () =&gt; {
+	it('marks a direct cycle and recovers when it is broken', () =&gt; {
+		const s = sheet({ A1: '=A1+1' });
+		expect(s.code('A1')).toBe('#CYCLE!');
+		s.set('A1', '5');
+		expect(s.value('A1')).toBe(5);
+	});
+
+	it('marks every member of an indirect cycle, and what is downstream', () =&gt; {
+		const s = sheet({ A1: '=B1', B1: '=C1', C1: '=A1', D1: '=C1+1', E1: '7' });
+		const result = s.set('A1', '=B1+0');
+		expect(s.code('A1')).toBe('#CYCLE!');
+		expect(s.code('B1')).toBe('#CYCLE!');
+		expect(s.code('C1')).toBe('#CYCLE!');
+		expect(s.code('D1')).toBe('#CYCLE!');
+		expect(result.cycles).toHaveLength(3); // the members; D1 is downstream
+		expect(s.value('E1')).toBe(7);
+
+		s.set('C1', '1');
+		expect(s.value('A1')).toBe(1);
+		expect(s.value('D1')).toBe(2);
+	});
+
+	it('lets a cell downstream of a cycle handle the error like any other', () =&gt; {
+		const s = sheet({ A1: '=B1', B1: '=A1', C1: '=IFERROR(A1, &quot;broken&quot;)', D1: '=COUNT(A1:B1)' });
+		expect(s.value('C1')).toBe('broken');
+		expect(s.value('D1')).toBe(0);
+	});
+
+	it('does not confuse a diamond with a cycle', () =&gt; {
+		const s = sheet({ A1: '1', B1: '=A1+1', C1: '=A1+2', D1: '=B1+C1' });
+		expect(s.value('D1')).toBe(5);
+		const result = s.set('A1', '2');
+		expect(result.evaluated).toBe(3); // each formula exactly once
+		expect(s.value('D1')).toBe(7);
+	});
+});</code></pre>
+</figure>
+<p>The engine’s own tests for cycles, in the language the sheet uses. <code>sheet()</code> is a tiny helper that builds an engine from a record of <code>A1: &quot;=B1&quot;</code> pairs, which is what every engine test in the file wants.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:511-544</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function isVolatile(node: Node): boolean {
+	switch (node.type) {
+		case 'call':
+			return Boolean(FUNCTIONS.get(node.name)?.volatile) || node.args.some(isVolatile);
+		case 'unary':
+			return isVolatile(node.operand);
+		case 'binary':
+			return isVolatile(node.left) || isVolatile(node.right);
+		default:
+			return false;
+	}
+}
+
+/**
+ * A cell holds a scalar. A formula that *is* a range — `=A1:B2` — has no
+ * single value to show; a one-cell range is its cell, and anything larger is
+ * an error, because this engine does not spill.
+ */
+function toScalar(v: Value): Scalar {
+	if (v instanceof RangeValue) {
+		return v.size === 1
+			? v.get(0, 0)
+			: new ErrorValue('#VALUE!', 'A range cannot be shown in one cell');
+	}
+	return v;
+}
+
+/** Value equality that treats two errors with the same code as the same. */
+export function same(a: Scalar, b: Scalar): boolean {
+	if (a instanceof ErrorValue || b instanceof ErrorValue) {
+		return a instanceof ErrorValue &amp;&amp; b instanceof ErrorValue &amp;&amp; a.code === b.code;
+	}
+	return Object.is(a, b);
+}</code></pre>
+</figure>
+<p>Three small helpers finish the file. <code>isVolatile</code> walks a tree looking for a function the library marked volatile. <code>toScalar</code> is the rule that this engine does not spill: <code>=A1:B2</code> in one cell is an error unless the range is one cell. <code>same</code> treats two errors with the same code as equal, so a recalculation does not report a cell as changed when its <code>#DIV/0!</code> was replaced with another <code>#DIV/0!</code>.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can draw the graph for <code>A1=B1</code>, <code>B1=C1</code>, <code>C1=A1</code>, <code>D1=A1+1</code> and say which cells are members and which is downstream.</li><li>You can explain what “low-link equals index” means in Tarjan’s algorithm.</li><li>You can say why <code>same()</code> exists and what would flicker without it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-dependency-graph.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The dependency graph</span>
+			</a>
+			<a class="pager__link pager__link--next" href="moving-references.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Moving references: insert, delete, copy</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

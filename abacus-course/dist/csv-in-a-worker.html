@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV: a streaming parser in a worker, and a streamed export — Building Abacus</title>
+<meta name="description" content="RFC 4180 with the lenient parts every real file needs, as a state machine that takes chunks of any size. A Web Worker feeds it from `File.stream()` and reports progress. Export goes the other way as a `ReadableStream` response.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 58.97435897435898%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html" aria-current="page"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>CSV: a streaming parser in a worker, and a streamed export</h1>
+			<p class="lede">RFC 4180 with the lenient parts every real file needs, as a state machine that takes chunks of any size. A Web Worker feeds it from <code>File.stream()</code> and reports progress. Export goes the other way as a <code>ReadableStream</code> response.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a streaming parser, move it off the main thread with a typed protocol, and stream a response one row at a time.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/parse.ts<span class="code__lines">:1-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A STREAMING CSV PARSER
+ * ======================
+ *
+ * RFC 4180 with the lenient parts every real file needs: any of `,` `;` and
+ * tab as the delimiter (detected from the first line), CRLF or LF line
+ * endings, quoted fields that may contain the delimiter, newlines and `&quot;&quot;`
+ * for a literal quote, and a final line with or without a newline.
+ *
+ * WHY STREAMING
+ * -------------
+ * A two hundred megabyte export does not fit in a string a browser is happy
+ * to hold, and even where it would, a parser that needs the whole file
+ * before it can start is a parser that shows a spinner for the whole file.
+ * This one is a state machine: `push()` takes a chunk of any size — a byte,
+ * a megabyte — and returns the rows that chunk *completed*, keeping the
+ * partial field and the quoting state for the next one. The Web Worker in
+ * `worker.ts` feeds it from `File.stream()` and reports progress as it goes.
+ *
+ * The one subtlety a streaming parser has that a whole-file parser does not:
+ * a `&quot;` inside a quoted field means either &quot;end of field&quot; or, if another `&quot;`
+ * follows, &quot;a literal quote&quot; — and the next character may be in the next
+ * chunk. The parser remembers that it is waiting to find out.
+ */</code></pre>
+</figure>
+<p>The subtlety a streaming parser has that a whole-file parser does not: a <code>&quot;</code> inside a quoted field means either “end of field” or, if another <code>&quot;</code> follows, “a literal quote” — and the next character may be in the next chunk. The parser remembers that it is waiting to find out.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/parse.ts<span class="code__lines">:31-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class CsvParser {
+	#delimiter: string | null;
+	#field = '';
+	#row: string[] = [];
+	#inQuotes = false;
+	#quoteInQuotes = false; // saw `&quot;` inside quotes; deciding what it means
+	#afterCR = false;
+	#firstLine = '';
+	#done = false;
+
+	constructor(options: ParserOptions = {}) {
+		this.#delimiter = options.delimiter ?? null;
+	}
+
+	get delimiter(): string {
+		return this.#delimiter ?? ',';
+	}
+
+	/** The rows this chunk completed. */
+	push(chunk: string): string[][] {
+		if (this.#done) throw new Error('The parser has finished');
+		const rows: string[][] = [];
+
+		for (let i = 0; i &lt; chunk.length; i += 1) {
+			const ch = chunk[i]!;
+
+			if (this.#delimiter === null) {
+				// Still on the first line, and it has not ended: keep it for detection.
+				if (ch === '\n' || ch === '\r') {
+					this.#delimiter = detectDelimiter(this.#firstLine);
+					this.#replay(this.#firstLine, rows);
+					this.#firstLine = '';
+				} else {
+					this.#firstLine += ch;
+					continue;
+				}
+			}
+
+			this.#consume(ch, rows);
+		}
+
+		return rows;
+	}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/parse.ts<span class="code__lines">:103-141</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#consume(ch: string, rows: string[][]): void {
+	const delimiter = this.#delimiter!;
+
+	if (this.#quoteInQuotes) {
+		this.#quoteInQuotes = false;
+		if (ch === '&quot;') {
+			this.#field += '&quot;';
+			return;
+		}
+		this.#inQuotes = false;
+		// fall through: the character after the closing quote is ordinary
+	}
+
+	if (this.#inQuotes) {
+		if (ch === '&quot;') this.#quoteInQuotes = true;
+		else this.#field += ch;
+		return;
+	}
+
+	if (this.#afterCR) {
+		this.#afterCR = false;
+		if (ch === '\n') return; // the LF of a CRLF
+	}
+
+	if (ch === '&quot;' &amp;&amp; this.#field === '') {
+		this.#inQuotes = true;
+	} else if (ch === delimiter) {
+		this.#row.push(this.#field);
+		this.#field = '';
+	} else if (ch === '\n' || ch === '\r') {
+		this.#row.push(this.#field);
+		rows.push(this.#row);
+		this.#field = '';
+		this.#row = [];
+		this.#afterCR = ch === '\r';
+	} else {
+		this.#field += ch;
+	}
+}</code></pre>
+</figure>
+<p><code>#consume</code> is the state machine, one character at a time: in quotes, after a quote in quotes, after a carriage return, or plain. The delimiter is detected from the first line, which is buffered until the line ends and then replayed through the same machine.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/parse.spec.ts<span class="code__lines">:37-64</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	it('produces the same rows however the input is chunked', () =&gt; {
+		const text = 'name,quote,n\r\n&quot;Ada, L.&quot;,&quot;she said &quot;&quot;hello&quot;&quot;\nand left&quot;,1\r\nBob,&quot;&quot;,2\n&quot;end&quot;';
+		const whole = parseCsv(text);
+		expect(whole).toEqual([
+			['name', 'quote', 'n'],
+			['Ada, L.', 'she said &quot;hello&quot;\nand left', '1'],
+			['Bob', '', '2'],
+			['end']
+		]);
+
+		// Every chunk size from one character up: the streaming state must be
+		// right at every possible boundary, including inside `&quot;&quot;` and after `\r`.
+		for (let size = 1; size &lt;= text.length; size += 1) {
+			const parser = new CsvParser();
+			const rows: string[][] = [];
+			for (let i = 0; i &lt; text.length; i += size)
+				rows.push(...parser.push(text.slice(i, i + size)));
+			rows.push(...parser.finish());
+			expect(rows, `chunk size ${size}`).toEqual(whole);
+		}
+	});
+
+	it('keeps multi-byte text intact', () =&gt; {
+		expect(parseCsv('café,naïve,日本語')).toEqual([['café', 'naïve', '日本語']]);
+	});
+});
+
+describe('writing', () =&gt; {</code></pre>
+</figure>
+<p>The test that matters for a streaming parser: the same rows however the input is chunked. It feeds a nasty string one character at a time, in threes, and whole, and expects the same result each way.</p>
+<h3 id="the-worker">The worker</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/protocol.ts<span class="code__lines">:1-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What the CSV worker and the page say to each other. Both sides import
+ * this, so a message the worker sends is a message the page expects — the
+ * compiler checks the conversation.
+ */
+
+export interface ParseRequest {
+	type: 'parse';
+	file: File;
+	delimiter?: string;
+}
+
+export type WorkerRequest = ParseRequest;
+
+export type WorkerResponse =
+	| { type: 'progress'; bytes: number; total: number; rows: number }
+	| { type: 'rows'; rows: string[][] }
+	| { type: 'done'; rows: number; delimiter: string }
+	| { type: 'error'; message: string };</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/worker.ts<span class="code__lines">:1-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE IMPORT WORKER
+ * =================
+ *
+ * Parsing a large file on the main thread freezes the page for as long as it
+ * takes; a Web Worker does the same work on another thread and the grid
+ * keeps scrolling. This file *is* that thread: the page creates it with
+ * `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })`,
+ * posts a `File`, and receives rows in batches with progress in between.
+ *
+ * The file is read as bytes, in chunks, from `file.stream()`, and decoded
+ * with a `TextDecoder` in streaming mode — so a multi-byte character split
+ * across two chunks is reassembled rather than turned into two garbage
+ * characters. Byte counts are what progress is measured in, because bytes
+ * are what a file is measured in.
+ *
+ * Type-checked by `tsconfig.worker.json` with the WebWorker library: here,
+ * `self` is a `DedicatedWorkerGlobalScope` and `document` is an error.
+ */
+
+import { CsvParser } from './parse.ts';
+import type { WorkerRequest, WorkerResponse } from './protocol.ts';
+
+const BATCH = 500;
+
+const post = (message: WorkerResponse) =&gt; self.postMessage(message);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/worker.ts<span class="code__lines">:28-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">self.addEventListener('message', async (event: MessageEvent&lt;WorkerRequest&gt;) =&gt; {
+	const request = event.data;
+	if (request.type !== 'parse') return;
+
+	try {
+		const parser = new CsvParser({ delimiter: request.delimiter });
+		const decoder = new TextDecoder();
+		const reader = request.file.stream().getReader();
+		let bytes = 0;
+		let total = 0;
+		let pending: string[][] = [];
+
+		const flush = () =&gt; {
+			if (pending.length === 0) return;
+			post({ type: 'rows', rows: pending });
+			pending = [];
+		};
+
+		for (;;) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			bytes += value.byteLength;
+			const rows = parser.push(decoder.decode(value, { stream: true }));
+			for (const row of rows) {
+				pending.push(row);
+				total += 1;
+				if (pending.length &gt;= BATCH) flush();
+			}
+			post({ type: 'progress', bytes, total: request.file.size, rows: total });
+		}
+
+		const tail = parser.push(decoder.decode());
+		const last = parser.finish();
+		for (const row of [...tail, ...last]) {
+			pending.push(row);
+			total += 1;
+		}
+		flush();
+		post({ type: 'done', rows: total, delimiter: parser.delimiter });
+	} catch (error) {
+		post({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+	}
+});</code></pre>
+</figure>
+<p>The file is read as bytes from <code>file.stream()</code> and decoded with a <code>TextDecoder</code> in streaming mode, so a multi-byte character split across two chunks is reassembled. Rows go back in batches of five hundred with progress between them. The protocol module is imported by both sides, so a message the worker sends is a message the page expects — the compiler checks the conversation.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/import.ts<span class="code__lines">:24-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function importCsv(
+	file: File,
+	onProgress?: (progress: Progress) =&gt; void,
+	signal?: AbortSignal
+): Promise&lt;Imported&gt; {
+	return new Promise((resolve, reject) =&gt; {
+		const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+		const rows: string[][] = [];
+
+		const finish = () =&gt; {
+			worker.terminate();
+			signal?.removeEventListener('abort', abort);
+		};
+		const abort = () =&gt; {
+			finish();
+			reject(new DOMException('Import cancelled', 'AbortError'));
+		};
+		signal?.addEventListener('abort', abort, { once: true });
+
+		worker.addEventListener('message', (event: MessageEvent&lt;WorkerResponse&gt;) =&gt; {
+			const message = event.data;
+			switch (message.type) {
+				case 'progress':
+					onProgress?.(message);
+					break;
+				case 'rows':
+					for (const row of message.rows) rows.push(row);
+					break;
+				case 'done':
+					finish();
+					resolve({ rows, delimiter: message.delimiter });
+					break;
+				case 'error':
+					finish();
+					reject(new Error(message.message));
+					break;
+				default:
+					message satisfies never;
+			}
+		});
+		worker.addEventListener('error', (event) =&gt; {
+			finish();
+			reject(new Error(event.message || 'The import worker failed'));
+		});
+
+		const request: WorkerRequest = { type: 'parse', file };
+		worker.postMessage(request);
+	});
+}</code></pre>
+</figure>
+<p>The page’s side wraps the worker in a promise. <code>new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })</code> is the form Vite understands and bundles; the config’s <code>worker.format: 'es'</code> lets the worker share the parser with the main thread rather than carrying a second copy. The worker is created per import and terminated when done, so a cancelled import leaves nothing running.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.worker.json<span class="code__lines">:1-15</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	// The CSV import worker: the WebWorker library instead of the DOM one, so
+	// that `self.postMessage` type-checks and `document` does not.
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;lib&quot;: [&quot;ES2024&quot;, &quot;WebWorker&quot;],
+		&quot;strict&quot;: true,
+		&quot;noUncheckedIndexedAccess&quot;: true,
+		&quot;noImplicitReturns&quot;: true,
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true,
+		&quot;types&quot;: []
+	},
+	&quot;include&quot;: [&quot;src/lib/csv/worker.ts&quot;, &quot;src/lib/csv/protocol.ts&quot;, &quot;src/lib/csv/parse.ts&quot;]
+}</code></pre>
+</figure>
+<h3 id="export">Export: a stream the other way</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/render.ts<span class="code__lines">:55-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Lines of CSV, one row at a time, for a streamed response. */
+export function* csvLines(doc: Document, locale: string): Generator&lt;string&gt; {
+	const { rows } = tabulate(doc, locale, { rows: 1_048_576, cols: 16_384 });
+	for (const row of rows) {
+		yield `${row
+			.map((cell) =&gt; {
+				const v = cell.text;
+				return /[&quot;,\r\n]/.test(v) || v !== v.trim() ? `&quot;${v.replaceAll('&quot;', '&quot;&quot;')}&quot;` : v;
+			})
+			.join(',')}\r\n`;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/sheets/[id]/export.csv/+server.ts<span class="code__lines">:19-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, locals }) =&gt; {
+	const own = await getSheet(params.id, locals.user ?? null);
+	const published = own ? null : await getPublished(params.id);
+	const source = own ? { title: own.title, doc: own.doc } : published;
+	if (!source) error(404, 'No such sheet');
+
+	const encoder = new TextEncoder();
+	const lines = csvLines(source.doc, 'en-US');
+
+	const stream = new ReadableStream&lt;Uint8Array&gt;({
+		pull(controller) {
+			const { value, done } = lines.next();
+			if (done) controller.close();
+			else controller.enqueue(encoder.encode(value));
+		},
+		cancel() {
+			lines.return(undefined);
+		}
+	});
+
+	const filename = `${source.title.replace(/[^\w\- ]+/g, '').trim() || 'sheet'}.csv`;
+	return new Response(stream, {
+		headers: {
+			'content-type': 'text/csv; charset=utf-8',
+			'content-disposition': `attachment; filename=&quot;${filename}&quot;`,
+			'cache-control': 'no-store'
+		}
+	});
+};</code></pre>
+</figure>
+<p>The response body is a <code>ReadableStream</code> that pulls one row at a time from a generator. The first bytes leave the server before the last row has been formatted, a sheet with a hundred thousand rows never exists as one string, and cancelling the download cancels the generator. Values travel *formatted*, as a person would read them, because a CSV is for people and other programs, not for the engine.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/csv/export.ts<span class="code__lines">:10-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function sheetToCsv(sheet: Sheet): string {
+	const extent = sheet.engine.extent();
+	if (!extent) return '';
+	const lines: string[] = [];
+	for (let r = 0; r &lt;= extent.row; r += 1) {
+		const row: string[] = [];
+		for (let c = 0; c &lt;= extent.col; c += 1) row.push(sheet.display(r, c));
+		lines.push(rowToCsv(row));
+	}
+	return `${lines.join('\r\n')}\r\n`;
+}
+
+/** Hand the person a file. The link is created, clicked and removed; nothing is left in the DOM. */
+export function downloadText(
+	text: string,
+	filename: string,
+	type = 'text/csv;charset=utf-8'
+): void {
+	const url = URL.createObjectURL(new Blob([text], { type }));
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = filename;
+	a.click();
+	setTimeout(() =&gt; URL.revokeObjectURL(url), 1000);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>#quoteInQuotes</code> is for and give an input that needs it.</li><li>You can explain why the worker decodes with <code>{ stream: true }</code>.</li><li>You can trace one row from the generator to the wire in the export endpoint.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="toolbar-find-and-workbench.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The toolbar, find and replace, and the workbench</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-schema.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The schema, and migrations instead of push</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

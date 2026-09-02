@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluation and the function library — Building Abacus</title>
+<meta name="description" content="The evaluator walks the tree with a `Context` and knows nothing about sheets. Fifty functions register themselves in a `Map`, receive their arguments as thunks so `IF` is lazy, and share a few coercion helpers.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20.51282051282051%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html" aria-current="page"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>Evaluation and the function library</h1>
+			<p class="lede">The evaluator walks the tree with a <code>Context</code> and knows nothing about sheets. Fifty functions register themselves in a <code>Map</code>, receive their arguments as thunks so <code>IF</code> is lazy, and share a few coercion helpers.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know how a formula becomes a value, why arguments are thunks, and how criteria, rounding and lookups are done the way a spreadsheet does them.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE EVALUATOR
+ * =============
+ *
+ * Walks a tree and produces a value. It does not know what a sheet is: the
+ * cells it needs come through a `Context`, which the engine provides — and a
+ * test provides a `Map`. That separation is what makes the language testable
+ * in a millisecond, and what lets the same evaluator run in the engine, in
+ * the `$derived` demonstration of chapter 12, and on the server for a
+ * published sheet.
+ */
+
+import type { CellRef, Node, RangeRef } from './ast.ts';
+import { FUNCTIONS } from './functions.ts';
+import {
+	compare,
+	DIV0,
+	ErrorValue,
+	isError,
+	isRange,
+	NAME,
+	RangeValue,
+	REF,
+	toNumber,
+	toText,
+	VALUE,
+	type Scalar,
+	type Value
+} from './values.ts';
+
+export interface Context {
+	/** The evaluated value of another cell. */
+	cell(row: number, col: number): Scalar;
+	/** The clock, for TODAY and NOW. Injected so that tests are deterministic. */
+	now(): Date;
+	/** A random number in [0, 1), for RAND. Injected for the same reason. */
+	random(): number;
+	/** The locale TEXT() formats in — the person's, not the server's. */
+	locale: string;
+}
+
+/** A range larger than this is refused with #NUM! rather than allocated. */
+export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
+</figure>
+<p>The evaluator does not know what a sheet is. The cells it needs come through a <code>Context</code> — the engine provides one, a test provides a <code>Map</code>, the lesson page in chapter 17 provides a closure over nine <code>$derived</code>s. The clock and the random source are injected for the same reason: <code>TODAY()</code> in a test must give the same answer tomorrow.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:45-94</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function evaluate(node: Node, ctx: Context): Value {
+	switch (node.type) {
+		case 'number':
+			return node.value;
+		case 'string':
+			return node.value;
+		case 'boolean':
+			return node.value;
+		case 'error':
+			return new ErrorValue(node.code as ErrorValue['code']);
+
+		case 'ref':
+			return ctx.cell(node.ref.row, node.ref.col);
+
+		case 'range':
+			return rangeValue(node.range, ctx);
+
+		case 'unary': {
+			const inner = evaluate(node.operand, ctx);
+			if (node.op === '+') return inner;
+			const n = toNumber(inner);
+			if (isError(n)) return n;
+			return node.op === '-' ? -n : n / 100;
+		}
+
+		case 'binary':
+			return binary(node.op, evaluate(node.left, ctx), evaluate(node.right, ctx));
+
+		case 'call': {
+			const fn = FUNCTIONS.get(node.name);
+			if (!fn) return NAME(node.name);
+			if (node.args.length &lt; fn.minArgs || node.args.length &gt; fn.maxArgs) {
+				return VALUE(
+					`${node.name} takes ${fn.minArgs === fn.maxArgs ? fn.minArgs : `${fn.minArgs} to ${fn.maxArgs === Infinity ? 'any number of' : fn.maxArgs}`} argument${fn.maxArgs === 1 ? '' : 's'}`
+				);
+			}
+			// Arguments are evaluated lazily by the function — IF must not evaluate
+			// the branch it does not take, and IFERROR must swallow an error rather
+			// than propagate it — so a function receives thunks.
+			return fn.call(
+				node.args.map((arg) =&gt; () =&gt; evaluate(arg, ctx)),
+				ctx
+			);
+		}
+
+		default:
+			node satisfies never;
+			return VALUE();
+	}
+}</code></pre>
+</figure>
+<p>The <code>call</code> branch is the one to read slowly. A function receives its arguments as <strong>thunks</strong> — <code>() =&gt; evaluate(arg, ctx)</code> — not as values. <code>IF</code> must not evaluate the branch it does not take (it might be <code>1/0</code>), and <code>IFERROR</code> must be able to *catch* an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:96-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function rangeValue(range: RangeRef, ctx: Context): Value {
+	const rows = range.end.row - range.start.row + 1;
+	const cols = range.end.col - range.start.col + 1;
+	if (rows * cols &gt; MAX_RANGE_CELLS) return new ErrorValue('#NUM!', 'That range is too large');
+	const cells: Scalar[] = new Array(rows * cols);
+	for (let r = 0; r &lt; rows; r += 1) {
+		for (let c = 0; c &lt; cols; c += 1) {
+			cells[r * cols + c] = ctx.cell(range.start.row + r, range.start.col + c);
+		}
+	}
+	return new RangeValue(rows, cols, cells);
+}</code></pre>
+</figure>
+<p>A range larger than a million cells is refused with <code>#NUM!</code> rather than allocated. <code>=SUM(A:A)</code> does not exist in this language — ranges are always two corners — but <code>=SUM(A1:XFD1048576)</code> does, and a person who types it should get an error, not a frozen tab.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:109-168</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function binary(op: string, left: Value, right: Value): Value {
+	if (isError(left)) return left;
+	if (isError(right)) return right;
+
+	switch (op) {
+		case '&amp;': {
+			const a = toText(left);
+			if (isError(a)) return a;
+			const b = toText(right);
+			if (isError(b)) return b;
+			return a + b;
+		}
+		case '=':
+		case '&lt;&gt;':
+		case '&lt;':
+		case '&gt;':
+		case '&lt;=':
+		case '&gt;=': {
+			if (isRange(left) || isRange(right)) return VALUE('Cannot compare a range');
+			const c = compare(left, right);
+			if (isError(c)) return c;
+			switch (op) {
+				case '=':
+					return c === 0;
+				case '&lt;&gt;':
+					return c !== 0;
+				case '&lt;':
+					return c &lt; 0;
+				case '&gt;':
+					return c &gt; 0;
+				case '&lt;=':
+					return c &lt;= 0;
+				default:
+					return c &gt;= 0;
+			}
+		}
+		default: {
+			const a = toNumber(left);
+			if (isError(a)) return a;
+			const b = toNumber(right);
+			if (isError(b)) return b;
+			switch (op) {
+				case '+':
+					return a + b;
+				case '-':
+					return a - b;
+				case '*':
+					return a * b;
+				case '/':
+					return b === 0 ? DIV0() : a / b;
+				case '^': {
+					const result = a ** b;
+					return Number.isFinite(result) ? result : new ErrorValue('#NUM!', 'Not a real number');
+				}
+				default:
+					return VALUE(`Unknown operator ${op}`);
+			}
+		}
+	}
+}</code></pre>
+</figure>
+<h3 id="the-library">The library</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:1-22</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE FUNCTION LIBRARY
+ * ====================
+ *
+ * Fifty-odd functions, each a few lines, registered by name in one `Map`. The
+ * evaluator looks a name up here and hands the function its arguments as
+ * *thunks* — functions that evaluate the argument when called — so that `IF`
+ * evaluates only the branch it takes and `IFERROR` can catch an error
+ * instead of receiving it.
+ *
+ * Each entry carries a `signature` and a `description` because the formula
+ * bar's autocomplete reads this table too. A function that exists but is not
+ * documented is a function nobody finds.
+ *
+ * THE RULES ARGUMENTS FOLLOW
+ * --------------------------
+ *   - An error in any argument is the result, unless the function exists to
+ *     handle errors (IFERROR, ISERROR).
+ *   - In a *range*, only numbers count for arithmetic: `SUM(A1:A3)` skips the
+ *     text and the empties. A scalar argument is coerced: `SUM(&quot;3&quot;)` is 3.
+ *   - Comparisons use `compare()` from values.ts, so &quot;b&quot; &gt; &quot;a&quot; and 2 &lt; &quot;a&quot;.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:46-63</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type Thunk = () =&gt; Value;
+
+export interface FunctionSpec {
+	name: string;
+	minArgs: number;
+	maxArgs: number;
+	/** Recalculated on every recalculation, whether or not anything it reads changed. */
+	volatile?: boolean;
+	signature: string;
+	description: string;
+	call(args: Thunk[], ctx: Context): Value;
+}
+
+export const FUNCTIONS = new Map&lt;string, FunctionSpec&gt;();
+
+function define(spec: FunctionSpec): void {
+	FUNCTIONS.set(spec.name, spec);
+}</code></pre>
+</figure>
+<p>Every entry carries a <code>signature</code> and a <code>description</code> because the formula bar’s completion list reads this same table. A function that exists but is not documented is a function nobody finds.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:69-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Evaluate every thunk; the first error wins. */
+function all(args: Thunk[]): Value[] | ErrorValue {
+	const values: Value[] = [];
+	for (const arg of args) {
+		const v = arg();
+		if (isError(v)) return v;
+		values.push(v);
+	}
+	return values;
+}
+
+/**
+ * The numbers among the arguments: scalars coerced, range cells filtered.
+ * This is the rule that makes `SUM(A1:A3)` ignore a heading in A1 and
+ * `SUM(&quot;3&quot;, TRUE)` equal 4.
+ */
+function numbers(values: Value[]): number[] | ErrorValue {
+	const out: number[] = [];
+	for (const v of values) {
+		if (isRange(v)) {
+			for (const cell of v.cells) {
+				if (typeof cell === 'number') out.push(cell);
+				else if (cell instanceof ErrorValue) return cell;
+			}
+		} else {
+			const n = toNumber(v);
+			if (isError(n)) return n;
+			out.push(n);
+		}
+	}
+	return out;
+}</code></pre>
+</figure>
+<p><code>numbers</code> is the rule that makes <code>SUM(A1:A3)</code> ignore a heading in A1 while <code>SUM(&quot;3&quot;, TRUE)</code> is 4: in a *range*, only numbers count; a *scalar* argument is coerced. Both are what every spreadsheet does, and they are different rules, so they are written as two branches rather than one clever one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:125-152</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A helper for functions of numbers only, with error propagation done once. */
+function numeric(
+	name: string,
+	signature: string,
+	description: string,
+	min: number,
+	max: number,
+	fn: (ns: number[]) =&gt; Value
+) {
+	define({
+		name,
+		signature,
+		description,
+		minArgs: min,
+		maxArgs: max,
+		call(args) {
+			const values = all(args);
+			if (isError(values)) return values;
+			const ns: number[] = [];
+			for (const v of values) {
+				const n = num(v);
+				if (isError(n)) return n;
+				ns.push(n);
+			}
+			return fn(ns);
+		}
+	});
+}</code></pre>
+</figure>
+<h3 id="criteria">Criteria: &quot;&gt;5&quot;, &quot;&lt;&gt;done&quot;, &quot;a*&quot;</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:158-215</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A predicate from a criterion, as COUNTIF and SUMIF read it. */
+export function criterion(raw: Scalar): (cell: Scalar) =&gt; boolean {
+	if (raw instanceof ErrorValue) return () =&gt; false;
+	if (typeof raw === 'boolean') return (cell) =&gt; cell === raw;
+	if (raw === null) return (cell) =&gt; cell === null || cell === '';
+
+	let op = '=';
+	let target: Scalar = raw;
+	if (typeof raw === 'string') {
+		const match = /^(&lt;&gt;|&lt;=|&gt;=|=|&lt;|&gt;)?(.*)$/s.exec(raw)!;
+		op = match[1] ?? '=';
+		const rest = match[2] ?? '';
+		const asNumber = rest.trim() === '' ? NaN : Number(rest);
+		target = Number.isFinite(asNumber) ? asNumber : rest;
+	}
+
+	/*
+	 * A numeric criterion sees only numbers — and text that is a number, which
+	 * is what a person pasting &quot;12&quot; from a web page has. Text never satisfies
+	 * &quot;&gt;6&quot;: in a column of prices with a heading, the heading is not &quot;greater
+	 * than six&quot;, it is a heading.
+	 */
+	if (typeof target === 'number') {
+		const wanted = target;
+		return (cell) =&gt; {
+			const n =
+				typeof cell === 'number'
+					? cell
+					: typeof cell === 'string' &amp;&amp; cell.trim() !== '' &amp;&amp; Number.isFinite(Number(cell))
+						? Number(cell)
+						: null;
+			if (n === null) return op === '&lt;&gt;';
+			return holds(op, n - wanted);
+		};
+	}
+
+	const text = target;
+	if ((op === '=' || op === '&lt;&gt;') &amp;&amp; /[*?]/.test(text)) {
+		const pattern = new RegExp(
+			`^${text
+				.replace(/[.+^${}()|[\]\\]/g, '\\$&amp;')
+				.replaceAll('*', '.*')
+				.replaceAll('?', '.')}$`,
+			'i'
+		);
+		return (cell) =&gt; pattern.test(cellText(cell)) === (op === '=');
+	}
+
+	const lower = text.toLowerCase();
+	return (cell) =&gt; {
+		if (op === '=') return cellText(cell).toLowerCase() === lower;
+		if (op === '&lt;&gt;') return cellText(cell).toLowerCase() !== lower;
+		// &quot;&lt;m&quot; orders text against text; a number is never &quot;less than m&quot;.
+		if (typeof cell !== 'string') return false;
+		const c = cell.toLowerCase();
+		return holds(op, c &lt; lower ? -1 : c &gt; lower ? 1 : 0);
+	};
+}</code></pre>
+</figure>
+<p><code>COUNTIF</code> and <code>SUMIF</code> take a criterion that is half a comparison: <code>&quot;&gt;5&quot;</code>, <code>&quot;&lt;&gt;done&quot;</code>, <code>&quot;a*&quot;</code>. This function turns one into a predicate once, so a range of a thousand cells is not re-parsing the string a thousand times. The comment in the middle records a decision the tests forced: a numeric criterion sees only numbers. In a column of prices with a heading, the heading is not “greater than six”; it is a heading.</p>
+<h3 id="rounding">Rounding in decimal, not in binary</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:428-461</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Rounding in decimal, not in binary. `1.005 * 100` is `100.49999999999999`
+ * in floating point, so `Math.round` gives 100 and a person who typed 1.005
+ * and asked for two places sees 1.00 and stops trusting the sheet. Shifting
+ * the decimal point *as text* — `Number(&quot;1.005e2&quot;)` is exactly 100.5 —
+ * moves the point before the binary error can, which is what every
+ * spreadsheet does under the hood.
+ */
+function shift(n: number, places: number): number {
+	const [mantissa, exponent = '0'] = n.toExponential().split('e');
+	return Number(`${mantissa}e${Number(exponent) + places}`);
+}
+
+function roundTo(n: number, places: number, mode: 'nearest' | 'up' | 'down'): number {
+	const p = Math.trunc(places);
+	const scaled = shift(Math.abs(n), p);
+	const whole =
+		mode === 'nearest'
+			? Math.round(scaled)
+			: mode === 'up'
+				? Math.ceil(scaled)
+				: Math.floor(scaled);
+	const result = shift(whole, -p);
+	return n &lt; 0 ? -result : result;
+}
+
+numeric(
+	'ROUND',
+	'ROUND(number, [places])',
+	'Rounds to a number of decimal places; half rounds away from zero.',
+	1,
+	2,
+	([n, p]) =&gt; roundTo(n!, p ?? 0, 'nearest')
+);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why ROUND shifts the decimal point as text</h4>
+	<p><code>1.005 * 100</code> is <code>100.49999999999999</code> in floating point, so <code>Math.round</code> gives 100 and a person who typed 1.005 and asked for two places sees 1.00 and stops trusting the sheet. <code>Number(&quot;1.005e2&quot;)</code> is exactly 100.5 — the shift happens in the decimal string, before the binary error can. This is the trick every spreadsheet uses under the hood, and it fell out of a failing test rather than a plan.</p>
+</aside>
+<h3 id="text-and-lookup">Text functions and lookups</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:607-631</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function textual(
+	name: string,
+	signature: string,
+	description: string,
+	min: number,
+	max: number,
+	fn: (parts: Value[]) =&gt; Value
+) {
+	define({
+		name,
+		signature,
+		description,
+		minArgs: min,
+		maxArgs: max,
+		call(args) {
+			const values = all(args);
+			return isError(values) ? values : fn(values);
+		}
+	});
+}
+
+textual('LEN', 'LEN(text)', 'How many characters.', 1, 1, ([v]) =&gt; {
+	const t = text(v!);
+	return isError(t) ? t : [...t].length;
+});</code></pre>
+</figure>
+<p>Text functions share one wrapper. <code>LEN</code> counts code points with <code>[...t]</code>, so an emoji is one character, which is what a person means.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/functions.ts<span class="code__lines">:832-855</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function asRange(v: Value): RangeValue {
+	return isRange(v) ? v : new RangeValue(1, 1, [v as Scalar]);
+}
+
+define({
+	name: 'INDEX',
+	signature: 'INDEX(range, row, [column])',
+	description: 'The cell at a row and column of a range, counting from 1.',
+	minArgs: 2,
+	maxArgs: 3,
+	call(args) {
+		const range = args[0]!();
+		if (isError(range)) return range;
+		const table = asRange(range);
+		const row = int(args[1]!());
+		if (isError(row)) return row;
+		const col = args[2] ? int(args[2]()) : 1;
+		if (isError(col)) return col;
+		if (row &lt; 1 || row &gt; table.rows || col &lt; 1 || col &gt; table.cols) {
+			return new ErrorValue('#REF!', 'INDEX is outside the range');
+		}
+		return table.get(row - 1, col - 1);
+	}
+});</code></pre>
+</figure>
+<p><code>INDEX</code> counts from one, as the language does everywhere a person types a number. <code>VLOOKUP</code> and <code>HLOOKUP</code> are one definition in a loop over a boolean, because they are the same function with the axes swapped and writing them twice would let them drift.</p>
+<h3 id="dates">Serial dates</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/dates.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SERIAL DATES
+ * ============
+ *
+ * A date is a number: whole days since the epoch, with the time of day as a
+ * fraction. The epoch is 30 December 1899, so that serial 1 is 31 December
+ * 1899 and 2 is 1 January 1900 — the convention Google Sheets uses, and the
+ * one Excel *agrees with* from 1 March 1900 onwards. (Excel's serial 60 is 29
+ * February 1900, a day that never happened, kept for compatibility with
+ * Lotus 1-2-3 in 1987. This project declines to inherit the bug.)
+ *
+ * Everything here is in UTC on purpose. A date in a cell has no time zone: 2
+ * September is 2 September whoever opens the sheet, and a serial computed in
+ * one zone and displayed in another must not shift by a day.
+ */
+
+const EPOCH_MS = Date.UTC(1899, 11, 30);
+const DAY_MS = 86_400_000;
+
+/** `(2026, 9, 2)` → 46267. Months are 1-based, like a person writes them; overflow rolls over like `Date` does. */
+export function serialFromParts(year: number, month: number, day: number): number {
+	return (Date.UTC(year, month - 1, day) - EPOCH_MS) / DAY_MS;
+}
+
+export function serialFromDate(date: Date): number {
+	return (date.getTime() - EPOCH_MS) / DAY_MS;
+}
+
+/** The moment a serial names, in UTC. */
+export function dateFromSerial(serial: number): Date {
+	return new Date(EPOCH_MS + serial * DAY_MS);
+}</code></pre>
+</figure>
+<p>The epoch is 30 December 1899, which agrees with Google Sheets and with Excel from 1 March 1900 onwards. Excel’s serial 60 is 29 February 1900 — a day that never happened, kept since 1987 for Lotus compatibility — and this project declines to inherit it. Everything is UTC on purpose: a date in a cell has no time zone, and a serial computed in one zone and displayed in another must not shift by a day.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/dates.ts<span class="code__lines">:53-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Today, as a whole-day serial, in the person's own zone: the date they would write down. */
+export function todaySerial(now = new Date()): number {
+	return serialFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+/** Now, with the fraction, in the person's own zone. */
+export function nowSerial(now = new Date()): number {
+	const wall = Date.UTC(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate(),
+		now.getHours(),
+		now.getMinutes(),
+		now.getSeconds()
+	);
+	return (wall - EPOCH_MS) / DAY_MS;
+}</code></pre>
+</figure>
+<h3 id="highlights">Colouring references from tokens</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/highlight.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * COLOURING REFERENCES
+ * ====================
+ *
+ * While a formula is being typed, every reference in it gets a colour — the
+ * first reference the first colour, and so on — and the same colour outlines
+ * the range on the grid. This is what lets a person see that `B2:B9` is the
+ * column they meant.
+ *
+ * It works from *tokens*, not from a parsed tree, because a formula being
+ * typed is unfinished more often than not: `=SUM(A1:` does not parse, and
+ * the colours must not vanish at every keystroke that makes it unparseable.
+ */
+
+import { rect, type Rect } from '#lib/sheet/address.ts';
+import { cellRef } from './parser.ts';
+import { tokenize, type Token } from './lexer.ts';
+
+export interface Highlight {
+	/** Where in the source, for the formula bar. */
+	start: number;
+	end: number;
+	/** Which cells, for the grid. */
+	rect: Rect;
+	/** 0–5, cycling; the palette is in tokens.css. */
+	hue: number;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/highlight.ts<span class="code__lines">:29-75</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The references in a formula source (without its leading `=`), coloured in order. */
+export function highlights(source: string): Highlight[] {
+	let tokens: Token[];
+	try {
+		tokens = tokenize(source);
+	} catch {
+		// Tokenise as far as it goes: an unterminated string means no references
+		// after it, which is fine — they will colour in when the quote closes.
+		return [];
+	}
+
+	const out: Highlight[] = [];
+	for (let i = 0; i &lt; tokens.length; i += 1) {
+		const token = tokens[i]!;
+		if (token.type !== 'ref') continue;
+		let start;
+		try {
+			start = cellRef(token);
+		} catch {
+			continue;
+		}
+		const colon = tokens[i + 1];
+		const endToken = tokens[i + 2];
+		if (colon?.type === 'colon' &amp;&amp; endToken?.type === 'ref') {
+			try {
+				const end = cellRef(endToken);
+				out.push({
+					start: token.start,
+					end: endToken.end,
+					rect: rect({ row: start.row, col: start.col }, { row: end.row, col: end.col }),
+					hue: out.length % 6
+				});
+				i += 2;
+				continue;
+			} catch {
+				// fall through: colour the first cell on its own
+			}
+		}
+		out.push({
+			start: token.start,
+			end: token.end,
+			rect: rect({ row: start.row, col: start.col }, { row: start.row, col: start.col }),
+			hue: out.length % 6
+		});
+	}
+	return out;
+}</code></pre>
+</figure>
+<p>The formula bar colours references while a formula is *being typed*, and a formula being typed is unfinished more often than not: <code>=SUM(A1:</code> does not parse. So this works from tokens, not from the tree, and the colours do not vanish at every keystroke that makes the text unparseable. The hue cycles through six, defined in <code>tokens.css</code>, and the same hue outlines the range on the grid.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>IF(TRUE, 1, 1/0)</code> is 1 and not <code>#DIV/0!</code>, and which line makes it so.</li><li>You can predict <code>COUNTIF(A1:A3, &quot;&gt;6&quot;)</code> over <code>{&quot;Price&quot;, 7, &quot;8&quot;}</code>.</li><li>You can add a function with a signature, a description and a lazy argument in under ten lines.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-parser.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The parser: a Pratt parser in a hundred lines</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-dependency-graph.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The dependency graph</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

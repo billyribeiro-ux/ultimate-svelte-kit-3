@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The local sheet: OPFS and a BroadcastChannel — Building Abacus</title>
+<meta name="description" content="No account, no server. The document lives in the Origin Private File System with `localStorage` as a fallback, two tabs stay in step over a `BroadcastChannel`, and signing in offers to save it to an account through a form.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 82.05128205128204%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html" aria-current="page"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>The local sheet: OPFS and a BroadcastChannel</h1>
+			<p class="lede">No account, no server. The document lives in the Origin Private File System with <code>localStorage</code> as a fallback, two tabs stay in step over a <code>BroadcastChannel</code>, and signing in offers to save it to an account through a form.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Persist a document in the browser’s private file system, synchronise tabs without a server, and hand a whole document to a form.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/local.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A SHEET THAT LIVES IN THIS BROWSER
+ * ==================================
+ *
+ * Nobody should need an account to try a spreadsheet. `/sheet/local` is a
+ * sheet with no server behind it: the document is written to the Origin
+ * Private File System — a real file, private to this site, that survives a
+ * reload and a restart — and two tabs on it stay in step over a
+ * `BroadcastChannel`, which is a message bus between the tabs of one origin
+ * with no server in the loop.
+ *
+ * OPFS is not everywhere yet, so `localStorage` is the fallback. Both are
+ * behind the same two functions, and the page never knows which it got.
+ */
+
+import { parseDocument, type Document } from './document.ts';
+import type { Op } from './ops.ts';
+
+const FILE = 'local-sheet.json';
+const STORAGE_KEY = 'abacus:local-sheet';
+
+async function directory(): Promise&lt;FileSystemDirectoryHandle | null&gt; {
+	try {
+		if (typeof navigator === 'undefined' || !navigator.storage?.getDirectory) return null;
+		return await navigator.storage.getDirectory();
+	} catch {
+		return null;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/local.ts<span class="code__lines">:31-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function loadLocal(): Promise&lt;Document | null&gt; {
+	const dir = await directory();
+	if (dir) {
+		try {
+			const handle = await dir.getFileHandle(FILE);
+			const file = await handle.getFile();
+			return parseDocument(await file.text());
+		} catch {
+			// no file yet, or an unreadable one: fall through to localStorage
+		}
+	}
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		return raw ? parseDocument(raw) : null;
+	} catch {
+		return null;
+	}
+}
+
+export async function saveLocal(doc: Document): Promise&lt;'opfs' | 'storage' | 'none'&gt; {
+	const json = JSON.stringify(doc);
+	const dir = await directory();
+	if (dir) {
+		try {
+			const handle = await dir.getFileHandle(FILE, { create: true });
+			const writable = await handle.createWritable();
+			await writable.write(json);
+			await writable.close();
+			return 'opfs';
+		} catch {
+			// a full disk, or a browser that lists the API and refuses to write
+		}
+	}
+	try {
+		localStorage.setItem(STORAGE_KEY, json);
+		return 'storage';
+	} catch {
+		return 'none';
+	}
+}</code></pre>
+</figure>
+<p>OPFS is a real file, private to this site, that survives a reload and a restart. It is not everywhere yet, so <code>localStorage</code> is the fallback, both behind the same two functions, and the page never knows which it got — except to say so in the status chip.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/local.ts<span class="code__lines">:86-134</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A message on the channel: an operation from another tab, tagged with that tab. */
+export interface TabMessage {
+	tab: string;
+	op: Op;
+}
+
+/**
+ * The bus between tabs. `post` sends this tab's operations; `listen` hands
+ * back the other tabs' with the sender's id, so a tab can ignore itself —
+ * a `BroadcastChannel` does not echo, but the id makes that explicit and
+ * survives somebody changing the transport.
+ */
+export function openTabChannel(tab: string): {
+	post(op: Op): void;
+	listen(handler: (message: TabMessage) =&gt; void): () =&gt; void;
+	close(): void;
+} {
+	const channel =
+		typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('abacus:local-sheet');
+	return {
+		post(op) {
+			channel?.postMessage({ tab, op } satisfies TabMessage);
+		},
+		listen(handler) {
+			if (!channel) return () =&gt; {};
+			const onMessage = (event: MessageEvent&lt;TabMessage&gt;) =&gt; {
+				if (event.data.tab !== tab) handler(event.data);
+			};
+			channel.addEventListener('message', onMessage);
+			return () =&gt; channel.removeEventListener('message', onMessage);
+		},
+		close() {
+			channel?.close();
+		}
+	};
+}
+
+/** One id per tab, kept for the tab's life in `sessionStorage`. */
+export function tabId(): string {
+	try {
+		const existing = sessionStorage.getItem('abacus:tab');
+		if (existing) return existing;
+		const id = Math.random().toString(36).slice(2, 10);
+		sessionStorage.setItem('abacus:tab', id);
+		return id;
+	} catch {
+		return Math.random().toString(36).slice(2, 10);
+	}
+}</code></pre>
+</figure>
+<p>A <code>BroadcastChannel</code> is a message bus between the tabs of one origin with no server in the loop. Each tab has an id kept in <code>sessionStorage</code> for its life, and tags its operations with it so a tab can ignore itself — a channel does not echo, but the id makes that explicit and survives somebody changing the transport.</p>
+<h3 id="the-page">The page</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:14-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE LOCAL SHEET
+ * ===============
+ *
+ * No account, no server: the document lives in this browser's private file
+ * system and every change is written there. Two tabs on it stay in step
+ * over a `BroadcastChannel`. Signing in offers to save it to an account,
+ * which posts the whole document through the `create` form.
+ *
+ * `?template=budget` starts from a template; `?from=&lt;id&gt;` starts from a
+ * published sheet — both are &quot;make me a copy of this&quot; without an account.
+ */
+const sheet = new Sheet();
+let storage = $state&lt;'opfs' | 'storage' | 'none' | null&gt;(null);
+let ready = $state(false);
+
+const tab = tabId();
+const channel = openTabChannel(tab);
+
+let saveTimer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+function scheduleSave() {
+	if (saveTimer) clearTimeout(saveTimer);
+	saveTimer = setTimeout(async () =&gt; {
+		saveTimer = null;
+		storage = await saveLocal(sheet.toDocument());
+		if (storage !== 'none') sheet.markSaved();
+	}, 400);
+}
+
+sheet.onop = (op) =&gt; {
+	channel.post(op);
+	scheduleSave();
+};</code></pre>
+</figure>
+<p>Every operation the sheet emits goes to the channel and schedules a save, debounced by four hundred milliseconds. <code>?template=budget</code> starts from a template; <code>?from=&lt;id&gt;</code> starts from a published sheet — both are “make me a copy of this” without an account.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:48-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">onMount(() =&gt; {
+	sheet.locale = navigator.language;
+
+	const template = page.url.searchParams.get('template');
+	const from = page.url.searchParams.get('from');
+
+	void (async () =&gt; {
+		try {
+			if (template &amp;&amp; template in TEMPLATES) {
+				sheet.load(templateDocument(template));
+				scheduleSave();
+			} else if (from) {
+				const published = await getPublished(from);
+				sheet.load({ ...published.doc, title: `Copy of ${published.title}` });
+				scheduleSave();
+			} else {
+				const saved = await loadLocal();
+				sheet.load(saved ?? emptyDocument('My sheet'));
+			}
+		} catch (e) {
+			toast((e as Error).message, 'error');
+			sheet.load(emptyDocument('My sheet'));
+		}
+		ready = true;
+	})();
+
+	const stop = channel.listen(({ op }) =&gt; {
+		sheet.applyRemote(op);
+		scheduleSave();
+	});
+	return () =&gt; {
+		stop();
+		channel.close();
+	};
+});
+
+/** The document as JSON for the &quot;save to account&quot; form, current with every edit. */
+const json = $derived.by(() =&gt; {
+	void sheet.version;
+	return JSON.stringify(sheet.toDocument());
+});
+
+const storageLabel = $derived(
+	storage === 'opfs'
+		? 'Saved in this browser'
+		: storage === 'storage'
+			? 'Saved in this browser (local storage)'
+			: storage === 'none'
+				? 'Could not save in this browser'
+				: ready
+					? 'Kept in this browser'
+					: 'Loading…'
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:107-140</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;page sheetpage&quot;&gt;
+	&lt;header class=&quot;sheetpage__head no-print&quot;&gt;
+		&lt;h1
+			class=&quot;title&quot;
+			contenteditable=&quot;plaintext-only&quot;
+			spellcheck=&quot;false&quot;
+			aria-label=&quot;Sheet title&quot;
+			bind:textContent={() =&gt; sheet.title, (text) =&gt; sheet.rename(text)}
+		&gt;&lt;/h1&gt;
+		&lt;span class=&quot;chip&quot; role=&quot;status&quot;&gt;{storageLabel}&lt;/span&gt;
+	&lt;/header&gt;
+
+	&lt;Workbench {sheet}&gt;
+		{#snippet extra()}
+			&lt;svelte:boundary&gt;
+				{const me = $derived(await whoAmI())}
+				{#if me}
+					&lt;form {...create} class=&quot;cluster&quot;&gt;
+						&lt;input {...create.fields.title.as('hidden', sheet.title)} /&gt;
+						&lt;input {...create.fields._doc.as('hidden', json)} /&gt;
+						&lt;button class=&quot;btn btn--sm btn--primary&quot; disabled={!!create.pending}&gt;
+							&lt;CloudArrowUpIcon size={16} /&gt; Save to my account
+						&lt;/button&gt;
+					&lt;/form&gt;
+				{:else}
+					&lt;a class=&quot;btn btn--sm&quot; href=&quot;/signin?next=/sheet/local&quot;&gt;Sign in to save it&lt;/a&gt;
+				{/if}
+				{#snippet pending()}
+					&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
+				{/snippet}
+			&lt;/svelte:boundary&gt;
+		{/snippet}
+	&lt;/Workbench&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the title is a function binding</h4>
+	<p>The title is an <code>&lt;h1&gt;</code> you can type into. <code>bind:textContent={() =&gt; sheet.title, (text) =&gt; sheet.rename(text)}</code> is a function binding: the getter feeds the element, the setter is called with what was typed, and <code>rename</code> trims it, refuses an empty title and emits an operation. The element stays a heading — no <code>role=&quot;textbox&quot;</code> — because a contenteditable heading is already editable to assistive technology, and the accessibility check in <code>svelte-check</code> says so.</p>
+</aside>
+<p>“Save to my account” is the <code>create</code> form with the whole document in a hidden field, kept current by a <code>$derived</code> that re-serialises on every version. The form posts JSON the server validates with the same <code>DocumentSchema</code> — the one from chapter 14 — and redirects to the new sheet.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:158-177</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('what was typed is still there after a reload', async ({ page }) =&gt; {
+	await enter(page, 0, 0, 'kept');
+	await expect(page.getByText('Saved in this browser')).toBeVisible();
+
+	await page.reload();
+	await expect(cell(page, 0, 0)).toHaveText('kept');
+});
+
+test('two tabs on the same sheet stay in step', async ({ page, context }) =&gt; {
+	const other = await context.newPage();
+	await other.goto('/sheet/local');
+	await expect(other.getByText('Kept in this browser')).toBeVisible();
+
+	await enter(page, 0, 0, 'from the first tab');
+	await expect(cell(other, 0, 0)).toHaveText('from the first tab');
+
+	await enter(other, 1, 0, '=LEN(A1)');
+	await expect(cell(page, 1, 0)).toHaveText('18');
+	await other.close();
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>saveLocal</code> returns and what the page does with each answer.</li><li>You can explain why each tab has an id and where it lives.</li><li>You can say how the whole document gets into a form with JavaScript off.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-landing-and-templates.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The landing page and the prerendered templates</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-stored-sheet.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The stored sheet: a universal load, a live query, a query in the component</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

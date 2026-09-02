@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The workspace, sign-in and settings — Building Abacus</title>
+<meta name="description" content="A list of sheets with a create form (`preflight`, `enhance`), per-card rename and delete (`.for(id)`, `withOverride`), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">34 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 87.17948717948718%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html" aria-current="page"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 34</p>
+			<h1>The workspace, sign-in and settings</h1>
+			<p class="lede">A list of sheets with a create form (<code>preflight</code>, <code>enhance</code>), per-card rename and delete (<code>.for(id)</code>, <code>withOverride</code>), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use every remote-form feature for something: client-side preflight, enhanced submission, per-instance forms, optimistic overrides, and a form that reissues the session cookie.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:9-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE WORKSPACE
+ * =============
+ *
+ * Every sheet this person owns, and the forms to make, rename and delete
+ * one. `remove.for(id)` gives each card its own form instance, so a
+ * pending delete disables its own button and no other; the optimistic
+ * override takes the card off the screen before the server has answered,
+ * and a failure puts it back.
+ */
+const newSheet = create
+	.preflight(
+		v.object({
+			title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give it a title'), v.maxLength(120)),
+			template: v.optional(v.string()),
+			_doc: v.optional(v.string())
+		})
+	)
+	.enhance(async (form) =&gt; {
+		try {
+			await form.submit();
+		} catch (e) {
+			toast((e as Error).message, 'error');
+		}
+	});
+
+const when = (ms: number) =&gt;
+	new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+		new Date(ms)
+	);</code></pre>
+</figure>
+<p><code>create.preflight(schema)</code> validates on the client before anything is sent — the same valibot the server runs, so “give it a title” appears on the keystroke — and <code>.enhance</code> wraps the submission so a failure becomes a toast rather than a page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:45-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
+	&lt;Section eyebrow=&quot;Workspace&quot; title=&quot;Your sheets&quot;&gt;
+		&lt;form
+			{...newSheet}
+			class=&quot;newsheet card&quot;
+			oninput={() =&gt; create.validate()}
+			onfocusout={() =&gt; create.validate()}
+		&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;field__label&quot;&gt;Title&lt;/span&gt;
+				&lt;input class=&quot;input&quot; {...create.fields.title.as('text')} placeholder=&quot;Untitled sheet&quot; /&gt;
+				{#each create.fields.title.issues() ?? [] as issue (issue.message)}
+					&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+				{/each}
+			&lt;/label&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;field__label&quot;&gt;Start from&lt;/span&gt;
+				&lt;select class=&quot;input&quot; {...create.fields.template.as('select')}&gt;
+					&lt;option value=&quot;&quot;&gt;An empty sheet&lt;/option&gt;
+					{#each Object.values(TEMPLATES) as template (template.slug)}
+						&lt;option value={template.slug}&gt;{template.title}&lt;/option&gt;
+					{/each}
+				&lt;/select&gt;
+			&lt;/label&gt;
+			&lt;button class=&quot;btn btn--primary&quot; disabled={!!create.pending}&gt;
+				&lt;PlusIcon size={16} /&gt; New sheet
+			&lt;/button&gt;
+		&lt;/form&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:74-139</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">		&lt;svelte:boundary&gt;
+			&lt;ul class=&quot;cards&quot;&gt;
+				{#each await getMine() as sheet (sheet.id)}
+					{@const del = remove.for(sheet.id)}
+					{@const ren = rename.for(sheet.id)}
+					&lt;li class=&quot;card sheetcard&quot;&gt;
+						&lt;a class=&quot;sheetcard__link&quot; href=&quot;/sheet/{sheet.id}&quot;&gt;
+							&lt;h3&gt;{sheet.title}&lt;/h3&gt;
+							&lt;p class=&quot;hint&quot;&gt;
+								{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
+								{#if sheet.published}· &lt;span class=&quot;chip chip--on&quot;&gt;published&lt;/span&gt;{/if}
+								{#if sheet.access === 'link'}· shared by link{/if}
+							&lt;/p&gt;
+						&lt;/a&gt;
+						&lt;div class=&quot;sheetcard__actions&quot;&gt;
+							&lt;form {...ren} class=&quot;cluster&quot;&gt;
+								&lt;input {...ren.fields.id.as('hidden', sheet.id)} /&gt;
+								&lt;input
+									class=&quot;input input--sm&quot;
+									{...ren.fields.title.as('text', sheet.title)}
+									aria-label=&quot;Rename {sheet.title}&quot;
+								/&gt;
+								&lt;button class=&quot;btn btn--sm&quot; disabled={!!ren.pending}&gt;Rename&lt;/button&gt;
+							&lt;/form&gt;
+							&lt;form
+								{...del.enhance(async (f) =&gt; {
+									if (!confirm(`Delete &quot;${sheet.title}&quot;? This cannot be undone.`)) return;
+									try {
+										await f
+											.submit()
+											.updates(
+												getMine().withOverride((list) =&gt; list.filter((s) =&gt; s.id !== sheet.id))
+											);
+										toast('Deleted');
+									} catch {
+										toast('Could not delete that', 'error');
+									}
+								})}
+							&gt;
+								&lt;input {...del.fields.id.as('hidden', sheet.id)} /&gt;
+								&lt;button
+									class=&quot;btn btn--sm btn--danger btn--icon&quot;
+									aria-label=&quot;Delete {sheet.title}&quot;
+									disabled={!!del.pending}
+								&gt;
+									&lt;TrashIcon size={16} /&gt;
+								&lt;/button&gt;
+							&lt;/form&gt;
+						&lt;/div&gt;
+					&lt;/li&gt;
+				{:else}
+					&lt;li class=&quot;hint&quot;&gt;
+						No sheets yet. Make one above, or &lt;a href=&quot;/sheet/local&quot;&gt;start without saving&lt;/a&gt;.
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+			{#snippet pending()}
+				&lt;p class=&quot;hint&quot;&gt;Loading your sheets…&lt;/p&gt;
+			{/snippet}
+			{#snippet failed(error, reset)}
+				&lt;p class=&quot;issue&quot;&gt;{(error as Error).message}&lt;/p&gt;
+				&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+	&lt;/Section&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why delete takes the card off the screen before the server answers</h4>
+	<p><code>remove.for(sheet.id)</code> gives each card its own form instance, so a pending delete disables its own button and no other. <code>f.submit().updates(getMine().withOverride(list =&gt; …))</code> applies an optimistic override to the workspace query — the card disappears now — and the server’s <code>requested(getMine, 1).refreshAll()</code> replaces the override with the truth in the same response. If the delete fails, the override is dropped and the card comes back. The <code>{:else}</code> on the <code>each</code> is the empty state, and <code>failed</code> on the boundary is the error state with a <code>reset</code>.</p>
+</aside>
+<h3 id="signin">Sign in</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:14-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * SIGN IN
+ * =======
+ *
+ * Two buttons and a name field. There is no password to type, remember
+ * or reset; the passkey is the account. Both ceremonies run in the
+ * browser's own credential prompt — the sheet-shaped dialog on a phone,
+ * the Touch ID prompt on a Mac — and this page only starts them and
+ * reads the result.
+ */
+let name = $state('');
+let busy = $state&lt;'register' | 'signin' | null&gt;(null);
+
+/** Where to go afterwards: a path on this site, never somewhere else. */
+const next = $derived.by(() =&gt; {
+	const wanted = page.url.searchParams.get('next') ?? '/sheets';
+	return wanted.startsWith('/') &amp;&amp; !wanted.startsWith('//') ? wanted : '/sheets';
+});
+
+async function register(event: SubmitEvent) {
+	event.preventDefault();
+	busy = 'register';
+	try {
+		const user = await registerPasskey(name);
+		toast(`Welcome, ${user.name}`);
+		await goto(next);
+	} catch (e) {
+		toast(explain(e), 'error');
+	} finally {
+		busy = null;
+	}
+}
+
+async function signIn() {
+	busy = 'signin';
+	try {
+		const user = await signInWithPasskey();
+		toast(`Welcome back, ${user.name}`);
+		await goto(next);
+	} catch (e) {
+		toast(explain(e), 'error');
+	} finally {
+		busy = null;
+	}
+}</code></pre>
+</figure>
+<p>Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. <code>next</code> is checked to be a path on this site — a <code>?next=https://elsewhere</code> must not become a redirect to elsewhere.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:65-114</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
+	&lt;Section eyebrow=&quot;Passkeys&quot; title=&quot;Sign in without a password&quot;&gt;
+		&lt;div class=&quot;panels&quot;&gt;
+			&lt;div class=&quot;card stack&quot;&gt;
+				&lt;h3&gt;Already have a passkey here?&lt;/h3&gt;
+				&lt;p class=&quot;hint&quot;&gt;Your browser will show the accounts it knows for this site.&lt;/p&gt;
+				&lt;button
+					type=&quot;button&quot;
+					class=&quot;btn btn--primary btn--lg&quot;
+					onclick={signIn}
+					disabled={busy !== null}
+				&gt;
+					&lt;FingerprintIcon size={20} /&gt;
+					{busy === 'signin' ? 'Waiting for your device…' : 'Sign in with a passkey'}
+				&lt;/button&gt;
+			&lt;/div&gt;
+
+			&lt;form class=&quot;card stack&quot; onsubmit={register}&gt;
+				&lt;h3&gt;New here?&lt;/h3&gt;
+				&lt;label class=&quot;field&quot;&gt;
+					&lt;span class=&quot;field__label&quot;&gt;What should we call you?&lt;/span&gt;
+					&lt;input
+						class=&quot;input&quot;
+						bind:value={name}
+						minlength=&quot;2&quot;
+						maxlength=&quot;40&quot;
+						required
+						autocomplete=&quot;name&quot;
+						placeholder=&quot;Ada&quot;
+					/&gt;
+				&lt;/label&gt;
+				&lt;button class=&quot;btn btn--lg&quot; disabled={busy !== null || name.trim().length &lt; 2}&gt;
+					&lt;KeyIcon size={20} /&gt;
+					{busy === 'register' ? 'Waiting for your device…' : 'Create a passkey'}
+				&lt;/button&gt;
+				&lt;p class=&quot;hint&quot;&gt;
+					A passkey is a key pair your device keeps. The private half never leaves it; we store only
+					the public half. Losing every device means losing the account — add a second passkey in
+					settings.
+				&lt;/p&gt;
+			&lt;/form&gt;
+		&lt;/div&gt;
+
+		{#if !passkeysSupported()}
+			&lt;p class=&quot;issue&quot;&gt;
+				This browser does not support passkeys. Try a current Chrome, Safari, Edge or Firefox.
+			&lt;/p&gt;
+		{/if}
+	&lt;/Section&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<h3 id="settings">Settings</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:15-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * SETTINGS
+ * ========
+ *
+ * The profile — name and locale — and the passkeys. Locale is the one
+ * that changes what the sheets show: `de-DE` and the same numbers are
+ * written `1.234,56`. Every write here is a form; `preflight` says
+ * &quot;two characters at least&quot; on the keystroke.
+ */
+const profile = updateProfile
+	.preflight(
+		v.object({
+			name: v.pipe(
+				v.string(),
+				v.trim(),
+				v.minLength(2, 'Two characters at least'),
+				v.maxLength(40)
+			),
+			locale: v.pipe(
+				v.string(),
+				v.regex(/^[a-z]{2,3}(-[A-Za-z]{2,4})?(-[A-Z]{2})?$/, 'A locale like en-US or de-DE')
+			)
+		})
+	)
+	.enhance(async (form) =&gt; {
+		try {
+			if (await form.submit()) toast('Saved');
+		} catch (e) {
+			toast((e as Error).message, 'error');
+		}
+	});
+
+let adding = $state(false);
+async function addPasskey(name: string) {
+	adding = true;
+	try {
+		await registerPasskey(name);
+		toast('Passkey added');
+	} catch (e) {
+		toast(explain(e), 'error');
+	} finally {
+		adding = false;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:82-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
+	&lt;svelte:boundary&gt;
+		{const me = $derived(await getProfile())}
+		{#if me}
+			&lt;Section eyebrow=&quot;Profile&quot; title={me.name}&gt;
+				&lt;form
+					{...profile}
+					class=&quot;card stack&quot;
+					oninput={() =&gt; updateProfile.validate()}
+					onfocusout={() =&gt; updateProfile.validate()}
+				&gt;
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;field__label&quot;&gt;Name&lt;/span&gt;
+						&lt;input
+							class=&quot;input&quot;
+							{...updateProfile.fields.name.as('text', me.name)}
+							autocomplete=&quot;name&quot;
+						/&gt;
+						{#each updateProfile.fields.name.issues() ?? [] as issue (issue.message)}
+							&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+						{/each}
+					&lt;/label&gt;
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;field__label&quot;&gt;Numbers and dates as in&lt;/span&gt;
+						&lt;select class=&quot;input&quot; {...updateProfile.fields.locale.as('select')} value={me.locale}&gt;
+							{#each locales as locale (locale)}
+								&lt;option value={locale}
+									&gt;{locale} — {new Intl.NumberFormat(locale).format(1234567.89)}&lt;/option
+								&gt;
+							{/each}
+						&lt;/select&gt;
+						{#each updateProfile.fields.locale.issues() ?? [] as issue (issue.message)}
+							&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+						{/each}
+					&lt;/label&gt;
+					&lt;div class=&quot;cluster&quot;&gt;
+						&lt;button class=&quot;btn btn--primary&quot; disabled={!!updateProfile.pending}&gt;Save&lt;/button&gt;
+					&lt;/div&gt;
+				&lt;/form&gt;
+			&lt;/Section&gt;</code></pre>
+</figure>
+<p>The profile is awaited in markup with a <code>$derived</code>, and the form is <code>updateProfile</code> with a preflight. The name is in the session cookie, so the handler reissues it — <code>startSession</code> again — and refreshes <code>whoAmI</code>, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:123-176</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	&lt;Section eyebrow=&quot;Passkeys&quot; title=&quot;Your passkeys&quot;&gt;
+		&lt;svelte:boundary&gt;
+			&lt;ul class=&quot;keys&quot;&gt;
+				{#each await listPasskeys() as passkey (passkey.id)}
+					{@const del = removePasskey.for(passkey.id)}
+					&lt;li class=&quot;card key&quot;&gt;
+						&lt;KeyIcon size={20} /&gt;
+						&lt;div class=&quot;key__body&quot;&gt;
+							&lt;strong&gt;{passkey.label}&lt;/strong&gt;
+							&lt;span class=&quot;hint&quot;&gt;
+								{passkey.deviceType === 'multiDevice' ? 'Synced passkey' : 'This device only'}
+								{passkey.backedUp ? '· backed up' : ''} · added {when(passkey.createdAt)} · last used
+								{when(passkey.lastUsedAt)}
+							&lt;/span&gt;
+						&lt;/div&gt;
+						&lt;form
+							{...del.enhance(async (f) =&gt; {
+								try {
+									await f.submit();
+									toast('Passkey removed');
+								} catch (e) {
+									toast((e as Error).message, 'error');
+								}
+							})}
+						&gt;
+							&lt;input {...del.fields.id.as('hidden', passkey.id)} /&gt;
+							&lt;button
+								class=&quot;btn btn--sm btn--icon btn--danger&quot;
+								aria-label=&quot;Remove {passkey.label}&quot;
+								disabled={!!del.pending}
+							&gt;
+								&lt;TrashIcon size={16} /&gt;
+							&lt;/button&gt;
+						&lt;/form&gt;
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+			{#snippet pending()}
+				&lt;p class=&quot;hint&quot;&gt;Loading…&lt;/p&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+		&lt;div class=&quot;cluster&quot;&gt;
+			&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={() =&gt; addPasskey(me.name)} disabled={adding}&gt;
+				&lt;KeyIcon size={16} /&gt;
+				{adding ? 'Waiting for your device…' : 'Add a passkey on this device'}
+			&lt;/button&gt;
+			&lt;form {...signOut}&gt;
+				&lt;button class=&quot;btn btn--ghost&quot; disabled={!!signOut.pending}
+					&gt;&lt;SignOutIcon size={16} /&gt; Sign out&lt;/button
+				&gt;
+			&lt;/form&gt;
+		&lt;/div&gt;
+	&lt;/Section&gt;
+{/if}</code></pre>
+</figure>
+<p>Passkeys are listed from a query, each with its own <code>removePasskey.for(id)</code> form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>preflight</code> runs and what it does not replace.</li><li>You can trace a delete from the click to the card disappearing to the server confirming it.</li><li>You can explain why updating a name reissues the cookie.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-stored-sheet.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The stored sheet: a universal load, a live query, a query in the component</span>
+			</a>
+			<a class="pager__link pager__link--next" href="published-and-embed.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Published sheets, the embed, the API and the health check</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

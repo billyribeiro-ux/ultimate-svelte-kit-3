@@ -1,0 +1,156 @@
+# Project 7 — Abacus, and its course.
+#
+# `verify` runs exactly what a developer runs before pushing: `pnpm run verify`
+# — type-check (app and worker), prettier + eslint, unit and browser tests, the
+# production build, and the end-to-end suite on a desktop and a phone profile
+# against `node build/index.js`, with real passkey ceremonies on a virtual
+# authenticator.
+#
+# `image` builds the Dockerfile and starts the container the way a deployment
+# would, then asks the health endpoint whether the migration ran and the
+# database answers. A Dockerfile that is never built is documentation.
+#
+# `course` proves the course: every quoted range is a whole thing in a real
+# file (`verify.js`), the pages build, and the built pages pass the reader-side
+# checks in `tools/check-dist.js`.
+#
+# Path filters keep this from running for the other six projects; they are
+# verified the same way from their own folders.
+
+name: abacus
+
+on:
+  push:
+    paths:
+      - 'abacus/**'
+      - 'abacus-course/**'
+      - '.github/workflows/abacus.yml'
+  pull_request:
+    paths:
+      - 'abacus/**'
+      - 'abacus-course/**'
+      - '.github/workflows/abacus.yml'
+
+concurrency:
+  group: abacus-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: abacus
+
+jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the unit tests and the build.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      SESSION_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      CELL_LIMIT: '50000'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: abacus/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: abacus/.nvmrc
+          cache: pnpm
+          cache-dependency-path: abacus/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # The unit tests that touch the database need one with the schema in it;
+      # the end-to-end suite builds its own again, from nothing, both times.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: abacus/test-results
+          if-no-files-found: ignore
+
+  image:
+    name: image (build · run · health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: abacus
+          build-args: PUBLIC_ORIGIN=http://localhost:3000
+          tags: abacus:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Start it the way compose does, wait for the health check, and ask.
+      - name: run the container and probe /healthz
+        run: |
+          docker run -d --name abacus -p 3000:3000 \
+            -e SESSION_SECRET=ci-only-secret-of-at-least-thirty-two-characters \
+            abacus:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/healthz; then echo; echo "healthy after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the container never became healthy"; docker logs abacus; exit 1
+
+      - name: the container stops cleanly on SIGTERM
+        run: |
+          docker stop -t 15 abacus
+          code=$(docker inspect abacus --format '{{.State.ExitCode}}')
+          echo "exit code $code"
+          test "$code" = "0"
+
+      - if: failure()
+        run: docker logs abacus || true
+
+  course:
+    name: course (verify ranges · build · check pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: abacus/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: abacus/.nvmrc
+          cache: pnpm
+          cache-dependency-path: abacus/pnpm-lock.yaml
+
+      # The course quotes the project and its page checker borrows the
+      # project's Playwright, so the project's dependencies are installed.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node ../abacus-course/verify.js
+      - run: node ../abacus-course/build.js
+      - run: node ../abacus-course/tools/check-dist.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- abacus-course/dist

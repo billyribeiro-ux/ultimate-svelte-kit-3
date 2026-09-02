@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The landing page and the prerendered templates — Building Abacus</title>
+<meta name="description" content="A prerendered landing page with a GSAP entrance behind an attachment and `hydratable` random dots, and template pages prerendered from `entries()` with their formulas already computed on the server.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 79.48717948717949%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html" aria-current="page"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>The landing page and the prerendered templates</h1>
+			<p class="lede">A prerendered landing page with a GSAP entrance behind an attachment and <code>hydratable</code> random dots, and template pages prerendered from <code>entries()</code> with their formulas already computed on the server.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Prerender pages that have dynamic parameters, animate an entrance without blanking the page, and use <code>hydratable</code> for a value the server and client must agree on.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.ts<span class="code__lines">:1-7</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The landing page is prerendered: the same for everybody, changed by a
+ * deploy and nothing else, so a static file is the fastest thing a server
+ * can send — and, with server-side route resolution, its route resolution
+ * is prerendered beside it.
+ */
+export const prerender = true;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { hydratable } from 'svelte';
+	import { cinematic } from '#lib/motion/cinematic.ts';
+	import Section from '#lib/components/Section.svelte';
+	import { TEMPLATES } from '#lib/sheet/templates.ts';
+
+	/**
+	 * A demo grid that needs no JavaScript: the formulas and their results,
+	 * written out, with a CSS animation that &quot;types&quot; the formula into the
+	 * bar. The results are real — `templates.spec.ts` computes them — and
+	 * the point is that a person sees a spreadsheet before they load one.
+	 */
+	const demo = [
+		['Category', 'Budgeted', 'Actual', 'Difference'],
+		['Rent', '1,400.00', '1,400.00', '0.00'],
+		['Groceries', '450.00', '512.40', '-62.40'],
+		['Transport', '120.00', '96.50', '23.50'],
+		['Total', '=SUM(B2:B4)', '=SUM(C2:C4)', '=B5-C5']
+	];
+
+	/**
+	 * `hydratable` for a random number that must agree with itself: the
+	 * drifting dots get random positions on the server, and the browser must
+	 * use *those*, not new ones, or hydration would find different markup.
+	 */
+	const seeds = hydratable('abacus:hero-seeds', () =&gt;
+		Array.from({ length: 18 }, () =&gt; ({
+			x: Math.random() * 100,
+			y: Math.random() * 100,
+			d: Math.random() * 8
+		}))
+	);
+
+	const words = 'A spreadsheet, and what it teaches.'.split(' ');
+&lt;/script&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the drifting dots use hydratable</h4>
+	<p>The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen *different* random positions during hydration, and Svelte would find the markup did not match. <code>hydratable(key, fn)</code> runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:45-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
+	&lt;div class=&quot;hero__dots&quot; aria-hidden=&quot;true&quot;&gt;
+		{#each seeds as seed, i (i)}
+			&lt;span
+				class=&quot;dot&quot;
+				style:left=&quot;{seed.x}%&quot;
+				style:top=&quot;{seed.y}%&quot;
+				style:animation-delay=&quot;-{seed.d}s&quot;
+			&gt;&lt;/span&gt;
+		{/each}
+	&lt;/div&gt;
+
+	&lt;p class=&quot;hero__eyebrow&quot; data-rise&gt;Abacus&lt;/p&gt;
+	&lt;h1 class=&quot;hero__title&quot;&gt;
+		{#each words as word, i (i)}
+			&lt;span class=&quot;hero__word&quot; data-word&gt;{word}&lt;/span&gt;
+		{/each}
+	&lt;/h1&gt;
+	&lt;p class=&quot;hero__lede&quot; data-rise&gt;
+		Formulas that recalculate only what changed. A grid that scrolls a million rows. Passkeys
+		instead of passwords, and a second person editing beside you. Every cell is a lesson in how
+		reactivity works — because a spreadsheet is where it was invented.
+	&lt;/p&gt;
+
+	&lt;div class=&quot;hero__actions cluster&quot; data-rise&gt;
+		&lt;a class=&quot;btn btn--primary btn--lg&quot; href=&quot;/sheet/local&quot;&gt;Open a sheet — no account&lt;/a&gt;
+		&lt;a class=&quot;btn btn--lg&quot; href=&quot;/templates&quot;&gt;Start from a template&lt;/a&gt;
+	&lt;/div&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/cinematic.ts<span class="code__lines">:1-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE ENTRANCE
+ * ============
+ *
+ * The landing page's one flourish: the title rises word by word and the pads
+ * of the demo grid light up in sequence, over about a second. It is an
+ * attachment, so the markup says `{@attach cinematic()}` and nothing else.
+ *
+ * THREE RULES IT KEEPS
+ * --------------------
+ *   1. GSAP is imported *dynamically*, inside the attachment, so the sixty
+ *      kilobytes of it never reach anyone who does not see the animation.
+ *   2. Somebody who asked for reduced motion gets no import and no animation:
+ *      `prefersReducedMotion` is checked first, and the page is already in its
+ *      final state because the animation only ever moves things *from*
+ *      somewhere *to* where the CSS put them.
+ *   3. It cannot blank the page. Nothing starts at `opacity: 0` in the
+ *      stylesheet; GSAP's `from` sets the start state at the moment it begins,
+ *      so a failed import leaves everything visible.
+ */
+
+import type { Attachment } from 'svelte/attachments';
+import { prefersReducedMotion } from 'svelte/motion';
+
+export function cinematic(): Attachment&lt;HTMLElement&gt; {
+	return (root) =&gt; {
+		if (prefersReducedMotion.current) return;
+
+		let cancelled = false;
+		let timeline: { kill(): void } | null = null;
+
+		void import('gsap').then(({ gsap }) =&gt; {
+			if (cancelled) return;
+
+			const words = root.querySelectorAll('[data-word]');
+			const pads = root.querySelectorAll('[data-pad]');
+			const rest = root.querySelectorAll('[data-rise]');
+
+			timeline = gsap
+				.timeline({ defaults: { ease: 'power3.out' } })
+				.from(words, { y: 28, opacity: 0, duration: 0.7, stagger: 0.06 })
+				.from(
+					pads,
+					{ scale: 0.4, opacity: 0, duration: 0.35, stagger: { each: 0.012, from: 'start' } },
+					'&lt;0.2'
+				)
+				.from(rest, { y: 16, opacity: 0, duration: 0.5, stagger: 0.08 }, '&lt;0.3');
+		});
+
+		return () =&gt; {
+			cancelled = true;
+			timeline?.kill();
+		};
+	};
+}</code></pre>
+</figure>
+<p>The entrance is an attachment, so the markup says <code>{@attach cinematic()}</code> and nothing else. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; <code>prefersReducedMotion</code> is checked first; and nothing in the stylesheet starts at <code>opacity: 0</code>, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.</p>
+<h3 id="templates">Templates from entries</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/templates/[slug]/+page.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
+import type { EntryGenerator, PageLoad } from './$types.js';
+import { tabulate } from '#lib/sheet/render.ts';
+import { TEMPLATE_SLUGS, TEMPLATES, templateDocument } from '#lib/sheet/templates.ts';
+
+/**
+ * Every template page is prerendered. A dynamic route cannot be crawled
+ * unless something links to it, so `entries` lists the parameters — and
+ * the list is the same array the templates module exports, so adding a
+ * template adds a page.
+ */
+export const prerender = true;
+
+export const entries: EntryGenerator = () =&gt; TEMPLATE_SLUGS.map((slug) =&gt; ({ slug }));
+
+export const load: PageLoad = ({ params }) =&gt; {
+	const template = TEMPLATES[params.slug];
+	if (!template) error(404, 'No such template');
+	return { template, rendered: tabulate(templateDocument(params.slug), 'en-US') };
+};</code></pre>
+</figure>
+<p>A dynamic route cannot be prerendered unless SvelteKit knows its parameters; <code>entries</code> lists them, and the list is the same array the templates module exports, so adding a template adds a page. The <code>load</code> runs the engine — on the build machine — and the page arrives with the numbers in it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/templates/[slug]/+page.svelte<span class="code__lines">:1-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { PageProps } from './$types.js';
+	import SheetTable from '#lib/components/SheetTable.svelte';
+	import { create } from '#lib/remote/sheets.remote.ts';
+	import { whoAmI } from '#lib/remote/auth.remote.ts';
+
+	let { data }: PageProps = $props();
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{data.template.title} — Abacus templates&lt;/title&gt;
+	&lt;meta name=&quot;description&quot; content={data.template.summary} /&gt;
+&lt;/svelte:head&gt;
+
+&lt;article class=&quot;page template&quot;&gt;
+	&lt;header class=&quot;template__head&quot;&gt;
+		&lt;div&gt;
+			&lt;p class=&quot;eyebrow&quot;&gt;Template&lt;/p&gt;
+			&lt;h1&gt;{data.template.title}&lt;/h1&gt;
+			&lt;p class=&quot;hint&quot;&gt;{data.template.summary}&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div class=&quot;cluster&quot;&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href=&quot;/sheet/local?template={data.template.slug}&quot;
+				&gt;Open a copy — no account&lt;/a
+			&gt;
+			&lt;svelte:boundary&gt;
+				{const me = $derived(await whoAmI())}
+				{#if me}
+					&lt;form {...create}&gt;
+						&lt;input {...create.fields.title.as('hidden', data.template.title)} /&gt;
+						&lt;input {...create.fields.template.as('hidden', data.template.slug)} /&gt;
+						&lt;button class=&quot;btn&quot; disabled={!!create.pending}&gt;Save to my account&lt;/button&gt;
+					&lt;/form&gt;
+				{/if}
+				{#snippet pending()}{/snippet}
+			&lt;/svelte:boundary&gt;
+		&lt;/div&gt;
+	&lt;/header&gt;
+
+	&lt;SheetTable rendered={data.rendered} caption={data.template.title} /&gt;
+&lt;/article&gt;</code></pre>
+</figure>
+<p>Two ways in: a local copy with no account, or — if <code>whoAmI()</code> says somebody is signed in — a form that saves the template into the account. The form is <code>create</code> from chapter 27 with two hidden fields, and it works with JavaScript off.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/SheetTable.svelte<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { colName } from '#lib/sheet/address.ts';
+	import type { Rendered } from '#lib/sheet/render.ts';
+
+	/**
+	 * A sheet as a plain table: no grid, no JavaScript, prints well. The
+	 * published page, the embed and the template previews all use it, with
+	 * the rows computed on the server by `tabulate`.
+	 */
+	let { rendered, caption }: { rendered: Rendered; caption: string } = $props();
+&lt;/script&gt;
+
+&lt;div class=&quot;wrap&quot;&gt;
+	&lt;table class=&quot;sheet&quot;&gt;
+		&lt;caption class=&quot;visually-hidden&quot;&gt;{caption}&lt;/caption&gt;
+		&lt;thead&gt;
+			&lt;tr&gt;
+				&lt;th scope=&quot;col&quot; class=&quot;corner&quot;&gt;&lt;/th&gt;
+				{#each { length: rendered.columns }, c (c)}
+					&lt;th scope=&quot;col&quot;&gt;{colName(c)}&lt;/th&gt;
+				{/each}
+			&lt;/tr&gt;
+		&lt;/thead&gt;
+		&lt;tbody&gt;
+			{#each rendered.rows as row, r (r)}
+				&lt;tr&gt;
+					&lt;th scope=&quot;row&quot;&gt;{r + 1}&lt;/th&gt;
+					{#each row as cell, c (c)}
+						&lt;td class={{ num: cell.numeric, error: cell.error }} title={cell.formula ?? undefined}
+							&gt;{cell.text}&lt;/td
+						&gt;
+					{/each}
+				&lt;/tr&gt;
+			{/each}
+		&lt;/tbody&gt;
+	&lt;/table&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Section.svelte<span class="code__lines">:1-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { Snippet } from 'svelte';
+
+	/**
+	 * A titled section whose heading level is a prop.
+	 *
+	 * `&lt;svelte:element this={...}&gt;` renders whichever tag the string names, so
+	 * the same component is an `h2` on the landing page and an `h3` inside a
+	 * panel — and the document outline stays honest, which is what a screen
+	 * reader navigates by.
+	 */
+	let {
+		level = 2,
+		title,
+		eyebrow,
+		children
+	}: { level?: 2 | 3 | 4; title: string; eyebrow?: string; children: Snippet } = $props();
+&lt;/script&gt;
+
+&lt;section class=&quot;section&quot;&gt;
+	&lt;header class=&quot;section__head&quot;&gt;
+		{#if eyebrow}&lt;p class=&quot;section__eyebrow&quot;&gt;{eyebrow}&lt;/p&gt;{/if}
+		&lt;svelte:element this={`h${level}`} class=&quot;section__title&quot;&gt;{title}&lt;/svelte:element&gt;
+	&lt;/header&gt;
+	{@render children()}
+&lt;/section&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what would go wrong if the dots used <code>Math.random()</code> directly.</li><li>You can explain why <code>entries</code> returns the template slugs and not a hard-coded list.</li><li>You can say why <code>&lt;svelte:element this={…}&gt;</code> is used for the section heading.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-shell.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The shell: layouts, tokens, toasts</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-local-sheet.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The local sheet: OPFS and a BroadcastChannel</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

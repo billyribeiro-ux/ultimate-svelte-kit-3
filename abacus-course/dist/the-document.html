@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The document, the operations, and the templates — Building Abacus</title>
+<meta name="description" content="What a sheet looks like at rest: a valibot schema shared by the server, the browser and the local file, with inputs and never values. Operations are the unit of change between browsers, and `applyOps` keeps the stored document current without running the engine.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 35.8974358974359%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html" aria-current="page"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>The document, the operations, and the templates</h1>
+			<p class="lede">What a sheet looks like at rest: a valibot schema shared by the server, the browser and the local file, with inputs and never values. Operations are the unit of change between browsers, and <code>applyOps</code> keeps the stored document current without running the engine.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Design a document format that cannot disagree with itself, and know why the server never stores a computed value.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/document.ts<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE DOCUMENT
+ * ============
+ *
+ * What a sheet looks like at rest: in the database, in the Origin Private
+ * File System, in a template, on the wire. Cells are a list rather than a
+ * grid because a sheet is sparse — forty cells in a million-row grid is a
+ * list of forty — and each cell carries its *input*, never its value. Values
+ * are recomputed on load; storing them would store something that can
+ * disagree with the formula that produced it.
+ *
+ * The schema is valibot, and it is the same schema on both sides: the server
+ * validates what a browser sends, and the browser validates what it reads
+ * back from local storage, which may have been written by an older build.
+ */
+
+import * as v from 'valibot';
+import { MAX_COLS, MAX_ROWS } from './address.ts';
+import type { CellFormat } from './format.ts';
+
+const index = (max: number) =&gt; v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(max - 1));</code></pre>
+</figure>
+<p>Two decisions. Cells are a *list*, because a sheet is sparse and a list of forty is forty. And each cell carries its <strong>input</strong>, never its value — values are recomputed on load, because a stored value can disagree with the formula that produced it and a recomputed one cannot.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/document.ts<span class="code__lines">:23-64</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const CellFormatSchema: v.GenericSchema&lt;CellFormat&gt; = v.variant('kind', [
+	v.object({ kind: v.literal('general') }),
+	v.object({
+		kind: v.literal('number'),
+		decimals: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10)),
+		grouping: v.boolean()
+	}),
+	v.object({
+		kind: v.literal('percent'),
+		decimals: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10))
+	}),
+	v.object({
+		kind: v.literal('currency'),
+		currency: v.pipe(v.string(), v.regex(/^[A-Z]{3}$/)),
+		decimals: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(4))
+	}),
+	v.object({ kind: v.literal('date'), style: v.picklist(['short', 'medium', 'long', 'iso']) }),
+	v.object({ kind: v.literal('datetime') }),
+	v.object({ kind: v.literal('time') }),
+	v.object({ kind: v.literal('text') })
+]);
+
+export const CellEntrySchema = v.object({
+	r: index(MAX_ROWS),
+	c: index(MAX_COLS),
+	/** The input as typed. Bounded: a formula longer than this is a paste gone wrong. */
+	i: v.pipe(v.string(), v.maxLength(8192)),
+	f: v.optional(CellFormatSchema)
+});
+
+export const DocumentSchema = v.object({
+	version: v.literal(1),
+	title: v.pipe(v.string(), v.trim(), v.maxLength(120)),
+	/** Column widths and row heights that differ from the default, in pixels. */
+	columns: v.record(v.string(), v.pipe(v.number(), v.minValue(24), v.maxValue(2000))),
+	rows: v.record(v.string(), v.pipe(v.number(), v.minValue(16), v.maxValue(1000))),
+	frozen: v.object({
+		rows: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10)),
+		cols: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10))
+	}),
+	cells: v.array(CellEntrySchema)
+});</code></pre>
+</figure>
+<p>The same valibot schema on both sides. The server validates what a browser sends; the browser validates what it reads back from the Origin Private File System, which may have been written by an older build. <code>v.variant('kind', …)</code> is a discriminated union: exactly the shape <code>CellFormat</code> has in TypeScript, and <code>v.GenericSchema&lt;CellFormat&gt;</code> makes the compiler check that the two agree.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/document.ts<span class="code__lines">:66-79</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type CellEntry = v.InferOutput&lt;typeof CellEntrySchema&gt;;
+export type Document = v.InferOutput&lt;typeof DocumentSchema&gt;;
+
+export function emptyDocument(title = 'Untitled sheet'): Document {
+	return { version: 1, title, columns: {}, rows: {}, frozen: { rows: 0, cols: 0 }, cells: [] };
+}
+
+/** Parse stored JSON, or throw with a message a person can read. */
+export function parseDocument(json: string): Document {
+	return v.parse(DocumentSchema, JSON.parse(json));
+}
+
+export const DEFAULT_COLUMN_WIDTH = 100;
+export const DEFAULT_ROW_HEIGHT = 28;</code></pre>
+</figure>
+<h3 id="operations">Operations</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/ops.ts<span class="code__lines">:1-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * OPERATIONS
+ * ==========
+ *
+ * The unit of change that leaves a browser: a batch of cell edits, a
+ * structural shift, or a new title. Local commands produce them, the server
+ * validates and numbers them, and the live query replays them to every
+ * other browser on the sheet — where `Sheet.applyRemote` turns them back
+ * into engine edits with no undo entry, because you cannot undo somebody
+ * else's typing.
+ *
+ * Same schema on both sides, as with `document.ts`.
+ */
+
+import * as v from 'valibot';
+import { MAX_COLS, MAX_ROWS } from './address.ts';
+import { CellFormatSchema } from './document.ts';
+
+const index = (max: number) =&gt; v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(max - 1));
+
+export const CellEditSchema = v.object({
+	r: index(MAX_ROWS),
+	c: index(MAX_COLS),
+	/** `null` clears the cell. */
+	i: v.nullable(v.pipe(v.string(), v.maxLength(8192))),
+	f: v.optional(CellFormatSchema)
+});
+
+export const OpSchema = v.variant('type', [
+	v.object({
+		type: v.literal('cells'),
+		cells: v.pipe(v.array(CellEditSchema), v.minLength(1), v.maxLength(20_000))
+	}),
+	v.object({
+		type: v.literal('shift'),
+		kind: v.picklist(['insert-rows', 'delete-rows', 'insert-cols', 'delete-cols']),
+		at: index(MAX_ROWS),
+		count: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(1000))
+	}),
+	v.object({
+		type: v.literal('title'),
+		title: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120))
+	}),
+	v.object({
+		type: v.literal('size'),
+		axis: v.picklist(['column', 'row']),
+		index: index(MAX_ROWS),
+		size: v.pipe(v.number(), v.minValue(16), v.maxValue(2000))
+	})
+]);
+
+export type CellEdit = v.InferOutput&lt;typeof CellEditSchema&gt;;
+export type Op = v.InferOutput&lt;typeof OpSchema&gt;;</code></pre>
+</figure>
+<p>An operation is what leaves a browser: a batch of cell edits, a structural shift, a title, a size. Every bound in the schema is a limit a bad client would otherwise find — twenty thousand cells per batch, a thousand rows per shift — because the server validates these with the same schema before it applies them (ch. 27).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/apply.ts<span class="code__lines">:1-86</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * OPERATIONS APPLIED TO A DOCUMENT AT REST
+ * ========================================
+ *
+ * The server does not run the engine — values are never stored, so it has
+ * nothing to calculate — but it does keep the document current as
+ * operations arrive, so that a browser opening the sheet later loads the
+ * truth rather than replaying a log. This is the pure function that does
+ * it: a document in, operations in, a new document out. The same function
+ * runs in the browser's tests to prove it agrees with `Sheet.applyRemote`.
+ */
+
+import { shiftFormula, shiftIndex } from '#lib/engine/rewrite.ts';
+import { key, unkey } from './address.ts';
+import type { CellEntry, Document } from './document.ts';
+import type { Op } from './ops.ts';
+
+export function applyOps(doc: Document, ops: readonly Op[]): Document {
+	const cells = new Map&lt;number, CellEntry&gt;();
+	for (const cell of doc.cells) cells.set(key(cell.r, cell.c), cell);
+	let title = doc.title;
+	const columns = { ...doc.columns };
+	const rows = { ...doc.rows };
+
+	for (const op of ops) {
+		switch (op.type) {
+			case 'cells':
+				for (const edit of op.cells) {
+					const k = key(edit.r, edit.c);
+					const existing = cells.get(k);
+					const input = edit.i === null ? '' : edit.i;
+					const format = edit.f ?? existing?.f;
+					if (input === '' &amp;&amp; (!format || format.kind === 'general')) cells.delete(k);
+					else
+						cells.set(k, {
+							r: edit.r,
+							c: edit.c,
+							i: input,
+							...(format &amp;&amp; format.kind !== 'general' ? { f: format } : {})
+						});
+				}
+				break;
+
+			case 'shift': {
+				const byRows = op.kind === 'insert-rows' || op.kind === 'delete-rows';
+				const insert = op.kind === 'insert-rows' || op.kind === 'insert-cols';
+				const moved = new Map&lt;number, CellEntry&gt;();
+				for (const [k, cell] of cells) {
+					const a = unkey(k);
+					const index = shiftIndex(byRows ? a.row : a.col, op.at, op.count, insert);
+					if (index === null) continue;
+					const r = byRows ? index : a.row;
+					const c = byRows ? a.col : index;
+					const i = cell.i.startsWith('=')
+						? `=${shiftFormula(cell.i.slice(1), { kind: op.kind, at: op.at, count: op.count })}`
+						: cell.i;
+					moved.set(key(r, c), { ...cell, r, c, i });
+				}
+				cells.clear();
+				for (const [k, cell] of moved) cells.set(k, cell);
+				shiftSizes(byRows ? rows : columns, op.at, op.count, insert);
+				break;
+			}
+
+			case 'title':
+				title = op.title;
+				break;
+
+			case 'size':
+				(op.axis === 'column' ? columns : rows)[String(op.index)] = op.size;
+				break;
+
+			default:
+				op satisfies never;
+		}
+	}
+
+	return {
+		version: 1,
+		title,
+		columns,
+		rows,
+		frozen: { ...doc.frozen },
+		cells: [...cells.values()].sort((a, b) =&gt; a.r - b.r || a.c - b.c)
+	};
+}</code></pre>
+</figure>
+<p>The server does not run the engine — it has nothing to calculate — but it does keep the stored document *current* as operations arrive, so that a browser opening the sheet later loads the truth rather than replaying a log. <code>applyOps</code> is that: a pure function from a document and operations to a new document. Its shift branch reuses <code>shiftIndex</code> and <code>shiftFormula</code> from chapter 11, so the server and the browser rewrite formulas with the same code.</p>
+<h3 id="templates">Templates</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/templates.ts<span class="code__lines">:19-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Template {
+	slug: string;
+	title: string;
+	summary: string;
+	/** Rows of inputs; `null` leaves a cell empty. */
+	rows: (string | number | null)[][];
+	/** Formats by column letter, applied to every row below the heading. */
+	formats?: Record&lt;string, CellFormat&gt;;
+	columns?: Record&lt;string, number&gt;;
+	frozen?: { rows: number; cols: number };
+}
+
+const money: CellFormat = { kind: 'currency', currency: 'USD', decimals: 2 };
+const percent: CellFormat = { kind: 'percent', decimals: 1 };
+
+export const TEMPLATES: Record&lt;string, Template&gt; = {
+	budget: {
+		slug: 'budget',</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/templates.ts<span class="code__lines">:159-179</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function templateDocument(slug: string): Document {
+	const template = TEMPLATES[slug];
+	if (!template) throw new Error(`No template &quot;${slug}&quot;`);
+	const doc = emptyDocument(template.title);
+	template.rows.forEach((row, r) =&gt; {
+		row.forEach((value, c) =&gt; {
+			if (value === null || value === undefined) return;
+			const letter = String.fromCharCode(65 + c);
+			const format = r &gt; 0 ? template.formats?.[letter] : undefined;
+			doc.cells.push({
+				r,
+				c,
+				i: typeof value === 'number' ? String(value) : value,
+				...(format ? { f: format } : {})
+			});
+		});
+	});
+	if (template.columns) doc.columns = { ...template.columns };
+	if (template.frozen) doc.frozen = { ...template.frozen };
+	return doc;
+}</code></pre>
+</figure>
+<p>A template is rows of inputs with column letters for formats, turned into a document by <code>templateDocument</code>. Three of them ship — a budget, a loan schedule, a grade book — and each is a real sheet with real formulas, which is why the template pages in chapter 31 can be prerendered with the numbers already computed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/templates.spec.ts<span class="code__lines">:8-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the templates', () =&gt; {
+	it.each(TEMPLATE_SLUGS)('%s is a valid document whose formulas all evaluate', (slug) =&gt; {
+		const doc = templateDocument(slug);
+		expect(v.safeParse(DocumentSchema, doc).success).toBe(true);
+
+		const engine = new Engine();
+		engine.apply(doc.cells.map((c) =&gt; ({ row: c.r, col: c.c, input: c.i, format: c.f })));
+		for (const [, cell] of engine.cells) {
+			expect(cell.error, `${cell.input}`).toBeNull();
+			expect(cell.value, `${cell.input}`).not.toBeInstanceOf(ErrorValue);
+		}
+	});
+
+	it('gets the loan arithmetic right', () =&gt; {
+		const doc = templateDocument('loan');
+		const engine = new Engine();
+		engine.apply(doc.cells.map((c) =&gt; ({ row: c.r, col: c.c, input: c.i, format: c.f })));
+		expect(engine.value(3, 1)).toBeCloseTo(765.09, 2); // the monthly payment
+		expect(engine.value(42, 4)).toBe(0); // the balance after the last month
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why a document stores inputs and what would go wrong if it stored values.</li><li>You can explain what <code>v.variant</code> checks that <code>v.union</code> would not.</li><li>You can say what <code>applyOps</code> does with a <code>shift</code> and which chapter’s functions it borrows.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="locale.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What a person typed, in their language</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-sheet-class.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The Sheet class, and where the reactivity line is</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
