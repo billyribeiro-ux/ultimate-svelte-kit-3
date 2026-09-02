@@ -1,0 +1,156 @@
+/*
+ * RESET AND BASE
+ * ==============
+ *
+ * A small reset, and the handful of global rules a dense data application needs.
+ */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+* {
+	margin: 0;
+}
+
+html {
+	/*
+	 * No smooth scrolling by default.
+	 *
+	 * A log table scrolls thousands of rows, and smooth behaviour makes "jump to
+	 * the newest line" a two-second animation past everything in between. It is
+	 * enabled per-element where it helps, which is almost nowhere here.
+	 */
+	-webkit-text-size-adjust: 100%;
+	tab-size: 2;
+}
+
+body {
+	min-height: 100dvh;
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-sans);
+	font-size: var(--fs-md);
+	line-height: var(--leading-prose);
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	/*
+	 * `font-variant-numeric: tabular-nums` on the whole document.
+	 *
+	 * Every number in this product sits in a column somebody scans downwards, and
+	 * proportional digits make the decimal points wander. Setting it globally is
+	 * simpler than remembering it on nine components, and it costs nothing for
+	 * prose because prose rarely has columns of figures in it.
+	 */
+	font-variant-numeric: tabular-nums;
+}
+
+img,
+svg,
+canvas {
+	display: block;
+	max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+
+a {
+	color: var(--accent);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	line-height: 1.25;
+	font-weight: var(--weight-semibold);
+	text-wrap: balance;
+}
+
+p {
+	text-wrap: pretty;
+}
+
+code,
+kbd,
+pre {
+	font-family: var(--font-mono);
+	font-size: 0.925em;
+}
+
+/*
+ * THE FOCUS RING
+ * ==============
+ *
+ * `:focus-visible`, not `:focus`, so a mouse click does not leave a ring — and
+ * two pixels rather than one, because a one-pixel ring on a dark ground next to
+ * a one-pixel border is invisible.
+ *
+ * The offset matters on table rows: without it the ring sits on the row's own
+ * border and cannot be told from a hover.
+ */
+:focus-visible {
+	outline: 2px solid var(--border-focus);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+/* Never remove the ring; only move it. */
+:focus:not(:focus-visible) {
+	outline: none;
+}
+
+::selection {
+	background: color-mix(in oklab, var(--accent) 35%, transparent);
+	color: var(--text);
+}
+
+/*
+ * SCROLLBARS
+ * ==========
+ *
+ * Styled because the default light scrollbar on a very dark panel is a bright
+ * vertical stripe next to the data — and because a data application has a great
+ * many scroll containers.
+ */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--slate-700) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/*
+	 * Not `animation: none`.
+	 *
+	 * Reduced motion means *less* motion, not none: a state change with no
+	 * transition at all can be harder to follow, not easier. Collapsing durations
+	 * to 1ms keeps the callbacks — `transitionend` fires, so nothing that waits on
+	 * one hangs — while removing the movement.
+	 */
+	*,
+	*::before,
+	*::after {
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 1ms !important;
+		scroll-behavior: auto !important;
+	}
+}
