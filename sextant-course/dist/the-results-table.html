@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The results table — Building Sextant</title>
+<meta name="description" content="One component for every result shape, attachments that do not thrash, and the ARIA that makes a virtualized grid tell the truth.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">29 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 65.9090909090909%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html" aria-current="page"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 29</p>
+			<h1>The results table</h1>
+			<p class="lede">One component for every result shape, attachments that do not thrash, and the ARIA that makes a virtualized grid tell the truth.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Render whatever columns a query produced, formatted by what the values are.</p></aside>
+			<p>Every query lands in one table, whatever its shape: a hundred thousand log lines, a six-row summary, one column of numbers. Rather than three components with a conditional between them, this renders whatever columns the result has and formats each cell by what the value *is*.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:7-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE RESULTS TABLE
+ * =================
+ *
+ * Every query lands here, whatever its shape: a hundred thousand log lines, a
+ * six-row summary, one column of numbers. Rather than three components with a
+ * conditional between them, this renders whatever columns the result has and
+ * formats each cell by what the value *is*.
+ *
+ * That is a deliberate constraint on the query language too: because the table
+ * is generic, a new SQF function needs no interface work at all.
+ */</code></pre>
+</figure>
+<p>That is a constraint on the query language too, and a useful one: because the table is generic, a new SQF function needs no interface work at all.</p>
+<h3 id="attachments">An attachment factory, and why not an inline arrow</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:68-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Measure a row after it renders, and remember it.
+ *
+ * A `ResizeObserver` rather than a one-off `getBoundingClientRect`: a row's
+ * height changes when the window is resized and a long message re-wraps, and a
+ * cached height that no longer matches puts every row below it in the wrong
+ * place.
+ *
+ * Declared as a factory returning an attachment rather than written inline in
+ * the markup: an attachment re-runs whenever its expression produces a new
+ * function, and an arrow written in markup is new on every render — so an
+ * inline version would detach and reattach an observer per row per frame.
+ */
+function measure(index: number): Attachment&lt;HTMLElement&gt; {
+	return (element) =&gt; {
+		const observer = new ResizeObserver(([entry]) =&gt; {
+			if (entry) virtualizer.measure(index, entry.contentRect.height);
+		});
+		observer.observe(element);
+		virtualizer.measure(index, element.getBoundingClientRect().height);
+		return () =&gt; observer.disconnect();
+	};
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The inline version — <code>{@attach (el) =&gt; …}</code> — looks identical and is a performance bug. An attachment re-runs whenever its expression produces a new function, and an arrow written in markup is new on every render, so an inline version detaches and reattaches a <code>ResizeObserver</code> per row per frame.</p></aside>
+<h3 id="aria">The ARIA a virtualized grid needs</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:159-175</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`role=&quot;grid&quot;` with explicit row indices.
+
+	A virtualized table renders a window of rows, so a screen reader that
+	counted the DOM would announce &quot;row 3 of 12&quot; while the person is at row
+	4,000 of 100,000. `aria-rowcount` on the grid and `aria-rowindex` on each
+	row tell it the truth, and are the reason a virtualizer does not have to
+	choose between being usable and being fast.
+--&gt;
+&lt;div
+	class=&quot;table__scroller&quot;
+	role=&quot;grid&quot;
+	aria-rowcount={rows.length}
+	aria-colcount={columns.length}
+	style=&quot;height: {virtualizer.total}px&quot;
+&gt;
+	{#each virtualizer.visible as slot (slot.index)}</code></pre>
+</figure>
+<p>A virtualized table renders a window of rows, so a screen reader that counted the DOM would announce &quot;row 3 of 12&quot; while the person is at row 4,000 of 100,000. <code>aria-rowcount</code> on the grid and <code>aria-rowindex</code> on each row tell it the truth — and are the reason a virtualizer does not have to choose between being usable and being fast.</p>
+<h3 id="formatting">Format by value, not by column name</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:104-127</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * How to render a value, decided by what it is rather than by its column name.
+ *
+ * A column called `duration` is a duration; so is one called `p95` produced by
+ * `percentile(duration, 95)`, and so is `slowest` from `max(duration)`. Keying
+ * off the name would format the first and miss the other two, which is exactly
+ * the case where a raw number is least readable.
+ */
+function classOf(column: string, value: Value): string {
+	if (column === 'level') return `cell cell--level level--${String(value)}`;
+	if (typeof value === 'number') return 'cell cell--number';
+	if (value === null) return 'cell cell--null';
+	return 'cell';
+}
+
+function render(column: string, value: Value): string {
+	if (value === null) return '—';
+	if (column === 'timestamp' || column === 'bucket') {
+		return formatTimestamp(Number(value), range);
+	}
+	if (isDurationColumn(column) &amp;&amp; typeof value === 'number') return formatDuration(value);
+	if (typeof value === 'object') return JSON.stringify(value);
+	return String(value);
+}</code></pre>
+</figure>
+<p>A column called <code>duration</code> is a duration; so is <code>p95</code> from <code>percentile(duration, 95)</code>, and <code>slowest</code> from <code>max(duration)</code>. Keying off the name formats the first and misses the other two — which is exactly the case where a raw number is least readable.</p>
+<p>The heuristic that follows is honest about being one. The evaluator knows each column’s SQF type and this component does not, because the result crosses the wire as plain rows; threading the type through would be the correct fix and would mean the result shape carries a schema.</p>
+<h3 id="truncation">Truncation, said plainly</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:206-219</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if truncated}
+	&lt;!--
+		Said plainly, and never hidden behind a tooltip.
+
+		A truncated result that looks complete is how somebody concludes an error
+		stopped happening. The count is the *shown* count, because the true one is
+		not known — and saying &quot;of many&quot; is more honest than a number that would
+		have to be guessed.
+	--&gt;
+	&lt;p class=&quot;table__note&quot; role=&quot;status&quot;&gt;
+		Showing the first {rows.length.toLocaleString()} rows. Narrow the range or add a
+		&lt;code&gt;take&lt;/code&gt; to see a complete result.
+	&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>A truncated result that looks complete is how somebody concludes an error stopped happening. The count shown is the *shown* count, because the true one is not known — and &quot;of many&quot; is more honest than a number that would have to be guessed.</p>
+<h3 id="mobile">And a phone gets a different table</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:234-247</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Mobile first: one column per row, and no header.
+ *
+ * A six-column grid at 390px gives each column sixty pixels, which is narrower
+ * than a timestamp. Stacked, each row is a small record — which is how a log
+ * line reads on a phone anyway. The columns arrive at 48rem, below.
+ */
+.table__head,
+.tr {
+	display: grid;
+	grid-template-columns: 1fr;
+	padding: 0 var(--space-3);
+	align-items: start;
+}</code></pre>
+</figure>
+<p>Mobile first, and the breakpoint adds columns rather than removing them. A six-column grid at 390px gives each column sixty pixels, which is narrower than a timestamp; stacked, each row is a small record — which is how a log line reads on a phone anyway.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>The same component renders a log table and a two-column summary.</li><li>A screen reader announces the true row number at row 4,000.</li><li>A truncated result says so above the fold.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-virtualizer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A virtualizer for variable-height rows, and `flushSync`</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-flame-graph.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A flame graph that renders itself</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

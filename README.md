@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Four complete projects, each with its own build-along course.
+Five complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -12,9 +12,11 @@ Four complete projects, each with its own build-along course.
 | [`sequent-course/`](./sequent-course) | Its 42-chapter course, for somebody who has finished project 2. Open `sequent-course/dist/index.html`. |
 | [`tessera/`](./tessera) | **Project 4** — Tessera, a local-first collaborative canvas. Conflict-free data types written from scratch, an editor that keeps working with the network unplugged, and no server anywhere deciding who wins. |
 | [`tessera-course/`](./tessera-course) | Its 44-chapter course, for somebody who has finished project 3. Open `tessera-course/dist/index.html`. |
+| [`sextant/`](./sextant) | **Project 5** — Sextant, a self-hosted observability platform. Logs, traces, metrics, and a query language written from the characters up: a lexer, a Pratt parser, a type checker that knows a duration is not a number, and a planner that pushes what it can into SQL. |
+| [`sextant-course/`](./sextant-course) | Its 44-chapter course, for somebody who has finished project 4. Open `sextant-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All four pin it in `.nvmrc` and `engines`.
+All five pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -33,11 +35,17 @@ pnpm run seed && pnpm run dev
 # Project 4 — the collaborative canvas. Open the printed link in two windows.
 cd tessera && pnpm install && cp .env.example .env
 pnpm run db:migrate && pnpm run db:seed && pnpm run dev
+
+# Project 5 — the observability platform. The seed prints a sign-in and a key.
+cd sextant && pnpm install && cp .env.example .env
+pnpm run db:push && pnpm run db:seed && pnpm run dev
 ```
 
 Each seed prints what you need to open the thing it built: Halfpast prints the
 demo studio's booking page, both sign-ins and a customer manage link; Tessera
-prints an owner, a viewer, and a board short link worth opening twice.
+prints an owner, a viewer, and a board short link worth opening twice; Sextant
+prints a workspace, a sign-in, an ingest key, and the twenty minutes of its six
+hours of telemetry during which `payments-api` is timing out.
 
 ## Reading the courses
 
@@ -46,17 +54,26 @@ open strikeflow-course/dist/index.html
 open halfpast-course/dist/index.html
 open sequent-course/dist/index.html
 open tessera-course/dist/index.html
+open sextant-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
 you can bookmark where you are and Ctrl+F the chapter you are actually reading.
 Rebuild any of them with `node build.js` in its folder.
 
-The Tessera course also ships `node tessera-course/verify.js`, which checks that
+The Tessera course ships `node tessera-course/verify.js`, which checks that
 every code block naming a file appears **verbatim** in that file. A course that
 quotes a codebase drifts from it the first time somebody refactors, and the
 drift is invisible — the prose still reads correctly and is simply no longer
 what the project does. This makes that a property rather than a promise.
+
+The Sextant course goes one step further: it does not paste code at all. Every
+block names a file and a **line range**, and the text is read out of the project
+when the course is built, so drift is impossible rather than detectable. That
+frees `node sextant-course/verify.js` to check the thing that still needs
+judgement — whether the ranges are sensible. A quotation can be perfectly
+faithful and useless if it starts on the closing brace above it or stops halfway
+through an `if`, and no byte-comparison notices.
 
 ## Project 1 — StrikeFlow
 
@@ -175,5 +192,56 @@ who wins, because no server is asked.
 
 ```bash
 cd tessera
+pnpm run verify   # check, lint, unit, build, e2e
+```
+
+## Project 5 — Sextant
+
+An observability platform. Logs, traces and metrics go in; questions come out —
+in a language written from the characters up, because the thing that makes a
+query editor good for your own language is that nothing in it can drift from the
+compiler.
+
+- **A real query language.** A hand-written lexer with error recovery, a Pratt
+  parser whose entire precedence table is eight readable lines, a type checker
+  that threads a scope through pipeline stages, an evaluator, and a planner that
+  compiles a predicate to SQL *only* when SQL's answer is identical including
+  nulls. Units are part of the type system: `duration > 500` is a type error and
+  `duration > 500ms` is the query somebody meant.
+- **The same front end, twice.** The lexer that colours the editor is the lexer
+  that parses the query on the server. Completion knows an aggregate is illegal
+  outside `summarize` because the checker knows it. There is no editor library
+  anywhere in this project.
+- **Sketches, because you cannot hold the data.** DDSketch for percentiles you
+  are allowed to merge — averaging a p95 both overstates and understates,
+  depending on the shape, which the tests demonstrate in both directions — and
+  HyperLogLog for distinct counts in 2KB, including the avalanche finaliser
+  everybody leaves out and the linear-counting correction that makes it usable.
+- **Ingest that survives a bad day.** Streamed rather than buffered, refused on
+  `content-length` before the body is read, rate-limited per tenant with a
+  `Retry-After`, idempotent by unique index, and a per-metric cardinality limit
+  whose rejections are counted and returned rather than logged.
+- **Alerts with a transactional outbox.** "It is firing" and "somebody was told"
+  are committed together, because every other ordering loses a page or sends it
+  twice. A `for` duration, hysteresis, and the case that decides whether an
+  alerting system is trustworthy: no data is not zero.
+- **An interface for three in the morning.** A variable-height virtualizer with
+  `flushSync` scroll anchoring, a flame graph drawn by a snippet that renders
+  itself, an ARIA-tree waterfall on `content-visibility`, canvas charts
+  downsampled in a worker over transferred typed arrays, and a live tail that
+  says how many lines it dropped.
+- **SvelteKit 3 where it earns it**: the URL as state via `SvelteURLSearchParams`
+  and one debounced `replaceState`; shallow routing whose URL is also a real
+  page; streamed loads that await what paints and stream what waits;
+  `getAbortSignal()` around a streaming `fetch`; `query.batch`, `form`,
+  `command`, `handleFetch`, `handleError` and `init`.
+- 316 unit tests and 57 end-to-end tests across desktop and a Pixel 7 profile.
+  Writing them found six real bugs, including a `forkPreloads` interaction that
+  broke opening a trace one time in three, and a NUL byte in a series key that
+  SQLite silently truncated at — collapsing every series into one row with no
+  error anywhere.
+
+```bash
+cd sextant
 pnpm run verify   # check, lint, unit, build, e2e
 ```

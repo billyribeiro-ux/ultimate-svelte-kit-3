@@ -15,6 +15,9 @@ import { part1 } from './part1.js';
 import { part2 } from './part2.js';
 import { part3 } from './part3.js';
 import { part4 } from './part4.js';
+import { part5 } from './part5.js';
+import { part6 } from './part6.js';
+import { part7 } from './part7.js';
 
 export const chapters = [
 	// Part 0 — What we are building, and the decision everything follows from.
@@ -30,7 +33,16 @@ export const chapters = [
 	...part3,
 
 	// Part 4 — Storage, ingest and access.
-	...part4
+	...part4,
+
+	// Part 5 — The interface.
+	...part5,
+
+	// Part 6 — SvelteKit 3 in anger.
+	...part6,
+
+	// Part 7 — The rest of the product, and proving it.
+	...part7
 ];
 
 /*

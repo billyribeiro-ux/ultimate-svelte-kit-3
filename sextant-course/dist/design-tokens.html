@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design tokens for a tool used at three in the morning — Building Sextant</title>
+<meta name="description" content="Why the default theme is dark and why that is not fashion, four status colours and no more, and a line height chosen for how many rows fit on a laptop.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 61.36363636363637%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html" aria-current="page"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>Design tokens for a tool used at three in the morning</h1>
+			<p class="lede">Why the default theme is dark and why that is not fashion, four status colours and no more, and a line height chosen for how many rows fit on a laptop.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a token layer that a component can use without ever knowing what the theme is.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Two themes, one set of names. Every colour is a semantic token —
+ * `--surface-raised`, not `--slate-800` — because a component that asks for
+ * slate-800 has decided what the theme is, and the second theme then needs a
+ * second component.
+ *
+ * The palette scales sit above the semantic layer and are referenced only in
+ * this file. If a component stylesheet mentions `--slate-500`, that is a bug.
+ *
+ * DARK IS THE DEFAULT, AND FOR A REASON
+ * -------------------------------------
+ * Not fashion. This is a tool people open at 3am, next to a terminal, on a
+ * screen that is the only light in the room — and it is a tool where the
+ * *content* is dense monochrome text with occasional colour that has to mean
+ * something. A light theme exists and is a deliberate choice rather than a
+ * fallback, because some people read better on it and some rooms are bright.
+ *
+ * SIGNAL COLOUR IS RATIONED
+ * -------------------------
+ * There are exactly four status colours and they are used for status only.
+ * Everything else — panels, borders, headings, the chrome — is neutral. In an
+ * interface whose job is to make an anomaly obvious, every decorative use of
+ * red spends some of the attention that red is supposed to buy.
+ */</code></pre>
+</figure>
+<p>Every colour is a semantic token — <code>--surface-raised</code>, never <code>--slate-800</code> — because a component that asks for slate-800 has decided what the theme is, and the second theme then needs a second component. If a component stylesheet mentions a palette step, that is a bug.</p>
+<h3 id="rationed-colour">Signal colour is rationed</h3>
+<p>There are exactly four status colours and they are used for status only. Everything else — panels, borders, headings, chrome — is neutral. In an interface whose job is to make an anomaly obvious, every decorative use of red spends some of the attention that red is supposed to buy.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:64-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * The four status hues.
+ *
+ * Chosen to be distinguishable with the two most common forms of colour
+ * blindness — which for red/green means the difference between &quot;error&quot; and
+ * &quot;ok&quot; is carried by *lightness* as well as hue, and by an icon in every
+ * place the colour appears. A dashboard where the only difference between
+ * fine and broken is red versus green is unusable for eight percent of men.
+ */
+--danger-400: #ff8080;
+--danger-500: #f2555a;
+--danger-600: #cf3238;
+--warn-400: #f5c26b;
+--warn-500: #e0a03a;
+--warn-600: #b87d1c;
+--ok-400: #6ddb9f;
+--ok-500: #35b877;
+--ok-600: #1f9159;
+--info-400: #8fb8ff;
+--info-500: #5b91f5;
+--info-600: #3a6fd0;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Colour blindness is not an edge case here</h4>
+	<p>Red and green as the only difference between &quot;error&quot; and &quot;ok&quot; is unusable for about eight per cent of men. The hues here are chosen so the difference is carried by <strong>lightness</strong> as well, and every place the colour appears also carries an icon or a pattern. The flame graph draws error bars with diagonal stripes for exactly this reason.</p>
+</aside>
+<h3 id="levels">Five log levels, two of them coloured</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:123-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* ---- Log levels ----------------------------------------------------- */
+
+/*
+ * Five levels, and only two of them are coloured.
+ *
+ * `debug` and `info` are the overwhelming majority of lines, and colouring
+ * them means a screen that is entirely coloured — at which point the colour on
+ * the `error` rows carries no information. Neutral for the common case is what
+ * makes the uncommon case visible.
+ */
+--level-debug: var(--text-faint);
+--level-info: var(--text-muted);
+--level-warn: var(--warn);
+--level-error: var(--danger);
+--level-fatal: var(--danger-500);</code></pre>
+</figure>
+<p><code>debug</code> and <code>info</code> are the overwhelming majority of lines. Colouring them means a screen that is entirely coloured, at which point the colour on the <code>error</code> rows carries no information at all. Neutral for the common case is what makes the uncommon case visible.</p>
+<h3 id="type">A line height chosen by counting rows</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:165-174</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * A tight line height for data, a comfortable one for prose.
+ *
+ * 1.45 on a log table is roughly 21px a row, which puts about forty lines on a
+ * laptop screen. Going to 1.6 for &quot;readability&quot; costs eight lines, and eight
+ * lines is often the difference between seeing the error and its cause on one
+ * screen.
+ */
+--leading-data: 1.45;
+--leading-prose: 1.6;</code></pre>
+</figure>
+<p>1.45 on a log table is about 21px a row, which puts roughly forty lines on a laptop screen. Going to 1.6 &quot;for readability&quot; costs eight lines — and eight lines is often the difference between seeing the error and its cause on one screen.</p>
+<p>And the data font is monospace, not because it is code but because a column of durations in a proportional face cannot be scanned downwards: <code>1</code> and <code>8</code> are different widths and the decimal points do not line up. <code>tabular-nums</code> fixes that for one family; a mono face fixes it for every number in the product, including the ones drawn into a canvas where that CSS property does not reach.</p>
+<h3 id="motion">Motion, and a budget</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:206-227</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">	/* ---- Motion ---------------------------------------------------------- */
+
+	/*
+	 * Fast and short. This is an instrument: motion exists to show *where a thing
+	 * came from* — a drawer sliding in from the right it can be dismissed towards —
+	 * and never to be noticed. Anything over 200ms in a tool people use for eight
+	 * hours becomes a wait.
+	 */
+	--ease: cubic-bezier(0.2, 0, 0.1, 1);
+	--fast: 120ms;
+	--medium: 180ms;
+}
+
+/*
+ * The light theme.
+ *
+ * `[data-theme]` on the root, set before first paint by the inline script in
+ * `app.html`, with `prefers-color-scheme` as the default. Doing it with a class
+ * toggled after hydration produces a flash of the wrong theme on every load,
+ * which on a dark-default app is a flash of white at 3am.
+ */
+:root[data-theme='light'] {</code></pre>
+</figure>
+<p>Anything over 200ms in a tool people use for eight hours becomes a wait. Motion exists to show *where a thing came from* — a drawer sliding in from the side it can be dismissed towards — and never to be noticed.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>No component stylesheet names a palette step.</li><li>Switching themes changes one attribute on the root and nothing else.</li><li>You can say why <code>debug</code> and <code>info</code> have no colour.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="live-tail.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Live tail: backpressure as a feature</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-virtualizer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A virtualizer for variable-height rows, and `flushSync`</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

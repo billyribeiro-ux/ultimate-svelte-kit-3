@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Completion that knows where the caret is — Building Sextant</title>
+<meta name="description" content="Why completion cannot use the parser, the five places a caret can be, and the hyphen that broke the replacement range.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">33 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 75%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html" aria-current="page"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 33</p>
+			<h1>Completion that knows where the caret is</h1>
+			<p class="lede">Why completion cannot use the parser, the five places a caret can be, and the hyphen that broke the replacement range.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Offer exactly what is legal at the caret, and nothing else.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * COMPLETION
+ * ==========
+ *
+ * What to offer at the caret, and — much harder — what *not* to offer.
+ *
+ * A completion list that shows every identifier in the language is a list nobody
+ * reads. The value is entirely in the filtering: after `from ` there are exactly
+ * three legal words, and showing three is the difference between an editor that
+ * teaches the language and one that requires you to already know it.
+ *
+ * WHY THIS IS NOT THE PARSER
+ * --------------------------
+ * The obvious approach is to parse and ask the tree what belongs at the offset.
+ * It does not work, and the reason is structural: **the text under a caret is
+ * almost always syntactically invalid.** Somebody typing `from logs | where sta`
+ * has an incomplete expression, and `| ` on its own has no stage at all. A parser
+ * built to reject invalid input has nothing useful to say about either.
+ *
+ * So completion works off the **token stream**, which the lexer produces for any
+ * input at all, and reconstructs just enough structure — which stage we are in,
+ * whether we are left or right of a comparison — to know what is legal. That is
+ * a few dozen lines and it is robust precisely because it understands so little.
+ *
+ * The check that runs alongside it *does* use the parser, because an error
+ * message is about text somebody has finished typing.
+ */</code></pre>
+</figure>
+<p>The obvious approach is to parse and ask the tree what belongs at the offset. It does not work, and the reason is structural: <strong>the text under a caret is almost always syntactically invalid.</strong> Somebody typing <code>from logs | where sta</code> has an incomplete expression, and <code>| </code> on its own has no stage at all. A parser built to reject invalid input has nothing useful to say about either.</p>
+<p>So completion works off the <strong>token stream</strong>, which the lexer produces for any input at all, and reconstructs just enough structure to know what is legal. That is a few dozen lines, and it is robust precisely because it understands so little.</p>
+<h3 id="five-places">Five places a caret can be</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:78-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	{ name: 'where', doc: 'Keep only the rows matching a condition.' },
+	{ name: 'summarize', doc: 'Aggregate, optionally grouped with `by`.' },
+	{ name: 'project', doc: 'Choose and rename the columns to keep.' },
+	{ name: 'sort', doc: 'Order the rows, `asc` or `desc`.' },
+	{ name: 'take', doc: 'Keep the first N rows.' }
+];
+
+/** Where the caret is, in terms of what is legal there. */
+type Place =
+	| { kind: 'source' }
+	| { kind: 'stage' }
+	/** An expression. `aggregates` says whether an aggregation is legal here. */
+	| { kind: 'expr'; aggregates: boolean }
+	/** The right-hand side of a comparison against a known column. */
+	| { kind: 'value'; column: string }
+	/** After `sort by x`, where a direction goes. */
+	| { kind: 'direction' };
+
+export function completionsAt(</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:140-155</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Which of the five places the caret is in.
+ *
+ * One left-to-right pass over the tokens before the caret. No stack and no
+ * nesting: SQF pipelines are flat, and the only nesting is inside parentheses,
+ * where the answer — &quot;an expression&quot; — is the same as outside them.
+ */
+function placeAt(tokens: readonly Token[], cursor: number): Place {
+	const before = tokens.filter((token) =&gt; token.kind !== 'eof' &amp;&amp; token.span.end &lt;= cursor);
+	const last = before[before.length - 1];
+
+	// Nothing yet, or still inside the first word: the query starts with `from`.
+	if (!last) return { kind: 'stage' };
+	if (last.kind === 'from') return { kind: 'source' };
+
+	/*</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:193-204</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">case 'summarize': {
+	/*
+	 * `summarize` has two halves and they allow different things.
+	 *
+	 * Before `by`, aggregations are required and bare columns are an error.
+	 * After it, the opposite. Offering `count()` in a `by` list is offering
+	 * something that will always fail the check — which is worse than offering
+	 * nothing, because it looks like an endorsement.
+	 */
+	const by = before.slice(pipe + 1).some((token) =&gt; token.kind === 'by');
+	return { kind: 'expr', aggregates: !by };
+}</code></pre>
+</figure>
+<p>One left-to-right pass over the tokens before the caret. No stack and no nesting: SQF pipelines are flat, and the only nesting is inside parentheses, where the answer — &quot;an expression&quot; — is the same as outside them.</p>
+<h3 id="aggregates">The rule that makes the list worth reading</h3>
+<p><code>summarize</code> has two halves and they allow different things. Before <code>by</code>, aggregations are required and bare columns are an error; after it, the opposite. Offering <code>count()</code> in a <code>by</code> list is offering something that will always fail the check — which is worse than offering nothing, because a completion list reads as a list of things that are *allowed*.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/editor.spec.ts<span class="code__lines">:50-74</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The rule that makes the list worth reading.
+ *
+ * An aggregate outside `summarize` always fails the check, so offering it is
+ * offering something that cannot work — which is worse than offering nothing,
+ * because a completion list reads as a list of things that are allowed.
+ */
+it('hides aggregates outside summarize and shows them inside it', () =&gt; {
+	expect(labels('from logs | where $')).not.toContain('count');
+	expect(labels('from logs | summarize $')).toContain('count');
+});
+
+it('hides aggregates after `by`, where only grouping keys are legal', () =&gt; {
+	const items = labels('from logs | summarize n = count() by $');
+	expect(items).not.toContain('count');
+	expect(items).toContain('service');
+});
+
+it('completes service names on the right of a comparison', () =&gt; {
+	expect(labels('from logs | where service == $')).toEqual([
+		'checkout',
+		'payments-api',
+		'payments-worker'
+	]);
+});</code></pre>
+</figure>
+<h3 id="ranking">And no fuzzy matching</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:316-373</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">				insert: `${fn.name}()`,
+				// Inside the parentheses when there are arguments, past them when there
+				// are none. `count()` never wants a caret between its brackets.
+				caret: fn.params.length === 0 ? fn.name.length + 2 : fn.name.length + 1
+			}));
+
+			const operators: Completion[] = ['and', 'or', 'not', 'contains', 'startswith', 'in']
+				.filter((word) =&gt; word in KEYWORDS)
+				.map((word) =&gt; ({
+					label: word,
+					kind: 'keyword' as const,
+					detail: 'operator',
+					doc: '',
+					insert: `${word} `,
+					caret: word.length + 1
+				}));
+
+			return [...columns, ...functions, ...operators];
+		}
+	}
+}
+
+/**
+ * Filter and order.
+ *
+ * Three rules, in this order: a prefix match beats a substring match, a shorter
+ * label beats a longer one, and alphabetical breaks the tie. Fuzzy matching —
+ * where `dur` matches `p95_duration_ms` — is deliberately absent: it is
+ * wonderful in a file finder, where you know the answer and are recalling it,
+ * and confusing in a schema you are still learning, because it puts things you
+ * have never heard of at the top of a list.
+ */
+function rank(items: readonly Completion[], prefix: string): Completion[] {
+	if (prefix === '') {
+		return [...items].sort((a, b) =&gt; a.label.localeCompare(b.label));
+	}
+
+	const needle = prefix.toLowerCase().replace(/^&quot;/, '');
+
+	return items
+		.map((item) =&gt; {
+			const label = item.label.toLowerCase();
+			if (label.startsWith(needle)) return { item, score: 0 };
+			if (label.includes(needle)) return { item, score: 1 };
+			return { item, score: 2 };
+		})
+		.filter((entry) =&gt; entry.score &lt; 2)
+		.sort(
+			(a, b) =&gt;
+				a.score - b.score ||
+				a.item.label.length - b.item.label.length ||
+				a.item.label.localeCompare(b.item.label)
+		)
+		.map((entry) =&gt; entry.item);
+}
+
+/** The sources, for the editor's placeholder text. Exported so the list is stated once. */
+export const SOURCE_NAMES: readonly string[] = SOURCES;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Fuzzy matching is wonderful in a file finder and wrong here</h4>
+	<p>In a file finder you know the answer and are recalling it, so <code>dur</code> matching <code>p95_duration_ms</code> is a shortcut. In a schema you are still learning, it puts things you have never heard of at the top of the list, and you cannot tell whether they are relevant or noise. Prefix beats substring, shorter beats longer, alphabetical breaks the tie.</p>
+</aside>
+<h3 id="the-hyphen">The hyphen that broke the replacement range</h3>
+<p>The first version found the word under the caret by walking backwards over <code>[A-Za-z0-9_.]</code>. Inside a string that is wrong, and the failure is specific:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>typed:      service == &quot;payments-w
+walk back:  stops at the hyphen, prefix is &quot;w&quot;
+accepted:   service == &quot;payments-payments-worker&quot;
+
+Every test passed. None of the fixtures had a hyphen in a
+partially typed name — which is the whole argument for
+writing the fixture that does.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/completion.ts<span class="code__lines">:112-138</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The start of the text a completion would replace.
+ *
+ * Two cases, and the second is the one that is easy to get wrong.
+ *
+ * Inside a **string** the range starts at the opening quote, so completing
+ * `service == &quot;payments-w` replaces `&quot;payments-w` with `&quot;payments-worker&quot;`
+ * rather than replacing just `w`. Walking back over word characters would stop
+ * at the hyphen and produce `&quot;payments-payments-worker&quot;` — a bug that hides
+ * completely behind a test whose fixtures happen not to contain a hyphen. The
+ * lexer emits a `string` token for an unterminated string precisely so that this
+ * case has a token to ask.
+ *
+ * Everywhere else it is the identifier under the caret, taken from the raw
+ * characters rather than from a token, because `service.` lexes as two tokens
+ * and reads as one name to the person typing it.
+ */
+function replaceFrom(source: string, tokens: readonly Token[], cursor: number): number {
+	for (const token of tokens) {
+		if (token.kind !== 'string') continue;
+		if (token.span.start &lt; cursor &amp;&amp; cursor &lt;= token.span.end) return token.span.start;
+	}
+
+	let at = cursor;
+	while (at &gt; 0 &amp;&amp; /[A-Za-z0-9_.]/.test(source[at - 1]!)) at -= 1;
+	return at;
+}</code></pre>
+</figure>
+<p>The fix uses the lexer again: an unterminated string still produces a <code>string</code> token, so the replacement range can start at the opening quote. The bug and the fix are both consequences of the same decision — that this file asks the real lexer rather than a regular expression.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>from </code> offers three sources and nothing else.</li><li><code>where </code> offers columns and scalar functions but not <code>count</code>.</li><li>Accepting a completion inside a string replaces the whole string, hyphens included.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-query-editor.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A query editor with no editor library</span>
+			</a>
+			<a class="pager__link pager__link--next" href="canvas-charts.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Canvas charts, and a worker that earns its keep</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

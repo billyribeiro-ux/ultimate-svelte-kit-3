@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shallow routing, and a drawer the back button closes — Building Sextant</title>
+<meta name="description" content="`pushState` with `page.state`, a URL that is also a real page, and why the drawer reads history rather than a variable.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">36 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 81.81818181818183%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html" aria-current="page"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 36</p>
+			<h1>Shallow routing, and a drawer the back button closes</h1>
+			<p class="lede"><code>pushState</code> with <code>page.state</code>, a URL that is also a real page, and why the drawer reads history rather than a variable.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Open a trace without losing the query that found it, and share the link anyway.</p></aside>
+			<p>Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:189-226</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	// query text and the documentation all say the same word.
+	const traceId = row?.trace_id;
+
+	// A row with a trace opens the trace; one without opens the row detail.
+	if (typeof traceId === 'string' &amp;&amp; traceId !== '') openTrace(traceId);
+	else pushState('', { row: index });
+}
+
+const rows = $derived(tailing ? tailRows : result.rows);
+const columns = $derived(
+	tailing &amp;&amp; tailRows.length &gt; 0 ? Object.keys(tailRows[0]!) : result.columns
+);
+
+/**
+ * `export const snapshot` — what survives leaving the page and coming back.
+ *
+ * SvelteKit calls `capture` before a navigation away and `restore` when the
+ * back button brings this exact history entry back. It is stored in
+ * `history.state`, so it survives a reload of the tab but not a new tab.
+ *
+ * WHAT IS AND IS NOT WORTH CAPTURING
+ * ----------------------------------
+ * The **draft** is: a half-written query that somebody left to go and look at a
+ * trace is work, and losing it is the kind of small betrayal that makes people
+ * stop trusting a tool. It is not in the URL precisely because it is
+ * half-written — putting every keystroke in the address bar would be a hundred
+ * history entries and a link to a broken query.
+ *
+ * The **results** are not. They could be tens of megabytes, `history.state` has
+ * a size limit measured in low megabytes, and exceeding it throws on
+ * `pushState` — which would break navigation itself rather than degrade it.
+ * They are re-fetched, which takes milliseconds and is always current.
+ *
+ * The **tail** is not either, and that is a product decision rather than a
+ * technical one: coming back to a tail that has been &quot;live&quot; while nobody was
+ * watching would show a gap, and a gap in a live view reads as an outage.
+ */
+export const snapshot: Snapshot&lt;{ draft: string; tailing: boolean }&gt; = {</code></pre>
+</figure>
+<p><code>pushState</code> with a <code>page.state</code> payload adds a history entry — so the back button closes the drawer — without running a single <code>load</code> function. The results stay exactly as they were.</p>
+<p>And the URL it writes is a <strong>real page</strong>. Reloading lands on <code>/[tenant]/traces/[traceId]</code>, which renders the same two views at full size. That combination — shallow within a session, real when shared — is what shallow routing is for, and it is why the drawer is not simply a component with an <code>open</code> prop.</p>
+<h3 id="page-state">The drawer reads history, not a variable</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:448-458</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">.explore__save .input {
+	width: 12rem;
+	min-height: 1.75rem;
+	font-size: var(--fs-xs);
+}
+
+.explore__views .btn[aria-pressed='true'],
+.explore__controls .btn[aria-pressed='true'] {
+	border-color: var(--accent);
+	color: var(--accent);
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>A local <code>open</code> variable that <code>pushState</code> also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading <code>page.state</code> directly means there is exactly one source of truth, and the browser’s own navigation is it.</p></aside>
+<h3 id="closing">Four ways to close, one implementation</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:44-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const assembled = $derived(await traceQuery({ tenant, traceId }));
+
+function close(): void {
+	// `history.back()` and not `pushState('', {})`, because the drawer *was*
+	// opened with a push: going back removes that entry, where a second push
+	// would add another and make the back button reopen it.
+	history.back();
+}</code></pre>
+</figure>
+<p>Escape, the button, the backdrop and the back button all do the same thing: <code>history.back()</code>. Anything else leaves the history entry behind, so the back button reopens a drawer somebody just closed.</p>
+<h3 id="modifier-clicks">And a link that is still a link</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:106-124</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	bind:this={panel}
+&gt;
+	&lt;header class=&quot;drawer__head&quot;&gt;
+		&lt;div&gt;
+			&lt;h2&gt;Trace&lt;/h2&gt;
+			&lt;p class=&quot;drawer__id mono&quot;&gt;{traceId}&lt;/p&gt;
+		&lt;/div&gt;
+
+		&lt;div class=&quot;drawer__actions&quot;&gt;
+			&lt;a
+				class=&quot;btn btn--sm&quot;
+				href=&quot;/{tenant}/traces/{encodeURIComponent(traceId)}&quot;
+				onclick={(event) =&gt; {
+					// A modifier-click or a middle-click must keep its normal meaning:
+					// hijacking every click is how a link stops being a link.
+					if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+					event.preventDefault();
+					pushState(`/${tenant}/traces/${encodeURIComponent(traceId)}`, { trace: traceId });
+				}}</code></pre>
+</figure>
+<p>A modifier-click or a middle-click must keep its normal meaning. Hijacking every click is how a link stops being a link — and &quot;open in a new tab&quot; is exactly what somebody does with a trace they want to keep while they look at the next one.</p>
+<h3 id="view-transitions">View transitions, in six lines and two guards</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:9-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * VIEW TRANSITIONS
+ * ================
+ *
+ * Six lines, and they are the whole of it. `onNavigate` returns a promise that
+ * SvelteKit awaits before completing the navigation, so wrapping the navigation
+ * in `startViewTransition` gives the browser both states of the page and lets
+ * it cross-fade between them.
+ *
+ * WHAT THIS IS FOR, AND WHAT IT IS NOT FOR
+ * ----------------------------------------
+ * It is for continuity: when a trace opens, the row you clicked should still be
+ * where you left it. A page that replaces its content instantly makes people
+ * re-find their place, and re-finding your place forty times an hour is a real
+ * cost even though no individual instance of it feels like one.
+ *
+ * It is not for decoration. There is no slide, no scale, no stagger — the
+ * default cross-fade, at the default duration, and nothing else. In a tool
+ * somebody uses for eight hours, a transition that is *noticeable* is a
+ * transition that is annoying by lunchtime.
+ *
+ * The two guards matter as much as the feature. `startViewTransition` does not
+ * exist in every browser, and there the navigation simply happens — which is
+ * the correct fallback and requires no polyfill. And somebody who has asked
+ * their system for reduced motion has asked for this too; honouring it here
+ * rather than only in CSS means the transition is never *started*, which is
+ * cheaper and avoids the flash that `animation: none` on a running transition
+ * produces.
+ */
+onNavigate((navigation) =&gt; {
+	if (!document.startViewTransition) return;
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+	return new Promise((resolve) =&gt; {
+		document.startViewTransition(async () =&gt; {
+			resolve();
+			await navigation.complete;
+		});
+	});
+});</code></pre>
+</figure>
+<p>The guards matter as much as the feature. <code>startViewTransition</code> does not exist in every browser, and there the navigation simply happens — which is the correct fallback and needs no polyfill. And somebody who asked their system for reduced motion asked for this too; honouring it *here* rather than only in CSS means the transition is never started, which is cheaper and avoids the flash that killing a running animation produces.</p>
+<p>There is no slide, no scale and no stagger. In a tool somebody uses for eight hours, a transition that is *noticeable* is a transition that is annoying by lunchtime.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Opening a trace changes the URL and does not re-run any load.</li><li>The back button closes the drawer and the results are still there.</li><li>Reloading the drawer’s URL lands on a full page.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-url-is-the-state.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The URL is the state</span>
+			</a>
+			<a class="pager__link pager__link--next" href="streamed-loads.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Streamed loads: await what paints, stream what waits</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

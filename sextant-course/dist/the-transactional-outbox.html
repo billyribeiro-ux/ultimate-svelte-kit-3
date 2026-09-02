@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerts end to end: the transactional outbox — Building Sextant</title>
+<meta name="description" content="Two facts that must never disagree, every ordering that gets one of them wrong, and the `isNull` that stops an outbox sending anything at all.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">41 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 93.18181818181817%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html" aria-current="page"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 41</p>
+			<h1>Alerts end to end: the transactional outbox</h1>
+			<p class="lede">Two facts that must never disagree, every ordering that gets one of them wrong, and the <code>isNull</code> that stops an outbox sending anything at all.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Evaluate rules on a timer and deliver notifications exactly as often as they should be.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.ts<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE EVALUATION LOOP
+ * ===================
+ *
+ * Rules are evaluated on a timer, their state is advanced by the pure machine in
+ * `#lib/alert/machine.ts`, and any notification is written to the outbox **in
+ * the same transaction as the state change**.
+ *
+ * WHY THE TRANSACTION IS THE WHOLE DESIGN
+ * ---------------------------------------
+ * There are two facts that must never disagree: &quot;this rule is firing&quot; and
+ * &quot;somebody was told&quot;. Every ordering that puts them in separate operations gets
+ * one of them wrong when the process dies in between:
+ *
+ *   - write the status, then send → a crash means the alert is firing and nobody
+ *     was told, and because the status now says `firing`, the next evaluation
+ *     sees no transition and never sends. The alert is permanently silent.
+ *   - send, then write the status → a crash means the page went out and the
+ *     status still says `ok`, so the next evaluation fires again. Duplicate
+ *     pages, forever, until somebody notices.
+ *
+ * The transactional outbox is the only ordering with neither failure: the row
+ * that says &quot;tell somebody&quot; is committed atomically with the row that says &quot;it
+ * is firing&quot;, and a separate worker delivers it. A crash before delivery leaves
+ * an undelivered row, which the worker picks up on restart. A crash *during*
+ * delivery may deliver twice — at-least-once — which is why the payload carries
+ * a stable key that a receiver can deduplicate on.
+ *
+ * WHY THIS IS NOT A CRON
+ * ----------------------
+ * Rules have their own intervals — a check on certificate expiry runs hourly, a
+ * check on error rate every thirty seconds — so a single cron would either run
+ * everything at the fastest interval or need one schedule per rule. Instead one
+ * timer ticks, and each tick evaluates the rules whose `intervalMs` has elapsed.
+ */</code></pre>
+</figure>
+<p>Two facts must never disagree: &quot;this rule is firing&quot; and &quot;somebody was told&quot;. Every ordering that puts them in separate operations gets one of them wrong when the process dies in between — and the process will die in between, because it is a process.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>write status, then send
+    crash between → firing, nobody told. And because the status
+    now says firing, the next evaluation sees no transition and
+    never sends. Permanently silent.
+
+send, then write status
+    crash between → the page went out, the status still says ok.
+    The next evaluation fires again. Duplicate pages, forever.
+
+write status AND outbox row in one transaction; a worker delivers
+    crash before delivery → an undelivered row, picked up on restart.
+    crash during delivery  → possibly delivered twice, which is why
+                             the payload carries a deduplication key.</code></pre>
+</figure>
+<h3 id="the-transaction">The transaction</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.ts<span class="code__lines">:168-215</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await db.transaction(async (tx) =&gt; {
+	await tx
+		.insert(alertStatus)
+		.values({
+			ruleId: rule.id,
+			state: result.status.state,
+			since: result.status.since,
+			firingSince: result.status.firingSince,
+			value: result.status.value,
+			evaluatedAt: now
+		})
+		.onConflictDoUpdate({
+			target: alertStatus.ruleId,
+			set: {
+				state: result.status.state,
+				since: result.status.since,
+				firingSince: result.status.firingSince,
+				value: result.status.value,
+				evaluatedAt: now
+			}
+		});
+
+	if (result.effect.kind === 'none' || !message) return;
+
+	await tx.insert(outbox).values({
+		id: crypto.randomUUID(),
+		tenantId: rule.tenantId,
+		kind: `alert.${result.effect.kind}`,
+		payload: JSON.stringify({
+			/*
+			 * A stable deduplication key.
+			 *
+			 * Delivery is at-least-once, so a receiver *will* occasionally see the
+			 * same notification twice. `rule + transition + when it started` is the
+			 * same string for both copies and a different one for the next
+			 * transition, which is exactly what a receiver needs to collapse them.
+			 */
+			key: `${rule.id}:${result.effect.kind}:${result.status.firingSince ?? now}`,
+			ruleId: rule.id,
+			rule: rule.name,
+			state: result.status.state,
+			value: result.effect.kind === 'fired' ? result.effect.value : result.effect.value,
+			message,
+			at: now
+		}),
+		nextAttemptAt: now
+	});
+});</code></pre>
+</figure>
+<p>And the deduplication key is <code>rule + transition + when it started</code> — the same string for both copies of a redelivery and a different one for the next transition, which is exactly what a receiver needs to collapse them. A timestamp of *now* would produce a different key each time and defeat the whole point.</p>
+<h3 id="isnull">The one-word bug that makes an outbox do nothing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.ts<span class="code__lines">:305-339</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * `isNull`, not `eq(..., null)`.
+	 *
+	 * In SQL, `x = NULL` is not false — it is NULL, which is not true, so the row
+	 * never matches and the outbox silently never sends anything. Drizzle will
+	 * happily build that comparison if you hand it a null, which is why this is
+	 * the single most common way an outbox ends up doing nothing at all.
+	 */
+	.where(and(isNull(outbox.deliveredAt), lte(outbox.nextAttemptAt, now)))
+	.limit(25);
+
+let sent = 0;
+
+for (const row of rows) {
+	if (row.attempts &gt;= MAX_ATTEMPTS) continue;
+
+	try {
+		await deliver(row);
+		await db
+			.update(outbox)
+			.set({ deliveredAt: new Date(now), lastError: null })
+			.where(eq(outbox.id, row.id));
+		sent += 1;
+	} catch (cause) {
+		const attempts = row.attempts + 1;
+		await db
+			.update(outbox)
+			.set({
+				attempts,
+				nextAttemptAt: now + backoffFor(attempts),
+				lastError: cause instanceof Error ? cause.message : String(cause)
+			})
+			.where(eq(outbox.id, row.id));
+	}
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>In SQL, <code>x = NULL</code> is not false — it is NULL, which is not true, so the row never matches. Drizzle will happily build that comparison if you hand it a null, and the result is an outbox that accepts rows forever and sends nothing, with no error anywhere. <code>isNull</code> is the fix and the reason this is worth a paragraph.</p></aside>
+<h3 id="backoff">Backoff as a timestamp</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.ts<span class="code__lines">:268-284</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Exponential, capped. Doubling from ten seconds reaches twenty minutes at attempt seven. */
+function backoffFor(attempts: number): number {
+	return Math.min(20 * 60_000, 10_000 * 2 ** attempts);
+}
+
+let outboxTimer: ReturnType&lt;typeof setInterval&gt; | null = null;
+
+export function startOutboxWorker(deliver = defaultDeliver): () =&gt; void {
+	if (outboxTimer) return stopOutboxWorker;
+
+	outboxTimer = setInterval(() =&gt; {
+		void drain(deliver);
+	}, 5_000);
+	outboxTimer.unref?.();
+
+	return stopOutboxWorker;
+}</code></pre>
+</figure>
+<p>A timestamp rather than a sleep, so a restart resumes rather than retrying immediately and hammering whatever was already failing. And a maximum attempt count that stops rather than deletes: a row that has failed eight times has a real problem, and keeping it with its <code>lastError</code> is what makes the failure visible instead of only in a log.</p>
+<h3 id="the-value">And the convention that gets the number out</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.ts<span class="code__lines">:218-230</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Run a rule's query and pull one number out of it.
+ *
+ * **The first numeric column of the first row.** That is a convention rather
+ * than a configuration field, and the reason is that every alternative is worse:
+ * naming a column means a rule breaks silently when somebody renames it in the
+ * query, and an expression evaluated over the result is a second language.
+ *
+ * A query that returns nothing gives `null`, and `null` is not zero. The machine
+ * treats it as &quot;no data&quot; and holds its state — because a rule on error rate whose
+ * query returns nothing means no requests were served, which during a total
+ * outage would otherwise resolve the alert at the worst possible moment.
+ */</code></pre>
+</figure>
+<p>The first numeric column of the first row. A convention rather than a configuration field, because every alternative is worse: naming a column means a rule breaks silently when somebody renames it in the query, and an expression evaluated over the result is a second language.</p>
+<h3 id="the-test">The test that matters most</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/alerts.spec.ts<span class="code__lines">:113-155</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The most important test in this file.
+ *
+ * A rule whose query returns nothing is *not* a rule whose value is zero. If it
+ * were treated as zero, an error-rate alert would resolve itself the moment the
+ * service stopped serving requests at all — which is the exact moment somebody
+ * needs to be told.
+ */
+it('holds its state when the query returns no rows', async () =&gt; {
+	const rule = await makeRule();
+	await logError(NOW - 1_000, 5);
+	await evaluateRule(rule, INITIAL, NOW);
+
+	const firing = (await db.select().from(alertStatus).where(eq(alertStatus.ruleId, rule.id)))[0]!;
+	expect(firing.state).toBe('firing');
+
+	// Nothing in the window at all now.
+	await db.delete(event).where(eq(event.tenantId, TENANT));
+
+	await evaluateRule(
+		rule,
+		{
+			state: firing.state,
+			since: firing.since,
+			firingSince: firing.firingSince,
+			value: firing.value,
+			at: firing.evaluatedAt
+		},
+		NOW + 60_000
+	);
+
+	const after = (await db.select().from(alertStatus).where(eq(alertStatus.ruleId, rule.id)))[0]!;
+	expect(after.state).toBe('firing');
+});
+
+it('treats an unparseable query as no data rather than as zero', async () =&gt; {
+	const rule = await makeRule({ query: 'from logs | where' });
+	await evaluateRule(rule, INITIAL, NOW);
+
+	const status = (await db.select().from(alertStatus).where(eq(alertStatus.ruleId, rule.id)))[0]!;
+	expect(status.state).toBe('ok');
+	expect(status.value).toBeNull();
+});</code></pre>
+</figure>
+<p>Everything else in that file is arithmetic. This one is the difference between an alerting system you can rely on and one that goes quiet at the worst possible moment.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A firing rule writes one notification, not one per evaluation.</li><li>A failed delivery backs off and survives a restart.</li><li>A rule whose query returns nothing holds its state.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hooks.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Hooks: auth, security, `handleFetch`, `handleError` and `init`</span>
+			</a>
+			<a class="pager__link pager__link--next" href="keys-and-views.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Settings: keys you can never read back</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

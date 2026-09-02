@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verifying it, and the six bugs the tests found — Building Sextant</title>
+<meta name="description" content="316 unit tests, 57 end-to-end across two viewports, and the specific things each layer caught that the other could not.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">44 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="hooks.html"><span class="toc__num">40</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">41</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">42</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">43</span><span>The seed, and why the data tells a story</span></a></li><li><a href="verifying-it.html" aria-current="page"><span class="toc__num">44</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 44</p>
+			<h1>Verifying it, and the six bugs the tests found</h1>
+			<p class="lede">316 unit tests, 57 end-to-end across two viewports, and the specific things each layer caught that the other could not.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Get to green, and understand what each kind of test is actually for.</p></aside>
+			<p>One command runs everything, in the order that fails fastest.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:11-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;vite dev&quot;,
+	&quot;build&quot;: &quot;vite build&quot;,
+	&quot;preview&quot;: &quot;vite preview&quot;,
+	&quot;prepare&quot;: &quot;node scripts/sync-fonts.js &amp;&amp; (svelte-kit sync || echo '')&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;format&quot;: &quot;prettier --write .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test:e2e&quot;: &quot;node scripts/prepare-e2e-db.js &amp;&amp; playwright test&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
+	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
+	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
+	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
+	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;,
+	&quot;auth:schema&quot;: &quot;auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes&quot;,
+	&quot;fonts:sync&quot;: &quot;node scripts/sync-fonts.js&quot;
+},</code></pre>
+</figure>
+<p>Type-check, lint, unit tests, <strong>build</strong>, then end to end. The build is before the end-to-end tests because the end-to-end tests run against the built output, and because a build failure is thirty seconds where an end-to-end failure is two minutes.</p>
+<h3 id="against-a-build">End to end against a production build</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:3-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * END-TO-END CONFIGURATION
+ * ========================
+ *
+ * Against a **production build**, on its own database, in two viewports.
+ *
+ * WHY THE BUILD AND NOT THE DEV SERVER
+ * ------------------------------------
+ * The dev server and the built server differ in the ways that break things:
+ * different module resolution, no minification, no `adapter-node` request
+ * handling, and — the one that matters most here — `PUBLIC_ORIGIN` is inlined at
+ * build time for the CSRF check. A suite that passes against `vite dev` and has
+ * never run against `vite build` will discover on deploy that every POST is
+ * rejected as cross-site.
+ *
+ * WHY TWO VIEWPORTS AND NOT A RESPONSIVE ASSERTION
+ * ------------------------------------------------
+ * Because this application genuinely renders different DOM at different widths:
+ * the results table has no header row on a phone, the waterfall stacks, the
+ * trace drawer is a bottom sheet rather than a side panel. Those are the parts
+ * most likely to break and the parts nobody looks at, so they run as their own
+ * project rather than as a resize inside one test.
+ */
+export default defineConfig({</code></pre>
+</figure>
+<p>The dev server and the built server differ in the ways that break things — module resolution, minification, <code>adapter-node</code> request handling, and <code>PUBLIC_ORIGIN</code> being inlined at build time for the CSRF check. A suite that passes against <code>vite dev</code> and has never run against <code>vite build</code> will discover on deploy that every POST is rejected as cross-site.</p>
+<p>Two viewports, and not as a resize inside one test: this application genuinely renders different DOM at different widths. The results table has no header row on a phone, the waterfall stacks, the drawer is a bottom sheet rather than a side panel. Those are the parts most likely to break and the parts nobody looks at.</p>
+<h3 id="the-six">The six bugs</h3>
+<p>Every test in the end-to-end suite was chosen by one rule — each covers a claim made in a comment somewhere in the source. Writing them found six things, and none of the six was findable by a unit test.</p>
+<ol><li><strong><code>flush()</code> never reached the address bar.</strong> One marker for two questions; typing a query and pressing Run immediately left the URL on the old one, permanently. Both halves worked in isolation. Chapter 35.</li><li><strong><code>db.select()</code> leaked internal columns and Drizzle’s key names.</strong> The chart view picked <code>id</code> as its numeric column and drew a line of primary keys; and a predicate on <code>trace_id</code> worked when pushed to SQL and matched nothing when it was not. Chapter 24.</li><li><strong>The ingest 401 had a comment about a <code>WWW-Authenticate</code> header and no header</strong> — <code>error()</code> throws an <code>HttpError</code> and cannot carry one. Chapter 22.</li><li><strong><code>error(400, …)</code> inside a remote <code>form</code> renders a 500 page over the whole form.</strong> <code>invalid(issue.query(…))</code> puts the message beside the field. Chapter 39.</li><li><strong>Remote form fields must come from <code>fields.&lt;key&gt;.as(type)</code></strong>; a plain <code>name=</code> attribute throws and the submission 500s. Chapter 39.</li><li><strong><code>forkPreloads</code> broke opening a trace one time in three on the phone profile.</strong> Three runs on, three failures; three off, three passes. Chapter 3.</li></ol>
+
+<aside class="callout callout--why">
+	<h4>What each layer is for</h4>
+	<p>The unit tests own the algorithms — the parser, the sketches, the state machine — where a property can be stated and checked exhaustively. The end-to-end tests own the *seams*: two effects that only interact once both are mounted, a header that only exists on a real response, a form that only fails when it is actually submitted. Neither can do the other’s job, and the six above are all seams.</p>
+</aside>
+<h3 id="a-test-per-claim">A test per claim, including the awkward one</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/auth.e2e.ts<span class="code__lines">:17-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">});
+
+test('the sign-in form works without JavaScript', async ({ browser }) =&gt; {
+	/*
+	 * THE TEST THAT JUSTIFIES THE FORM.
+	 *
+	 * `sign-in/+page.server.ts` uses a real action rather than a remote function,
+	 * and the entire argument for that is &quot;it has to work when the bundle does
+	 * not&quot;. An argument nobody tests is a comment.
+	 */
+	const context = await browser.newContext({ javaScriptEnabled: false });
+	const page = await context.newPage();
+
+	await page.goto('/sign-in');
+	await page.getByLabel('Email').fill('ada@example.com');
+	await page.getByLabel('Password').fill('correct-horse-battery');
+	await page.getByRole('button', { name: 'Sign in' }).click();</code></pre>
+</figure>
+<p>The sign-in page uses a real form action rather than a remote function, and the entire argument for that is &quot;it has to work when the bundle does not&quot;. An argument nobody tests is a comment — so the test disables JavaScript and signs in anyway.</p>
+<p>It also found something. With enhancement, the page is not re-rendered after a failed submission, so the typed password stayed in the DOM — visible over a shoulder, and one autofill away from being submitted again after the person had already decided it was wrong. The no-JavaScript path was already correct, which is exactly the sort of divergence that survives review.</p>
+<h3 id="flakes">And a word about flakes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/trace.e2e.ts<span class="code__lines">:102-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The trace id the seed reserves for a deliberately incomplete trace.
+ *
+ * Hard-coded in two places on purpose. The alternative — importing it from
+ * `scripts/seed.ts` — would pull the seed's whole module graph, and its database
+ * client, into the Playwright process.
+ */
+const INCOMPLETE_TRACE = 'ffffffffffffffffffffffffffffffff';
+
+test('a trace with no root still renders as one tree, and says so', async ({ page }) =&gt; {
+	/*
+	 * A fixed id, not a hunt.
+	 *
+	 * The first version of this test opened traces one by one until it found an
+	 * incomplete one, which is a flake generator: the seed drops a root at random,
+	 * so the test passed or failed on a coin toss it could not see. The seed now
+	 * plants one at a known id, and the case becomes something a test can name.
+	 */
+	await page.goto(`/demo/traces/${INCOMPLETE_TRACE}`);
+
+	// One tree, from two orphans, under a root this code invented.
+	await expect(page.getByRole('tree', { name: 'Spans' })).toBeVisible();
+	await expect(page.getByRole('treeitem')).toHaveCount(3);
+
+	// And it must say so, rather than rendering a plausible tree in silence:
+	// &quot;the gateway span is missing&quot; is frequently the answer.
+	await expect(page.getByText(/no parent in this trace/i)).toBeVisible();
+});</code></pre>
+</figure>
+<p>The first version of that test opened traces one by one until it found an incomplete one — a coin toss it could not see. The seed now plants one at a fixed id, and the case becomes something a test can name. A flaky test is worse than no test, because it teaches people to re-run the suite.</p>
+<h3 id="the-course-too">And the course is checked too</h3>
+<p>Every code block in this course is read out of the project by file and line range at build time, so it cannot drift. <code>verify.js</code> checks the thing that still needs judgement — that the ranges are inside their files, do not start inside a comment or on a blank line, and do not cut through a brace.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ node sextant-course/verify.js
+44 chapters · 213 blocks quoted from sextant/ by line range · 0 illustrative
+every range is inside its file, whole, and starts somewhere a reader can follow
+
+$ pnpm verify
+✓ svelte-check     0 errors, 0 warnings
+✓ eslint           clean
+✓ vitest           316 passed
+✓ vite build       done
+✓ playwright       57 passed, 2 viewports</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>pnpm verify</code> is green from a clean checkout.</li><li>You can say what a unit test can find that an end-to-end test cannot, and the reverse.</li><li>You have no test that passes or fails on a coin toss.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-seed.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The seed, and why the data tells a story</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
