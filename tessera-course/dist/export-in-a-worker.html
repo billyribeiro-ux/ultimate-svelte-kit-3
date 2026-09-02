@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export, off the main thread — Building Tessera</title>
+<meta name="description" content="SVG on the main thread because strings are cheap, PNG in a worker because rasterising is not — and the `new URL` form Vite needs.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">38 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 86.36363636363636%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html" aria-current="page"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 38</p>
+			<h1>Export, off the main thread</h1>
+			<p class="lede">SVG on the main thread because strings are cheap, PNG in a worker because rasterising is not — and the <code>new URL</code> form Vite needs.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Produce a PNG of a large board without dropping a frame.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/export/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Export a board as SVG or PNG.
+ *
+ * The SVG is produced on the main thread — it is string building, and it is
+ * fast. The PNG goes to a worker, because rasterising is not.
+ */</code></pre>
+</figure>
+<p>Six lines that make the whole decision. String building is fast; rasterising a large diagram is tens of milliseconds of decode and draw — and on the main thread that is several dropped frames at the exact moment somebody has pressed a button and is watching for a response.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/export/raster.worker.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SVG TO PNG, OFF THE MAIN THREAD
+ * ===============================
+ *
+ * Rasterising a large diagram is tens of milliseconds of decode and draw. On the
+ * main thread that is several dropped frames at the exact moment somebody has
+ * pressed a button and is watching for a response — the worst possible time to
+ * be busy.
+ *
+ * `OffscreenCanvas` is what makes this possible at all: a `&lt;canvas&gt;` element
+ * cannot exist in a worker, and without one there is nothing to draw into.
+ *
+ * The worker is deliberately tiny and knows nothing about boards. It takes a
+ * string of SVG and gives back PNG bytes, which makes it testable by hand and
+ * means a change to how a diagram looks never touches this file.
+ */
+
+export interface RasterRequest {
+	readonly svg: string;
+	readonly width: number;
+	readonly height: number;
+	/** Device pixel ratio, so an export looks right on a high-density screen. */
+	readonly scale: number;
+}
+
+export interface RasterResponse {
+	readonly ok: boolean;
+	readonly blob?: Blob;
+	readonly error?: string;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A worker that knows nothing about boards</h4>
+	<p>It takes a string of SVG and gives back PNG bytes. That makes it testable by hand — paste any SVG in — and it means a change to how a diagram *looks* never touches this file. The temptation is to pass it the nodes and let it render, which couples the worker to the document model and turns every design change into a two-file change.</p>
+</aside>
+<p><code>OffscreenCanvas</code> is what makes this possible at all: a <code>&lt;canvas&gt;</code> element cannot exist in a worker, and without one there is nothing to draw into. <code>createImageBitmap</code> is used rather than an <code>Image</code> with a data URL because <code>Image</code> does not exist in a worker either — and it decodes off the thread that called it, so even this work does not block the worker’s own message queue.</p>
+<h3 id="the-url-form">The <code>new URL</code> form</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/export/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * `new Worker(new URL(...), { type: 'module' })`.
+ *
+ * The `import.meta.url` form is what Vite recognises: it bundles the worker as
+ * a separate entry point and rewrites the URL. A bare string path works in dev
+ * and produces a 404 in production, which is the most annoying category of
+ * bug — it only exists in the artefact you ship.
+ */
+const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type: 'module' });</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>new Worker(new URL('./raster.worker.ts', import.meta.url), { type: 'module' })</code> is what Vite recognises: it bundles the worker as a separate entry point and rewrites the URL. A bare string path <strong>works in dev and 404s in production</strong>, which is the most annoying category of bug — it exists only in the artefact you ship.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/export/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	try {
+		return await new Promise&lt;Blob&gt;((resolve, reject) =&gt; {
+			const timer = setTimeout(() =&gt; reject(new Error('The export timed out.')), TIMEOUT_MS);
+
+			worker.onmessage = (event: MessageEvent&lt;RasterResponse&gt;) =&gt; {
+				clearTimeout(timer);
+				if (event.data.ok &amp;&amp; event.data.blob) resolve(event.data.blob);
+				else reject(new Error(event.data.error ?? 'The export failed.'));
+			};
+
+			worker.onerror = (event) =&gt; {
+				clearTimeout(timer);
+				reject(new Error(event.message || 'The export worker failed to start.'));
+			};
+
+			worker.postMessage({
+				svg,
+				width,
+				height,
+				scale: Math.min(options.scale ?? globalThis.devicePixelRatio ?? 1, 2)
+			} satisfies RasterRequest);
+		});
+	} finally {
+		// Always, including on the timeout path. A worker left running holds its
+		// module graph and its OffscreenCanvas for the life of the tab.
+		worker.terminate();
+	}
+}</code></pre>
+</figure>
+<p>A timeout, and a <code>finally</code> that terminates the worker on <strong>every</strong> path including the timeout — a worker left running holds its module graph and its <code>OffscreenCanvas</code> for the life of the tab. And the scale is capped at 2, so a 5K screen does not produce a file five times larger than anybody wanted.</p>
+<aside class="callout callout--note"><p>The cross-origin isolation headers from chapter 34 are what make <code>SharedArrayBuffer</code> available to this worker. They are scoped to the application’s own pages rather than set globally, because <code>require-corp</code> also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Exporting a two-hundred-node board does not stutter the canvas.</li><li>The worker loads in a production build, not only in dev.</li><li>A failed export cleans up after itself.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="version-history.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Version history, where restore is an edit</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-custom-element.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A board on somebody else’s page</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

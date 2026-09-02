@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote functions — Building Tessera</title>
+<meta name="description" content="`query`, `command` and `form` from `$app/server` — what replaces most of an API, and the one job left for a real endpoint.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">30 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 68.18181818181817%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html" aria-current="page"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 30</p>
+			<h1>Remote functions</h1>
+			<p class="lede"><code>query</code>, <code>command</code> and <code>form</code> from <code>$app/server</code> — what replaces most of an API, and the one job left for a real endpoint.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Call the server as if it were a function, with validation, CSRF and types for free.</p></aside>
+			<p>Tessera has exactly two API routes. Everything else that would have been an endpoint is a <strong>remote function</strong>: an <code>async</code> function you export from a <code>.remote.ts</code> file and *import into a component*, where calling it performs a typed, validated, CSRF-protected request.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sync.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SYNC
+ * ====
+ *
+ * The client's two outbound calls. Everything inbound arrives on the SSE stream
+ * in `routes/api/boards/[board]/stream/+server.ts`.
+ *
+ * Both are `command()` rather than `form()` or a hand-written endpoint, which
+ * buys three things without any code: the payload is validated by the same
+ * valibot schema the client imports, the CSRF origin check runs, and the call is
+ * typed end to end so a change to `PushSchema` breaks the caller at build time.
+ */</code></pre>
+</figure>
+<p>Three things without any code: the payload is validated by the same valibot schema the client imports, the CSRF origin check runs, and the call is typed end to end — so a change to <code>PushSchema</code> breaks the caller at build time rather than at runtime in production.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/sync.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Push a batch of operations.
+ *
+ * Returns the board's watermark, which is the *only* thing the client advances
+ * its cursor to. Advancing per operation is how a gap gets skipped — see the
+ * note in `crdt/version.ts`, which cost an afternoon.
+ */
+export const pushOps = command(PushSchema, async ({ boardId, actor, ops }) =&gt; {
+	const user = requireUser();
+
+	const access = await requireAccess(boardId, user.id, 'editor').catch((thrown: unknown) =&gt; {
+		if (thrown instanceof AccessError) error(thrown.status, thrown.message);
+		throw thrown;
+	});
+
+	try {
+		return await ingest({ boardId, userId: user.id, role: access.role, actor, ops });
+	} catch (thrown) {
+		/*
+		 * A refusal is data, not a crash.
+		 *
+		 * The client has already applied these operations locally — that is what
+		 * local-first means — so it needs a status it can act on: 403 means &quot;stop
+		 * and reload&quot;, 422 means &quot;your clock is wrong and this will keep happening&quot;.
+		 * A 500 would tell it to retry forever.
+		 */
+		if (thrown instanceof IngestError) error(thrown.status, thrown.message);
+		throw thrown;
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A refusal is data, not a crash</h4>
+	<p>The client has already applied these operations locally — that is what local-first means — so it needs a status it can *act on*. 403 means &quot;stop and reload&quot;. 422 means &quot;your clock is wrong and this will keep happening&quot;. A 500 would tell it to retry forever, which for a permanent failure is a client that hammers the server until the tab closes. The <code>IngestError</code> → <code>error(status, message)</code> translation is three lines and it is what makes <code>#onPushFailure</code> in chapter 24 able to distinguish retryable from not.</p>
+</aside>
+<h3 id="query"><code>query</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/boards.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Open a board.
+ *
+ * Returns a `LoadedBoard`, which is a class registered with the `transport`
+ * hook — so the browser gets an object that can `hydrate()` itself into a
+ * reactive document rather than a bag of fields plus a convention.
+ */
+export const openBoard = query(boardId, async (id) =&gt; {
+	const user = requireUser();
+
+	const access = await requireAccess(id, user.id, 'viewer').catch(rethrow);
+
+	const rows = await db
+		.select({ title: board.title, snapshot: board.snapshot, snapshotSeq: board.snapshotSeq })
+		.from(board)
+		.where(eq(board.id, id))
+		.limit(1);
+
+	const found = rows[0];
+	if (!found) error(404, 'No such board.');
+
+	return new LoadedBoard(
+		id,
+		found.title,
+		found.snapshot ? parseSnapshot(JSON.parse(found.snapshot)) : emptySnapshot(),
+		found.snapshotSeq,
+		access.role
+	);
+});</code></pre>
+</figure>
+<p>Note how little it does. It reads a row and returns it. It does <strong>not</strong> replay operations, build a document, or hold a CRDT in memory — the client streams everything after that sequence and applies it itself, which it has to be able to do anyway because that is the same path every subsequent edit takes.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/boards.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * BOARDS
+ * ======
+ *
+ * Opening a board deliberately does almost nothing.
+ *
+ * The server returns the stored snapshot and the sequence it is current to, and
+ * stops. It does not replay operations, does not build a document, does not hold
+ * a CRDT in memory. The client streams everything after that sequence from
+ * `/api/boards/[board]/stream` and applies it itself — which it has to be able
+ * to do anyway, because that is the same path every subsequent edit takes.
+ *
+ * The alternative is a server that materialises the current state on every open.
+ * It looks tidier and it means the server now has an opinion about the document,
+ * which has to agree with the client's opinion forever. When two authorities
+ * disagree about a CRDT, the one with the database usually wins, and the user's
+ * unsynced work is what loses.
+ */</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The alternative — a server that materialises the current state on every open — looks tidier and gives the server an <strong>opinion about the document</strong>, which then has to agree with the client’s opinion forever. When two authorities disagree about a CRDT, the one with the database usually wins, and the user’s unsynced work is what loses.</p></aside>
+<h3 id="transport">Returning something with behaviour</h3>
+<p><code>openBoard</code> returns a <code>LoadedBoard</code>, which is a *class*. That works because of the <code>transport</code> hook, and it is worth seeing what it buys.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/loaded.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What the server hands over when a board is opened.
+ *
+ * A class rather than a plain object, and registered with the `transport` hook,
+ * so that the thing arriving in the browser knows how to turn itself into a
+ * working document. The alternative is every call site doing
+ * `BoardDocument.fromSnapshot(actorId(), result.snapshot)` and one of them
+ * eventually forgetting the actor.
+ */
+
+import type { ActorId } from '#lib/crdt/index.ts';
+import type { Role } from '#lib/server/roles.ts';
+import { BoardDocument } from './document.svelte';
+import { parseSnapshot, type BoardSnapshot } from './snapshot.ts';
+
+export class LoadedBoard {
+	readonly id: string;
+	readonly title: string;
+	readonly snapshot: BoardSnapshot;
+	/**
+	 * The sequence the snapshot is current to.
+	 *
+	 * The client streams from here. Getting it wrong in the safe direction (too
+	 * low) costs a few redundant operations; wrong in the other direction silently
+	 * loses everything in between, which is the kind of bug that shows up as
+	 * &quot;sometimes a box I definitely drew is missing&quot;.
+	 */
+	readonly watermark: number;
+	readonly role: Role;
+
+	constructor(id: string, title: string, snapshot: BoardSnapshot, watermark: number, role: Role) {
+		this.id = id;
+		this.title = title;
+		this.snapshot = snapshot;
+		this.watermark = watermark;
+		this.role = role;
+	}
+
+	get readOnly(): boolean {
+		return this.role === 'viewer' || this.role === 'commenter';
+	}
+
+	/** Build the reactive document for this replica. */
+	hydrate(actor: ActorId): BoardDocument {
+		return BoardDocument.fromSnapshot(actor, this.snapshot);
+	}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Custom types that survive the server/client boundary.
+ *
+ * **Read this before adding an entry.** SvelteKit serialises with devalue, which
+ * already handles `Date`, `Map`, `Set`, `RegExp`, `BigInt`, `URL`, `Infinity`,
+ * `NaN`, `-0` and cyclic references. Most reaching for `transport` is
+ * unnecessary, and every unnecessary entry is a pair of functions that can drift
+ * apart. Both entries below carry *behaviour*, which is the thing devalue
+ * genuinely cannot reconstruct.
+ *
+ * `encode` returns a falsy value for anything it does not recognise, so the
+ * order of these checks does not matter and a value only ever matches one.
+ */
+export const transport: Transport = {
+	/**
+	 * The board itself. `decode` gives the browser an object that knows how to
+	 * build a reactive document from the snapshot it is carrying, so no component
+	 * has to remember the actor id.
+	 */
+	LoadedBoard: {
+		encode: (value) =&gt; value instanceof LoadedBoard &amp;&amp; value.toTuple(),
+		decode: (tuple) =&gt; LoadedBoard.fromTuple(tuple)
+	},
+
+	/**
+	 * One entry in the version history. It arrives with `describe()` attached, so
+	 * the list component formats a revision by asking it rather than by
+	 * re-implementing the rules next to the markup.
+	 */
+	BoardRevision: {
+		encode: (value) =&gt; value instanceof BoardRevision &amp;&amp; value.toTuple(),
+		decode: (tuple) =&gt; BoardRevision.fromTuple(tuple)
+	}
+};</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Read the warning at the top of that block before adding an entry of your own. SvelteKit serialises with devalue, which already handles <code>Date</code>, <code>Map</code>, <code>Set</code>, <code>RegExp</code>, <code>BigInt</code>, <code>URL</code>, <code>Infinity</code>, <code>NaN</code>, <code>-0</code> and cyclic references. Most reaching for <code>transport</code> is unnecessary, and every unnecessary entry is a pair of functions that can drift apart. Both entries here carry <strong>behaviour</strong>, which is the thing devalue genuinely cannot reconstruct.</p></aside>
+<p>The payoff: the browser gets an object that can <code>hydrate()</code> itself into a reactive document. The alternative is every call site doing <code>BoardDocument.fromSnapshot(actorId(), result.snapshot)</code> and one of them eventually forgetting the actor — which, per chapter 21, is a bug that presents as typing occasionally vanishing.</p>
+<h3 id="the-two-endpoints">What is left for a real endpoint</h3>
+<ul><li><strong><code>/api/boards/[board]/stream</code></strong> — a <code>GET</code> that never ends. A remote function returns a value; this returns a <code>ReadableStream</code> that stays open for hours.</li><li><strong><code>/api/boards/[board]/snapshot</code></strong> — a document, fetched by an embedded custom element on somebody else’s page, which has no SvelteKit client to call a remote function with.</li></ul>
+<p>That is a useful rule of thumb for the whole feature: <strong>a remote function replaces a request/response endpoint. It does not replace a stream or a public document.</strong></p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can call the server from a component with no <code>fetch</code>, no route and no manual types.</li><li>Changing a schema breaks the caller at build time.</li><li>You can name the two things a remote function is not for.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-editor.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The editor</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-queries-and-forms.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Live queries, and forms that work without JavaScript</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

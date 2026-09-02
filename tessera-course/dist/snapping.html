@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapping that helps rather than fights — Building Tessera</title>
+<meta name="description" content="Two rules — screen-space thresholds and nearest-only — and why alignment beats the grid when both apply.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 63.63636363636363%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html" aria-current="page"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>Snapping that helps rather than fights</h1>
+			<p class="lede">Two rules — screen-space thresholds and nearest-only — and why alignment beats the grid when both apply.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make shapes click into place without ever feeling like they are resisting you.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/snapping.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ALIGNMENT AND SNAPPING
+ * ======================
+ *
+ * When a shape is dragged near an edge or centre line of another shape, it
+ * clicks into place and a guide is drawn. It is the difference between a diagram
+ * that looks tidy and one that is tidy.
+ *
+ * TWO RULES THAT MAKE IT FEEL RIGHT RATHER THAN FIGHT
+ * ---------------------------------------------------
+ * The threshold is in **screen** pixels, not board units. Snapping that gets
+ * stronger as you zoom in is exactly backwards — zooming in is what people do
+ * when they want fine control.
+ *
+ * Only the **nearest** candidate on each axis wins. Collecting every match and
+ * applying them all makes a shape jump between two equally close neighbours as
+ * the pointer moves, which reads as the shape being unable to make up its mind.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The threshold is in screen pixels</h4>
+	<p>Snapping that gets stronger as you zoom in is exactly backwards: zooming in is what people do when they want <strong>fine control</strong>. Six board units is a hair at 10% zoom and half a shape at 400%. Six screen pixels is six screen pixels, and the implementation is one division: <code>SNAP_THRESHOLD / scale</code>.</p>
+</aside>
+<p>The second rule is subtler and just as important. Only the *nearest* candidate on each axis wins. Collect every match and apply them all, and a shape jumps between two equally close neighbours as the pointer moves — which reads as the shape being unable to make up its mind.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/snapping.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** How close, in screen pixels, before a shape snaps. */
+export const SNAP_THRESHOLD = 6;
+
+export interface Guide {
+	readonly axis: 'x' | 'y';
+	/** Board coordinate of the line. */
+	readonly at: number;
+	/** The span the guide is drawn across, so it reaches both shapes. */
+	readonly from: number;
+	readonly to: number;
+}
+
+export interface SnapResult {
+	readonly dx: number;
+	readonly dy: number;
+	readonly guides: readonly Guide[];
+}
+
+/** The three interesting lines on each axis: both edges and the centre. */
+function linesX(rect: Rect): number[] {
+	return [rect.x, rect.x + rect.w / 2, rect.x + rect.w];
+}
+
+function linesY(rect: Rect): number[] {
+	return [rect.y, rect.y + rect.h / 2, rect.y + rect.h];</code></pre>
+</figure>
+<p>Three lines per axis — both edges and the centre — which is what makes &quot;align these two boxes by their middles&quot; work without a separate feature.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/snapping.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Work out how far to nudge `moving` so it lines up with something in `others`.
+ *
+ * @param scale the camera's zoom, so the threshold stays constant on screen.
+ */
+export function snapTo(moving: Rect, others: readonly Rect[], scale: number): SnapResult {
+	const threshold = SNAP_THRESHOLD / Math.max(scale, 0.0001);
+
+	let bestX: { delta: number; at: number; other: Rect } | null = null;
+	let bestY: { delta: number; at: number; other: Rect } | null = null;
+
+	for (const other of others) {
+		for (const mine of linesX(moving)) {
+			for (const theirs of linesX(other)) {
+				const delta = theirs - mine;
+				if (Math.abs(delta) &gt; threshold) continue;
+				if (!bestX || Math.abs(delta) &lt; Math.abs(bestX.delta)) {
+					bestX = { delta, at: theirs, other };
+				}
+			}
+		}
+
+		for (const mine of linesY(moving)) {
+			for (const theirs of linesY(other)) {
+				const delta = theirs - mine;
+				if (Math.abs(delta) &gt; threshold) continue;
+				if (!bestY || Math.abs(delta) &lt; Math.abs(bestY.delta)) {
+					bestY = { delta, at: theirs, other };
+				}
+			}
+		}
+	}
+
+	const guides: Guide[] = [];
+
+	if (bestX) {
+		guides.push({
+			axis: 'x',
+			at: bestX.at,
+			// The guide spans both shapes, so it visibly connects them rather than
+			// floating as an unexplained line.
+			from: Math.min(moving.y, bestX.other.y),
+			to: Math.max(moving.y + moving.h, bestX.other.y + bestX.other.h)
+		});
+	}
+
+	if (bestY) {
+		guides.push({
+			axis: 'y',
+			at: bestY.at,
+			from: Math.min(moving.x, bestY.other.x),
+			to: Math.max(moving.x + moving.w, bestY.other.x + bestY.other.w)
+		});
+	}
+
+	return { dx: bestX?.delta ?? 0, dy: bestY?.delta ?? 0, guides };</code></pre>
+</figure>
+<p>A triple loop, which looks alarming and is nine comparisons per other shape. On a board of two hundred nodes that is eighteen hundred float comparisons per pointer move, which is nothing. When it stops being nothing the fix is to filter <code>others</code> by the visible region first — one line, and only worth writing when a profiler asks for it.</p>
+<p>The guide spans <strong>both</strong> shapes rather than the viewport, so it visibly connects them instead of floating as an unexplained line. Small, and it is the difference between a guide that explains itself and one that is decoration.</p>
+<h3 id="grid-vs-snap">When both apply</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/editor.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">			.filter((node) =&gt; !drag.start.has(node.id))
+			.map((node) =&gt; node.rect);
+
+		const result = snapTo(proposed, others, this.camera.scale);
+		this.guides = result.guides;
+
+		/*
+		 * Snapping wins over the grid.
+		 *
+		 * Applying both means a shape that has clicked onto a neighbour's edge is
+		 * then rounded off it again, so it sits one or two units out and the
+		 * guide is still showing. Alignment to another shape is what the person
+		 * asked for; the grid is the fallback when nothing is nearby.
+		 */
+		if (result.dx !== 0 || result.dy !== 0) {
+			dx += result.dx;
+			dy += result.dy;
+		} else {
+			const anchor = [...drag.start.values()][0];
+			if (anchor) {
+				dx += snap(anchor.x + dx, GRID) - (anchor.x + dx);
+				dy += snap(anchor.y + dy, GRID) - (anchor.y + dy);
+			}
+		}
+	}
+} else {
+	this.guides = [];
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Snapping wins over the grid, and the <code>else</code> matters. Apply both and a shape that has clicked onto a neighbour’s edge is then rounded off it again — so it sits one or two units out <strong>while the guide is still showing</strong>, which is the interface visibly contradicting itself. Alignment to another shape is what the person asked for; the grid is the fallback when nothing is nearby.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Snapping feels the same at 25% and 400% zoom.</li><li>A shape between two neighbours picks one and stays there.</li><li>A snapped shape sits exactly on the guide.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="geometry.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Geometry that is only numbers</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-editor.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The editor</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

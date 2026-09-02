@@ -16,6 +16,10 @@ import { part2 } from './part2.js';
 import { part3 } from './part3.js';
 import { part4 } from './part4.js';
 import { part5 } from './part5.js';
+import { part6 } from './part6.js';
+import { part7 } from './part7.js';
+import { part8 } from './part8.js';
+import { part9 } from './part9.js';
 
 export const chapters = [
 	// Part 0 — What we are building, and the one question everything answers.
@@ -34,7 +38,19 @@ export const chapters = [
 	...part4,
 
 	// Part 5 — Local-first sync, and the four bugs in it.
-	...part5
+	...part5,
+
+	// Part 6 — The canvas: a camera, a pointer, and geometry that is just numbers.
+	...part6,
+
+	// Part 7 — SvelteKit 3 in anger: remote functions, hooks, i18n, presence.
+	...part7,
+
+	// Part 8 — The rest of the product.
+	...part8,
+
+	// Part 9 — Proving it, and running it.
+	...part9
 ];
 
 /*

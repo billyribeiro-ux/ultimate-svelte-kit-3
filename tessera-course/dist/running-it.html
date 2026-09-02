@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running it, and what to take away — Building Tessera</title>
+<meta name="description" content="Deploying a single-instance local-first app, the seam where it stops being single-instance, and the six ideas worth keeping.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">44 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html" aria-current="page"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 44</p>
+			<h1>Running it, and what to take away</h1>
+			<p class="lede">Deploying a single-instance local-first app, the seam where it stops being single-instance, and the six ideas worth keeping.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Ship it, know what would have to change to scale it, and know what generalises.</p></aside>
+			
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>pnpm install
+cp .env.example .env        # set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm run db:migrate
+pnpm run db:seed
+pnpm run dev</code></pre>
+</figure>
+<p>The seed prints two sign-ins — an owner and a viewer on the same board — and the board’s short link. Open it in two windows and drag something. That is the whole demo, and it is the right first thing to do, because the rest of this course is an explanation of why it works.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>PUBLIC_ORIGIN=https://tessera.example pnpm run build
+node build/index.js</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>PUBLIC_ORIGIN</code> is <code>static: true</code>, so it is inlined at build time. It has to be in the environment of the <strong>build</strong>, not just the run — set it only at run time and every POST comes back <code>403 Cross-site remote requests are forbidden</code> from an application whose GET requests all work. That is chapter 03’s scar, and it is the single most likely thing to go wrong on a first deployment.</p></aside>
+<h3 id="scaling">The seam</h3>
+<p>Tessera runs on one Node process. The thing that makes it single-instance is <code>hub.ts</code>: a <code>Map</code> of listeners in memory. Two instances mean a client connected to A never hears about a write that landed on B — until it reconnects and catches up, which it *will*, but seconds later rather than milliseconds.</p>
+<p>The fix is to replace <code>publish</code> with something that goes through Redis, NATS or Postgres <code>LISTEN/NOTIFY</code>, and <strong>nothing else changes</strong>. That is worth sitting with for a moment: the reason a horizontal-scaling change is one file is that the fan-out was never load-bearing for correctness. A missed broadcast is a slower recovery, not a wrong board.</p>
+<ul><li><strong>The log</strong> is already the source of truth and already indexed for &quot;everything after this sequence&quot;.</li><li><strong>Presence</strong> is soft state and re-announces on a heartbeat, so it heals on its own.</li><li><strong>Compaction</strong> would need a lock, or to stay where it is — on the read path, per board.</li><li><strong>libSQL</strong> would become a hosted Turso database or Postgres; the Drizzle schema is portable and the two native-module lines in <code>vite.config.ts</code> go away.</li></ul>
+<h3 id="takeaways">Six ideas worth keeping</h3>
+<ol><li><strong>The server owns permission; the data structure owns merging.</strong> Almost every design question in a collaborative system resolves to &quot;which of those two is this?&quot;, and the answer is usually obvious once the question is asked.</li><li><strong>Before removing work, say out loud what would have to be true for the removal to be safe.</strong> Three of the four bugs in chapter 25 would have died at that sentence.</li><li><strong>When two failure directions have different costs, pick the algorithm that can only fail in the cheap one.</strong> Deliver twice rather than risk delivering zero; echo an operation rather than risk dropping one.</li><li><strong>A guard belongs where the bad thing can still be prevented, and where the party being refused is the party at fault.</strong> The clock check was in the wrong tier for a fortnight and read as defensive the whole time.</li><li><strong>Determinism beats polish in a shared document.</strong> Hysteresis on arrow routing would look better and would make two people see different diagrams.</li><li><strong>Write down the reason next to the code.</strong> Every chapter in this course that told you about a bug was quoting a comment somebody left in the file. That is not documentation overhead; it is the only form of it that survives.</li></ol>
+<h3 id="where-next">Where to go next</h3>
+<ul><li><strong>Add a seventh node kind.</strong> It touches <code>types.ts</code>, one schema in <code>ops.ts</code>, one switch in <code>NodeShape.svelte</code> and three catalogues — and nothing else. If it touches anything else, that is a layering bug worth finding.</li><li><strong>Add a fourth language.</strong> One folder, per chapter 34. Time yourself.</li><li><strong>Break something on purpose.</strong> Put the echo filter back in <code>client.svelte.ts</code> and watch the restore test fail *only after a reload*. Then delete a line from the convergence spec’s shuffle and watch two hundred seeds stop finding anything.</li><li><strong>Make the hub multi-instance.</strong> It is one file, and it is the most realistic piece of production work left in the project.</li></ul>
+<p>And the thing to actually take away: none of the hard parts of this application were framework problems. Svelte 5 and SvelteKit 3 made the interface layer small enough that the interesting problems — time, order, convergence, and what to do when the network lies — were the ones left to solve. That is the best thing you can say about a framework.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You have it running, with two windows open on one board.</li><li>You know the one file that makes it single-instance.</li><li>You can state at least three of the six ideas without looking.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-gate.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The gate</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

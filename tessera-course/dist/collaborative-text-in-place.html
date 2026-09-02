@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typing into a shape somebody else is typing into — Building Tessera</title>
+<meta name="description" content="A textarea over an RGA: the prefix/suffix diff, the caret anchored to a character, and the IME rule that stops other replicas watching you think.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 79.54545454545455%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html" aria-current="page"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>Typing into a shape somebody else is typing into</h1>
+			<p class="lede">A textarea over an RGA: the prefix/suffix diff, the caret anchored to a character, and the IME rule that stops other replicas watching you think.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Bridge a <code>&lt;textarea&gt;</code>’s &quot;here is the whole new string&quot; to a CRDT’s &quot;insert this after that&quot;.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * IN-PLACE COLLABORATIVE TEXT
+ * ===========================
+ *
+ * A plain `&lt;textarea&gt;`, not a contenteditable.
+ *
+ * Contenteditable gives you rich text you did not ask for, a different DOM in
+ * every browser, and an IME story that has to be rebuilt by hand. A textarea
+ * gives you `value`, `selectionStart`, native spellcheck, native undo inside
+ * the field, and composition events that already work. A node label is one run
+ * of plain text; anything more is a feature nobody requested.
+ *
+ * THE DIFF
+ * --------
+ * The textarea reports the whole new string, and the CRDT wants &quot;insert these
+ * characters after that one&quot;. Bridging the two is a common-prefix and
+ * common-suffix scan, which is exactly right for how people actually edit: a
+ * keystroke, a paste, a selection replaced. It is wrong for a change that
+ * happens to move text around inside the field, and that is a trade worth
+ * making — the alternative is a real diff algorithm running on every keystroke.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A textarea, not a contenteditable</h4>
+	<p>Contenteditable gives you rich text you did not ask for, a different DOM in every browser, and an IME story that has to be rebuilt by hand. A textarea gives you <code>value</code>, <code>selectionStart</code>, native spellcheck, native undo *inside the field*, and composition events that already work. A node label is one run of plain text; anything more is a feature nobody requested.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let field = $state&lt;HTMLTextAreaElement | null&gt;(null);
+
+/**
+ * Take focus, and select what is there.
+ *
+ * Without this the field appears and the keystrokes go to the board, where
+ * they are tool shortcuts — so naming a new shape &quot;Ledger&quot; silently switches
+ * to the external-system tool twice and creates nothing. Selecting the
+ * existing text is what makes typing *replace* a name, which is what everybody
+ * expects from a rename.
+ *
+ * Declared as a `const` rather than written inline in the template. An
+ * attachment re-runs whenever its expression produces a new function, and an
+ * arrow function written in markup is new on every render — so an inline
+ * version would grab focus and reselect the text on every keystroke, including
+ * somebody else's.
+ */
+const takeFocus: Attachment&lt;HTMLTextAreaElement&gt; = (node) =&gt; {
+	node.focus();
+	node.select();</code></pre>
+</figure>
+<p>Without the focus grab, the field appears and the keystrokes go to the *board*, where they are tool shortcuts — so naming a new shape &quot;Ledger&quot; silently switches to the external-system tool twice and creates nothing.</p>
+<aside class="callout callout--warn"><p>The attachment is a <code>const</code>, not an inline arrow. An attachment re-runs whenever its expression produces a new function, and an arrow written in markup is new on <strong>every render</strong> — so an inline version would grab focus and reselect the text on every keystroke, including somebody else’s. This is the single most common attachment mistake, and it is invisible until two people are in the same label.</p></aside>
+<h3 id="ime">The composition rule</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * True between `compositionstart` and `compositionend`.
+ *
+ * Japanese, Chinese and Korean input builds a word from several keystrokes,
+ * and the textarea's value during that time is provisional — pre-edit text the
+ * person has not committed. Diffing it produces a stream of insertions and
+ * deletions that other replicas watch flicker, and it breaks the IME's own
+ * candidate window. So nothing is sent until composition ends.
+ */
+let composing = $state(false);</code></pre>
+</figure>
+<p>Japanese, Chinese and Korean input builds a word from several keystrokes, and the textarea’s value during that time is <strong>provisional</strong> — pre-edit text the person has not committed. Diffing it produces a stream of insertions and deletions that other replicas watch flicker, and it breaks the IME’s own candidate window.</p>
+<p>This is a good example of a feature you cannot find by testing in English. It is also why <code>ja</code> is one of the three languages: having it in the catalogue means somebody actually types Japanese into the thing at some point.</p>
+<h3 id="the-caret">A remote edit, and where the caret goes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The last text we know the document holds.
+ *
+ * Tracked separately from `value` because the diff must be against what the
+ * *document* had, not what the textarea last rendered — those differ for one
+ * frame after a remote edit lands.
+ */
+// svelte-ignore state_referenced_locally
+// Intentional. `mirror` is seeded from the current text once and then tracks
+// what the *document* holds, which is not the same thing as what this prop
+// last rendered — the two differ for one frame after a remote edit lands, and
+// that frame is exactly when the diff must not use the newer value.
+let mirror = $state(value);
+
+$effect(() =&gt; {
+	// A remote edit arrived. Update the field without disturbing the caret more
+	// than the change itself requires.
+	if (!field || field.value === value) {
+		mirror = value;
+		return;
+	}
+
+	const anchor = board.label(target).idBefore(field.selectionStart);
+	field.value = value;
+	mirror = value;
+
+	const offset = board.label(target).offsetAfter(anchor);
+	const caret = offset ?? Math.min(field.selectionStart, value.length);
+	field.setSelectionRange(caret, caret);
+});</code></pre>
+</figure>
+<p>Five lines, and they are chapter 11’s <code>idBefore</code>/<code>offsetAfter</code> pair doing the job they exist for. Remember the character id under the caret <strong>before</strong> the value changes, then ask the RGA where that character is now. Somebody inserting three characters above you does not move your cursor, because the character it is anchored to has not moved.</p>
+<aside class="callout callout--note"><p><code>mirror</code> is tracked separately from the <code>value</code> prop, and the <code>svelte-ignore state_referenced_locally</code> is intentional rather than a suppression. The diff must be against what the *document* had, not what the textarea last rendered — those differ for exactly one frame after a remote edit lands, and that frame is precisely when the diff must not use the newer value.</p></aside>
+<h3 id="the-diff">The diff</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function commit(next: string) {
+	if (next === mirror) return;
+
+	// Common prefix, then common suffix, then the difference between them.
+	let start = 0;
+	while (start &lt; mirror.length &amp;&amp; start &lt; next.length &amp;&amp; mirror[start] === next[start])
+		start += 1;
+
+	let end = 0;
+	while (
+		end &lt; mirror.length - start &amp;&amp;
+		end &lt; next.length - start &amp;&amp;
+		mirror[mirror.length - 1 - end] === next[next.length - 1 - end]
+	) {
+		end += 1;
+	}
+
+	const removed = mirror.length - start - end;
+	const added = next.slice(start, next.length - end);
+
+	// Delete first, then insert. The other order would make the insertion's
+	// anchor a character that is about to be tombstoned — which works, and
+	// leaves the new text on the wrong side of it.
+	if (removed &gt; 0) board.deleteText(target, start, start + removed);
+	if (added) board.insertText(target, start, added);
+
+	mirror = next;
+}</code></pre>
+</figure>
+<p>Common prefix, common suffix, and the difference between them. That is exactly right for how people actually edit — a keystroke, a paste, a selection replaced — and wrong for a change that moves text around inside the field. Accepting that is a much better trade than a real diff algorithm running on every keystroke.</p>
+<aside class="callout callout--warn"><p>Delete first, then insert. The other order makes the insertion’s anchor a character that is about to be tombstoned — which *works*, and leaves the new text on the wrong side of it. Two orderings, both plausible, one correct, and the incorrect one produces text that is subtly scrambled only when you replace a selection.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Two people typing at opposite ends of a label both keep their text.</li><li>Somebody typing above your caret does not move it.</li><li>Typing Japanese sends nothing until the word is committed.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="presence.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Seeing each other</span>
+			</a>
+			<a class="pager__link pager__link--next" href="comments.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Comments</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

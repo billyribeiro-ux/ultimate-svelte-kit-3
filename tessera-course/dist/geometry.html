@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geometry that is only numbers — Building Tessera</title>
+<meta name="description" content="Hit testing, bounds, elbow routing, and a routing decision that had to stay deterministic because the document is shared.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 61.36363636363637%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html" aria-current="page"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>Geometry that is only numbers</h1>
+			<p class="lede">Hit testing, bounds, elbow routing, and a routing decision that had to stay deterministic because the document is shared.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Do every spatial calculation as a pure function, testable in Node in a millisecond.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/geometry.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * GEOMETRY
+ * ========
+ *
+ * Board coordinates, not screen coordinates. Nothing in this file knows about
+ * zoom, scroll or devicePixelRatio — that conversion lives in `canvas/camera`,
+ * and keeping it out of here means every function below is a pure function of
+ * numbers and can be tested without a browser.
+ *
+ * The y axis points down, matching the DOM and SVG. Every &quot;top&quot; here is a
+ * smaller number than the corresponding &quot;bottom&quot;, which is worth saying once
+ * because half of the sign errors in canvas code come from someone assuming the
+ * other convention for one function.</code></pre>
+</figure>
+<p>Nothing in this file knows about zoom, scroll or <code>devicePixelRatio</code> — that conversion lives in the camera. Keeping it out means every function here is a pure function of numbers and can be tested without a browser, which is what makes a hundred and thirty lines of spatial code trustworthy.</p>
+<p>The sentence about the y axis is worth copying into any canvas project you write. Half the sign errors in this kind of code come from somebody assuming the other convention for one function.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/geometry.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function contains(rect: Rect, point: Point): boolean {
+	return (
+		point.x &gt;= rect.x &amp;&amp;
+		point.x &lt;= rect.x + rect.w &amp;&amp;
+		point.y &gt;= rect.y &amp;&amp;
+		point.y &lt;= rect.y + rect.h
+	);
+}
+
+/** Do two rectangles share any area? Touching edges count as overlapping. */
+export function intersects(a: Rect, b: Rect): boolean {
+	return a.x &lt;= b.x + b.w &amp;&amp; b.x &lt;= a.x + a.w &amp;&amp; a.y &lt;= b.y + b.h &amp;&amp; b.y &lt;= a.y + a.h;
+}
+
+/** The smallest rectangle containing all of them, or `null` for none. */
+export function bounds(rects: Iterable&lt;Rect&gt;): Rect | null {
+	let left = Infinity;
+	let top = Infinity;
+	let right = -Infinity;
+	let bottom = -Infinity;
+	let seen = false;
+
+	for (const rect of rects) {
+		seen = true;
+		left = Math.min(left, rect.x);
+		top = Math.min(top, rect.y);
+		right = Math.max(right, rect.x + rect.w);
+		bottom = Math.max(bottom, rect.y + rect.h);
+	}
+
+	return seen ? { x: left, y: top, w: right - left, h: bottom - top } : null;
+}
+
+/** Grow a rectangle on all sides. Negative shrinks. */
+export function inflate(rect: Rect, by: number): Rect {
+	return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
+
+/** A rectangle from two corners, in any order. Used by the marquee. */
+export function fromCorners(a: Point, b: Point): Rect {
+	return {
+		x: Math.min(a.x, b.x),
+		y: Math.min(a.y, b.y),
+		w: Math.abs(a.x - b.x),
+		h: Math.abs(a.y - b.y)
+	};
+}
+
+export function centre(rect: Rect): Point {
+	return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };</code></pre>
+</figure>
+<p>Small, boring, and each one used in three places. <code>bounds</code> returns <code>null</code> for an empty iterable rather than a zero rectangle at the origin, because &quot;no shapes&quot; and &quot;a zero-size shape at 0,0&quot; want different handling and collapsing them puts an <code>if</code> in every caller anyway.</p>
+<h3 id="ports">Where an arrow attaches</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/geometry.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The point on a node's edge where a connection attaches.
+ *
+ * `auto` picks the side facing the other end, which is what makes a diagram
+ * rearrange itself sensibly when a box is dragged across the board.
+ *
+ * The choice is the dominant axis of the gap between centres: a total function
+ * of two rectangles, with no trigonometry and no state. It does flip at the
+ * diagonal — drag a box past 45 degrees and the arrow moves from the right edge
+ * to the bottom one — and that is accepted rather than smoothed away.
+ *
+ * Hysteresis would remove the flip and would make the routing depend on where
+ * the box came *from*. In a shared document that is a divergence: two people
+ * whose boxes arrived at the same place by different paths would see the arrow
+ * attached to different sides of the same node. Determinism wins.
+ */
+export function portPoint(rect: Rect, port: Port, towards: Point): Point {
+	const middle = centre(rect);
+
+	/*
+	 * Narrowed to the four real sides before the switch, so the switch is
+	 * exhaustive over exactly the cases that exist. Leaving `'auto'` in the union
+	 * and adding an unreachable branch for it works and is worse: the branch has
+	 * to return something, whatever it returns is a lie, and a future fifth port
+	 * would land in it silently instead of failing to compile.
+	 */
+	const side: Exclude&lt;Port, 'auto'&gt; = port === 'auto' ? autoPort(middle, towards) : port;
+
+	switch (side) {
+		case 'top':
+			return { x: middle.x, y: rect.y };
+		case 'bottom':
+			return { x: middle.x, y: rect.y + rect.h };
+		case 'left':
+			return { x: rect.x, y: middle.y };
+		case 'right':
+			return { x: rect.x + rect.w, y: middle.y };
+	}
+}
+
+function autoPort(from: Point, to: Point): Exclude&lt;Port, 'auto'&gt; {
+	const dx = to.x - from.x;
+	const dy = to.y - from.y;
+
+	if (Math.abs(dx) &gt;= Math.abs(dy)) return dx &gt;= 0 ? 'right' : 'left';
+	return dy &gt;= 0 ? 'bottom' : 'top';
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Determinism beats polish, in a shared document</h4>
+	<p><code>auto</code> picks the dominant axis of the gap between centres, and it *flips* at the diagonal: drag a box past 45 degrees and the arrow jumps from the right edge to the bottom one. The obvious polish is hysteresis — remember which side it was on and require a bigger movement to change. Do that and the routing depends on where the box came *from*, which in a shared document is a <strong>divergence</strong>: two people whose boxes arrived at the same place by different paths see the arrow attached to different sides of the same node. The flicker is the price of everybody seeing the same diagram.</p>
+</aside>
+<aside class="callout callout--note"><p>The narrowing before the switch is a small type-design idea worth stealing. <code>side</code> is <code>Exclude&lt;Port, 'auto'&gt;</code>, so the switch is exhaustive over exactly the cases that exist. Leaving <code>'auto'</code> in the union and adding an unreachable branch works and is worse: the branch has to return something, whatever it returns is a lie, and a future fifth port lands in it silently instead of failing to compile.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/geometry.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * An orthogonal route between two nodes: the elbow polyline a system diagram
+ * wants, rather than a straight line between centres.
+ *
+ * Three segments at most. A real router would avoid the other nodes; this one
+ * deliberately does not, because a router that reroutes while you drag makes the
+ * diagram feel unstable, and because &quot;the line goes behind that box&quot; is a
+ * problem people fix by moving the box.
+ */
+export function route(from: Rect, to: Rect, fromPort: Port, toPort: Port): Point[] {
+	const start = portPoint(from, fromPort, centre(to));
+	const end = portPoint(to, toPort, centre(from));
+
+	const horizontal = Math.abs(end.x - start.x) &gt;= Math.abs(end.y - start.y);
+	const middle = horizontal ? (start.x + end.x) / 2 : (start.y + end.y) / 2;
+
+	if (horizontal) {
+		return [start, { x: middle, y: start.y }, { x: middle, y: end.y }, end];
+	}
+	return [start, { x: start.x, y: middle }, { x: end.x, y: middle }, end];
+}
+</code></pre>
+</figure>
+<p>Three segments at most, and deliberately no obstacle avoidance. A real router would route around the other nodes; this one does not, because a router that reroutes while you drag makes the diagram feel unstable, and because &quot;the line goes behind that box&quot; is a problem people fix by moving the box.</p>
+<h3 id="hit-testing">Hit testing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/editor.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Which node is under a board point, topmost first. */
+hitTest(point: Point): NodeView | null {
+	const painted = this.document.painted();
+	for (let i = painted.length - 1; i &gt;= 0; i -= 1) {
+		const node = painted[i]!;
+		if (contains(node.rect, point)) return node;
+	}
+	return null;
+}</code></pre>
+</figure>
+<p>Backwards through the painted order, so the topmost node wins — which is what &quot;on top&quot; means, and it is one <code>for</code> loop rather than a spatial index. A board with ten thousand shapes would want a quadtree; a diagram has tens, and building the index anyway would be the expensive kind of foresight this course keeps warning about.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every function in <code>geometry.ts</code> is testable without a DOM.</li><li>You can explain why the port choice must not have memory.</li><li>Clicking overlapping shapes selects the one drawn on top.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="gestures.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Pointers, wheels and one strange standard</span>
+			</a>
+			<a class="pager__link pager__link--next" href="snapping.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Snapping that helps rather than fights</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

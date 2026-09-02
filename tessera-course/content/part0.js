@@ -346,22 +346,20 @@ export default defineConfig(({ mode }) => {
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `
-/*
- * The trusted origin for CSRF checks on form submissions and remote
- * function calls, and — since adapter-node v6 — a BUILD-time value
- * rather than a runtime \`ORIGIN\` variable.
- *
- * Leave it unset and the adapter reconstructs the origin from request
- * headers, where with no \`PROTOCOL_HEADER\` configured it assumes
- * \`https\`. A server on plain HTTP then computes \`https://localhost:4173\`,
- * the browser sends \`http://localhost:4173\`, and every POST comes back
- * \`403 {"message":"Cross-site remote requests are forbidden"}\` from an
- * app whose GET requests all work perfectly.
- */
-paths: { origin: env.PUBLIC_ORIGIN },
-
-compilerOptions: {
-	// Runes everywhere except node_modules, where a dependency may still be`
+sveltekit({
+	/*
+	 * The trusted origin for CSRF checks on form submissions and remote
+	 * function calls, and — since adapter-node v6 — a BUILD-time value
+	 * rather than a runtime \`ORIGIN\` variable.
+	 *
+	 * Leave it unset and the adapter reconstructs the origin from request
+	 * headers, where with no \`PROTOCOL_HEADER\` configured it assumes
+	 * \`https\`. A server on plain HTTP then computes \`https://localhost:4173\`,
+	 * the browser sends \`http://localhost:4173\`, and every POST comes back
+	 * \`403 {"message":"Cross-site remote requests are forbidden"}\` from an
+	 * app whose GET requests all work perfectly.
+	 */
+	paths: { origin: env.PUBLIC_ORIGIN },`
 			},
 			{
 				type: 'why',
@@ -373,6 +371,9 @@ compilerOptions: {
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `
+compilerOptions: {
+	// Runes everywhere except node_modules, where a dependency may still be
+	// written in legacy Svelte 4 style. Removable in Svelte 6.
 	runes: ({ filename }) =>
 		filename.split(/[/\\\\]/).includes('node_modules') ? undefined : true,
 
@@ -387,11 +388,7 @@ compilerOptions: {
 	 * boolean threaded through four components.
 	 */
 	experimental: { async: true }
-},
-
-adapter: adapter(),
-
-experimental: {`
+},`
 			},
 			{
 				type: 'p',
@@ -406,6 +403,10 @@ experimental: {`
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `
+adapter: adapter(),
+
+experimental: {
+	// \`query()\`, \`query.batch()\`, \`query.live()\`, \`command()\` and \`form()\`
 	// from \`$app/server\`.
 	remoteFunctions: true,
 
@@ -423,7 +424,9 @@ experimental: {`
 
 prerender: {
 	// A broken internal link fails the build instead of shipping a 404.
-	handleHttpError: 'fail',`
+	handleHttpError: 'fail',
+	handleMissingId: 'fail'
+},`
 			},
 			{
 				type: 'p',
@@ -556,7 +559,7 @@ prerender: {
 		title: 'Environment variables that cannot be wrong',
 		summary:
 			'`src/env.ts` and `defineEnvVars` — declaring every variable once, validating at boot, and making a secret in the browser something you have to type on purpose.',
-		goal: 'Set up configuration that fails at start-up with a clear message rather than at 3am with an undefined.',
+		goal: 'Set up configuration that fails at start-up with a clear message rather than at 3am with a missing value.',
 		blocks: [
 			{
 				type: 'p',
@@ -594,7 +597,7 @@ export const variables = defineEnvVars({
 			},
 			{
 				type: 'p',
-				text: 'A variable not in this file **cannot be imported**. Not "imports as undefined" — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.'
+				text: 'A variable not in this file **cannot be imported**. Not "imports as nothing" — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.'
 			},
 
 			{ type: 'h3', id: 'the-flags', text: 'What you declare, and why' },

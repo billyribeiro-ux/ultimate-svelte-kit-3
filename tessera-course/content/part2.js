@@ -350,7 +350,7 @@ static fromJSON<K extends string>(json: ReturnType<OrSet<K>['toJSON']>): OrSet<K
 		slug: 'last-write-wins-registers',
 		title: 'The fields on a shape',
 		summary:
-			'Twenty-two lines of actual code, one rule of thumb for when to use them, and the `undefined` return that turns out to matter.',
+			'Twenty-two lines of actual code, one rule of thumb for when to use them, and a return value that turns out to matter.',
 		goal: 'Merge single-valued fields deterministically, and know precisely when this is the wrong tool.',
 		blocks: [
 			{
