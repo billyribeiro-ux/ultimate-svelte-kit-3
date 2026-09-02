@@ -352,3 +352,54 @@ describe('truncation', () => {
 		expect(result.truncated).toBe(true);
 	});
 });
+
+describe('the projection', () => {
+	/**
+	 * Internal columns must never reach a result.
+	 *
+	 * `db.select()` with no projection returns `id`, `tenant_id` and `received_at`
+	 * as well, and the consequence was not merely untidy: the chart view picks the
+	 * first numeric column, found `id`, and drew a beautiful straight line of
+	 * primary keys.
+	 */
+	it('returns only the columns the schema documents', async () => {
+		const { pushed: result } = await bothWays('logs', 'from logs | take 5');
+
+		expect(result.columns).toEqual([
+			'timestamp',
+			'service',
+			'level',
+			'message',
+			'trace_id',
+			'span_id',
+			'host',
+			'attributes'
+		]);
+
+		for (const forbidden of ['id', 'tenantId', 'tenant_id', 'receivedAt', 'received_at']) {
+			expect(result.columns).not.toContain(forbidden);
+		}
+	});
+
+	/**
+	 * The same query must give the same answer whether or not it was pushed.
+	 *
+	 * Drizzle keys a row by its JavaScript name — `traceId` — while SQF calls the
+	 * column `trace_id`. Before the projection, a predicate on `trace_id` that
+	 * reached SQL worked and one that fell back to the evaluator silently matched
+	 * nothing, so the answer depended on whether the planner happened to push it.
+	 * That is the worst possible kind of difference, and this is the test that
+	 * would have caught it.
+	 */
+	it('agrees with itself whether a predicate is pushed or not', async () => {
+		const viaSql = (await bothWays('logs', 'from logs | where trace_id != ""')).pushed;
+
+		// `strlen` is not pushable, so this one is evaluated in memory over the same
+		// rows — and must select exactly the same set.
+		const viaEvaluator = (await bothWays('logs', 'from logs | where strlen(trace_id) > 0')).pushed;
+
+		expect(viaSql.pushed).toContain('filter');
+		expect(viaEvaluator.pushed).not.toContain('filter');
+		expect(viaEvaluator.rows).toEqual(viaSql.rows);
+	});
+});

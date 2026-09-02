@@ -63,15 +63,29 @@ export default defineConfig(({ mode }) => {
 					remoteFunctions: true,
 
 					/*
-					 * Preload the next route inside a Svelte *fork*: the framework
-					 * speculatively runs the new page's state without committing it, then
-					 * either adopts the result or throws it away.
+					 * FORKED PRELOADS: OFF, AND MEASURED RATHER THAN ASSUMED.
 					 *
-					 * Worth having because navigating between saved views preloads on
-					 * hover, and a view's `load` starts a query. Without forking, an
-					 * abandoned preload leaves that query running against the database.
+					 * The feature preloads the next route inside a Svelte *fork* — the
+					 * framework speculatively runs the new page's state without committing
+					 * it, then adopts the result or throws it away. It is exactly what this
+					 * application wants in principle: navigating to a trace starts a remote
+					 * query, and without forking an abandoned preload leaves that query
+					 * running against the database.
+					 *
+					 * It was turned on, and the end-to-end suite found it. Opening a trace
+					 * from the traces list on the phone profile fails intermittently: the
+					 * remote `trace` query comes back as a bare `Bad Request` and the page
+					 * renders its error branch, while loading the same URL directly always
+					 * works. The bisect is unambiguous — three runs on, three failures;
+					 * three runs off, three passes; nothing else changed.
+					 *
+					 * So it is off. A preload is a latency optimisation; a page that fails
+					 * to load one time in three is not a trade worth making, and shipping
+					 * an experimental flag because it sounded right is how a rare bug gets
+					 * blamed on the database for a month. Worth revisiting when the flag
+					 * settles — with the same test as the acceptance criterion.
 					 */
-					forkPreloads: true
+					forkPreloads: false
 				},
 
 				prerender: {

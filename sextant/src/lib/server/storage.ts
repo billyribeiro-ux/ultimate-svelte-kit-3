@@ -40,6 +40,7 @@
  */
 
 import { type Column, type SQL, and, asc, desc, eq, gt, gte, lt, lte, ne, sql } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { Query, Expr } from '#lib/sqf/ast.ts';
 import { evaluate, type EvalResult } from '#lib/sqf/eval.ts';
 import type { Row } from '#lib/sqf/value.ts';
@@ -88,6 +89,72 @@ const PUSHABLE: { [S in keyof typeof TABLES]: Readonly<Record<string, Column>> }
 		metric: sample.metric,
 		service: sample.service,
 		value: sample.value
+	}
+};
+
+/**
+ * THE ONLY COLUMNS A QUERY EVER SEES
+ * ==================================
+ *
+ * `db.select()` with no projection returns every column of the table, which for
+ * `event` means `id`, `tenant_id` and `received_at` as well — and Drizzle keys
+ * them by their *JavaScript* names, so a row arrives with `traceId` while SQF
+ * calls that column `trace_id`.
+ *
+ * Both halves of that are bugs, and both were invisible until a query was run
+ * through the interface:
+ *
+ *   1. `from logs` showed `id` and `tenant_id` in the results table. Internal
+ *      columns in a user-facing result are not merely untidy — the chart view
+ *      picked `id` as its numeric column and drew a lovely straight line of
+ *      primary keys.
+ *
+ *   2. A predicate on `trace_id` that could not be pushed to SQL was evaluated
+ *      against `row.trace_id`, which did not exist, so it silently matched
+ *      nothing. The pushed-down path worked, which is the worst possible split:
+ *      the same query returns different answers depending on whether the planner
+ *      happened to push it.
+ *
+ * Selecting an explicit projection keyed by the *schema's* names fixes both at
+ * once, and makes `schema.ts` the single statement of what a column is called.
+ */
+/*
+ * Typed as `SQLiteColumn` rather than the generic `Column` that `PUSHABLE` uses.
+ *
+ * `select()` wants columns it can actually build a SELECT list from, and the
+ * generic `Column` is the dialect-agnostic base — assignable to a `where`
+ * comparison and not to a projection. The two maps therefore have different
+ * types even though they hold the same objects, which is the type system
+ * correctly noticing that they are used for different things.
+ */
+const PROJECTION: { [S in keyof typeof TABLES]: Record<string, SQLiteColumn> } = {
+	logs: {
+		timestamp: event.timestamp,
+		service: event.service,
+		level: event.level,
+		message: event.message,
+		trace_id: event.traceId,
+		span_id: event.spanId,
+		host: event.host,
+		attributes: event.attributes
+	},
+	spans: {
+		timestamp: span.timestamp,
+		trace_id: span.traceId,
+		span_id: span.spanId,
+		parent_id: span.parentId,
+		service: span.service,
+		name: span.name,
+		duration: span.duration,
+		status: span.status,
+		attributes: span.attributes
+	},
+	metrics: {
+		timestamp: sample.timestamp,
+		metric: sample.metric,
+		value: sample.value,
+		service: sample.service,
+		labels: sample.labels
 	}
 };
 
@@ -175,7 +242,8 @@ export async function run(query: Query, options: ReadOptions): Promise<ReadResul
 	if (limit !== null) pushed.push('limit');
 
 	let statement = db
-		.select()
+		// The projection, not `select()`. See the note above `PROJECTION`.
+		.select({ ...PROJECTION[query.source] })
 		.from(table)
 		.where(and(...conditions))
 		.$dynamic();

@@ -10,6 +10,7 @@
 	import ResultTable from '#lib/components/ResultTable.svelte';
 	import TraceDrawer from '#lib/components/TraceDrawer.svelte';
 	import { runQuery } from '#lib/remote/query.remote.ts';
+	import { saveView } from '#lib/remote/settings.remote.ts';
 	import { SOURCES, type Source } from '#lib/sqf/ast.ts';
 	import type { Row } from '#lib/sqf/value.ts';
 	import { Workspace } from '#lib/state/workspace.svelte.ts';
@@ -183,7 +184,10 @@
 
 	function openRow(index: number): void {
 		const row = rows[index];
-		const traceId = row?.traceId;
+		// `trace_id`, the name SQF uses — not Drizzle's `traceId`. The storage layer
+		// projects rows into the schema's names precisely so that this file, the
+		// query text and the documentation all say the same word.
+		const traceId = row?.trace_id;
 
 		// A row with a trace opens the trace; one without opens the row detail.
 		if (typeof traceId === 'string' && traceId !== '') openTrace(traceId);
@@ -233,7 +237,17 @@
 </svelte:head>
 
 <div class="explore">
-	<section class="explore__query" aria-label="Query">
+	<!--
+		Labelled "Query editor", not "Query".
+
+		The textarea inside it is already labelled "Query", and two things with the
+		same accessible name in one region is genuinely ambiguous — a screen reader
+		announces the landmark and the control identically, and there is no way to
+		tell from the announcement which one has focus. An end-to-end test found it
+		by resolving the name to two elements, which is the same ambiguity said in a
+		different voice.
+	-->
+	<section class="explore__query" aria-label="Query editor">
 		<!--
 			The catalogue is streamed, so completion is behind an `#await`.
 
@@ -284,6 +298,29 @@
 			>
 				{tailing ? 'Stop tail' : 'Live tail'}
 			</button>
+
+			<!--
+				Saving a view is a form, and the hidden fields carry the *current* query
+				rather than the submitted one.
+
+				Somebody who has edited the box and not pressed Run still means the thing
+				they can see. A form that saved `submitted` would silently store the
+				previous query, which is the kind of quiet wrongness people discover
+				weeks later when the view opens something they never wrote.
+			-->
+			<form {...saveView} class="explore__save">
+				<input {...saveView.fields.tenant.as('hidden', data.tenant)} />
+				<input {...saveView.fields.query.as('hidden', workspace.q)} />
+				<input {...saveView.fields.range.as('hidden', workspace.range)} />
+				<input
+					class="input btn--sm"
+					placeholder="Save this view as…"
+					aria-label="Name for the saved view"
+					required
+					{...saveView.fields.name.as('text')}
+				/>
+				<button type="submit" class="btn btn--sm">Save</button>
+			</form>
 		</div>
 	</section>
 
@@ -400,6 +437,18 @@
 	.explore__views {
 		display: flex;
 		gap: 2px;
+	}
+
+	.explore__save {
+		display: flex;
+		gap: var(--space-1);
+		align-items: center;
+	}
+
+	.explore__save .input {
+		width: 12rem;
+		min-height: 1.75rem;
+		font-size: var(--fs-xs);
 	}
 
 	.explore__views .btn[aria-pressed='true'],

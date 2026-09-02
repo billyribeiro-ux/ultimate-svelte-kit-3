@@ -68,6 +68,16 @@
 			<ul class="rules">
 				{#each list as rule (rule.id)}
 					{@const state = stateOf(rule, clock.now)}
+					<!--
+						`.for(rule.id)`, not the bare form object.
+
+						A remote form is a single object with one attached `<form>` element, so
+						spreading the same one inside an `{#each}` throws "A form object can only
+						be attached to a single `<form>` element" — and the whole page then
+						renders its error branch. `.for` mints one instance per id, which is also
+						what gives each row its own pending state.
+					-->
+					{@const remove = deleteRule.for(rule.id)}
 					<li class="rule">
 						<div class="rule__head">
 							<span class="chip {state.tone}">{state.label}</span>
@@ -106,9 +116,9 @@
 									{editing === rule.id ? 'Close' : 'Edit'}
 								</button>
 
-								<form {...deleteRule}>
-									<input type="hidden" name="tenant" value={data.tenant} />
-									<input type="hidden" name="id" value={rule.id} />
+								<form {...remove}>
+									<input {...remove.fields.tenant.as('hidden', data.tenant)} />
+									<input {...remove.fields.id.as('hidden', rule.id)} />
 									<button type="submit" class="btn btn--sm btn--danger">Delete</button>
 								</form>
 							</div>
@@ -181,19 +191,33 @@
 	branches on.
 -->
 {#snippet ruleForm(rule: (typeof list)[number] | null)}
-	<form {...saveRule} class="form">
-		<input type="hidden" name="tenant" value={data.tenant} />
-		<input type="hidden" name="id" value={rule?.id ?? ''} />
+	{@const save = saveRule.for(rule?.id ?? 'new')}
+	<!--
+		EVERY FIELD COMES FROM `save.fields`, NOT FROM A `name` ATTRIBUTE.
+
+		A remote form validates against its schema on both sides, and it knows which
+		inputs belong to it because each one is created by `fields.<key>.as(type)`.
+		A plain `name="threshold"` is not merely undeclared — it throws "Form
+		contained a field that wasn't created with form.fields.as(...)" and the
+		submission fails with a 500 that says nothing about which field.
+
+		What the spread buys is worth the ceremony: the field carries its own
+		`aria-invalid`, its value survives a failed submission without the page
+		re-rendering, and a rename in the valibot schema is a type error here rather
+		than a form that silently posts a key the server ignores.
+	-->
+	<form {...save} class="form">
+		<input {...save.fields.tenant.as('hidden', data.tenant)} />
+		<input {...save.fields.id.as('hidden', rule?.id ?? '')} />
 
 		<div class="field">
 			<label for="name-{rule?.id ?? 'new'}">Name</label>
 			<input
 				id="name-{rule?.id ?? 'new'}"
-				name="name"
 				class="input"
 				required
-				value={rule?.name ?? ''}
 				placeholder="Checkout error rate"
+				{...save.fields.name.as('text', rule?.name ?? '')}
 			/>
 		</div>
 
@@ -201,10 +225,12 @@
 			<label for="query-{rule?.id ?? 'new'}">Query</label>
 			<input
 				id="query-{rule?.id ?? 'new'}"
-				name="query"
 				class="input mono"
 				required
-				value={rule?.query ?? 'from logs | where level == "error" | summarize n = count()'}
+				{...save.fields.query.as(
+					'text',
+					rule?.query ?? 'from logs | where level == "error" | summarize n = count()'
+				)}
 			/>
 			<p class="field__hint">
 				The first numeric column of the first row is the value under test. A query that returns no
@@ -214,9 +240,13 @@
 
 		<div class="field">
 			<label for="direction-{rule?.id ?? 'new'}">Fires when the value is</label>
-			<select id="direction-{rule?.id ?? 'new'}" name="direction" class="select">
-				<option value="above" selected={rule?.direction !== 'below'}>above the threshold</option>
-				<option value="below" selected={rule?.direction === 'below'}>below the threshold</option>
+			<select
+				id="direction-{rule?.id ?? 'new'}"
+				class="select"
+				{...save.fields.direction.as('select', rule?.direction ?? 'above')}
+			>
+				<option value="above">above the threshold</option>
+				<option value="below">below the threshold</option>
 			</select>
 		</div>
 
@@ -224,11 +254,10 @@
 			<label for="threshold-{rule?.id ?? 'new'}">Threshold</label>
 			<input
 				id="threshold-{rule?.id ?? 'new'}"
-				name="threshold"
 				class="input"
 				inputmode="decimal"
 				required
-				value={rule?.threshold ?? 10}
+				{...save.fields.threshold.as('text', String(rule?.threshold ?? 10))}
 			/>
 		</div>
 
@@ -236,10 +265,12 @@
 			<label for="clears-{rule?.id ?? 'new'}">Clears at (optional)</label>
 			<input
 				id="clears-{rule?.id ?? 'new'}"
-				name="clearsAt"
 				class="input"
 				inputmode="decimal"
-				value={rule?.clearsAt ?? ''}
+				{...save.fields.clearsAt.as(
+					'text',
+					rule?.clearsAt === null ? '' : String(rule?.clearsAt ?? '')
+				)}
 			/>
 			<p class="field__hint">
 				A separate resolve threshold stops a value sitting on the line from firing and resolving on
@@ -251,10 +282,9 @@
 			<label for="for-{rule?.id ?? 'new'}">For (minutes)</label>
 			<input
 				id="for-{rule?.id ?? 'new'}"
-				name="forMinutes"
 				class="input"
 				inputmode="numeric"
-				value={(rule?.forMs ?? 0) / 60_000}
+				{...save.fields.forMinutes.as('text', String((rule?.forMs ?? 0) / 60_000))}
 			/>
 			<p class="field__hint">
 				Zero fires on the first crossing. Use it only for things never briefly true.
@@ -265,10 +295,9 @@
 			<label for="window-{rule?.id ?? 'new'}">Window (minutes)</label>
 			<input
 				id="window-{rule?.id ?? 'new'}"
-				name="windowMinutes"
 				class="input"
 				inputmode="numeric"
-				value={(rule?.windowMs ?? 300_000) / 60_000}
+				{...save.fields.windowMinutes.as('text', String((rule?.windowMs ?? 300_000) / 60_000))}
 			/>
 		</div>
 

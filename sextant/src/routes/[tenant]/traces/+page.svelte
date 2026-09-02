@@ -29,8 +29,10 @@
 	const q = $derived(
 		[
 			'from spans',
-			'| where parentId == ""',
-			`| project traceId, service, name, timestamp, duration, status`,
+			// `parent_id`, not `parentId`. SQF names columns the way the schema does;
+			// Drizzle's camel-cased keys never reach a query.
+			'| where parent_id == ""',
+			'| project trace_id, service, name, timestamp, duration, status',
 			sort === 'slowest' ? '| sort duration desc' : '| sort timestamp desc',
 			'| take 100'
 		].join(' ')
@@ -73,10 +75,13 @@
 		{#if result.rows.length === 0}
 			<p class="empty">No traces in this range.</p>
 		{:else}
-			<ul class="list">
-				{#each result.rows as row (String(row.traceId))}
+			<ul class="list" aria-label="Recent traces">
+				{#each result.rows as row (String(row.trace_id))}
 					<li>
-						<a class="trace" href="/{data.tenant}/traces/{encodeURIComponent(String(row.traceId))}">
+						<a
+							class="trace"
+							href="/{data.tenant}/traces/{encodeURIComponent(String(row.trace_id))}"
+						>
 							<span class="trace__name truncate">
 								<span class="trace__service">{row.service}</span>
 								{row.name}

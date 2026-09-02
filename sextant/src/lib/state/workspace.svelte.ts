@@ -33,6 +33,7 @@
  * and `.set()` on it would silently do nothing.
  */
 
+import { untrack } from 'svelte';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { replaceState } from '$app/navigation';
 import { DEFAULT_RANGE } from '#lib/time/range.ts';
@@ -60,11 +61,39 @@ export type View = (typeof VIEWS)[number];
  */
 const SETTLE = 400;
 
+/** The three keys this workspace owns. Anything else in the URL is left alone. */
+const KEYS = ['q', 'range', 'view'] as const;
+
+/** `?a=b` and `a=b` are the same search string. Comparing them raw is a bug. */
+function normalise(search: string): string {
+	return search.startsWith('?') ? search.slice(1) : search;
+}
+
 export class Workspace {
 	readonly params: SvelteURLSearchParams;
 
-	/** The last search string written to or read from the address bar. */
-	#synced: string;
+	/**
+	 * TWO MARKERS, NOT ONE, AND THIS IS THE WHOLE CORRECTNESS ARGUMENT.
+	 *
+	 * `#urlSeen` is the last address-bar value this instance has *read*.
+	 * `#written` is the last value it has *put there*.
+	 *
+	 * The first version of this class had one field for both, and it was wrong in
+	 * a way that no unit test would have found. `adopt` ended with
+	 * `#synced = params.toString()` — so every time the params changed, the adopt
+	 * effect re-ran, saw a URL it had not written, and quietly recorded the
+	 * *current params* as "already synced". `flush` then compared equal and did
+	 * nothing, and the debounced write did nothing, and the query in the address
+	 * bar never changed again.
+	 *
+	 * The end-to-end test that types a query and presses Run immediately is what
+	 * found it: with a pause between the two it worked, because the debounce had
+	 * already fired. That is the shape of the bug this separation removes — one
+	 * marker cannot answer both "has the URL changed under me" and "have my edits
+	 * been written out".
+	 */
+	#urlSeen = '';
+	#written = '';
 	#timer = 0;
 
 	constructor(init: WorkspaceInit) {
@@ -72,7 +101,6 @@ export class Workspace {
 		this.params.set('q', init.q);
 		this.params.set('range', init.range);
 		this.params.set('view', init.view);
-		this.#synced = this.params.toString();
 	}
 
 	get q(): string {
@@ -100,7 +128,7 @@ export class Workspace {
 		this.params.set('view', value);
 	}
 
-	/** The query string as it would appear in the address bar. */
+	/** The query string as it would appear in the address bar, without the `?`. */
 	get search(): string {
 		return this.params.toString();
 	}
@@ -113,24 +141,36 @@ export class Workspace {
 	 * not, which is the single most common bug in a URL-driven application and the
 	 * reason "the back button does nothing" is such a familiar complaint.
 	 *
-	 * Guarded on equality, because this is called from an effect that also depends
-	 * on the params it writes — and an unguarded version is an infinite loop that
-	 * only shows up as the fan spinning up.
+	 * The params are read and written inside `untrack`, so the effect that calls
+	 * this depends **only** on the URL. Without it, every keystroke re-runs the
+	 * adopt effect — which is how the two markers above got conflated in the first
+	 * place, and would be a loop even with them separated.
 	 */
 	adopt(search: string): void {
-		if (search === this.#synced) return;
+		const incoming = normalise(search);
+		if (incoming === this.#urlSeen) return;
+		this.#urlSeen = incoming;
 
-		// A plain `URLSearchParams`, deliberately: this one is read once, inside this
-		// function, and thrown away. Making it reactive would create a dependency on
-		// a value that cannot change, in an effect that writes the params it reads.
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const incoming = new URLSearchParams(search);
-		for (const key of ['q', 'range', 'view']) {
-			const value = incoming.get(key);
-			if (value !== null && this.params.get(key) !== value) this.params.set(key, value);
-		}
+		untrack(() => {
+			// A plain `URLSearchParams`: parsed here, read three times, discarded. The
+			// reactive version would be a signal nothing ever writes to.
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity
+			const values = new URLSearchParams(incoming);
+			for (const key of KEYS) {
+				const value = values.get(key);
+				if (value !== null && this.params.get(key) !== value) this.params.set(key, value);
+			}
+		});
 
-		this.#synced = this.params.toString();
+		/*
+		 * The address bar now says exactly `incoming`.
+		 *
+		 * Not `params.toString()` — the two differ whenever the URL omits a key this
+		 * workspace holds, which is the ordinary case for a hand-written link like
+		 * `?q=from+logs`. Recording the params here would mark those defaults as
+		 * already written, and they would never reach the URL.
+		 */
+		this.#written = incoming;
 	}
 
 	/**
@@ -146,16 +186,19 @@ export class Workspace {
 	 * take fifteen presses of the back button. Pushing is correct for a
 	 * deliberate act — opening a trace — which is why the drawer uses `pushState`
 	 * and this does not.
+	 *
+	 * A consequence worth naming: arriving on `?q=from+logs` with no `range` or
+	 * `view` rewrites the URL to include them, once, shortly after load. That is
+	 * deliberate. The address bar is the state, so it should say all of it — and a
+	 * link copied a moment later then carries the whole view rather than the half
+	 * somebody happened to type.
 	 */
 	sync(): () => void {
 		const search = this.search;
-		if (search === this.#synced) return () => {};
+		if (search === this.#written) return () => {};
 
 		clearTimeout(this.#timer);
-		this.#timer = setTimeout(() => {
-			this.#synced = search;
-			replaceState(`?${search}`, {});
-		}, SETTLE) as unknown as number;
+		this.#timer = setTimeout(() => this.#write(search), SETTLE) as unknown as number;
 
 		return () => clearTimeout(this.#timer);
 	}
@@ -163,9 +206,18 @@ export class Workspace {
 	/** Flush immediately. Used when running a query, so the URL is right to copy. */
 	flush(): void {
 		clearTimeout(this.#timer);
-		const search = this.search;
-		if (search === this.#synced) return;
-		this.#synced = search;
+		this.#write(this.search);
+	}
+
+	#write(search: string): void {
+		if (search === this.#written) return;
+
+		// Both markers move together: the URL now says this, and we are the ones who
+		// said it — so the adopt effect that fires next is a no-op rather than a
+		// round trip back through the params.
+		this.#written = search;
+		this.#urlSeen = search;
+
 		replaceState(`?${search}`, {});
 	}
 }

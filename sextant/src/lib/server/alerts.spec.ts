@@ -156,13 +156,31 @@ describe('evaluateRule', () => {
 });
 
 describe('tick', () => {
+	/**
+	 * Asserted on the rule's own row, not on `tick`'s return count.
+	 *
+	 * `tick` evaluates every enabled rule in the *database*, which in a shared
+	 * development file includes whatever the seed left behind. A test that counted
+	 * its return value would pass on a clean machine and fail after `pnpm db:seed`
+	 * — which is a worse outcome than either, because it makes the suite look
+	 * flaky rather than the assertion look wrong.
+	 */
 	it('skips a rule whose interval has not elapsed', async () => {
 		const rule = await makeRule({ intervalMs: 60_000 });
 		await logError(NOW - 1_000, 5);
 
 		await evaluateRule(rule, INITIAL, NOW);
-		expect(await tick(NOW + 10_000)).toBe(0);
-		expect(await tick(NOW + 61_000)).toBeGreaterThanOrEqual(1);
+
+		const at = async () =>
+			(await db.select().from(alertStatus).where(eq(alertStatus.ruleId, rule.id)))[0]!.evaluatedAt;
+
+		expect(await at()).toBe(NOW);
+
+		await tick(NOW + 10_000);
+		expect(await at()).toBe(NOW);
+
+		await tick(NOW + 61_000);
+		expect(await at()).toBe(NOW + 61_000);
 	});
 
 	it('ignores disabled rules', async () => {

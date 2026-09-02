@@ -44,8 +44,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		 * authentication rather than a transient error, so it stops retrying and
 		 * logs something a person can act on. Without it, a collector with a revoked
 		 * key retries forever and the only symptom is a rate limit somewhere else.
+		 *
+		 * A plain `Response`, not `error(401, …)`. SvelteKit's `error` throws an
+		 * `HttpError` and renders it through `handleError`, and there is no way to
+		 * attach a header to that — so the version written with `error()` had this
+		 * comment above a response that did not carry the header it describes. The
+		 * end-to-end test that asserts the header is what found it.
 		 */
-		error(401, { message: 'Provide a valid API key in the Authorization header.' });
+		return json(
+			{ message: 'Provide a valid API key in the Authorization header.' },
+			{
+				status: 401,
+				headers: { 'www-authenticate': 'Bearer realm="sextant", charset="UTF-8"' }
+			}
+		);
 	}
 
 	if (!hasScope(access, 'ingest')) {

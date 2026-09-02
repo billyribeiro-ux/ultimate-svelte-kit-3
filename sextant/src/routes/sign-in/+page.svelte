@@ -18,14 +18,29 @@
 		method="POST"
 		action="?/signIn"
 		class="card"
-		use:enhance={() => {
+		use:enhance={({ formElement }) => {
 			submitting = true;
 			return async ({ update }) => {
 				// `reset: false` keeps what was typed when the submission failed. The
-				// default clears the form, which on a failed sign-in means retyping an
-				// email address that was correct.
+				// default clears the whole form, which on a failed sign-in means
+				// retyping an email address that was correct.
 				await update({ reset: false });
 				submitting = false;
+
+				/*
+				 * The password, and only the password, is cleared by hand.
+				 *
+				 * Without JavaScript the server re-renders the page and the field is
+				 * empty because the action never returns it. With enhancement there is
+				 * no re-render, so the typed value stays in the DOM — visible over a
+				 * shoulder, and one autofill away from being submitted again after the
+				 * person has already decided it was wrong.
+				 *
+				 * The two paths behaving differently is exactly the sort of thing that
+				 * survives review and is caught by a test that checks the field.
+				 */
+				const password = formElement.querySelector<HTMLInputElement>('input[type="password"]');
+				if (password) password.value = '';
 			};
 		}}
 	>

@@ -15,7 +15,7 @@
  * which is instant, reversible and visibly reflected in the row.
  */
 
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import * as v from 'valibot';
 import { command, form, getRequestEvent, query } from '$app/server';
@@ -108,7 +108,7 @@ export const saveRule = form(
 			v.maxValue(1_440)
 		)
 	}),
-	async (input) => {
+	async (input, issue) => {
 		const { user } = requireUser();
 		// `member`, not `viewer`: creating an alert is a write, and a read-only
 		// member must not be able to page the whole team at three in the morning.
@@ -121,17 +121,25 @@ export const saveRule = form(
 		 * `valueFor` returns null, the machine holds its state, and nothing ever
 		 * happens. That is the worst possible failure for an alert, and it is
 		 * entirely preventable at the moment somebody types it.
+		 *
+		 * `invalid(issue.query(…))`, NOT `error(400, …)`. The distinction is not
+		 * stylistic: a form's job is to come back with the field marked and the
+		 * message beside it, and `error` throws an `HttpError`, which a form handler
+		 * turns into a 500 error *page* — the whole form, and the list around it,
+		 * replaced by "Internal Error". The end-to-end test that creates a rule is
+		 * what found that; the version with `error` looked perfectly reasonable.
 		 */
 		const parsed = parse(input.query);
 		if (!parsed.query || parsed.errors.length > 0) {
-			error(400, { message: parsed.errors[0]?.message ?? 'That query does not parse.' });
+			invalid(issue.query(parsed.errors[0]?.message ?? 'That query does not parse.'));
 		}
+
 		const checked = check(parsed.query);
-		if (checked.errors.length > 0) error(400, { message: checked.errors[0]!.message });
+		if (checked.errors.length > 0) invalid(issue.query(checked.errors[0]!.message));
 
 		const clearsAt = input.clearsAt.trim() === '' ? null : Number(input.clearsAt);
 		if (clearsAt !== null && !Number.isFinite(clearsAt)) {
-			error(400, { message: 'The clear threshold must be a number, or empty.' });
+			invalid(issue.clearsAt('The clear threshold must be a number, or empty.'));
 		}
 
 		const values = {
