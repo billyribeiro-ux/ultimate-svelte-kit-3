@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One file to configure everything — Building Ostinato</title>
+<meta name="description" content="SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: what each option does, what it costs, and what was removed since SvelteKit 2.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 5.128205128205128%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html" aria-current="page"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>One file to configure everything</h1>
+			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: what each option does, what it costs, and what was removed since SvelteKit 2.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config and know what every line is for — including the ones that are there because a test found a bug.</p></aside>
+			<p>There is no <code>svelte.config.js</code>. SvelteKit 3 moved every option into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
+// `loadEnv` is not re-exported from there, so it comes straight from Vite.
+import { defineConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
+import { execSync } from 'node:child_process';
+import { playwright } from '@vitest/browser-playwright';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
+import ostinato from './adapters/ostinato/index.js';
+import { version as packageVersion } from './package.json' with { type: 'json' };
+
+/*
+ * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
+ * plugin. There is no `svelte.config.js`.
+ *
+ * The config is a *function* because it has to read the environment before the
+ * build starts — `paths.origin` below is substituted into the output.
+ */
+export default defineConfig(({ mode }) =&gt; {
+	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	return {
+		plugins: [
+			sveltekit({
+				/*
+				 * The trusted origin for CSRF checks on form submissions and remote
+				 * function calls. A BUILD-time value: the adapter bakes it into the
+				 * server so that a process started on plain HTTP behind a proxy does not
+				 * reconstruct `https://…` from headers and reject every POST as
+				 * cross-site.
+				 */
+				paths: { origin: env.PUBLIC_ORIGIN },</code></pre>
+</figure>
+<p>Two things to notice. <code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. And <code>paths.origin</code> is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers.</p>
+<h3 id="compiler">The compiler options</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:34-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">compilerOptions: {
+	// Runes everywhere except node_modules, where a dependency may still be
+	// written in legacy Svelte 4 style. Removable in Svelte 6.
+	runes: ({ filename }) =&gt;
+		filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
+
+	/*
+	 * `await` at the top level of `&lt;script&gt;`, inside `$derived`, and
+	 * directly in markup — plus everything that hangs off it: `pending`
+	 * snippets, `$effect.pending()`, `settled()` and `fork()`.
+	 *
+	 * A groovebox is a natural fit. Decoding a sample, rendering a pattern
+	 * to a WAV, fetching a published pattern: every one of those is &quot;wait,
+	 * then draw&quot;, and the honest expression of that is an `await` inside a
+	 * boundary rather than a `loading` boolean threaded through four
+	 * components.
+	 */
+	experimental: { async: true }
+},</code></pre>
+</figure>
+<p><code>runes</code> is a function so that a dependency written in Svelte 4 style keeps compiling. <code>experimental.async</code> is the one that changes how you write components: <code>await</code> at the top of a <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup — and with it <code>pending</code> snippets, <code>$effect.pending()</code>, <code>settled()</code> and <code>fork()</code>. An instrument is full of “wait, then draw”, and this is the honest way to write that.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:54-86</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHICH FILES ARE CUSTOM ELEMENTS
+ * ==============================
+ *
+ * `src/lib/embed/` holds the one component that is compiled as a custom
+ * element — `&lt;ostinato-player&gt;`, the thing people paste into their own
+ * pages. `dynamicCompileOptions` is called per file and, since
+ * vite-plugin-svelte 7.3.0, per *environment*, which is what lets this
+ * say &quot;for the client build of this folder only&quot;.
+ *
+ * The `environment` guard matters more than it looks. A custom element
+ * registers itself with `customElements.define` and has no server
+ * rendered form; asking the SSR pass to compile one is asking for
+ * something that cannot exist. The compiler used to decline quietly, and
+ * a behaviour you depend on quietly is a behaviour that changes quietly.
+ */
+dynamicCompileOptions({ filename, environment }) {
+	if (environment.name !== 'client') return {};
+	if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+	return {};
+},
+
+/*
+ * OUR OWN ADAPTER
+ * ===============
+ *
+ * `adapters/ostinato` is a small adapter written for this project — a
+ * Node server that deploys the app as two functions, `pages` and `api`,
+ * with a catch-all that uses SvelteKit 3's `applyReroute` to hand a
+ * request from one to the other when the `reroute` hook says so. It
+ * exists to show what an adapter *is*; the end-to-end suite runs against
+ * its output, which is the only proof of an adapter that counts.
+ */</code></pre>
+</figure>
+<p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.</p>
+<h3 id="experimental">Experimental, with evidence</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:89-131</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">experimental: {
+	// `query()`, `query.batch()`, `query.live()`, `prerender()`, `command()`
+	// and `form()` from `$app/server`. Every server call in this project
+	// goes through one of them.
+	remoteFunctions: true,
+
+	/*
+	 * FORKED PRELOADS: OFF, AND THIS TIME IT IS THE SECOND PROJECT TO SAY SO.
+	 *
+	 * The feature preloads the next route inside a Svelte `fork()` — the
+	 * new page's state is run speculatively and adopted or discarded.
+	 * Project 5 turned it off after its suite found a one-in-three failure
+	 * opening a trace. This project turned it *on*, with the same
+	 * acceptance criterion — the end-to-end suite — and the suite found a
+	 * different bug: navigate from the studio to the gallery and press
+	 * back, and five times in eight the navigation *completes* — the URL
+	 * changes, `navigation.complete` resolves, the view transition runs —
+	 * while the gallery stays on screen. The studio never renders.
+	 *
+	 * The bisect was clean: fifteen runs with the flag off, fifteen passes,
+	 * on both the desktop and the phone profile. Nothing else changed.
+	 * Speculative state that is discarded rather than committed is exactly
+	 * the sort of thing that would produce a navigation with no page, and a
+	 * preload is a latency optimisation that is not worth a blank screen.
+	 * Off, with the test that found it left in the suite as the criterion
+	 * for turning it back on.
+	 */
+	forkPreloads: false
+},
+
+/*
+ * TRACING
+ * =======
+ *
+ * OpenTelemetry spans for `handle`, `load`, form actions and remote
+ * functions. A top-level option in SvelteKit 3 — it graduated from
+ * `experimental.tracing` — and the matching `instrumentation.server.ts`
+ * no longer needs a flag at all: if the file exists and the adapter says
+ * it can (`supports.instrumentation`), it runs before the app.
+ *
+ * The spans go to an in-memory ring rather than to a collector, and the
+ * diagnostics page reads them back out, so &quot;why was that publish slow&quot;
+ * has an answer without a second service.</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the comment is longer than the option</h4>
+	<p><code>forkPreloads</code> was turned <strong>on</strong> for this project, deliberately, with the end-to-end suite as the acceptance criterion — the previous project had turned it off after a bug, and “the flag is off because it was off last time” is not engineering. The suite found a different bug: a back navigation that completes, URL and all, while the old page stays on screen. Five failures in eight runs; fifteen passes in fifteen with the flag off. A comment that records the bisect is worth more than one that records the opinion.</p>
+</aside>
+<h3 id="removed">What SvelteKit 3 removed</h3>
+<p>Three options that this file *tried* to set no longer exist, and SvelteKit says so at startup rather than ignoring them. <code>experimental.tracing</code> is now top-level <code>tracing</code>; <code>experimental.instrumentation</code> is gone because <code>src/instrumentation.server.ts</code> is picked up whenever the adapter says it can; and <code>output.preloadStrategy</code> is gone because <code>modulepreload</code> is the only strategy modern browsers need.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:133-141</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">tracing: { server: true },
+
+prerender: {
+	// A broken internal link fails the build instead of shipping a 404.
+	handleHttpError: 'fail',
+	handleMissingId: 'fail'
+},
+
+/*</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The removal list lives in SvelteKit’s own <code>src/core/config/options.js</code>, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.</p></aside>
+<h3 id="security-and-versioning">Policy, origin, version</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:157-211</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">csp: {
+	mode: 'auto',
+	directives: {
+		'default-src': ['self'],
+		'script-src': ['self'],
+		'style-src': ['self', 'unsafe-inline'],
+		'img-src': ['self', 'data:'],
+		'media-src': ['self', 'blob:'],
+		'font-src': ['self', 'data:'],
+		'connect-src': ['self'],
+		'form-action': ['self'],
+		'frame-ancestors': ['none'],
+		'object-src': ['none'],
+		'base-uri': ['self']
+	}
+},
+
+/*
+ * Nobody else may POST here. `trustedOrigins` exists for the case where a
+ * form on a partner's domain submits to this app; that case does not
+ * exist, so the list is empty and stays empty until somebody can name
+ * the domain.
+ */
+csrf: { trustedOrigins: [] },
+
+/*
+ * VERSIONING, SO A DEPLOY DOES NOT STRAND OPEN TABS
+ * ================================================
+ *
+ * Client-side navigation loads JavaScript by hashed filename. Deploy a
+ * new build while somebody has the studio open and the next navigation
+ * asks for a file that no longer exists. SvelteKit falls back to a full
+ * reload when that fails; `pollInterval` lets it *notice first*, so the
+ * layout can offer a &quot;reload for the new version&quot; banner while the
+ * pattern being worked on is still saved.
+ *
+ * `name` is the commit, because it has to be deterministic: a value that
+ * differed between two builds of the same code would tell every open tab
+ * to reload for nothing.
+ */
+version: {
+	name: commitHash() ?? packageVersion,
+	pollInterval: 60_000
+},
+
+/*
+ * `bundleStrategy: 'split'` (the default) is right for an app with a
+ * landing page and a studio: somebody reading the landing page should not
+ * download the audio engine. `'inline'` — one file, no separate chunks —
+ * is what the embeddable player wants, and it gets it from its own build
+ * in `vite.embed.config.ts` rather than from this one.
+ *
+ * There is no `preloadStrategy` any more. SvelteKit 3 removed the option
+ * and always emits `&lt;link rel=&quot;modulepreload&quot;&gt;`; the alternatives existed
+ * for browsers that no longer exist.</code></pre>
+</figure>
+<p>The CSP directives are each a decision, and chapter 36 takes them one at a time. <code>version.pollInterval</code> is worth a sentence now: it makes SvelteKit poll for a new deployment every minute and set <code>updated.current</code>, so the layout can offer a reload *before* a navigation asks for a JavaScript file that no longer exists.</p>
+<h3 id="tests">Two test projects</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:249-318</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		test: {
+			// A test that asserts nothing is a test that cannot fail.
+			expect: { requireAssertions: true },
+			projects: [
+				{
+					/*
+					 * Component and engine tests — a real Chromium, not a DOM emulator.
+					 *
+					 * Non-negotiable for an audio application: jsdom has no
+					 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
+					 * scheduler, the knobs and the waveform would all pass every test you
+					 * thought to write while doing nothing at all.
+					 */
+					extends: './vite.config.ts',
+					test: {
+						name: 'client',
+						browser: {
+							enabled: true,
+							provider: playwright({
+								// Web Audio starts suspended without a user gesture. The tests
+								// are not a person, so the flag says so.
+								launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] }
+							}),
+							instances: [{ browser: 'chromium', headless: true }]
+						},
+						include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+						exclude: ['src/lib/server/**']
+					}
+				},
+				{
+					// Pure logic — plain Node, no browser, fast. The pattern model, the
+					// codec, the identity cookie and the adapter's route partition live
+					// here, and these are the tests that run on every save.
+					extends: './vite.config.ts',
+					test: {
+						name: 'server',
+						environment: 'node',
+						include: ['src/**/*.{test,spec}.{js,ts}', 'adapters/**/*.{test,spec}.js'],
+						exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+
+						/*
+						 * One file at a time: SQLite allows exactly one writer, and two
+						 * spec files seeding the same database meet `SQLITE_BUSY` as a
+						 * dozen unrelated assertions failing in whichever file lost the
+						 * race.
+						 */
+						fileParallelism: false
+					}
+				}
+			]
+		}
+	};
+});
+
+/**
+ * The current commit, or `null` when there is no repository to ask.
+ *
+ * `null` rather than a throw: a Docker build context usually has no `.git`,
+ * and a build that fails because it could not compute a version string is a
+ * build that fails for the least important thing in it.
+ */
+function commitHash(): string | null {
+	try {
+		return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+			.toString()
+			.trim();
+	} catch {
+		return null;
+	}
+}</code></pre>
+</figure>
+<p>The <code>client</code> project runs in a real Chromium, because jsdom has no <code>AudioContext</code> and no layout: a scheduler test under jsdom would pass while doing nothing. The <code>server</code> project is plain Node for the pure logic — the codec, the cookie, the adapter’s route partition — and runs one file at a time because SQLite has one writer.</p>
+<h3 id="env">Every variable, declared once</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:12-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description: 'libSQL connection string. `file:local.db` in development.',
+		schema: required
+	},
+
+	PUBLIC_ORIGIN: {
+		description: 'Where the app is served from, with no trailing slash. Used for CSRF checks.',
+		public: true,
+
+		/*
+		 * `static: true` means the value is inlined at build time rather than read
+		 * from the environment at runtime. It has to be: `paths.origin` in
+		 * `vite.config.ts` reads the same variable during the build, and a value
+		 * that could differ between build and run would make the CSRF check compare
+		 * two different origins.
+		 */
+		static: true,
+		schema: v.pipe(
+			required,
+			v.url('Must be an absolute URL'),
+			v.transform((value) =&gt; value.replace(/\/+$/, ''))
+		)
+	},
+
+	SESSION_SECRET: {
+		description: 'Signs the artist cookie. Generate with `openssl rand -base64 32`.',
+		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+	},
+
+	TRACE_BUFFER: {
+		description: 'How many recent server spans the diagnostics page keeps in memory.',
+		/*
+		 * A string in, a number out. Environment variables are always strings, and
+		 * the place to turn one into a number is here — once — rather than in every
+		 * file that reads it with a `Number()` and a hopeful default.
+		 */
+		schema: v.optional(
+			v.pipe(
+				v.string(),
+				v.transform(Number),
+				v.number(),
+				v.integer(),
+				v.minValue(10, 'Fewer than ten spans is a page with nothing on it'),
+				v.maxValue(5000, 'Spans are kept in memory; five thousand is plenty')
+			),
+			'200'
+		)
+	}
+});</code></pre>
+</figure>
+<p><code>defineEnvVars</code> replaced the <code>$env/*</code> magic modules. A variable not declared here cannot be imported — a build error, not an <code>undefined</code> in production — and <code>public: true</code> has to be typed, so a secret cannot reach the browser by accident. <code>TRACE_BUFFER</code> shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the config is a function.</li><li>You know which three options were removed in SvelteKit 3 and what replaced each.</li><li>You can say, from the comment, why <code>forkPreloads</code> is off — and what would turn it back on.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-map.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The map: everything the framework has to offer</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

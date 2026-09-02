@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The landing page is a file — Building Ostinato</title>
+<meta name="description" content="Prerendered, with a `prerender` remote function baked in, `hydratable` for random numbers that must agree with themselves, a GSAP entrance loaded only for people who will see it, and a demo grid that plays in pure CSS.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 71.7948717948718%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html" aria-current="page"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>The landing page is a file</h1>
+			<p class="lede">Prerendered, with a <code>prerender</code> remote function baked in, <code>hydratable</code> for random numbers that must agree with themselves, a GSAP entrance loaded only for people who will see it, and a demo grid that plays in pure CSS.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Prerender a page and know what that means for the data on it; fix a hydration mismatch with <code>hydratable</code>; and load an animation library without making anybody who does not need it pay for it.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.ts<span class="code__lines">:1-8</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The landing page is prerendered: it is the same for everybody, it changes
+ * when the app is deployed and not before, and a static file is the fastest
+ * thing a server can send. The featured strip inside it is a `prerender`
+ * remote function, so the crawler runs that at build time too and the page
+ * needs no database to serve.
+ */
+export const prerender = true;</code></pre>
+</figure>
+<p>The landing page is the same for everybody and changes when the app is deployed, so it is prerendered: a static file, the fastest thing a server can send. The featured strip inside it is a <code>prerender</code> remote function (ch. 23), so the crawler runs that at build time too, and the page needs no database to serve.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:9-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE DEMO GROOVE
+ * ===============
+ *
+ * The hero shows a pattern lighting up step by step with no audio and no
+ * JavaScript: each pad has a CSS animation offset by its column. The
+ * pattern is a real preset, so what plays when somebody clicks &quot;open in the
+ * studio&quot; is what they were just looking at.
+ */
+const demo = preset('four-on-the-floor');
+
+/**
+ * `hydratable` for a random number that must agree with itself.
+ *
+ * The dots behind the hero drift with random delays. Random on the server
+ * and random again in the browser means the markup SvelteKit hydrates does
+ * not match the markup it rendered — a hydration mismatch, and a visible
+ * jump. `hydratable` runs the function once on the server, bakes the result
+ * into the page, and hands the browser *that* value instead of a new one.
+ */
+const seeds = hydratable('ostinato:hero-seeds', () =&gt;
+	Array.from({ length: 24 }, () =&gt; ({
+		x: Math.random() * 100,
+		y: Math.random() * 100,
+		d: Math.random() * 8
+	}))
+);
+
+const words = 'A groovebox in your browser.'.split(' ');</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>hydratable</code></h4>
+	<p>The dots behind the hero drift with random delays. Random on the server and random again in the browser means the markup SvelteKit hydrates does not match the markup it rendered — a hydration mismatch, and a visible jump as the dots relocate. <code>hydratable(key, fn)</code> runs the function once on the server, bakes the result into the page under that key, and hands the browser *that* value instead of a new one. Any value that is computed once and must be the same on both sides is a candidate: a random seed, a timestamp, a shuffled order.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:48-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
+	&lt;div class=&quot;hero__dots&quot; aria-hidden=&quot;true&quot;&gt;
+		{#each seeds as seed, i (i)}
+			&lt;span
+				class=&quot;dot&quot;
+				style:left=&quot;{seed.x}%&quot;
+				style:top=&quot;{seed.y}%&quot;
+				style:animation-delay=&quot;-{seed.d}s&quot;
+			&gt;&lt;/span&gt;
+		{/each}
+	&lt;/div&gt;
+
+	&lt;p class=&quot;hero__eyebrow&quot; data-rise&gt;Ostinato&lt;/p&gt;
+	&lt;h1 class=&quot;hero__title&quot;&gt;
+		{#each words as word, i (i)}
+			&lt;span class=&quot;hero__word&quot; data-word&gt;{word}&lt;/span&gt;
+		{/each}
+	&lt;/h1&gt;
+	&lt;p class=&quot;hero__lede&quot; data-rise&gt;
+		Sixteen steps, a synthesised kit, a bass that moves. Make a groove, share it as a link, publish
+		it to the gallery, or jam on it with somebody else in real time.
+	&lt;/p&gt;
+
+	&lt;div class=&quot;hero__actions cluster&quot; data-rise&gt;
+		&lt;a class=&quot;btn btn--primary btn--lg&quot; href=&quot;/studio?preset=four-on-the-floor&quot;&gt;Open the studio&lt;/a&gt;
+		&lt;a class=&quot;btn btn--lg&quot; href=&quot;/jam/lobby&quot;&gt;Join the lobby jam&lt;/a&gt;
+	&lt;/div&gt;
+
+	&lt;div class=&quot;demo&quot; aria-hidden=&quot;true&quot;&gt;
+		{#each demo.tracks as track (track.id)}
+			&lt;div class=&quot;demo__row&quot; style:--hue={`var(--hue-${track.kind})`}&gt;
+				{#each track.steps as step, column (column)}
+					&lt;span
+						class={['demo__pad', { 'demo__pad--on': step.velocity &gt; 0 }]}
+						style:--column={column}
+						data-pad
+					&gt;&lt;/span&gt;
+				{/each}
+			&lt;/div&gt;
+		{/each}
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:232-263</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">.demo__pad {
+	aspect-ratio: 1;
+	border-radius: var(--radius-sm);
+	background: var(--surface-active);
+}
+
+.demo__pad--on {
+	background: oklch(72% 0.17 var(--hue));
+	animation: pulse 2s steps(1) infinite;
+	/* Sixteen steps at 120bpm are two seconds; each column fires an eighth later. */
+	animation-delay: calc(var(--column) * 0.125s);
+}
+
+@keyframes pulse {
+	0%,
+	6% {
+		background: var(--playhead);
+		box-shadow: 0 0 12px var(--playhead);
+	}
+	6.25%,
+	100% {
+		background: oklch(72% 0.17 var(--hue));
+		box-shadow: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.demo__pad--on,
+	.dot {
+		animation: none;
+	}
+}</code></pre>
+</figure>
+<p>The demo grid plays with no audio and no JavaScript: every lit pad has the same two-second CSS animation, offset by its column with <code>animation-delay: calc(var(--column) * 0.125s)</code>. Sixteen steps at 120 bpm are two seconds, and each column fires an eighth of a second later. It obeys <code>prefers-reduced-motion</code> with one rule, because it is CSS.</p>
+<h3 id="the-entrance">The entrance</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/cinematic.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE ENTRANCE
+ * ============
+ *
+ * The landing page's one flourish: the title rises word by word and the pads
+ * of the demo grid light up in sequence, over about a second. It is an
+ * attachment, so the markup says `{@attach cinematic()}` and nothing else.
+ *
+ * THREE RULES IT KEEPS
+ * --------------------
+ *   1. GSAP is imported *dynamically*, inside the attachment, so the sixty
+ *      kilobytes of it never reach anyone who does not see the animation.
+ *   2. Somebody who asked for reduced motion gets no import and no animation:
+ *      `prefersReducedMotion` is checked first, and the page is already in its
+ *      final state because the animation only ever moves things *from*
+ *      somewhere *to* where the CSS put them.
+ *   3. It cannot blank the page. Nothing starts at `opacity: 0` in the
+ *      stylesheet; GSAP's `from` sets the start state at the moment it begins,
+ *      so a failed import leaves everything visible.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/cinematic.ts<span class="code__lines">:25-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function cinematic(): Attachment&lt;HTMLElement&gt; {
+	return (root) =&gt; {
+		if (prefersReducedMotion.current) return;
+
+		let cancelled = false;
+		let timeline: { kill(): void } | null = null;
+
+		void import('gsap').then(({ gsap }) =&gt; {
+			if (cancelled) return;
+
+			const words = root.querySelectorAll('[data-word]');
+			const pads = root.querySelectorAll('[data-pad]');
+			const rest = root.querySelectorAll('[data-rise]');
+
+			timeline = gsap
+				.timeline({ defaults: { ease: 'power3.out' } })
+				.from(words, { y: 28, opacity: 0, duration: 0.7, stagger: 0.06 })
+				.from(
+					pads,
+					{ scale: 0.4, opacity: 0, duration: 0.35, stagger: { each: 0.012, from: 'start' } },
+					'&lt;0.2'
+				)
+				.from(rest, { y: 16, opacity: 0, duration: 0.5, stagger: 0.08 }, '&lt;0.3');
+		});
+
+		return () =&gt; {
+			cancelled = true;
+			timeline?.kill();
+		};
+	};
+}</code></pre>
+</figure>
+<p>GSAP is imported *inside* the attachment, dynamically, so the sixty kilobytes of it never reach anyone who does not see the animation — and someone who asked for reduced motion gets no import at all. Nothing in the stylesheet starts at <code>opacity: 0</code>; GSAP’s <code>from</code> sets the start state at the moment it begins, so a failed import leaves everything visible. The markup says <code>{@attach cinematic()}</code> and nothing else.</p>
+<h3 id="the-featured-strip">The featured strip</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:91-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
+	&lt;Section eyebrow=&quot;Featured&quot; title=&quot;Grooves worth stealing&quot;&gt;
+		&lt;!--
+			`await` in markup, inside a boundary with a `pending` snippet. The
+			featured list is a `prerender` remote function: at build time this
+			resolved and was baked into the page, so on a real visit it arrives
+			with the HTML and the pending state never shows.
+		--&gt;
+		&lt;svelte:boundary&gt;
+			&lt;ul class=&quot;featured&quot;&gt;
+				{#each await getFeatured() as published (published.id)}
+					&lt;li&gt;&lt;PatternCard {published} /&gt;&lt;/li&gt;
+				{:else}
+					&lt;li class=&quot;hint&quot;&gt;Nothing featured yet — publish something from the studio.&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+
+			{#snippet pending()}
+				&lt;p class=&quot;hint&quot;&gt;Loading the featured grooves…&lt;/p&gt;
+			{/snippet}
+
+			{#snippet failed(error, reset)}
+				&lt;p class=&quot;issue&quot;&gt;
+					The featured list could not be loaded. &lt;button class=&quot;btn btn--sm&quot; onclick={reset}
+						&gt;Try again&lt;/button
+					&gt;
+				&lt;/p&gt;
+				&lt;p class=&quot;hint&quot;&gt;{(error as Error).message}&lt;/p&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+	&lt;/Section&gt;</code></pre>
+</figure>
+<p><code>{#each await getFeatured() as published}</code> — an <code>await</code> directly in an <code>{#each}</code>. At build time this resolved and was baked into the page, so on a real visit the list arrives with the HTML and the <code>pending</code> snippet never shows. The <code>failed</code> snippet is there for the one case that is left: a build with no database.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:7-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * One published pattern, as a card. The link is the whole card; the
+ * optional `actions` snippet is where a gallery puts its delete form or its
+ * preview button, so this component does not have to know about either.
+ */
+let {
+	published,
+	counts,
+	href = `/p/${published.id}`,
+	actions,
+	grid,
+	onopen
+}: {
+	published: Published;
+	counts?: { plays: number; likes: number };
+	href?: string;
+	actions?: Snippet;
+	/** Replaces the default picture — the gallery uses it to crossfade into a preview. */
+	grid?: Snippet&lt;[Pattern]&gt;;
+	onopen?: (event: MouseEvent) =&gt; void;
+} = $props();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:30-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;article class=&quot;card pattern-card&quot;&gt;
+	&lt;a {href} class=&quot;pattern-card__link&quot; onclick={onopen}&gt;
+		{#if grid}
+			{@render grid(published.pattern)}
+		{:else}
+			&lt;MiniGrid pattern={published.pattern} /&gt;
+		{/if}
+		&lt;h3 class=&quot;pattern-card__title&quot;&gt;{published.title}&lt;/h3&gt;
+	&lt;/a&gt;
+	&lt;p class=&quot;pattern-card__meta&quot;&gt;
+		&lt;span&gt;@{published.artist.handle}&lt;/span&gt;
+		&lt;span class=&quot;mono&quot;&gt;{published.bpm} bpm&lt;/span&gt;
+		{#if counts}
+			&lt;span class=&quot;mono&quot; title=&quot;plays&quot;&gt;▶ {counts.plays}&lt;/span&gt;
+			&lt;span class=&quot;mono&quot; title=&quot;loves&quot;&gt;♥ {counts.likes}&lt;/span&gt;
+		{/if}
+	&lt;/p&gt;
+	{#if actions}
+		&lt;div class=&quot;pattern-card__actions&quot;&gt;{@render actions()}&lt;/div&gt;
+	{/if}
+&lt;/article&gt;</code></pre>
+</figure>
+<p>A card takes two optional snippets: <code>actions</code>, where a gallery puts its delete form, and <code>grid</code>, which replaces the picture — the gallery uses it to crossfade the picture into a preview (ch. 30). <code>Snippet&lt;[Pattern]&gt;</code> is a snippet that takes one argument. The card knows nothing about either use.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/MiniGrid.svelte<span class="code__lines">:4-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	/**
+	 * A pattern as a picture: one row of squares per track, lit where a step
+	 * is. It is an SVG so that it scales to a card, a hero and a share image
+	 * from the same markup, and it is the same drawing `Card.svelte` uses on
+	 * the server.
+	 */
+	let { pattern, playhead = -1 }: { pattern: Pattern; playhead?: number } = $props();
+
+	const cell = 10;
+	const gap = 2;
+	const width = STEPS * (cell + gap) - gap;
+	const height = $derived(pattern.tracks.length * (cell + gap) - gap);
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/MiniGrid.svelte<span class="code__lines">:18-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svg
+	viewBox=&quot;0 0 {width} {height}&quot;
+	class=&quot;mini&quot;
+	role=&quot;img&quot;
+	aria-label=&quot;{pattern.tracks.length} tracks, 16 steps&quot;
+&gt;
+	{#each pattern.tracks as track, row (track.id)}
+		{#each track.steps as step, column (column)}
+			{const on = step.velocity &gt; 0}
+			&lt;rect
+				x={column * (cell + gap)}
+				y={row * (cell + gap)}
+				width={cell}
+				height={cell}
+				rx=&quot;2&quot;
+				class={[
+					'cell',
+					{
+						'cell--on': on,
+						'cell--soft': on &amp;&amp; step.velocity &lt;= 80,
+						'cell--now': column === playhead
+					}
+				]}
+				style:--hue={`var(--hue-${track.kind})`}
+			/&gt;
+		{/each}
+	{/each}
+&lt;/svg&gt;</code></pre>
+</figure>
+<p>The picture is an SVG so that it scales to a card, a hero and a share image from the same markup. A <code>{const}</code> inside a nested <code>{#each}</code> computes <code>on</code> once per cell, and the <code>class</code> array reads it three times.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>export const prerender = true</code> does and what it forbids the page from doing.</li><li>You can find a hydration mismatch in a page of your own and say whether <code>hydratable</code> is the fix.</li><li>You can explain why the GSAP import is inside the attachment rather than at the top of the file.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="layouts-and-groups.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Two layouts and a group</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-pattern-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The pattern page and its share card</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

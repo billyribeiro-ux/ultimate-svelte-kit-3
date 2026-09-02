@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The schema, and the environment — Building Ostinato</title>
+<meta name="description" content="Four tables in Drizzle, a pattern as one JSON column, relations for the query builder, one libSQL client with WAL, and every environment variable declared once with a valibot schema.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">21 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 53.84615384615385%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html" aria-current="page"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 21</p>
+			<h1>The schema, and the environment</h1>
+			<p class="lede">Four tables in Drizzle, a pattern as one JSON column, relations for the query builder, one libSQL client with WAL, and every environment variable declared once with a valibot schema.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a small schema and know why it is small; understand what <code>relations()</code> is for; and see how SvelteKit 3 replaced <code>$env/*</code> with a typed, validated declaration.</p></aside>
+			<p>The smallest schema of the six projects, on purpose. A pattern is read and written whole and never queried by its insides, so it is one JSON column; a table of steps would be a hundred and twenty-eight rows per pattern for no query that anybody runs.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SCHEMA
+ * ==========
+ *
+ * Four tables, and the smallest schema of the six projects on purpose. A
+ * pattern is one JSON column: it is read and written whole, never queried by
+ * its insides, and a table of steps would be a hundred and twenty-eight rows
+ * per pattern for no query that anybody runs.
+ *
+ * Timestamps are integers — milliseconds since the epoch — because SQLite has
+ * no date type and a string date sorts wrong the first time somebody changes
+ * the format.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:20-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * An artist is a browser that has chosen a name. There is no password: the id
+ * lives in a signed cookie, and losing the cookie is losing the account. That
+ * is the right amount of identity for &quot;who made this groove&quot; and the wrong
+ * amount for anything with money in it, which is why nothing here has money
+ * in it.
+ */
+export const artists = sqliteTable('artists', {
+	id: text('id').primaryKey(),
+	handle: text('handle').notNull().unique(),
+	createdAt: integer('created_at').notNull().default(now)
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:33-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const patterns = sqliteTable(
+	'patterns',
+	{
+		id: text('id').primaryKey(),
+		artistId: text('artist_id')
+			.notNull()
+			.references(() =&gt; artists.id, { onDelete: 'cascade' }),
+		/** URL-safe, unique per artist: `/@handle/slug` is the vanity address. */
+		slug: text('slug').notNull(),
+		title: text('title').notNull(),
+		bpm: integer('bpm').notNull(),
+		/** The whole pattern, as `PatternDto` JSON. */
+		data: text('data').notNull(),
+		/** The pattern this was remixed from, if any. Kept when the original is deleted. */
+		remixOf: text('remix_of').references((): ReturnType&lt;typeof text&gt; =&gt; patterns.id, {
+			onDelete: 'set null'
+		}),
+		plays: integer('plays').notNull().default(0),
+		likes: integer('likes').notNull().default(0),
+		featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+		createdAt: integer('created_at').notNull().default(now),
+		updatedAt: integer('updated_at').notNull().default(now)
+	},
+	(table) =&gt; [
+		uniqueIndex('patterns_artist_slug').on(table.artistId, table.slug),
+		// The gallery sorts by recency and the featured strip by likes.
+		index('patterns_created').on(table.createdAt),
+		index('patterns_likes').on(table.likes)
+	]
+);</code></pre>
+</figure>
+<p>The unique index on <code>(artist_id, slug)</code> is what makes <code>/@handle/slug</code> an address: one artist cannot publish two patterns with the same slug, and the publish function (ch. 24) appends <code>-2</code>, <code>-3</code> until it finds one free. The two plain indexes are the two ways the gallery sorts. <code>remix_of</code> points at another pattern and is set to <code>null</code> when that one is deleted — a remix outlives its original, which is how remixes work.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:64-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A jam room: one pattern several browsers edit at once. The row is the truth;
+ * the live query in `rooms.remote.ts` is how everybody hears about a change.
+ * `version` goes up by one per write, so a browser can tell &quot;changed&quot; from
+ * &quot;same as before&quot; without comparing two kilobytes of JSON.
+ */
+export const rooms = sqliteTable('rooms', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	data: text('data').notNull(),
+	version: integer('version').notNull().default(0),
+	updatedAt: integer('updated_at').notNull().default(now)
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:78-95</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Relations, for drizzle's relational query builder. A `with: { artist }` in
+ * `db.query.patterns.findMany` is only meaningful once drizzle has been told
+ * how a pattern finds its artist — the foreign key above is a database fact,
+ * and this is the same fact stated for the query builder.
+ */
+export const artistsRelations = relations(artists, ({ many }) =&gt; ({
+	patterns: many(patterns)
+}));
+
+export const patternsRelations = relations(patterns, ({ one }) =&gt; ({
+	artist: one(artists, { fields: [patterns.artistId], references: [artists.id] }),
+	original: one(patterns, {
+		fields: [patterns.remixOf],
+		references: [patterns.id],
+		relationName: 'remix'
+	})
+}));</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>relations()</code> exists when the foreign key already does</h4>
+	<p>The <code>references()</code> on <code>artistId</code> is a database fact: the database will refuse a pattern whose artist does not exist. Drizzle’s *relational query builder* — <code>db.query.patterns.findMany({ with: { artist } })</code> — does not read that fact; it reads these <code>relations()</code> declarations. Without them the <code>with:</code> clause throws a confusing error about <code>referencedTable</code> at the first prerender, which is exactly how this project found out.</p>
+</aside>
+<h3 id="the-client">One client, WAL on</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The database handle.
+ *
+ * One client for the process, created at import time. libSQL pools internally,
+ * so a second client would mean a second pool competing for the same file — and
+ * with SQLite, two pools writing to one file is how you meet `SQLITE_BUSY`.
+ */
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL } from '$app/env/private';
+import * as schema from './schema.ts';
+
+const client = createClient({ url: DATABASE_URL, intMode: 'number' });
+
+/*
+ * WAL lets readers proceed while a writer appends — a jam room is many readers
+ * and one writer at a time — and the busy timeout makes a second writer wait a
+ * few milliseconds instead of failing at once.
+ */
+await client.execute('pragma journal_mode = wal');
+await client.execute('pragma busy_timeout = 5000');
+
+export const db = drizzle(client, { schema });
+export { client };
+export * as schema from './schema.ts';</code></pre>
+</figure>
+<p>A top-level <code>await</code> in a module is fine on the server, and here it sets two pragmas before anything else can run a query. WAL — write-ahead logging — lets readers proceed while a writer appends, and a jam room is many readers and one writer at a time. The busy timeout makes a second writer wait a few milliseconds rather than fail with <code>SQLITE_BUSY</code>.</p>
+<h3 id="the-environment">The environment, declared</h3>
+<p>SvelteKit 3 replaced the <code>$env/static/*</code> and <code>$env/dynamic/*</code> modules with one file: <code>src/env.ts</code> calls <code>defineEnvVars</code> with every variable the app reads, each with a description, a schema and — if the browser may see it — <code>public: true</code>. A variable not declared here cannot be imported. <code>DATABASE_URL</code> comes in through <code>$app/env/private</code>; <code>PUBLIC_ORIGIN</code> through <code>$app/env/public</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:23-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">PUBLIC_ORIGIN: {
+	description: 'Where the app is served from, with no trailing slash. Used for CSRF checks.',
+	public: true,
+
+	/*
+	 * `static: true` means the value is inlined at build time rather than read
+	 * from the environment at runtime. It has to be: `paths.origin` in
+	 * `vite.config.ts` reads the same variable during the build, and a value
+	 * that could differ between build and run would make the CSRF check compare
+	 * two different origins.
+	 */
+	static: true,
+	schema: v.pipe(
+		required,
+		v.url('Must be an absolute URL'),
+		v.transform((value) =&gt; value.replace(/\/+$/, ''))
+	)
+},</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:47-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">TRACE_BUFFER: {
+	description: 'How many recent server spans the diagnostics page keeps in memory.',
+	/*
+	 * A string in, a number out. Environment variables are always strings, and
+	 * the place to turn one into a number is here — once — rather than in every
+	 * file that reads it with a `Number()` and a hopeful default.
+	 */
+	schema: v.optional(
+		v.pipe(
+			v.string(),
+			v.transform(Number),
+			v.number(),
+			v.integer(),
+			v.minValue(10, 'Fewer than ten spans is a page with nothing on it'),
+			v.maxValue(5000, 'Spans are kept in memory; five thousand is plenty')
+		),
+		'200'
+	)
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Environment variables are strings. <code>TRACE_BUFFER</code> is turned into a number *here*, once, with <code>v.transform(Number)</code> followed by the checks a number needs — rather than in every file that reads it with a <code>Number()</code> and a hopeful default. If the value is missing, the default <code>&quot;200&quot;</code> goes through the same pipe.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the pattern is one JSON column and when that would be the wrong choice.</li><li>You can explain what <code>relations()</code> adds that <code>references()</code> does not.</li><li>You can add a new environment variable and say which import path the app would use for it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="sound-and-share.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Sound in, patterns out</span>
+			</a>
+			<a class="pager__link pager__link--next" href="identity-without-passwords.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Identity without passwords</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

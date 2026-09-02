@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The studio page — Building Ostinato</title>
+<meta name="description" content="A universal `load` decides where the pattern comes from; the page builds the instrument, provides it through context, restores after hydration, snapshots across navigation, and wires the keyboard, the window and the body.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">19 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 48.717948717948715%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html" aria-current="page"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 19</p>
+			<h1>The studio page</h1>
+			<p class="lede">A universal <code>load</code> decides where the pattern comes from; the page builds the instrument, provides it through context, restores after hydration, snapshots across navigation, and wires the keyboard, the window and the body.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Assemble the studio: read a <code>load</code> with four sources, know why a fresh visit restores in <code>onMount</code>, and use <code>snapshot</code>, <code>settled</code>, <code>{#key}</code>, <code>&lt;svelte:boundary&gt;</code> and <code>$inspect</code> for what they are for.</p></aside>
+			<p>A pattern arrives at the studio four ways, and the <code>load</code> function is the list. A universal <code>load</code> — <code>+page.ts</code>, not <code>+page.server.ts</code> — runs on the server for the first visit and in the browser for every navigation after, and the remote query it calls behaves the same in both.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.ts<span class="code__lines">:7-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHERE THE STUDIO'S PATTERN COMES FROM
+ * =====================================
+ *
+ *   ?remix=&lt;id&gt;   a published pattern, fetched with a remote query
+ *   ?p=&lt;code&gt;     a shared link — the pattern is the address
+ *   ?preset=name  one of the built-in grooves
+ *   nothing       whatever this browser was working on last, restored in the
+ *                 page once it has mounted (`localStorage` is not available
+ *                 here, and a `load` that ran differently on the server and
+ *                 in the browser would hydrate to a mismatch)
+ *
+ * A universal `load`: it runs on the server for the first visit and in the
+ * browser for every navigation after, and a remote query called inside it
+ * behaves the same in both. The pattern it returns crosses to the browser
+ * through the `transport` hook, `Note`s intact.
+ */
+export const load: PageLoad = async ({ url }) =&gt; {
+	const remix = url.searchParams.get('remix');
+	if (remix) {
+		const published = await getPattern(remix);
+		return {
+			source: 'remix' as const,
+			pattern: published.pattern,
+			remixOf: published.id,
+			title: `Remix: ${published.title}`
+		};
+	}
+
+	const code = url.searchParams.get('p');
+	if (code) {
+		try {
+			return {
+				source: 'link' as const,
+				pattern: decodePattern(code),
+				remixOf: null,
+				title: 'Studio'
+			};
+		} catch {
+			// A damaged link opens an empty studio with a message, not an error page.
+			return { source: 'broken' as const, pattern: null, remixOf: null, title: 'Studio' };
+		}
+	}
+
+	const name = url.searchParams.get('preset');
+	if (name &amp;&amp; name in PRESETS) {
+		return {
+			source: 'preset' as const,
+			pattern: preset(name) as Pattern,
+			remixOf: null,
+			title: 'Studio'
+		};
+	}
+
+	return { source: 'fresh' as const, pattern: null, remixOf: null, title: 'Studio' };
+};</code></pre>
+</figure>
+<p>The fourth case is the interesting one. A fresh visit should show whatever this browser was working on last, and that lives in <code>localStorage</code>, which the server cannot read. A <code>load</code> that returned one thing on the server and another in the browser would hydrate to a mismatch. So <code>load</code> returns <code>null</code>, the server renders a preset, and the page swaps the saved session in *after* hydration.</p>
+<aside class="callout callout--note"><p>The <code>as const</code> on each <code>source</code> is what makes <code>data.source</code> a union of five literal strings rather than <code>string</code>. The page then switches on it with the compiler checking that every case is spelled right.</p></aside>
+<h3 id="the-instrument">Building the instrument</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:24-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let { data }: PageProps = $props();
+
+/* ---------------------------------------------------------------- */
+/* The instrument                                                    */
+/* ---------------------------------------------------------------- */
+
+const session = new Session();
+const engine = new AudioEngine();
+const samples = new SampleBank(engine);
+
+/*
+ * The scheduler reads the pattern through a getter, so whatever the session
+ * holds when the timer ticks is what plays — including a step toggled a
+ * millisecond ago. Its outputs are the engine's channel strips.
+ */
+const scheduler = new Scheduler(engine, () =&gt; session.pattern, {
+	output: (track) =&gt; engine.channel(track).input,
+	sample: (track) =&gt; samples.get(track.id)
+});
+
+// Every component under this page reaches the three through context.
+setStudio({ engine, scheduler, samples });
+
+/*
+ * The first pattern. `load` decided what it is, except for a fresh visit,
+ * which shows a preset on the server and swaps in the saved session once
+ * mounted — after hydration, so the server's markup is never contradicted.
+ */
+const initial = untrack(() =&gt; data);
+session.load(initial.pattern ?? preset('four-on-the-floor'), { remixOf: initial.remixOf });
+
+onMount(() =&gt; {
+	if (initial.source === 'fresh') session.restore();
+	if (initial.source === 'broken')
+		toast('That link was damaged, so here is a fresh pattern', 'error');
+});</code></pre>
+</figure>
+<p>The session, the engine, the sample bank and the scheduler are created once, at the top of the script. <code>setStudio</code> puts the three the rest of the tree needs into context (ch. 11): the sound panel is three components down and asks for the engine by calling <code>getStudio()</code>, and nothing in between knows.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>untrack(() =&gt; data)</code></h4>
+	<p><code>data</code> is a prop, and props are reactive: when a navigation changes the URL, <code>data</code> changes with it. The *first* pattern must be read exactly once, at creation, and never again — a later <code>data</code> change should not reload the session and throw away edits. <code>untrack</code> reads without subscribing. The <code>onMount</code> after it runs once the DOM exists, which is when <code>localStorage</code> can be read without the server disagreeing.</p>
+</aside>
+<h3 id="snapshot-and-effects">Snapshot, autosave, prune, inspect</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:61-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * SNAPSHOT
+ * ========
+ * Navigating away and back — to the gallery to steal an idea, say — must
+ * not lose the pattern. `capture` runs before the page is left, `restore`
+ * when it comes back, and the value is kept with the history entry. It is
+ * the encoded string: small, serialisable, and exactly what a link holds.
+ */
+export const snapshot: Snapshot&lt;string&gt; = {
+	capture: () =&gt; session.encoded,
+	restore: (code) =&gt; session.load(decodePattern(code), { remixOf: session.remixOf })
+};
+
+// Autosave to localStorage after every change; the root effect's teardown is this effect's cleanup.
+$effect(() =&gt; session.autosave());
+
+// Drop channel strips for tracks that no longer exist. A sync with an
+// external system — the audio graph — which is what `$effect` is for.
+$effect(() =&gt; {
+	engine.prune(session.pattern.tracks.map((track) =&gt; track.id));
+});
+
+/*
+ * `$inspect` logs its arguments whenever they change, in development only.
+ * `.with` replaces the default `console.log` — here with something that
+ * says which of the two changed, which the default does not.
+ */
+// eslint-disable-next-line svelte/no-inspect -- deliberate: development-only, compiles away
+$inspect(session.pattern.bpm, session.pattern.swing).with((type, bpm, swing) =&gt; {
+	if (type === 'update') console.debug(`tempo → ${bpm} bpm, swing ${Math.round(swing * 100)}%`);
+});</code></pre>
+</figure>
+<p>Four things, each in the place Svelte or SvelteKit provides for it. <code>snapshot</code> is SvelteKit’s: <code>capture</code> runs before the page is left and <code>restore</code> when the back button brings it back, and the value — the encoded pattern, a few hundred characters — is stored with the history entry. Go to the gallery, come back, and the pattern is where you left it.</p>
+<p><code>$effect(() =&gt; session.autosave())</code> is the root effect from chapter 14, wired in one line: the disposer it returns is this effect’s cleanup. <code>engine.prune</code> runs whenever the track list changes — a sync with an external system, the audio graph, which is what <code>$effect</code> is for. And <code>$inspect(...).with(...)</code> logs the tempo in development with a custom formatter that says *which* of the two values changed, which the default <code>console.log</code> does not.</p>
+<h3 id="settled">Presets and <code>settled()</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:120-136</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `settled()` resolves when the state change *and everything it caused*
+ * has reached the DOM — the new rows, their transitions started, the pads
+ * in place. Focusing the first pad before that would focus a pad about to
+ * be replaced.
+ */
+async function loadPreset(name: string) {
+	session.load(preset(name));
+	await settled();
+	document.querySelector&lt;HTMLElement&gt;('.pad')?.focus({ preventScroll: true });
+	toast(`Loaded ${session.pattern.title}`);
+}
+
+function addTrack(kind: Kind) {
+	const track = session.addTrack(kind);
+	if (!track) toast('Eight tracks is the limit', 'error');
+}</code></pre>
+</figure>
+<p>Loading a preset replaces the pattern, which replaces the grid (the <code>{#key}</code> below), which creates a hundred new pads. Focusing the first pad *before* that has finished would focus a pad about to be removed. <code>settled()</code> resolves when the state change and everything it caused — the new rows, their transitions started — has reached the DOM. It is <code>await tick()</code> for a world with async in it.</p>
+<h3 id="the-keyboard">The keyboard, the window, the body</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:142-175</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function keydown(event: KeyboardEvent) {
+	const target = event.target as HTMLElement | null;
+	if (target?.closest('input, textarea, select, [contenteditable]')) return;
+
+	if (event.key === ' ') {
+		event.preventDefault();
+		void scheduler.toggle();
+	} else if ((event.metaKey || event.ctrlKey) &amp;&amp; event.key.toLowerCase() === 'z') {
+		event.preventDefault();
+		if (event.shiftKey) session.redo();
+		else session.undo();
+	} else if ((event.metaKey || event.ctrlKey) &amp;&amp; event.key.toLowerCase() === 'y') {
+		event.preventDefault();
+		session.redo();
+	} else if (event.key &gt;= '1' &amp;&amp; event.key &lt;= '4' &amp;&amp; !event.metaKey &amp;&amp; !event.ctrlKey) {
+		session.brush = (['cycle', 'accent', 'soft', 'erase'] as const)[Number(event.key) - 1]!;
+	} else if (event.key === 'Escape') {
+		close();
+	}
+}
+
+/**
+ * Browsers will not start audio until the person has done something. Any
+ * pointer press on the page counts, so the first one wakes the engine — and
+ * the space bar, which is not a gesture in every browser, then works too.
+ */
+function wake() {
+	if (engine.state !== 'running') void engine.resume();
+}
+
+/** Save battery when the tab is hidden and nothing is playing. */
+function visibility() {
+	if (document.hidden &amp;&amp; !scheduler.playing) void engine.suspend();
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:190-197</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:head&gt;
+	&lt;title&gt;{data.title} — Ostinato&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;!-- Window for shortcuts, document for visibility, body for the audio unlock: each element for what it is the right listener for. --&gt;
+&lt;svelte:window onkeydown={keydown} /&gt;
+&lt;svelte:document onvisibilitychange={visibility} /&gt;
+&lt;svelte:body onpointerdown={wake} /&gt;</code></pre>
+</figure>
+<p>Three special elements, each for what it is the right listener for. <code>&lt;svelte:window&gt;</code> for the shortcuts, because a key press goes to the window when nothing is focused. <code>&lt;svelte:document&gt;</code> for <code>visibilitychange</code>, which is a document event. <code>&lt;svelte:body&gt;</code> for the pointer press that wakes the audio engine — browsers will not start audio without a gesture, and any press anywhere on the page counts, after which the space bar (not a gesture in every browser) works too.</p>
+<h3 id="the-grid-in-place">The grid, keyed and bounded</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:282-314</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`{#key}` destroys and recreates its contents when the expression
+	changes: a whole new grid for a whole new pattern, so no row
+	transition from the old one plays against the new.
+--&gt;
+{#key session.generation}
+	&lt;svelte:boundary onerror={(error) =&gt; toast((error as Error).message, 'error')}&gt;
+		&lt;StepGrid
+			pattern={session.pattern}
+			step={scheduler.step}
+			bind:brush={session.brush}
+			selected={session.selected}
+			onpaint={(track, index) =&gt; session.paint(track, index)}
+			ontranspose={(track, index, semitones) =&gt; session.transpose(track, index, semitones)}
+			onfill={(track, on) =&gt; session.fill(track, on)}
+			onselect={(track) =&gt; {
+				session.selected = track;
+				open('sound');
+			}}
+			onmove={(track, direction) =&gt; session.moveTrack(track, direction)}
+			onremove={(track) =&gt; session.removeTrack(track)}
+			onrename={(track, name) =&gt; {
+				const t = session.track(track);
+				if (t) t.name = name;
+			}}
+		/&gt;
+
+		{#snippet failed(error, reset)}
+			&lt;p class=&quot;issue&quot;&gt;The grid could not be drawn: {(error as Error).message}&lt;/p&gt;
+			&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+		{/snippet}
+	&lt;/svelte:boundary&gt;
+{/key}</code></pre>
+</figure>
+<p><code>{#key session.generation}</code> destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, <code>&lt;svelte:boundary&gt;</code> catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the <code>failed</code> snippet with a “Try again” button instead of taking the page down. <code>onerror</code> sends the message to a toast as well.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:177-187</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/* &quot;Saved 3s ago&quot; — a `SvelteDate` for now, ticking, against the session's `savedAt`. */
+const now = new SvelteDate();
+$effect(() =&gt; {
+	const timer = setInterval(() =&gt; now.setTime(Date.now()), 1000);
+	return () =&gt; clearInterval(timer);
+});
+const savedAgo = $derived.by(() =&gt; {
+	if (!session.savedAt) return null;
+	const seconds = Math.max(0, Math.round((now.getTime() - session.savedAt.getTime()) / 1000));
+	return seconds &lt; 60 ? `${seconds}s ago` : `${Math.round(seconds / 60)}m ago`;
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:259-267</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;p class=&quot;status hint&quot; aria-live=&quot;polite&quot;&gt;
+	{#if savedAgo}
+		Published {savedAgo}{session.dirty ? ' · edited since' : ''}
+	{:else if session.remixOf}
+		Remixing &lt;code&gt;{session.remixOf}&lt;/code&gt;
+	{:else}
+		Saved in this browser as you go
+	{/if}
+&lt;/p&gt;</code></pre>
+</figure>
+<p>“Published 3s ago” needs a clock that ticks. <code>now</code> is a <code>SvelteDate</code>, updated by an interval; <code>session.savedAt</code> is another. Subtract one from the other in a <code>$derived.by</code> and the label re-renders every second, because reading a <code>SvelteDate</code> is tracked. A plain <code>Date</code> would show “0s ago” forever.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can list the four places a pattern comes from and say which one restores in <code>onMount</code> and why.</li><li>You can say what <code>settled()</code> waits for and what would go wrong without it.</li><li>You can explain what <code>{#key}</code> and <code>&lt;svelte:boundary&gt;</code> each protect against here.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="panels-as-history.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Panels that are history entries</span>
+			</a>
+			<a class="pager__link pager__link--next" href="sound-and-share.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Sound in, patterns out</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

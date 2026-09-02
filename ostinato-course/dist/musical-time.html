@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Musical time, in seconds — Building Ostinato</title>
+<meta name="description" content="The conversions between steps and seconds — tempo, swing, velocity — kept apart from both the scheduler and the pattern so they can be tested with a calculator.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 12.82051282051282%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html" aria-current="page"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>Musical time, in seconds</h1>
+			<p class="lede">The conversions between steps and seconds — tempo, swing, velocity — kept apart from both the scheduler and the pattern so they can be tested with a calculator.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know what a sixteenth note is in seconds at a tempo, what swing does to it, and why velocity maps to gain on a curve.</p></aside>
+			<p>The scheduler thinks in the audio clock — seconds since the <code>AudioContext</code> was created. The pattern thinks in steps. Four small functions convert between them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/time.ts<span class="code__lines">:1-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * MUSICAL TIME, IN SECONDS
+ * ========================
+ *
+ * The scheduler thinks in the audio clock — seconds since the `AudioContext`
+ * was created — and the pattern thinks in steps. These are the conversions,
+ * kept apart from both so they can be tested with a calculator.
+ *
+ * A **step** is a sixteenth note: four to a beat, sixteen to a bar of 4/4.
+ */
+
+/** Sixteenth notes per beat. */
+export const STEPS_PER_BEAT = 4;
+
+/** How long one step lasts at a tempo, with no swing. */
+export function stepSeconds(bpm: number): number {
+	return 60 / bpm / STEPS_PER_BEAT;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/time.ts<span class="code__lines">:20-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SWING
+ * =====
+ *
+ * Straight sixteenths land on an even grid. Swing delays every *second* step —
+ * the &quot;and&quot; of each eighth note — so a pair of steps becomes long-short rather
+ * than equal. At `amount = 0` the grid is straight; at `amount = 1` the second
+ * step lands two thirds of the way through the pair, which is a full triplet
+ * feel and about as far as anybody pushes it.
+ *
+ * Returned as an offset in seconds to add to the odd steps, so the caller keeps
+ * one simple clock and applies the feel on top. Swing that shortens the
+ * *following* step rather than delaying this one sounds identical and is far
+ * harder to reason about, because it makes the step length depend on the step.
+ */
+export function swingOffset(step: number, bpm: number, amount: number): number {
+	if (step % 2 === 0) return 0;
+	const clamped = Math.min(1, Math.max(0, amount));
+	// A third of a step is the distance from the straight position (1/2 of the
+	// pair) to the triplet position (2/3 of the pair).
+	return stepSeconds(bpm) * clamped * (1 / 3);
+}</code></pre>
+</figure>
+<p>Swing is the one worth reading twice. Straight sixteenths land on an even grid; swing delays every *second* step so a pair becomes long-short. At <code>amount = 1</code> the second step lands two thirds of the way through the pair — a full triplet feel. It is returned as an *offset* for the caller to add, so the scheduler keeps one simple, even clock and applies the feel on top. The alternative — shortening the *following* step — sounds identical and is far harder to reason about, because then the length of a step depends on which step it is.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/time.ts<span class="code__lines">:44-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function stepAt(elapsed: number, bpm: number, steps: number): number {
+	const step = Math.floor(elapsed / stepSeconds(bpm));
+	return ((step % steps) + steps) % steps;
+}
+
+/** MIDI velocity (0–127) as a gain (0–1), on a curve that feels linear to an ear. */
+export function velocityGain(velocity: number): number {
+	const v = Math.min(127, Math.max(0, velocity)) / 127;
+	// Perceived loudness is closer to the square of the control than to the
+	// control itself; a straight line makes the bottom half of the range inaudible.
+	return v * v;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why velocity is squared</h4>
+	<p>MIDI velocity is 0–127 and gain is 0–1, and the obvious mapping is a straight line. But loudness as an ear hears it is closer to the square of the control than to the control itself: a straight line makes the bottom half of the range nearly inaudible and the top half indistinguishable. Squaring is the cheapest curve that fixes both ends. The test checks the ends are fixed and the middle is below the line.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.spec.ts<span class="code__lines">:50-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('time', () =&gt; {
+	it('makes a sixteenth at 120bpm last an eighth of a second', () =&gt; {
+		expect(stepSeconds(120)).toBeCloseTo(0.125, 6);
+	});
+
+	it('swings only the odd steps, up to a triplet', () =&gt; {
+		expect(swingOffset(0, 120, 1)).toBe(0);
+		expect(swingOffset(2, 120, 1)).toBe(0);
+		expect(swingOffset(1, 120, 0)).toBe(0);
+		// A third of a step: the distance from halfway to two thirds of the pair.
+		expect(swingOffset(1, 120, 1)).toBeCloseTo(0.125 / 3, 6);
+		expect(swingOffset(1, 120, 0.5)).toBeCloseTo(0.125 / 6, 6);
+		expect(swingOffset(1, 120, 4)).toBeCloseTo(0.125 / 3, 6); // clamped
+	});
+
+	it('wraps the playhead around the loop', () =&gt; {
+		expect(stepAt(0, 120, 16)).toBe(0);
+		expect(stepAt(0.125 * 15, 120, 16)).toBe(15);
+		expect(stepAt(0.125 * 16, 120, 16)).toBe(0);
+		expect(stepAt(0.125 * 37, 120, 16)).toBe(5);
+	});
+
+	it('maps velocity to gain on a curve, with the ends fixed', () =&gt; {
+		expect(velocityGain(0)).toBe(0);
+		expect(velocityGain(127)).toBe(1);
+		expect(velocityGain(64)).toBeLessThan(0.5);
+		expect(velocityGain(200)).toBe(1);
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can compute the length of a step at 120 bpm in your head (an eighth of a second).</li><li>You can say why swing is an offset added to odd steps rather than a change to step length.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-note-is-a-class.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A note is a class</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-pattern.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The pattern</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

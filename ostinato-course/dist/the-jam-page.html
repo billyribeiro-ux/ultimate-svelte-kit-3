@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The jam room — Building Ostinato</title>
+<meta name="description" content="The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 79.48717948717949%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html" aria-current="page"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>The jam room</h1>
+			<p class="lede">The live query on screen: <code>$derived(await room)</code> so the page follows every yield, overridable <code>{let}</code> deriveds for knobs in mid-gesture, <code>room.connected</code> and <code>reconnect()</code>, <code>online</code> from the window, presence with <code>animate:flip</code>, a handle form that carries the room id, and every edit as a command.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Consume a <code>query.live</code> correctly — including the mistake that shows the first snapshot forever — and let a person edit a value that the server also updates, without the two fighting.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:22-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const params = $derived(page.params as RouteParams&lt;'/(app)/jam/[room]'&gt;);
+
+/**
+ * THE LIVE QUERY
+ * ==============
+ * `watchRoom(id)` is a `query.live`: awaiting it gives the current room,
+ * and after that its `current` updates every time the server yields —
+ * every toggle by anybody in the room. `connected` says whether the stream
+ * is up; `reconnect()` restarts it by hand. SvelteKit reconnects on its own
+ * with backoff, and eagerly when the browser comes back online.
+ */
+const room = $derived(watchRoom(params.room));
+
+async function run(action: Promise&lt;unknown&gt;) {
+	try {
+		await action;
+	} catch (e) {
+		toast((e as Error).message, 'error');
+	}
+}</code></pre>
+</figure>
+<p><code>watchRoom(id)</code> is the live query from chapter 25. Awaiting it gives the current room; after that, its value updates every time the server yields. <code>room.connected</code> says whether the stream is up, and <code>room.reconnect()</code> restarts it by hand — SvelteKit reconnects on its own with backoff, and eagerly when the browser comes back online.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:49-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	&lt;!--
+		`$derived(await room)`, not a bare `await room`. A declaration tag with
+		a plain `await` runs *once* — it is a blocking promise, not a
+		subscription — and would show the first snapshot forever. Wrapping it
+		in `$derived` is what makes it re-run every time the live query yields:
+		the resource's `then` is reactive, and a derived is what tracks it.
+	--&gt;
+	{const snapshot = $derived(await room)}
+	&lt;!--
+		Overridable deriveds: `bpm` follows the room, and can be *assigned*
+		by the knob while a gesture is in progress. When the room's next
+		snapshot arrives the derived recomputes and the override is gone —
+		replaced by whatever the server settled on, which is usually the
+		same number.
+	--&gt;
+	{let bpm = $derived(snapshot.pattern.bpm)}
+	{let swing = $derived(snapshot.pattern.swing)}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The comment in the file is the whole chapter in three sentences. A declaration tag with a plain <code>await</code> runs *once* — it is a blocking promise, not a subscription — and would show the first snapshot forever, while the server yields to nobody. Wrapping it in <code>$derived</code> is what makes it re-run every time the live query yields: the resource’s <code>then</code> is reactive, and a derived is what tracks it. This cost an afternoon and two end-to-end tests, and it is the reason every <code>await</code> in this project’s markup that should follow its inputs is written <code>$derived(await …)</code>.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why <code>{let bpm = $derived(...)}</code></h4>
+	<p>The tempo knob has two writers: the person turning it, and the room’s next snapshot. An *overridable derived* — <code>let</code> rather than <code>const</code> — follows the room and can be assigned by the knob while a gesture is in progress. When the next snapshot arrives the derived recomputes and the override is gone, replaced by whatever the server settled on, which is usually the same number. Neither writer needs to know about the other.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:68-98</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;header class=&quot;jam__head&quot;&gt;
+	&lt;div&gt;
+		&lt;p class=&quot;eyebrow&quot;&gt;Jam room&lt;/p&gt;
+		&lt;h1&gt;{snapshot.name}&lt;/h1&gt;
+	&lt;/div&gt;
+
+	&lt;div class=&quot;cluster&quot;&gt;
+		&lt;span class={['chip', { 'chip--on': room.connected }]} role=&quot;status&quot;&gt;
+			{room.connected ? 'live' : 'reconnecting…'}
+		&lt;/span&gt;
+		{#if online.current === false}
+			&lt;span class=&quot;chip&quot;&gt;offline&lt;/span&gt;
+		{/if}
+		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--ghost&quot; onclick={() =&gt; room.reconnect()}
+			&gt;Reconnect&lt;/button
+		&gt;
+		&lt;span class=&quot;hint mono&quot;&gt;v{snapshot.version}&lt;/span&gt;
+	&lt;/div&gt;
+&lt;/header&gt;
+
+&lt;section class=&quot;presence&quot; aria-label=&quot;Who is here&quot;&gt;
+	{#each snapshot.present as who (who.id)}
+		&lt;span
+			class=&quot;chip chip--on&quot;
+			animate:flip={{ duration: 200 }}
+			transition:scale={{ duration: 160 }}
+		&gt;
+			@{who.handle}
+		&lt;/span&gt;
+	{/each}
+&lt;/section&gt;</code></pre>
+</figure>
+<p>Presence is the <code>present</code> array from the snapshot: every open stream, by handle. Keyed by id with <code>animate:flip</code> and a <code>scale</code> transition, so a person joining slides into place and a person leaving shrinks away. <code>online</code> from <code>svelte/reactivity/window</code> is <code>navigator.onLine</code> as a reactive value, and the chip says so before the stream has noticed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:100-119</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- Who this browser is, from the same query the header uses; refreshed by the form below. --&gt;
+{const me = $derived(await whoAmI())}
+{#if !me}
+	&lt;!--
+		Choosing a handle in the room: the form carries the room id, and the
+		handler calls `watchRoom(room).reconnect()` so that the stream — which
+		read the cookie when it opened — restarts and shows the new name.
+	--&gt;
+	&lt;form {...becomeArtist} class=&quot;cluster handle&quot;&gt;
+		&lt;label class=&quot;field&quot;&gt;
+			&lt;span class=&quot;field__label&quot;&gt;Play as&lt;/span&gt;
+			&lt;input class=&quot;input&quot; {...becomeArtist.fields.handle.as('text')} placeholder=&quot;yourname&quot; /&gt;
+		&lt;/label&gt;
+		&lt;input {...becomeArtist.fields.room.as('hidden', params.room)} /&gt;
+		&lt;button class=&quot;btn&quot; disabled={!!becomeArtist.pending}&gt;Join as @…&lt;/button&gt;
+		{#each becomeArtist.fields.handle.issues() ?? [] as issue (issue.message)}
+			&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+		{/each}
+	&lt;/form&gt;
+{/if}</code></pre>
+</figure>
+<p>A browser with no handle sees a form. It carries the room id as a hidden field, and the handler (ch. 24) calls <code>watchRoom(room).reconnect()</code> so that the stream — which read the cookie when it opened — restarts and shows the new name in the presence list. The same <code>whoAmI()</code> query the header reads is read here, and the form’s <code>refresh()</code> updates both.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:121-160</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Player
+	pattern={snapshot.pattern}
+	bind:bpm
+	bind:swing
+	readonly={false}
+	ontempo={(b, s) =&gt; run(setRoomTempo({ room: params.room, bpm: b, swing: s }))}
+&gt;
+	{#snippet children({ step })}
+		&lt;StepGrid
+			pattern={snapshot.pattern}
+			{step}
+			tools={false}
+			onpaint={(track, index) =&gt; {
+				const current = snapshot.pattern.tracks.find((t) =&gt; t.id === track)?.steps[index];
+				if (!current) return;
+				void run(
+					setRoomStep({
+						room: params.room,
+						track,
+						index,
+						step: { velocity: cycleVelocity(current.velocity), note: current.note }
+					})
+				);
+			}}
+			ontranspose={(track, index, semitones) =&gt; {
+				const current = snapshot.pattern.tracks.find((t) =&gt; t.id === track)?.steps[index];
+				if (!current) return;
+				void run(
+					setRoomStep({
+						room: params.room,
+						track,
+						index,
+						step: { velocity: current.velocity, note: current.note.transpose(semitones) }
+					})
+				);
+			}}
+			onfill={(track, on) =&gt; run(fillRoomTrack({ room: params.room, track, on }))}
+		/&gt;
+	{/snippet}
+&lt;/Player&gt;</code></pre>
+</figure>
+<p>The grid is the studio’s <code>StepGrid</code> with <code>tools={false}</code> — no per-track buttons, because tracks are shared — and every callback is a command. <code>onpaint</code> reads the current step from the snapshot, computes the next velocity with the same <code>cycleVelocity</code> the studio uses, and sends a <code>Step</code> with a real <code>Note</code> in it; the <code>transport</code> hook (ch. 26) carries it across. Nothing is changed locally: the room’s next yield is what redraws the pad, for this browser and every other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:162-186</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;cluster&quot;&gt;
+	{#each snapshot.pattern.tracks as track (track.id)}
+		&lt;button
+			type=&quot;button&quot;
+			class={['chip', { 'chip--on': !track.muted }]}
+			aria-pressed={!track.muted}
+			onclick={() =&gt; run(toggleRoomMute({ room: params.room, track: track.id }))}
+		&gt;
+			{track.name}
+		&lt;/button&gt;
+	{/each}
+&lt;/section&gt;
+
+&lt;section class=&quot;cluster&quot;&gt;
+	&lt;span class=&quot;hint&quot;&gt;Replace the room's pattern:&lt;/span&gt;
+	{#each PRESET_NAMES as name (name)}
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--sm&quot;
+			onclick={() =&gt; run(loadRoomPreset({ room: params.room, preset: name }))}
+		&gt;
+			{preset(name).title}
+		&lt;/button&gt;
+	{/each}
+&lt;/section&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what would be on screen if line 57 lost its <code>$derived</code>.</li><li>You can explain what happens to a knob override when the next snapshot arrives.</li><li>You can trace one pad click from this page to every other browser in the room.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-gallery.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The gallery</span>
+			</a>
+			<a class="pager__link pager__link--next" href="diagnostics-and-the-api.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Diagnostics, tracing and the API</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

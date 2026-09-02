@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound in, patterns out — Building Ostinato</title>
+<meta name="description" content="The sound panel: `bind:files`, a `DataTransfer` to clear it, a waveform drawn by an attachment factory. The share panel: a link, a WAV rendered speculatively with `fork`, `$effect.pending()`, media bindings, and a form with preflight validation.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 51.28205128205128%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html" aria-current="page"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>Sound in, patterns out</h1>
+			<p class="lede">The sound panel: <code>bind:files</code>, a <code>DataTransfer</code> to clear it, a waveform drawn by an attachment factory. The share panel: a link, a WAV rendered speculatively with <code>fork</code>, <code>$effect.pending()</code>, media bindings, and a form with preflight validation.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use the bindings and primitives that only show up when a page does real work: files, media elements, <code>fork</code>, <code>$effect.pending</code>, <code>&lt;select defaultValue&gt;</code>, and a remote form with <code>preflight</code> and <code>enhance</code>.</p></aside>
+			<p>Two panels, both opened as history entries (ch. 18). The sound panel edits one track: its instrument, its two knobs, and — for a sample track — the file it plays. The share panel is three ways out of the studio: a link, a file, and the gallery.</p>
+<h3 id="files">A file, in</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SoundPanel.svelte<span class="code__lines">:33-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `bind:files` gives a `FileList`, which cannot be built by hand — so
+ * clearing it means assigning the `files` of an empty `DataTransfer`, the
+ * one way to make an empty one. Left `undefined` until the browser sets it,
+ * because `DataTransfer` does not exist on the server and this component
+ * is server-rendered.
+ */
+let files = $state&lt;FileList&gt;();
+let loading = $state(false);
+
+async function load() {
+	const file = files?.[0];
+	if (!file) return;
+	loading = true;
+	try {
+		await samples.load(track.id, file);
+		toast(`Loaded ${file.name}`);
+	} catch (e) {
+		toast((e as Error).message, 'error');
+		clear();
+	} finally {
+		loading = false;
+	}
+}
+
+function clear() {
+	files = new DataTransfer().files;
+	samples.clear(track.id);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SoundPanel.svelte<span class="code__lines">:131-158</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if track.kind === 'sample'}
+	&lt;div class=&quot;stack&quot;&gt;
+		&lt;label class=&quot;field&quot;&gt;
+			&lt;span class=&quot;field__label&quot;&gt;Sample file (up to ten seconds)&lt;/span&gt;
+			&lt;input
+				class=&quot;input&quot;
+				type=&quot;file&quot;
+				accept=&quot;audio/*&quot;
+				bind:files
+				onchange={load}
+				disabled={loading}
+			/&gt;
+		&lt;/label&gt;
+
+		&lt;canvas class=&quot;wave&quot; {@attach waveform(samples.get(track.id), hue)}&gt;&lt;/canvas&gt;
+
+		{#if samples.names.has(track.id)}
+			&lt;p class=&quot;cluster&quot;&gt;
+				&lt;span class=&quot;hint&quot;&gt;{samples.names.get(track.id)}&lt;/span&gt;
+				&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--ghost btn--danger&quot; onclick={clear}
+					&gt;Remove&lt;/button
+				&gt;
+			&lt;/p&gt;
+		{:else}
+			&lt;p class=&quot;hint&quot;&gt;No file yet — this track is silent until one is loaded.&lt;/p&gt;
+		{/if}
+	&lt;/div&gt;
+{/if}</code></pre>
+</figure>
+<p><code>bind:files</code> on <code>&lt;input type=&quot;file&quot;&gt;</code> gives a <code>FileList</code>. A <code>FileList</code> cannot be constructed, so clearing the input means assigning the <code>files</code> of an empty <code>DataTransfer</code> — the one way to make an empty one. The variable starts <code>undefined</code> rather than as an empty list because <code>DataTransfer</code> does not exist on the server, and this component is server-rendered with the rest of the page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/waveform.ts<span class="code__lines">:16-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function waveform(
+	buffer: AudioBuffer | undefined,
+	hue: string
+): Attachment&lt;HTMLCanvasElement&gt; {
+	return (canvas) =&gt; {
+		const draw = () =&gt; {
+			const ctx = canvas.getContext('2d');
+			if (!ctx) return;
+
+			const ratio = window.devicePixelRatio || 1;
+			const width = canvas.clientWidth;
+			const height = canvas.clientHeight;
+			canvas.width = Math.max(1, Math.round(width * ratio));
+			canvas.height = Math.max(1, Math.round(height * ratio));
+			ctx.scale(ratio, ratio);
+			ctx.clearRect(0, 0, width, height);
+
+			if (!buffer) return;
+
+			// One column per pixel: the loudest sample in that slice of time, up
+			// and down. Drawing every sample would be tens of thousands of lines
+			// for a shape a hundred columns describes.
+			const data = buffer.getChannelData(0);
+			const perColumn = Math.max(1, Math.floor(data.length / width));
+			ctx.fillStyle = `oklch(72% 0.17 ${hue})`;
+
+			for (let x = 0; x &lt; width; x += 1) {
+				let peak = 0;
+				const start = x * perColumn;
+				for (let i = start; i &lt; start + perColumn &amp;&amp; i &lt; data.length; i += 1) {
+					const v = Math.abs(data[i]!);
+					if (v &gt; peak) peak = v;
+				}
+				const h = Math.max(1, peak * height);
+				ctx.fillRect(x, (height - h) / 2, 1, h);
+			}
+		};
+
+		draw();
+		const observer = new ResizeObserver(draw);
+		observer.observe(canvas);
+		return () =&gt; observer.disconnect();
+	};
+}</code></pre>
+</figure>
+<p><code>{@attach waveform(samples.get(track.id), hue)}</code> — an attachment factory again (ch. 17). It draws the loudest sample per pixel column, sized from the canvas’s CSS box at draw time, and re-draws through a <code>ResizeObserver</code> when the sheet becomes a sidebar. When the buffer prop changes, Svelte re-runs the factory and the new attachment draws the new file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SoundPanel.svelte<span class="code__lines">:63-97</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Hear the sound now, with the current knobs, without pressing play. */
+async function audition() {
+	await engine.resume();
+	const ctx = engine.context;
+	const out = engine.channel(track).input;
+	const voice = {
+		time: ctx.currentTime + 0.01,
+		velocity: 110,
+		tone: track.tone,
+		decay: track.decay
+	};
+	const note = track.steps.find((s) =&gt; s.velocity &gt; 0)?.note ?? track.steps[0]!.note;
+
+	switch (track.kind) {
+		case 'kick':
+			return voices.kick(ctx, out, voice);
+		case 'snare':
+			return voices.snare(ctx, out, voice);
+		case 'hat':
+			return voices.hat(ctx, out, voice);
+		case 'clap':
+			return voices.clap(ctx, out, voice);
+		case 'bass':
+			return voices.bass(ctx, out, { ...voice, frequency: note.frequency, duration: 0.3 });
+		case 'lead':
+			return voices.lead(ctx, out, { ...voice, frequency: note.frequency, duration: 0.3 });
+		case 'sample': {
+			const buffer = samples.get(track.id);
+			if (buffer) voices.sample(ctx, out, voice, buffer);
+			return;
+		}
+		default:
+			track.kind satisfies never;
+	}
+}</code></pre>
+</figure>
+<p>“Audition” plays the sound once with the current knobs, without pressing play. It is the same <code>switch</code> as the scheduler’s (ch. 10), <code>satisfies never</code> and all, which is what guarantees that adding a kind to the model breaks this file at compile time until it is handled.</p>
+<h3 id="the-link">The link</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:31-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const link = $derived.by(() =&gt; {
+	const url = new URL('/studio', page.url.origin);
+	url.searchParams.set('p', session.encoded);
+	return url.href;
+});</code></pre>
+</figure>
+<p><code>session.encoded</code> is a getter over the whole pattern, so the link is a <code>$derived.by</code> that recomputes on every edit. Copy it, paste it into a chat, and the other person opens your groove — the studio’s <code>load</code> (ch. 19) decodes <code>?p=</code> on arrival.</p>
+<h3 id="fork">A WAV, rendered before the click</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:168-199</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;stack&quot;&gt;
+	&lt;h3&gt;Export&lt;/h3&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;field__label&quot;&gt;Bars&lt;/span&gt;
+		&lt;!--
+			`defaultValue` on a select (Svelte 5.57): the value it starts at and
+			returns to on reset, with the element otherwise uncontrolled. The
+			change handler is the only thing that reads it.
+		--&gt;
+		&lt;select
+			class=&quot;input&quot;
+			defaultValue=&quot;2&quot;
+			onchange={(e) =&gt; (bars = Number(e.currentTarget.value))}
+		&gt;
+			&lt;option value=&quot;1&quot;&gt;1 bar&lt;/option&gt;
+			&lt;option value=&quot;2&quot;&gt;2 bars&lt;/option&gt;
+			&lt;option value=&quot;4&quot;&gt;4 bars&lt;/option&gt;
+		&lt;/select&gt;
+	&lt;/label&gt;
+
+	{#if !wanted}
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn&quot;
+			onpointerenter={preload}
+			onpointerleave={discard}
+			onfocusin={preload}
+			onfocusout={discard}
+			onclick={commit}
+		&gt;
+			&lt;DownloadSimpleIcon size={16} /&gt; Render to WAV
+		&lt;/button&gt;</code></pre>
+</figure>
+<p>Two small things first. <code>&lt;select defaultValue=&quot;2&quot;&gt;</code> is the element *uncontrolled* with a starting value — new in Svelte 5.57 — and only the change handler reads it. And the render button has five handlers: pointer enter and focus start something; pointer leave and focus out cancel it; click commits it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:50-80</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let bars = $state(2);
+let wanted = $state(false);
+
+/**
+ * FORK: START THE WORK BEFORE THE CLICK
+ * -------------------------------------
+ * Rendering two bars takes a few hundred milliseconds. `fork` runs a state
+ * change — `wanted = true` — *speculatively*: the `await` it unlocks in the
+ * markup below starts immediately, but nothing is shown until the fork is
+ * committed. Hover or focus the button and the render begins; click and it
+ * is already half done; leave and it is discarded, which it must be, or
+ * the work leaks.
+ */
+let pending: Fork | null = null;
+
+function preload() {
+	pending ??= fork(() =&gt; {
+		wanted = true;
+	});
+}
+
+function discard() {
+	pending?.discard();
+	pending = null;
+}
+
+function commit() {
+	pending?.commit();
+	pending = null;
+	wanted = true;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>fork</code></h4>
+	<p>Rendering two bars through an <code>OfflineAudioContext</code> (ch. 13) takes a few hundred milliseconds. <code>fork</code> runs a state change *speculatively*: <code>wanted = true</code> happens in a fork, the <code>await render(bars)</code> it unlocks in the markup below starts immediately, but nothing is shown until the fork is committed. Hover the button and the render begins; click and it is already half done; leave and <code>discard()</code> throws the work away — which it must, or the fork leaks. This is the same primitive SvelteKit uses to preload pages on hover, exposed for your own state.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:82-105</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let objectUrl: string | null = null;
+
+async function render(count: number): Promise&lt;{ url: string; kilobytes: number }&gt; {
+	const buffer = await renderPattern(session.snapshot(), {
+		bars: count,
+		samples: (id) =&gt; samples.get(id)
+	});
+	const blob = bufferToWav(buffer);
+	if (objectUrl) URL.revokeObjectURL(objectUrl);
+	objectUrl = URL.createObjectURL(blob);
+	return { url: objectUrl, kilobytes: Math.round(blob.size / 1024) };
+}
+
+$effect(() =&gt; () =&gt; {
+	if (objectUrl) URL.revokeObjectURL(objectUrl);
+});
+
+/* `bind:paused`, `bind:currentTime`, `bind:duration` on the &lt;audio&gt; below. */
+let paused = $state(true);
+let currentTime = $state(0);
+let duration = $state(0);
+
+const clock = (seconds: number) =&gt;
+	`${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:201-241</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	{const rendered = $derived(await render(bars))}
+
+	&lt;!--
+		`$effect.pending()` counts the `await`s in flight in this boundary
+		*after* the first render — changing the bar count re-renders, and
+		this is what says so while it happens.
+	--&gt;
+	{#if $effect.pending()}
+		&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;Re-rendering {bars} bars…&lt;/p&gt;
+	{/if}
+
+	&lt;div class=&quot;player&quot;&gt;
+		&lt;audio src={rendered.url} bind:paused bind:currentTime bind:duration preload=&quot;metadata&quot;
+		&gt;&lt;/audio&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--icon&quot;
+			aria-label={paused ? 'Play' : 'Pause'}
+			onclick={() =&gt; (paused = !paused)}
+		&gt;
+			{#if paused}&lt;PlayIcon size={18} weight=&quot;fill&quot; /&gt;{:else}&lt;PauseIcon
+					size={18}
+					weight=&quot;fill&quot;
+				/&gt;{/if}
+		&lt;/button&gt;
+		&lt;span class=&quot;mono&quot;&gt;{clock(currentTime)} / {clock(duration)}&lt;/span&gt;
+		&lt;a class=&quot;btn btn--primary&quot; href={rendered.url} download=&quot;{session.pattern.title}.wav&quot;&gt;
+			&lt;DownloadSimpleIcon size={16} /&gt; Download ({rendered.kilobytes} KB)
+		&lt;/a&gt;
+	&lt;/div&gt;
+
+	{#snippet pending()}
+		&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;Rendering {bars} bars…&lt;/p&gt;
+	{/snippet}
+
+	{#snippet failed(error, reset)}
+		&lt;p class=&quot;issue&quot;&gt;Rendering failed: {(error as Error).message}&lt;/p&gt;
+		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>{const rendered = $derived(await render(bars))}</code> — with the <code>$derived</code>. A bare <code>{const x = await …}</code> in markup runs *once*; wrapped in <code>$derived</code> it re-runs when <code>bars</code> changes, which is the whole feature. This distinction cost an afternoon during the jam room (ch. 38), and it appears here first: when an <code>await</code> in a template should follow its inputs, it needs <code>$derived</code> around it.</p></aside>
+<p><code>$effect.pending()</code> counts the <code>await</code>s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The <code>pending</code> snippet covers the *first* render, the <code>failed</code> snippet a thrown error, with <code>reset</code> to try again. And <code>bind:paused</code>, <code>bind:currentTime</code> and <code>bind:duration</code> on the <code>&lt;audio&gt;</code> make a play button and a clock with no event handlers at all.</p>
+<h3 id="publishing">Publishing: a form with preflight</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:111-145</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The pattern travels as JSON in a hidden field. Deriving the value keeps
+ * the field current with every edit, so a submission with JavaScript off
+ * still sends what is on screen.
+ */
+const json = $derived(JSON.stringify(toDto(session.snapshot())));
+
+/**
+ * Preflight: the two fields a person types, checked in the browser before
+ * anything is sent. The server checks everything again; this is what makes
+ * &quot;three to twenty characters&quot; appear on the keystroke instead of after a
+ * round trip.
+ */
+const preflight = v.object({
+	handle: HandleSchema,
+	title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give it a title'), v.maxLength(60)),
+	// The rest of the form's fields, typed but not checked: a preflight
+	// schema describes the whole input, and these are the server's to judge.
+	_pattern: v.string(),
+	remixOf: v.optional(v.string()),
+	action: v.picklist(['stay', 'open'])
+});
+
+const form = publish.preflight(preflight).enhance(async (f) =&gt; {
+	try {
+		// `submit()` resolves `true` on success; the handler's return value is
+		// then on `publish.result`, where the template reads it too.
+		if (await f.submit()) {
+			session.markSaved();
+			toast(`Published as ${publish.result?.url ?? 'a new pattern'}`);
+		}
+	} catch {
+		toast('Publishing failed — try again in a moment', 'error');
+	}
+});</code></pre>
+</figure>
+<p><code>publish</code> is a remote form function (ch. 24). <code>.preflight(schema)</code> checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why <code>_pattern</code>, <code>remixOf</code> and <code>action</code> are typed here but barely checked. <code>.enhance()</code> takes over the submission: <code>submit()</code> resolves <code>true</code> on success, the handler’s return value is on <code>publish.result</code>, and the page never reloads.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:252-282</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	Validate on every keystroke *and* on blur. SvelteKit only reports issues
+	for fields a person has finished with — it marks a field touched on
+	`focusout` — so the blur is what turns &quot;three to twenty characters&quot;
+	from a rule into a message under the field.
+--&gt;
+&lt;form
+	{...form}
+	class=&quot;stack&quot;
+	oninput={() =&gt; publish.validate()}
+	onfocusout={() =&gt; publish.validate()}
+&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;field__label&quot;&gt;Handle&lt;/span&gt;
+		&lt;!-- The handle this browser already has, if any, as the field's starting value. --&gt;
+		&lt;svelte:boundary&gt;
+			{const me = $derived(await whoAmI())}
+			&lt;input
+				class=&quot;input&quot;
+				{...publish.fields.handle.as('text', me?.handle ?? '')}
+				placeholder=&quot;yourname&quot;
+				autocomplete=&quot;username&quot;
+			/&gt;
+			{#snippet pending()}
+				&lt;input class=&quot;input&quot; placeholder=&quot;yourname&quot; disabled /&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+		{#each publish.fields.handle.issues() ?? [] as issue (issue.message)}
+			&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+		{/each}
+	&lt;/label&gt;</code></pre>
+</figure>
+<p>Validate on every keystroke *and* on blur. SvelteKit only reports issues for fields a person has finished with — it marks a field touched on <code>focusout</code> — so the blur is what turns a rule into a message under the field. The handle input sits in its own <code>&lt;svelte:boundary&gt;</code> with <code>{const me = $derived(await whoAmI())}</code> so that a browser that already has a handle sees it filled in, and one that does not sees a placeholder while the query is in flight.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:304-319</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;cluster&quot;&gt;
+	&lt;button
+		class=&quot;btn btn--primary&quot;
+		{...publish.fields.action.as('submit', 'stay')}
+		disabled={!!publish.pending}
+	&gt;
+		Publish
+	&lt;/button&gt;
+	&lt;button
+		class=&quot;btn&quot;
+		{...publish.fields.action.as('submit', 'open')}
+		disabled={!!publish.pending}
+	&gt;
+		Publish and open
+	&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>Two submit buttons, one field: <code>publish.fields.action.as(&quot;submit&quot;, &quot;stay&quot;)</code> and <code>as(&quot;submit&quot;, &quot;open&quot;)</code>. Whichever is pressed sends its value as <code>action</code>, and the server either returns the result or redirects to the new page — a redirect from inside an enhanced submission navigates, since SvelteKit 3.0.0-next.17. With JavaScript off, the form posts, the hidden <code>_pattern</code> field carries the JSON, and everything still works.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>fork</code> does, and what happens if a fork is never committed or discarded.</li><li>You can explain why <code>preflight</code> covers fields the browser does not validate.</li><li>You can say why the handle input is inside a boundary with a <code>pending</code> snippet.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-studio-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The studio page</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-schema.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The schema, and the environment</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

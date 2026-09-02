@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The transport and the mixer — Building Ostinato</title>
+<meta name="description" content="Play, tempo, swing and volume; a strip per track with level, pan, mute, solo and a meter drawn by an attachment at sixty frames a second; and `$inspect.trace` in the one effect most likely to re-run for the wrong reason.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 43.58974358974359%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html" aria-current="page"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>The transport and the mixer</h1>
+			<p class="lede">Play, tempo, swing and volume; a strip per track with level, pan, mute, solo and a meter drawn by an attachment at sixty frames a second; and <code>$inspect.trace</code> in the one effect most likely to re-run for the wrong reason.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Bind knobs into deep state, keep a per-frame value out of the reactivity system, and know what <code>$inspect.trace</code> tells you.</p></aside>
+			<p>The transport is the row above the grid: play, tempo, swing, master volume, and a bar counter. Two of the knobs bind into the pattern; one binds into the engine, because how loud *this machine* is has nothing to do with what gets shared.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Transport.svelte<span class="code__lines">:16-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let {
+	engine,
+	scheduler,
+	bpm = $bindable(120),
+	swing = $bindable(0),
+	disabled = false,
+	onstart,
+	onend
+}: {
+	engine: AudioEngine;
+	scheduler: Scheduler;
+	bpm?: number;
+	swing?: number;
+	/** Tempo and swing knobs locked — a published pattern plays as written. */
+	disabled?: boolean;
+	onstart?: () =&gt; void;
+	onend?: () =&gt; void;
+} = $props();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Transport.svelte<span class="code__lines">:76-105</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Knob
+	bind:value={bpm}
+	min={40}
+	max={240}
+	step={1}
+	label=&quot;Tempo&quot;
+	format={(v) =&gt; `${v}`}
+	{disabled}
+	{onstart}
+	{onend}
+/&gt;
+&lt;Knob
+	bind:value={swing}
+	min={0}
+	max={1}
+	step={0.05}
+	label=&quot;Swing&quot;
+	format={(v) =&gt; `${Math.round(v * 100)}%`}
+	{disabled}
+	{onstart}
+	{onend}
+/&gt;
+&lt;Knob
+	bind:value={engine.volume}
+	min={0}
+	max={1}
+	step={0.02}
+	label=&quot;Volume&quot;
+	format={(v) =&gt; `${Math.round(v * 100)}`}
+/&gt;</code></pre>
+</figure>
+<p><code>bind:value={bpm}</code> on a <code>$bindable</code> prop that the page bound to <code>session.pattern.bpm</code>: a binding chained through two components into deep state. The scheduler reads <code>pattern.bpm</code> on every tick (ch. 12), so a turn of the knob is heard on the next sixteenth. <code>bind:value={engine.volume}</code> binds to a *setter* on the engine class, which writes the gain node.</p>
+<h3 id="inspect-trace"><code>$inspect.trace</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Transport.svelte<span class="code__lines">:35-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `$inspect.trace` — in development only, and only in this one effect —
+ * prints *which* piece of state made the effect re-run. The transport is
+ * the component most likely to update for a reason nobody intended, since
+ * it reads the engine, the scheduler and the pattern; when it does, this
+ * says why. It must be the first statement of the effect, and it compiles
+ * to nothing in production.
+ */
+$effect(() =&gt; {
+	// eslint-disable-next-line svelte/no-inspect -- deliberate: the lesson is what this prints
+	$inspect.trace('transport');
+	void engine.state;
+	void scheduler.playing;
+});</code></pre>
+</figure>
+<p>The transport reads the engine, the scheduler and the pattern, which makes it the component most likely to update for a reason nobody intended. <code>$inspect.trace(&quot;transport&quot;)</code> as the *first statement* of an effect prints, in development, which piece of state caused each re-run — not that it ran, but *why*. It compiles to nothing in production. The <code>eslint-disable</code> comment is deliberate and says so: the lint rule exists to catch <code>$inspect</code> left in by accident, and this one is the lesson.</p>
+<aside class="callout callout--note"><p>Open the studio in development, press play, and read the console. Every message names a signal — <code>scheduler.playing</code>, <code>engine.state</code> — and that is the fastest way to learn what the reactivity system actually tracks, which is not always what you assumed.</p></aside>
+<h3 id="the-mixer">The mixer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Mixer.svelte<span class="code__lines">:8-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE MIXER
+ * =========
+ *
+ * One strip per track: level, pan, mute, solo, and a meter. The knobs bind
+ * straight into the track — `bind:value={track.gain}` on a deep `$state`
+ * object — and the engine picks the new value up on the next scheduled step.
+ *
+ * The meter appears only once the engine has built a channel for the
+ * track, which happens on the first note it plays. `engine.channels` is a
+ * `SvelteMap`, so `has()` is reactive and the meter shows up on its own.
+ */
+let {
+	pattern,
+	engine,
+	onstart
+}: {
+	pattern: Pattern;
+	engine: AudioEngine;
+	onstart?: () =&gt; void;
+} = $props();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Mixer.svelte<span class="code__lines">:39-60</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Knob
+	bind:value={track.gain}
+	label=&quot;Level&quot;
+	size={44}
+	format={(v) =&gt; `${Math.round(v * 100)}`}
+	{onstart}
+/&gt;
+&lt;Knob
+	bind:value={track.pan}
+	min={-1}
+	max={1}
+	step={0.05}
+	label=&quot;Pan&quot;
+	size={36}
+	format={(v) =&gt;
+		Math.abs(v) &lt; 0.025
+			? 'C'
+			: v &lt; 0
+				? `L${Math.round(-v * 100)}`
+				: `R${Math.round(v * 100)}`}
+	{onstart}
+/&gt;</code></pre>
+</figure>
+<p><code>bind:value={track.gain}</code> inside an <code>{#each}</code>: a binding straight into an element of a deep <code>$state</code> array. Nothing forwards it; the knob writes the number and the engine reads it on the next scheduled step. The pan formatter turns −0.4 into “L40” and 0 into “C”, which is what a mixer says.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Mixer.svelte<span class="code__lines">:91-98</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if engine.channels.has(track.id)}
+	&lt;Meter
+		analyser={engine.channels.get(track.id)!.analyser}
+		hue={`var(--hue-${track.kind})`}
+	/&gt;
+{:else}
+	&lt;div class=&quot;strip__silent&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+{/if}</code></pre>
+</figure>
+<p>The meter appears only once the engine has built a channel for the track, which happens on the first note it plays. <code>engine.channels</code> is a <code>SvelteMap</code> (ch. 11), so <code>has()</code> is reactive, and the meter shows up on its own the first time the track sounds.</p>
+<h3 id="the-meter">A meter at sixty frames a second</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Meter.svelte<span class="code__lines">:16-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let { analyser, hue }: { analyser: AnalyserNode; hue: string } = $props();
+
+let width = $state(0);
+let height = $state(0);
+
+/**
+ * An attachment *factory*: it closes over `analyser`, so when the prop
+ * changes Svelte tears the old loop down and starts a new one on the new
+ * node. `devicePixelRatio` from `svelte/reactivity/window` is read inside,
+ * which makes the canvas re-scale when a window moves between screens.
+ */
+function meter(node: AnalyserNode): Attachment&lt;HTMLCanvasElement&gt; {
+	return (canvas) =&gt; {
+		const scratch = new Float32Array(node.fftSize);
+		const ratio = devicePixelRatio.current ?? 1;
+		let frame = 0;
+		let shown = 0;
+
+		const draw = () =&gt; {
+			const ctx = canvas.getContext('2d');
+			if (!ctx) return;
+
+			canvas.width = Math.max(1, Math.round(width * ratio));
+			canvas.height = Math.max(1, Math.round(height * ratio));
+
+			const peak = AudioEngine.level(node, scratch);
+			// Rise instantly, fall slowly: the ballistics of every meter ever built.
+			shown = peak &gt; shown ? peak : shown * 0.92;
+
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			const filled = Math.round(canvas.width * Math.min(1, shown));
+			ctx.fillStyle = shown &gt; 0.9 ? 'oklch(70% 0.2 30)' : `oklch(72% 0.17 ${hue})`;
+			ctx.fillRect(0, 0, filled, canvas.height);
+
+			frame = requestAnimationFrame(draw);
+		};
+
+		frame = requestAnimationFrame(draw);
+		return () =&gt; cancelAnimationFrame(frame);
+	};
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why an attachment, and not <code>$state</code></h4>
+	<p>A peak level changes every frame. Putting it through <code>$state</code> would mean sixty state updates a second per track, each scheduling a re-render, for a value that only a canvas reads. So it never enters the reactivity system: an attachment gets the canvas, runs a <code>requestAnimationFrame</code> loop that reads the analyser and draws, and returns the function that cancels the loop. The rule: if a value changes faster than a person can see it change, it is not state.</p>
+</aside>
+<p><code>meter(analyser)</code> is an attachment *factory* — a function that returns an attachment. Because it closes over the prop, Svelte re-runs the factory when the prop changes, tearing down the old loop and starting a new one on the new node. <code>devicePixelRatio</code> from <code>svelte/reactivity/window</code> is read inside for the same reason: move the window to a different screen and the canvas re-scales.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Meter.svelte<span class="code__lines">:59-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- `bind:clientWidth` / `bind:clientHeight`: read-only bindings the browser keeps current with a ResizeObserver. --&gt;
+&lt;div class=&quot;meter&quot; bind:clientWidth={width} bind:clientHeight={height} aria-hidden=&quot;true&quot;&gt;
+	&lt;canvas {@attach meter(analyser)}&gt;&lt;/canvas&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>bind:clientWidth</code> and <code>bind:clientHeight</code> are read-only bindings the browser keeps current with a <code>ResizeObserver</code>. The canvas is sized from them at draw time, at device resolution, so the bar is crisp on a phone.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain the chain from a knob in <code>Transport</code> to <code>session.pattern.bpm</code>.</li><li>You can say why the meter’s level is never <code>$state</code>.</li><li>You have read a <code>$inspect.trace</code> message and can say what it names.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="pads-and-the-grid.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Pads and the grid</span>
+			</a>
+			<a class="pager__link pager__link--next" href="panels-as-history.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Panels that are history entries</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One step, scheduled — Building Ostinato</title>
+<meta name="description" content="The function both players share: given a pattern, a step index and a time, schedule every hit. Sharing it is what makes “the file sounds like the studio” a property rather than a hope.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 25.64102564102564%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html" aria-current="page"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>One step, scheduled</h1>
+			<p class="lede">The function both players share: given a pattern, a step index and a time, schedule every hit. Sharing it is what makes “the file sounds like the studio” a property rather than a hope.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Factor the one piece of logic two different callers need into a pure function with a narrow interface, and make an exhaustive switch fail to compile when a case is missing.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE STEP, SCHEDULED
+ * ===================
+ *
+ * The function both players share: the live scheduler in
+ * `scheduler.svelte.ts`, which calls it a tenth of a second before each step
+ * is due, and the offline renderer in `render.ts`, which calls it for every
+ * step of every bar at once. Sharing it is what makes &quot;the WAV sounds exactly
+ * like the studio&quot; a property rather than a hope.
+ *
+ * It knows nothing about time beyond the number it is given. Swing is applied
+ * here — a step's *position* in the bar decides its delay — so that the caller
+ * keeps a plain, even clock.
+ */
+
+import { stepSeconds, swingOffset } from '#lib/music/time.ts';
+import { audibleTracks, type Pattern, type Track } from '#lib/pattern/model.ts';
+import * as voices from './voices.ts';
+
+export interface Outputs {
+	/** Where a track's sound goes: its channel strip on the live engine, or a plain gain offline. */
+	output(track: Track): AudioNode;
+	/** The decoded file on a `sample` track, if one has been loaded. */
+	sample(track: Track): AudioBuffer | undefined;
+}
+
+/**
+ * Schedule every audible hit of step `index` to sound at `time`.
+ *
+ * @param time the step's position on the context's clock, *before* swing
+ * @returns the time the earliest voice was scheduled for — the playhead uses it</code></pre>
+</figure>
+<p><code>Outputs</code> is the whole of what the function needs from its caller: where a track’s sound goes, and the decoded file for a sample track. The live engine answers with a channel strip; the offline renderer answers with a plain gain. Neither knows about the other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:33-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function scheduleStep(
+	ctx: BaseAudioContext,
+	outputs: Outputs,
+	pattern: Pattern,
+	index: number,
+	time: number
+): number {
+	const at = time + swingOffset(index, pattern.bpm, pattern.swing);
+	// Hold a melodic note for most of its step; the gap is what makes two
+	// consecutive notes sound like two notes rather than one long one.
+	const duration = stepSeconds(pattern.bpm) * 0.8;
+
+	for (const track of audibleTracks(pattern)) {
+		const step = track.steps[index];
+		if (!step || step.velocity === 0) continue;
+
+		const out = outputs.output(track);
+		const voice = { time: at, velocity: step.velocity, tone: track.tone, decay: track.decay };
+		const melodic = { ...voice, frequency: step.note.frequency, duration };
+
+		// Every kind, and `satisfies never` at the end: adding an instrument to
+		// `KINDS` without adding a case here fails to compile rather than
+		// playing silence.
+		switch (track.kind) {
+			case 'bass':
+				voices.bass(ctx, out, melodic);
+				break;
+			case 'lead':
+				voices.lead(ctx, out, melodic);
+				break;
+			case 'kick':
+				voices.kick(ctx, out, voice);
+				break;
+			case 'snare':
+				voices.snare(ctx, out, voice);
+				break;
+			case 'hat':
+				voices.hat(ctx, out, voice);
+				break;
+			case 'clap':
+				voices.clap(ctx, out, voice);
+				break;
+			case 'sample': {
+				const buffer = outputs.sample(track);
+				// A sample track with nothing loaded is silent, not an error: the
+				// person is probably about to drop a file on it.
+				if (buffer) voices.sample(ctx, out, voice, buffer);
+				break;
+			}
+			default:
+				track.kind satisfies never;
+		}
+	}
+
+	return at;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>satisfies never</code> at the bottom of the switch</h4>
+	<p>Adding an instrument to <code>KINDS</code> without adding a case here would play silence for it — a bug that shows up as “the new track does nothing” with no error anywhere. <code>track.kind satisfies never</code> in the <code>default</code> branch makes it a compile error instead: if any kind is left unhandled, its type is not <code>never</code>, and TypeScript says so at the line that needs the case. The <code>noFallthroughCasesInSwitch</code> flag in <code>tsconfig.json</code> catches the other way to get this wrong.</p>
+</aside>
+<aside class="callout callout--note"><p>A melodic note is held for 80% of its step. The gap is what makes two consecutive notes sound like two notes rather than one long one; a hold of 100% would tie every run of notes together.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the two callers of <code>scheduleStep</code> and what each passes as <code>Outputs</code>.</li><li>You can explain what <code>satisfies never</code> does and reproduce the error by adding a kind.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-instruments.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The instruments</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-engine.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The engine: where the audio graph meets reactivity</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

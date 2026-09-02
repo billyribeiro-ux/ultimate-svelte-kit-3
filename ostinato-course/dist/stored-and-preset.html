@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stored patterns and presets — Building Ostinato</title>
+<meta name="description" content="The DTO — the pattern as JSON without a `Note` in it — and three presets written as strings you can read like a drum machine.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20.51282051282051%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html" aria-current="page"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>Stored patterns and presets</h1>
+			<p class="lede">The DTO — the pattern as JSON without a <code>Note</code> in it — and three presets written as strings you can read like a drum machine.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Keep one boundary between the model and its storage form, and see how a small string notation makes test data and seeds readable.</p></aside>
+			<p>The database keeps a pattern as one JSON column, and JSON has no idea what a <code>Note</code> is. The DTO is the conversion in both directions, with a schema for what comes *out* of the column — because a row written by last year’s version of the app is exactly as untrusted as a request body.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/dto.ts<span class="code__lines">:1-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PATTERN, AS IT IS STORED
+ * ============================
+ *
+ * The database keeps a pattern as one JSON column, and JSON has no idea what a
+ * `Note` is. This is the conversion in both directions, and the schema for what
+ * comes *out* of the column — because a row written by last year's version of
+ * the app is exactly as untrusted as a request body.
+ *
+ * Only two places touch a DTO: the storage layer, and the publish form, which
+ * carries the pattern in one hidden field because a form field cannot hold a
+ * class either. Everything else in the project works with `Pattern`.
+ */
+
+import * as v from 'valibot';
+import { Note } from '#lib/music/note.ts';
+import { KINDS, STEPS, MAX_TRACKS, type Pattern, type Track } from './model.ts';
+
+const unit = v.pipe(v.number(), v.minValue(0), v.maxValue(1));
+
+export const StepDtoSchema = v.object({
+	v: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(127)),
+	n: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(127))
+});
+
+export const TrackDtoSchema = v.object({
+	id: v.pipe(v.string(), v.regex(/^[a-z0-9]{6,12}$/)),
+	kind: v.picklist(KINDS),
+	name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(24)),
+	gain: unit,
+	pan: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+	tone: unit,
+	decay: unit,
+	muted: v.boolean(),
+	solo: v.boolean(),
+	steps: v.pipe(v.array(StepDtoSchema), v.length(STEPS))
+});
+
+export const PatternDtoSchema = v.object({
+	title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give it a title'), v.maxLength(60)),
+	bpm: v.pipe(v.number(), v.integer(), v.minValue(40), v.maxValue(240)),
+	swing: unit,
+	tracks: v.pipe(v.array(TrackDtoSchema), v.minLength(1), v.maxLength(MAX_TRACKS))
+});
+
+export type PatternDto = v.InferOutput&lt;typeof PatternDtoSchema&gt;;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/dto.ts<span class="code__lines">:48-95</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function toDto(pattern: Pattern): PatternDto {
+	return {
+		title: pattern.title,
+		bpm: pattern.bpm,
+		swing: pattern.swing,
+		tracks: pattern.tracks.map((track) =&gt; ({
+			id: track.id,
+			kind: track.kind,
+			name: track.name,
+			gain: track.gain,
+			pan: track.pan,
+			tone: track.tone,
+			decay: track.decay,
+			muted: track.muted,
+			solo: track.solo,
+			steps: track.steps.map((step) =&gt; ({ v: step.velocity, n: step.note.midi }))
+		}))
+	};
+}
+
+export function fromDto(dto: PatternDto): Pattern {
+	return {
+		title: dto.title,
+		bpm: dto.bpm,
+		swing: dto.swing,
+		tracks: dto.tracks.map((track): Track =&gt; ({
+			id: track.id,
+			kind: track.kind,
+			name: track.name,
+			gain: track.gain,
+			pan: track.pan,
+			tone: track.tone,
+			decay: track.decay,
+			muted: track.muted,
+			solo: track.solo,
+			steps: track.steps.map((step) =&gt; ({ velocity: step.v, note: new Note(step.n) }))
+		}))
+	};
+}
+
+/**
+ * Parse a JSON column. Throws a valibot error with the path of the first bad
+ * field, which is the message you want when a migration went wrong and the
+ * message you never get from `JSON.parse(row.data) as Pattern`.
+ */
+export function parseStored(json: string): Pattern {
+	return fromDto(v.parse(PatternDtoSchema, JSON.parse(json)));
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Only two places touch a DTO: the storage layer, and the publish form, which carries the pattern in one hidden field because a form field cannot hold a class either. Everything else in the project works with <code>Pattern</code>. Keeping that boundary narrow is what lets the <code>Note</code> class exist at all.</p></aside>
+<h3 id="presets">Three grooves as strings</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/presets.ts<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THREE PATTERNS TO START FROM
+ * ============================
+ *
+ * Written as strings rather than arrays of objects, because a groove is
+ * something you *read*: `x---x---x---x---` is four on the floor to anybody who
+ * has seen a drum machine, and sixteen `{ velocity: 112 }` objects are not.
+ *
+ *   `x`  accent      `o`  soft      `-`  rest
+ *
+ * Melodic tracks take a note name per step instead, with `.` for a rest.
+ */
+
+import { Note } from '#lib/music/note.ts';
+import { createTrack, defaultNote, type Kind, type Pattern, type Step } from './model.ts';
+
+function drums(
+	kind: Kind,
+	hits: string,
+	overrides: Partial&lt;Parameters&lt;typeof createTrack&gt;[1]&gt; = {}
+) {
+	const note = defaultNote(kind);
+	const steps: Step[] = [...hits].map((glyph) =&gt; ({
+		velocity: glyph === 'x' ? 112 : glyph === 'o' ? 64 : 0,
+		note
+	}));
+	return createTrack(kind, { steps, ...overrides });
+}
+
+function melody(
+	kind: Kind,
+	notes: string,
+	overrides: Partial&lt;Parameters&lt;typeof createTrack&gt;[1]&gt; = {}
+) {
+	const fallback = defaultNote(kind);
+	const steps: Step[] = notes
+		.trim()
+		.split(/\s+/)
+		.map((token) =&gt;
+			token === '.' ? { velocity: 0, note: fallback } : { velocity: 100, note: Note.parse(token) }
+		);
+	return createTrack(kind, { steps, ...overrides });
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/presets.ts<span class="code__lines">:45-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const PRESETS: Record&lt;string, () =&gt; Pattern&gt; = {
+	'four-on-the-floor': () =&gt; ({
+		title: 'Four on the floor',
+		bpm: 124,
+		swing: 0,
+		tracks: [
+			drums('kick', 'x---x---x---x---', { decay: 0.55 }),
+			drums('clap', '----x-------x---', { gain: 0.6 }),
+			drums('hat', 'o-x-o-x-o-x-o-x-', { gain: 0.5, tone: 0.7, decay: 0.25 }),
+			melody('bass', 'A1 . . A1 . A1 . . C2 . . C2 . G1 . .', { tone: 0.35, decay: 0.4 })
+		]
+	}),
+
+	'boom-bap': () =&gt; ({
+		title: 'Boom bap',
+		bpm: 92,
+		swing: 0.45,
+		tracks: [
+			drums('kick', 'x-----x--x--x---', { decay: 0.6, tone: 0.4 }),
+			drums('snare', '----x-------x---', { gain: 0.85, tone: 0.55 }),
+			drums('hat', 'x-o-x-o-x-o-x-o-', { gain: 0.45, tone: 0.5, decay: 0.2 }),
+			melody('lead', 'E4 . G4 . . A4 . . E4 . D4 . . . . .', { gain: 0.5, tone: 0.6, decay: 0.35 })
+		]
+	}),
+
+	'two-step': () =&gt; ({
+		title: 'Two-step',
+		bpm: 132,
+		swing: 0.3,
+		tracks: [
+			drums('kick', 'x-----x---x-----', { decay: 0.5 }),
+			drums('snare', '----x-------x---', { tone: 0.65 }),
+			drums('hat', '--x---x---x---x-', { gain: 0.55, tone: 0.8, decay: 0.15 }),
+			drums('clap', '----x-----o-x---', { gain: 0.5 }),
+			melody('bass', 'F1 . . F1 . . G#1 . . . A#1 . . . G#1 .', { tone: 0.45, decay: 0.45 })
+		]
+	})
+};
+
+export const PRESET_NAMES = Object.keys(PRESETS) as (keyof typeof PRESETS)[];
+
+export function preset(name: string): Pattern {
+	const build = PRESETS[name];
+	if (!build) throw new Error(`No preset called &quot;${name}&quot;`);
+	return build();
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why strings and not arrays of objects</h4>
+	<p>A groove is something you *read*. <code>x---x---x---x---</code> is four on the floor to anybody who has seen a drum machine; sixteen <code>{ velocity: 112 }</code> objects are not. The notation costs two small parsing functions and buys presets, seeds and test fixtures that a person can check by eye — which is how the boom-bap hi-hat pattern was noticed to be wrong the first time.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which two places in the project use a DTO and why nothing else does.</li><li>You can write a new four-track preset in the string notation without looking at the parser.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-pattern-in-a-url.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A pattern in a URL</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-instruments.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The instruments</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A note is a class — Building Ostinato</title>
+<meta name="description" content="One number — the MIDI note — and everything a sequencer needs derived from it. Why it is a class, why it is immutable, and why that combination is exactly what `$state` wants.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">04 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 10.256410256410255%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html" aria-current="page"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 04</p>
+			<h1>A note is a class</h1>
+			<p class="lede">One number — the MIDI note — and everything a sequencer needs derived from it. Why it is a class, why it is immutable, and why that combination is exactly what <code>$state</code> wants.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a small immutable value object, know when a class belongs inside reactive state, and see how one decision here pays off in the transport hook later.</p></aside>
+			<p>Start with the smallest thing in the project. A note is a MIDI number — 60 is middle C, each step up is a semitone — and two things every part of the app asks a note for: its frequency, so the synth can play it, and its name, so the pad can show it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.ts<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A MUSICAL NOTE
+ * ==============
+ *
+ * One number, the MIDI note — 60 is middle C, and each step up is a semitone —
+ * and everything a sequencer needs to know about it derived from that number.
+ *
+ * A class rather than a bare number, for two reasons that both matter:
+ *
+ *   1. `frequency` and `name` are the two things every part of the app asks a
+ *      note for, and computing them in four places is how one of the four ends
+ *      up with `A = 435`.
+ *   2. It is a type. `transpose(note, 7)` on a number silently accepts a
+ *      velocity, a step index or a track count. On a `Note` it accepts a note.
+ *
+ * It is **immutable**. `transpose()` returns a new one. That is what lets a
+ * `Note` live inside `$state` without being proxied: Svelte leaves class
+ * instances alone, and an object that never changes has nothing to observe —
+ * replacing it is the change, and replacing a property of a `$state` object is
+ * exactly what Svelte does observe.
+ *
+ * The same immutability is what makes it safe to send across the wire. The
+ * `transport` hook in `src/hooks.ts` encodes a `Note` as its MIDI number and
+ * decodes it back, so a pattern that leaves the server with `Note`s in it
+ * arrives in the browser with `Note`s in it — not with `{ midi: 57 }` objects
+ * that have forgotten how to be notes.
+ */
+
+const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'] as const;
+
+/** The lowest and highest notes worth sequencing on a groovebox. */
+export const LOWEST = 24; // C1
+export const HIGHEST = 96; // C7</code></pre>
+</figure>
+<p>The header explains the two decisions. It is a <strong>class</strong>, because computing <code>frequency</code> in four places is how one of them ends up with A = 435. And it is <strong>immutable</strong>: <code>transpose()</code> returns a new note.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.ts<span class="code__lines">:35-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Note {
+	readonly midi: number;
+
+	constructor(midi: number) {
+		if (!Number.isInteger(midi) || midi &lt; 0 || midi &gt; 127) {
+			throw new RangeError(`Not a MIDI note: ${midi}`);
+		}
+		this.midi = midi;
+	}
+
+	/**
+	 * Equal temperament, tuned to A4 = 440Hz.
+	 *
+	 * Each semitone multiplies the frequency by the twelfth root of two, so a
+	 * note `n` semitones above A4 is `440 × 2^(n/12)`. A4 is MIDI 69.
+	 */
+	get frequency(): number {
+		return 440 * 2 ** ((this.midi - 69) / 12);
+	}
+
+	/** `C4`, `F♯2` — the octave changes between B and C, as on a piano. */
+	get name(): string {
+		return `${this.pitchClass}${this.octave}`;
+	}
+
+	/** `C`, `F♯` — the letter without the octave, for a compact grid label. */
+	get pitchClass(): string {
+		return NAMES[this.midi % 12]!;
+	}
+
+	/** MIDI 60 is C4 under the convention most instruments print. */
+	get octave(): number {
+		return Math.floor(this.midi / 12) - 1;
+	}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why immutable, and why that matters for $state</h4>
+	<p>Svelte’s <code>$state</code> makes plain objects and arrays deeply reactive by wrapping them in proxies. It leaves class instances alone. So a <code>Note</code> inside a <code>$state</code> pattern is not observed *inside* — and because it never changes inside, there is nothing to observe. Replacing it (<code>step.note = step.note.transpose(1)</code>) is the change, and replacing a property of a <code>$state</code> object is exactly what Svelte does observe. Immutability is what makes “a class inside reactive state” safe rather than a trap.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.ts<span class="code__lines">:77-113</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	transpose(semitones: number): Note {
+		const midi = Math.min(HIGHEST, Math.max(LOWEST, this.midi + semitones));
+		return midi === this.midi ? this : new Note(midi);
+	}
+
+	equals(other: Note): boolean {
+		return this.midi === other.midi;
+	}
+
+	toString(): string {
+		return this.name;
+	}
+
+	/** `JSON.stringify` writes the number; `Note.from` reads it back. */
+	toJSON(): number {
+		return this.midi;
+	}
+
+	static from(midi: number): Note {
+		return new Note(midi);
+	}
+
+	/**
+	 * Parse `A3`, `f#2`, `Bb4`. Used by the tests and by the URL codec's
+	 * human-readable form; the app itself only ever moves by semitones.
+	 */
+	static parse(text: string): Note {
+		const match = /^([A-Ga-g])([#♯b♭]?)(-?\d)$/.exec(text.trim());
+		if (!match) throw new SyntaxError(`Not a note name: ${text}`);
+
+		const [, letter, accidental, octave] = match;
+		const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter!.toUpperCase()]!;
+		const shift = accidental === '#' || accidental === '♯' ? 1 : accidental ? -1 : 0;
+
+		return new Note((Number(octave) + 1) * 12 + base + shift);
+	}
+}</code></pre>
+</figure>
+<p><code>transpose</code> returns <code>this</code> when nothing changed. That is not an optimisation; it is a correctness detail for reactivity — assigning the same object back to <code>step.note</code> is not a change, so nothing re-renders, so holding the up arrow at the top of the range does not repaint a hundred pads for nothing. The test pins it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.spec.ts<span class="code__lines">:26-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('transposes immutably and clamps at the ends of the range', () =&gt; {
+	const c4 = new Note(60);
+	const g4 = c4.transpose(7);
+
+	expect(g4.name).toBe('G4');
+	expect(c4.midi).toBe(60);
+	expect(new Note(HIGHEST).transpose(5).midi).toBe(HIGHEST);
+	expect(new Note(LOWEST).transpose(-5).midi).toBe(LOWEST);
+	// Returning `this` when nothing changes keeps `$state` from seeing a change.
+	const top = new Note(HIGHEST);
+	expect(top.transpose(5)).toBe(top);
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>toJSON</code> returns the number, so <code>JSON.stringify</code> of a pattern writes <code>57</code> rather than <code>{&quot;midi&quot;:57}</code>. Chapter 26 shows the <code>transport</code> hook doing the same thing in both directions for SvelteKit’s wire format — which is why a pattern arrives in the browser with real <code>Note</code>s in it.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>Note</code> is a class and why it is immutable, and how those two facts relate to <code>$state</code>.</li><li>You can explain what <code>transpose</code> returning <code>this</code> buys.</li><li>Run <code>pnpm vitest run --project server src/lib/music</code> and watch it pass.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-map.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The map: everything the framework has to offer</span>
+			</a>
+			<a class="pager__link pager__link--next" href="musical-time.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Musical time, in seconds</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

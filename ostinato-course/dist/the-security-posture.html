@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The security posture — Building Ostinato</title>
+<meta name="description" content="One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, and two tests that prove the policy covers every inline script.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">36 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 92.3076923076923%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html" aria-current="page"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 36</p>
+			<h1>The security posture</h1>
+			<p class="lede">One place for the decisions spread across six files: a CSP in <code>auto</code> mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers <code>handleSecurity</code> adds, CORS on exactly one endpoint, and two tests that prove the policy covers every inline script.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the whole posture as one decision, and know which trade each line makes.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:141-172</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * CONTENT SECURITY POLICY
+ * =======================
+ *
+ * `mode: 'auto'`: hashes for prerendered pages, where the whole document
+ * is known at build time, and nonces for dynamically rendered ones,
+ * which stream `resolve(…)` scripts after the header has gone.
+ *
+ * The directives that are specific to an instrument:
+ *   `media-src blob:`  the exported WAV is played back from a Blob URL
+ *   `img-src data:`    the share card is an SVG data URL in the studio
+ *   `style-src 'unsafe-inline'` — a deliberate trade. Knobs and the
+ *                      playhead set `style:--angle` per frame; attributes
+ *                      cannot be hashed and a nonce does not apply to them.
+ *                      The exposure is CSS injection, not script execution.
+ */
+csp: {
+	mode: 'auto',
+	directives: {
+		'default-src': ['self'],
+		'script-src': ['self'],
+		'style-src': ['self', 'unsafe-inline'],
+		'img-src': ['self', 'data:'],
+		'media-src': ['self', 'blob:'],
+		'font-src': ['self', 'data:'],
+		'connect-src': ['self'],
+		'form-action': ['self'],
+		'frame-ancestors': ['none'],
+		'object-src': ['none'],
+		'base-uri': ['self']
+	}
+},</code></pre>
+</figure>
+<p><code>mode: &quot;auto&quot;</code>: hashes for prerendered pages, where the whole document is known at build time and a file cannot carry a header, and nonces for dynamically rendered ones, which stream scripts after the header has gone. Three directives are specific to an instrument. <code>media-src blob:</code> because the exported WAV is played from a Blob URL. <code>img-src data:</code> for the share card preview. And <code>style-src &quot;unsafe-inline&quot;</code> — a deliberate trade: knobs and the playhead set custom properties per frame through <code>style:</code> attributes, which cannot be hashed and to which a nonce does not apply. The exposure is CSS injection, not script execution, and <code>script-src</code> never gets the same allowance.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/landing.e2e.ts<span class="code__lines">:9-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('is served as a prerendered page with a hashed policy', async ({ page }) =&gt; {
+	const response = await page.goto('/');
+	expect(response?.status()).toBe(200);
+
+	// A prerendered page is a file, and a file cannot carry a response header
+	// of its own — so SvelteKit writes the policy into a `&lt;meta http-equiv&gt;`
+	// tag, which browsers honour the same way. `mode: 'auto'`: hashes here,
+	// never a nonce.
+	expect(response?.headers()['content-security-policy']).toBeUndefined();
+	const policy =
+		(await page.locator('meta[http-equiv=&quot;content-security-policy&quot;]').getAttribute('content')) ??
+		'';
+	expect(policy).toContain('sha256-');
+	expect(policy).not.toContain('nonce-');
+	// `style-src` allows inline styles on purpose (see vite.config.ts); scripts never do.
+	const scriptSrc = policy.split(';').find((d) =&gt; d.trim().startsWith('script-src')) ?? '';
+	expect(scriptSrc).not.toContain(&quot;'unsafe-inline'&quot;);
+
+	await expect(page.getByRole('heading', { level: 1 })).toContainText('groovebox');
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:44-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('every inline script the server emits is covered by the policy', async ({ request }) =&gt; {
+	for (const path of ['/studio', '/p/seedfour', '/']) {
+		const response = await request.get(path);
+		const html = await response.text();
+		// A dynamic page sends the policy as a header; a prerendered one bakes it
+		// into a `&lt;meta http-equiv&gt;` tag. Either way it is the policy in force.
+		const policy =
+			response.headers()['content-security-policy'] ??
+			/&lt;meta http-equiv=&quot;content-security-policy&quot; content=&quot;([^&quot;]*)&quot;/
+				.exec(html)?.[1]
+				?.replaceAll('&amp;#39;', &quot;'&quot;) ??
+			'';
+
+		const allowed = new Set([...policy.matchAll(/'(sha256-[^']+)'/g)].map((m) =&gt; m[1]));
+		const nonce = /'nonce-([^']+)'/.exec(policy)?.[1] ?? null;
+
+		const inline = [...html.matchAll(/&lt;script(?![^&gt;]*\bsrc=)([^&gt;]*)&gt;([\s\S]*?)&lt;\/script&gt;/g)];
+		expect(
+			inline.length,
+			`${path} has no inline script — has the bootstrap moved?`
+		).toBeGreaterThan(0);
+
+		for (const [, attributes, body] of inline) {
+			const digest = `sha256-${createHash('sha256').update(body!).digest('base64')}`;
+			const covered = (nonce !== null &amp;&amp; attributes!.includes(nonce)) || allowed.has(digest);
+			expect(covered, `${path}: uncovered inline script: ${body!.slice(0, 60)}…`).toBe(true);
+		}
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a test hashes the scripts itself</h4>
+	<p>A policy that is too strict blocks the app’s own bootstrap and the page never hydrates; a policy that is too loose is decoration. The test fetches three pages — dynamic, dynamic with data, prerendered — finds every inline <code>&lt;script&gt;</code>, computes its SHA-256, and checks that the policy in force (header or <code>&lt;meta&gt;</code>) names that hash or that the script carries the nonce. It is the only way to know the policy covers what SvelteKit emits, and it is what would catch a framework upgrade that added a new inline script.</p>
+</aside>
+<h3 id="csrf-and-the-cookie">CSRF, and the cookie</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:174-180</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Nobody else may POST here. `trustedOrigins` exists for the case where a
+ * form on a partner's domain submits to this app; that case does not
+ * exist, so the list is empty and stays empty until somebody can name
+ * the domain.
+ */
+csrf: { trustedOrigins: [] },</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:23-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">PUBLIC_ORIGIN: {
+	description: 'Where the app is served from, with no trailing slash. Used for CSRF checks.',
+	public: true,
+
+	/*
+	 * `static: true` means the value is inlined at build time rather than read
+	 * from the environment at runtime. It has to be: `paths.origin` in
+	 * `vite.config.ts` reads the same variable during the build, and a value
+	 * that could differ between build and run would make the CSRF check compare
+	 * two different origins.
+	 */
+	static: true,
+	schema: v.pipe(
+		required,
+		v.url('Must be an absolute URL'),
+		v.transform((value) =&gt; value.replace(/\/+$/, ''))
+	)
+},</code></pre>
+</figure>
+<p>SvelteKit refuses a form submission or a remote function call whose origin does not match. <code>trustedOrigins</code> exists for a form on a partner’s domain; that case does not exist, so the list is empty and stays empty until somebody can name the domain. The origin it compares against is <code>PUBLIC_ORIGIN</code>, <code>static: true</code> — inlined at build time, because <code>paths.origin</code> in the config reads the same variable during the build, and a value that could differ between build and run would make the check compare two different origins.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/artist.ts<span class="code__lines">:57-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * A year, `httpOnly` so a script on the page cannot read it, `sameSite: 'lax'`
+ * so a link from elsewhere still arrives signed in, and `secure` whenever the
+ * app is served over HTTPS — which `event.url.protocol` knows and a constant
+ * would have to guess.
+ */
+event.cookies.set(COOKIE, await sign(artist, SESSION_SECRET), {
+	path: '/',
+	httpOnly: true,
+	sameSite: 'lax',
+	secure: event.url.protocol === 'https:',
+	maxAge: 60 * 60 * 24 * 365
+});</code></pre>
+</figure>
+<p>The cookie (ch. 22): signed so it cannot be forged; <code>httpOnly</code> so a script on the page cannot read it; <code>sameSite: &quot;lax&quot;</code> so a link from elsewhere arrives signed in but a cross-site POST does not; <code>secure</code> whenever the app is served over HTTPS. A year, because losing the cookie is losing the account and nobody wants that on a schedule.</p>
+<h3 id="headers-and-cors">Headers, and CORS on one endpoint</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:79-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">response.headers.set('x-content-type-options', 'nosniff');
+response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+// An instrument that makes sound has no business hearing any.
+response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');</code></pre>
+</figure>
+<p><code>nosniff</code>, a referrer policy, and a permissions policy that turns off the microphone, the camera and geolocation: an instrument that makes sound has no business hearing any. <code>frame-ancestors &quot;none&quot;</code> in the CSP is the modern <code>X-Frame-Options</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, setHeaders }) =&gt; {
+	const published = await getPattern(params.id);
+	if (!published) error(404, 'No such pattern');
+
+	setHeaders({
+		'cache-control': 'public, max-age=300',
+		'access-control-allow-origin': '*'
+	});
+
+	return json({
+		id: published.id,
+		title: published.title,
+		artist: published.artist.handle,
+		url: vanityPath({ handle: published.artist.handle, slug: published.slug }),
+		pattern: toDto(published.pattern)
+	});
+};</code></pre>
+</figure>
+<p>Exactly one endpoint says <code>Access-Control-Allow-Origin: *</code>: the one the embeddable player fetches from other origins. It is read-only and public — the same data is on the pattern’s page for anyone — so there is nothing to protect by withholding it. Everything else is same-origin by default, which is the default worth keeping.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/card.svg/+server.ts<span class="code__lines">:43-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const scripts =
+	hashes.script.length &gt; 0 ? hashes.script.map((hash) =&gt; `'${hash}'`).join(' ') : &quot;'none'&quot;;
+
+return new Response(`&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;\n${body}`, {
+	headers: {
+		'content-type': 'image/svg+xml; charset=utf-8',
+		'cache-control': 'public, max-age=300',
+		'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src ${scripts}`
+	}
+});</code></pre>
+</figure>
+<p>The share card sets its own policy from what the render actually produced: <code>hashes.script</code> is read rather than assumed empty. Today that is <code>script-src &quot;none&quot;</code>, and the end-to-end suite checks that string — so if a future change put a script in the card, the test would notice the policy had changed rather than the card breaking silently.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why prerendered and dynamic pages carry the policy differently.</li><li>You can defend <code>style-src &quot;unsafe-inline&quot;</code> in one sentence and say what you would need to remove it.</li><li>You can explain what <code>PUBLIC_ORIGIN</code> being <code>static</code> has to do with CSRF.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-service-worker.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The service worker</span>
+			</a>
+			<a class="pager__link pager__link--next" href="unit-and-browser-tests.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Unit tests, and tests in a real browser</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

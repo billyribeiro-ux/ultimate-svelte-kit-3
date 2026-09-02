@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Five complete projects, each with its own build-along course.
+Six complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -14,9 +14,11 @@ Five complete projects, each with its own build-along course.
 | [`tessera-course/`](./tessera-course) | Its 44-chapter course, for somebody who has finished project 3. Open `tessera-course/dist/index.html`. |
 | [`sextant/`](./sextant) | **Project 5** — Sextant, a self-hosted observability platform. Logs, traces, metrics, and a query language written from the characters up: a lexer, a Pratt parser, a type checker that knows a duration is not a number, and a planner that pushes what it can into SQL. |
 | [`sextant-course/`](./sextant-course) | Its 46-chapter course, for somebody who has finished project 4. Open `sextant-course/dist/index.html`. |
+| [`ostinato/`](./ostinato) | **Project 6** — Ostinato, a groovebox in the browser. A step sequencer with a two-clock scheduler and synthesised instruments, patterns that fit in a URL, a gallery with vanity addresses, live jam rooms, an embeddable custom element, and an adapter written from scratch — every feature of Svelte 5 and SvelteKit 3, each one used for something. |
+| [`ostinato-course/`](./ostinato-course) | Its 39-chapter course, for somebody who has finished project 5. Open `ostinato-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All five pin it in `.nvmrc` and `engines`.
+All six pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -39,13 +41,18 @@ pnpm run db:migrate && pnpm run db:seed && pnpm run dev
 # Project 5 — the observability platform. The seed prints a sign-in and a key.
 cd sextant && pnpm install && cp .env.example .env
 pnpm run db:push && pnpm run db:seed && pnpm run dev
+
+# Project 6 — the groovebox. Open /studio, or /jam/lobby in two windows.
+cd ostinato && pnpm install && cp .env.example .env
+pnpm run db:push && pnpm run db:seed && pnpm run dev
 ```
 
 Each seed prints what you need to open the thing it built: Halfpast prints the
 demo studio's booking page, both sign-ins and a customer manage link; Tessera
 prints an owner, a viewer, and a board short link worth opening twice; Sextant
 prints a workspace, a sign-in, an ingest key, and the twenty minutes of its six
-hours of telemetry during which `payments-api` is timing out.
+hours of telemetry during which `payments-api` is timing out; Ostinato publishes
+three grooves under `@ostinato` and opens the lobby jam room.
 
 ## Reading the courses
 
@@ -55,6 +62,7 @@ open halfpast-course/dist/index.html
 open sequent-course/dist/index.html
 open tessera-course/dist/index.html
 open sextant-course/dist/index.html
+open ostinato-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
@@ -74,6 +82,11 @@ frees `node sextant-course/verify.js` to check the thing that still needs
 judgement — whether the ranges are sensible. A quotation can be perfectly
 faithful and useless if it starts on the closing brace above it or stops halfway
 through an `if`, and no byte-comparison notices.
+
+The Ostinato course is built the same way — 294 blocks quoted from the project
+by line range, `node ostinato-course/verify.js` to check the ranges — and adds
+`tools/snapfile.js`, which snaps every range in a chapter file to whole
+statements so that fixing thirty of them after a refactor is one command.
 
 ## Project 1 — StrikeFlow
 
@@ -244,4 +257,56 @@ compiler.
 ```bash
 cd sextant
 pnpm run verify   # check, lint, unit, build, e2e
+```
+
+## Project 6 — Ostinato
+
+A groovebox. Sixteen steps, a synthesised kit, a bass that moves. The five
+projects before it each had a domain problem at the centre; this one has the
+framework at the centre, and the rule for every feature was that it had to be
+*for* something. There is no `$host` demo page; there is a custom element that
+needs `$host` to dispatch an event.
+
+- **A real scheduler.** Two clocks: a timer looks a hundred milliseconds ahead
+  and the audio clock plays exactly on time. Swing, velocity and tempo changes
+  land on the next sixteenth. Four synthesised drums and two synths from
+  oscillators and noise; offline rendering to a WAV whose header a test reads
+  back with a `DataView`.
+- **Links that are saves.** A versioned byte codec puts a whole pattern in about
+  two hundred URL-safe characters — a seventh of the JSON — with notes encoded
+  only for the tracks that have them. Every preset round-trips; damaged links
+  fail with a sentence.
+- **The studio is every binding Svelte has.** `bind:group`, function bindings
+  with `bind:checked={get, set}`, `bind:indeterminate`, `bind:textContent` on a
+  `contenteditable`, `bind:files` cleared with a `DataTransfer`, media bindings,
+  `$bindable` knobs chained through two components into deep `$state`; springs
+  on the pointer and never on the value; attachments for a wheel listener that
+  must not be passive and a meter drawn at sixty frames a second; `fork()` to
+  render a WAV on hover before the click; `settled()`, `$state.eager`,
+  `$inspect.trace`, `$props.id()`, `hydratable`, `<select defaultValue>`.
+- **The server is every remote function.** `query`, `query.batch` for thirty
+  cards in one request, `query.live` as an async generator with a one-value
+  mailbox, `prerender` baked into a static landing page, `command` with
+  `requested(...).refreshAll()` and `withOverride` for optimistic counts, and
+  two `form`s that work with JavaScript off — one with `preflight`, two submit
+  buttons and `invalid(issue.handle(...))` for a 409 under the right field.
+- **An adapter written from scratch.** Two functions and a catch-all with no
+  routes, joined by SvelteKit 3's `applyReroute`, bundled with rolldown,
+  instrumented with `builder.instrument`, emulated in development, and
+  contributing a Vite plugin of its own. The end-to-end suite runs against its
+  output, not `vite preview`.
+- **The rest of SvelteKit 3**: async `reroute` for `/@handle/slug` addresses
+  that are not routes, `transport` for a class that crosses the wire, a `QUERY`
+  handler with a test file beside the route, `handleError` by `kind`, a font
+  `preload` filter by source filename, OpenTelemetry spans read back on a
+  diagnostics page, a service worker on `$app/manifest`, a CSP in `auto` mode
+  proved by a test that hashes every inline script itself.
+- 58 unit and browser tests, 33 end-to-end scenarios run on desktop and a Pixel
+  7 profile. Writing them found five real bugs, including a `forkPreloads` back
+  navigation that completed without rendering and an `await` in markup that ran
+  once and never again.
+
+```bash
+cd ostinato
+pnpm run verify   # check, lint, unit + browser, build, e2e
 ```

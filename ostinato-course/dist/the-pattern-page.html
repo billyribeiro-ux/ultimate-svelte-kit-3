@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The pattern page and its share card — Building Ostinato</title>
+<meta name="description" content="`RouteParams` from `$app/types` with the layout group in the id, an optimistic love count with `withOverride`, a `Player` that provides a studio only if none exists, and a share card rendered by `svelte/server` with a CSP built from the hashes it returns.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">29 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 74.35897435897436%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html" aria-current="page"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 29</p>
+			<h1>The pattern page and its share card</h1>
+			<p class="lede"><code>RouteParams</code> from <code>$app/types</code> with the layout group in the id, an optimistic love count with <code>withOverride</code>, a <code>Player</code> that provides a studio only if none exists, and a share card rendered by <code>svelte/server</code> with a CSP built from the hashes it returns.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Type a route’s params from the route table, do an optimistic update that corrects itself, use the third function <code>createContext</code> returns, and render a component to a string on the server for something that is not a page.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/+page.ts<span class="code__lines">:4-11</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The pattern, loaded up front so that `preloadData` has something to
+ * preload: the gallery calls it on hover, and by the time somebody clicks,
+ * this has run and the remote query's cache is warm.
+ */
+export const load: PageLoad = async ({ params }) =&gt; {
+	return { published: await getPattern(params.id) };
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:9-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `$app/types` knows every route. `RouteParams&lt;'/(app)/p/[id]'&gt;` is
+ * `{ id: string }`, derived from the folder name — layout group included,
+ * because the group is part of the route's id even though it is not part
+ * of its URL — and it would stop compiling if the folder were renamed,
+ * which is what a type for a URL should do.
+ */
+const params = $derived(page.params as RouteParams&lt;'/(app)/p/[id]'&gt;);
+const card = $derived(`${page.url.origin}/p/${params.id}/card.svg`);</code></pre>
+</figure>
+<p><code>$app/types</code> knows every route. <code>RouteParams&lt;&quot;/(app)/p/[id]&quot;&gt;</code> is <code>{ id: string }</code>, derived from the folder name — layout group included, because the group is part of the route’s *id* even though it is not part of its URL — and it stops compiling if the folder is renamed, which is what a type for a URL should do.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:20-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:head&gt;
+	&lt;title&gt;{data.published.title} by @{data.published.artist.handle} — Ostinato&lt;/title&gt;
+	&lt;meta
+		name=&quot;description&quot;
+		content=&quot;{data.published.title}: a {data.published.bpm} bpm groove by @{data.published.artist
+			.handle}. Play it, remix it, embed it.&quot;
+	/&gt;
+	&lt;meta property=&quot;og:title&quot; content={data.published.title} /&gt;
+	&lt;meta property=&quot;og:image&quot; content={card} /&gt;
+	&lt;meta property=&quot;og:type&quot; content=&quot;music.song&quot; /&gt;
+	&lt;meta name=&quot;twitter:card&quot; content=&quot;summary_large_image&quot; /&gt;
+&lt;/svelte:head&gt;</code></pre>
+</figure>
+<h3 id="the-view">The view, and an optimistic heart</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:11-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A PUBLISHED PATTERN
+ * ===================
+ *
+ * The page at `/p/&lt;id&gt;` and the gallery's preview dialog are the same
+ * component. Counts come through `query.batch` — every card and this view
+ * asking `getCounts(id)` in one render becomes one request.
+ */
+let { published, compact = false }: { published: Published; compact?: boolean } = $props();
+
+const vanity = $derived(vanityPath({ handle: published.artist.handle, slug: published.slug }));
+
+/**
+ * OPTIMISTIC, THEN CORRECTED
+ * --------------------------
+ * Loving a pattern bumps the number on screen *now* — `withOverride` —
+ * and asks the server to send the real count back in the same response.
+ * If the command fails, the override is dropped and the number returns to
+ * what the server last said. No spinner, no stale count.
+ */
+async function love() {
+	try {
+		await lovePattern(published.id).updates(
+			getCounts(published.id).withOverride((counts) =&gt; ({ ...counts, likes: counts.likes + 1 }))
+		);
+	} catch {
+		toast('Could not love that right now', 'error');
+	}
+}
+
+function played() {
+	void recordPlay(published.id)
+		.updates(
+			getCounts(published.id).withOverride((counts) =&gt; ({ ...counts, plays: counts.plays + 1 }))
+		)
+		.catch(() =&gt; {});
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>withOverride</code></h4>
+	<p>Loving a pattern should bump the number *now*. <code>lovePattern(id).updates(getCounts(id).withOverride(fn))</code> applies <code>fn</code> to the query’s current value on screen immediately, sends the command, and asks the server to refresh that query in the same response (ch. 24). When the real count arrives, the override is dropped and the real value takes over. If the command fails, the override is dropped and the number returns to what the server last said. No spinner, no stale count, no manual rollback.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:67-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`await` in markup: the batched counts, with nothing to show until they
+	arrive. `$derived`, because the value must follow the query — a bare
+	`{const counts = await …}` would evaluate once, and the optimistic
+	override below would update a number nobody was watching.
+--&gt;
+&lt;svelte:boundary&gt;
+	{const counts = $derived(await getCounts(published.id))}
+	&lt;div class=&quot;cluster&quot;&gt;
+		&lt;span class=&quot;chip mono&quot; title=&quot;plays&quot;&gt;▶ {counts.plays}&lt;/span&gt;
+		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={love}&gt;
+			&lt;HeartIcon size={14} weight=&quot;fill&quot; /&gt;
+			{counts.likes}
+		&lt;/button&gt;
+	&lt;/div&gt;
+	{#snippet pending()}
+		&lt;span class=&quot;hint&quot;&gt;…&lt;/span&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>{const counts = $derived(await getCounts(published.id))}</code> — with the <code>$derived</code>. A bare <code>{const counts = await …}</code> evaluates once, and the optimistic override above would update a number nobody was watching. This is the same lesson as the WAV render (ch. 20) and the jam room (ch. 31), and it is the single most common mistake with <code>await</code> in markup.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:88-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Player pattern={published.pattern} onfirstplay={played}&gt;
+	{#snippet children({ step })}
+		&lt;StepGrid pattern={published.pattern} {step} readonly /&gt;
+	{/snippet}
+&lt;/Player&gt;</code></pre>
+</figure>
+<h3 id="the-player">A player that provides a studio only if none exists</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Player.svelte<span class="code__lines">:10-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * PLAY A PATTERN YOU CANNOT EDIT
+ * ==============================
+ *
+ * The published page, the gallery preview and the jam room all need to
+ * *play* a pattern without owning one. This wraps the transport around a
+ * pattern prop and hands its children the playhead through a snippet
+ * parameter, so the grid underneath can light up.
+ *
+ * It asks context whether a studio already exists — `hasStudio` is the
+ * third function `createContext` returns — and creates one only if not.
+ * The jam page creates none; this makes one and provides it, so the meters
+ * and panels under it work exactly as they do in the studio.
+ */
+let {
+	pattern,
+	bpm = $bindable(),
+	swing = $bindable(),
+	readonly = true,
+	onfirstplay,
+	ontempo,
+	children
+}: {
+	pattern: Pattern;
+	bpm?: number;
+	swing?: number;
+	readonly?: boolean;
+	/** Called once, the first time play starts — the published page counts it. */
+	onfirstplay?: () =&gt; void;
+	/** Called when a tempo gesture ends, with the values the knobs landed on. */
+	ontempo?: (bpm: number, swing: number) =&gt; void;
+	children: Snippet&lt;[{ step: number; playing: boolean }]&gt;;
+} = $props();
+
+const studio: Studio = hasStudio() ? getStudio() : create();
+if (!hasStudio()) setStudio(studio);
+
+function create(): Studio {
+	const engine = new AudioEngine();
+	const samples = new SampleBank(engine);
+	const scheduler = new Scheduler(engine, () =&gt; pattern, {
+		output: (track) =&gt; engine.channel(track).input,
+		sample: (track) =&gt; samples.get(track.id)
+	});
+	return { engine, scheduler, samples };
+}
+
+const { engine, scheduler } = studio;</code></pre>
+</figure>
+<p><code>createContext</code> in Svelte 5.57 returns three functions: <code>get</code>, <code>set</code> and <code>has</code>. The studio page provides a studio (ch. 19) and this component finds it with <code>hasStudio()</code>. The published page and the jam room provide none, so it creates one and provides it, and the meters and panels beneath work exactly as they do in the studio. A <code>Snippet&lt;[{ step; playing }]&gt;</code> hands the playhead to whatever the parent renders inside.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Player.svelte<span class="code__lines">:59-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	let played = false;
+	$effect(() =&gt; {
+		if (scheduler.playing &amp;&amp; !played) {
+			played = true;
+			onfirstplay?.();
+		}
+	});
+
+	// Stop the transport when the player goes away — a navigation must not leave a groove running.
+	$effect(() =&gt; () =&gt; scheduler.stop());
+
+	// Local copies the knobs can turn; the parent decides what a turn means.
+	let localBpm = $derived(bpm ?? pattern.bpm);
+	let localSwing = $derived(swing ?? pattern.swing);
+&lt;/script&gt;
+
+&lt;div class=&quot;player&quot;&gt;
+	&lt;Transport
+		{engine}
+		{scheduler}
+		bind:bpm={localBpm}
+		bind:swing={localSwing}
+		disabled={readonly}
+		onend={() =&gt; ontempo?.(localBpm, localSwing)}
+	/&gt;
+	{@render children({ step: scheduler.step, playing: scheduler.playing })}
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>bpm</code> and <code>swing</code> are optional <code>$bindable</code> props. The jam room binds them to overridable deriveds (ch. 31); the published page leaves them alone and <code>localBpm</code> falls back to the pattern. <code>onend</code> on the transport fires when a knob gesture finishes, and the parent decides what a finished gesture means.</p>
+<h3 id="the-share-card">The share card</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:4-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE SHARE CARD
+ * ==============
+ *
+ * A 1200×630 picture of a pattern, for the `og:image` of its page and for
+ * the studio's &quot;published&quot; preview. Rendered on the server by
+ * `svelte/server`'s `render()` — a Svelte component used as an SVG template
+ * — and nowhere else. It has no `&lt;style&gt;` block because a stylesheet would
+ * be extracted to a file the SVG cannot reach; everything is an attribute.
+ *
+ * The boundary is the point of the component beyond the picture. A
+ * pattern row written by an old version might not parse; without the
+ * boundary the whole render throws and the page has no image. With it, the
+ * `failed` snippet draws a plain card — and `transformError` in the
+ * endpoint decides what the snippet is allowed to know about the error.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:65-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each published.pattern.tracks as track, row (track.id)}
+	{const hue = hues[track.kind] ?? 60}
+	{#each track.steps as step, column (column)}
+		{const on = step.velocity &gt; 0}
+		&lt;rect
+			x={gridX + column * (cell + gap)}
+			y={gridY + row * (cell + gap)}
+			width={cell}
+			height={cell}
+			rx=&quot;6&quot;
+			fill={on ? `oklch(${step.velocity &gt; 80 ? 72 : 58}% 0.17 ${hue})` : '#1c1c24'}
+		/&gt;
+	{/each}
+{/each}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:94-109</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	{#snippet failed(error)}
+		&lt;text
+			x=&quot;80&quot;
+			y=&quot;180&quot;
+			font-family=&quot;system-ui, sans-serif&quot;
+			font-size=&quot;56&quot;
+			font-weight=&quot;700&quot;
+			fill=&quot;#f1efe9&quot;
+		&gt;
+			{published.title}
+		&lt;/text&gt;
+		&lt;text x=&quot;80&quot; y=&quot;590&quot; font-family=&quot;system-ui, sans-serif&quot; font-size=&quot;26&quot; fill=&quot;#a6a3b3&quot;&gt;
+			{(error as { message: string }).message}
+		&lt;/text&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<p>A Svelte component as an SVG template, with a <code>&lt;svelte:boundary&gt;</code> around the drawing. A pattern row written by an old version might not parse; without the boundary the whole render throws and the page has no image. With it, the <code>failed</code> snippet draws a plain card with the title and whatever <code>transformError</code> allowed it to know.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/card.svg/+server.ts<span class="code__lines">:1-22</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SHARE CARD, AS AN ENDPOINT
+ * ==============================
+ *
+ * `/p/&lt;id&gt;/card.svg` is the picture a chat client or a social network shows
+ * when the pattern's page is linked. It is a Svelte component rendered to a
+ * string on the server with `render` from `svelte/server` — the same function
+ * SvelteKit itself calls for every page, used here for a document that is not
+ * a page.
+ *
+ * Two of `render`'s options are used and both are worth knowing:
+ *
+ * `csp: { hash: true }` asks for the SHA-256 of any inline script the render
+ * produced, typed as `Sha256Source[]`. An SVG of rectangles produces none, and
+ * the header below says so with `script-src 'none'` — but the list is read
+ * rather than assumed, so a future `hydratable` in the card would be covered
+ * rather than blocked.
+ *
+ * `transformError` decides what a `failed` snippet may know. A render error
+ * carries a stack trace and, sometimes, a database message; the card gets a
+ * sentence and the log gets the rest.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/p/[id]/card.svg/+server.ts<span class="code__lines">:30-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, url }) =&gt; {
+	const published = await getPattern(params.id);
+	if (!published) error(404, 'No such pattern');
+
+	const { body, hashes } = await render(Card, {
+		props: { published, origin: url.origin },
+		csp: { hash: true },
+		transformError: (e) =&gt; {
+			console.error(`card ${params.id} failed to render`, e);
+			return { message: 'This card could not be drawn in full.' };
+		}
+	});
+
+	const scripts =
+		hashes.script.length &gt; 0 ? hashes.script.map((hash) =&gt; `'${hash}'`).join(' ') : &quot;'none'&quot;;
+
+	return new Response(`&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;\n${body}`, {
+		headers: {
+			'content-type': 'image/svg+xml; charset=utf-8',
+			'cache-control': 'public, max-age=300',
+			'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src ${scripts}`
+		}
+	});
+};</code></pre>
+</figure>
+<p><code>render</code> from <code>svelte/server</code> is the function SvelteKit calls for every page, used here for a document that is not a page. <code>csp: { hash: true }</code> asks for the SHA-256 of any inline script the render produced — typed as <code>Sha256Source[]</code> — and the header is built from the list rather than assumed empty, so a future <code>hydratable</code> in the card would be covered rather than blocked. <code>transformError</code> decides what the <code>failed</code> snippet may know: the card gets a sentence, the log gets the stack.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/vanity.ts<span class="code__lines">:15-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const VANITY = /^\/@([a-z0-9_]{3,20})\/([a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?)\/?$/;
+
+export interface Vanity {
+	handle: string;
+	slug: string;
+}
+
+/** `/@handle/slug` → `{ handle, slug }`, or `null` for any other path. */
+export function parseVanity(pathname: string): Vanity | null {
+	const match = VANITY.exec(pathname);
+	if (!match) return null;
+	return { handle: match[1]!, slug: match[2]! };
+}
+
+export function vanityPath({ handle, slug }: Vanity): string {
+	return `/@${handle}/${slug}`;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/vanity.ts<span class="code__lines">:33-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A title as a slug: lower-case, ASCII, hyphens, at most sixty characters.
+ * `normalize('NFKD')` splits accented letters into a letter and a mark, and
+ * the range removes the marks, so &quot;Café groove&quot; becomes `cafe-groove` rather
+ * than `caf-groove`.
+ */
+export function slugify(title: string): string {
+	const slug = title
+		.normalize('NFKD')
+		.replace(/[̀-ͯ]/g, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 60)
+		.replace(/-+$/, '');
+	return slug || 'untitled';
+}</code></pre>
+</figure>
+<p>The vanity address is one regular expression, shared by the <code>reroute</code> hook (ch. 26), the resolver endpoint (ch. 32) and every page that prints an address, so all three agree on its shape. <code>slugify</code> normalises to NFKD and strips the combining marks, which is why “Café groove” becomes <code>cafe-groove</code> and not <code>caf-groove</code>.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write the <code>RouteParams</code> type for the jam room and say why the group is in it.</li><li>You can explain what happens to an overridden value when the command fails.</li><li>You can say what <code>hashes.script</code> contains for this card, and what would change it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-landing-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The landing page is a file</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-gallery.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The gallery</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

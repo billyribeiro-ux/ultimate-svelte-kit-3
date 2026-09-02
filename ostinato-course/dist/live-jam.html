@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A live query: the jam room — Building Ostinato</title>
+<meta name="description" content="One pattern many browsers edit. An in-memory broadcaster, `query.live` as an async generator with `finally` for leaving, a one-value mailbox so slow browsers get the latest, and commands that refresh nothing because the stream already did.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 64.1025641025641%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html" aria-current="page"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>A live query: the jam room</h1>
+			<p class="lede">One pattern many browsers edit. An in-memory broadcaster, <code>query.live</code> as an async generator with <code>finally</code> for leaving, a one-value mailbox so slow browsers get the latest, and commands that refresh nothing because the stream already did.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a <code>query.live</code>, understand why its body is a generator and what <code>finally</code> is for, and know the honest limit of an in-process broadcaster.</p></aside>
+			<p>A jam room is one pattern that several browsers edit at once. The database row is the truth; the broadcaster is how everybody hears that the truth changed. Each write notifies every open stream for that room, and each stream yields the new snapshot to its browser.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rooms.ts<span class="code__lines">:1-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * JAM ROOMS
+ * =========
+ *
+ * A room is one pattern that several browsers edit together. The database row
+ * is the truth, and the *broadcaster* below is how everybody hears that the
+ * truth changed: each write notifies every open `query.live` stream for that
+ * room, which yields the new snapshot to its browser.
+ *
+ * ONE PROCESS, AND SAID SO
+ * ------------------------
+ * Subscribers live in a `Map` in this module, so two instances of the server
+ * would each know only their own listeners. That is the honest limit of an
+ * in-memory broadcaster; the fix is a shared channel — a Postgres `NOTIFY`, a
+ * Redis stream — and it is the first thing to reach for when this runs on more
+ * than one machine. Saying so here beats a deployment discovering it.
+ */</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Subscribers live in a <code>Map</code> in this module, which means *one process*. Two instances of the server would each know only their own listeners, and a step toggled on one would not be heard on the other. The fix is a shared channel — Postgres <code>NOTIFY</code>, a Redis stream — and the file says so, because a deployment discovering it is worse than a comment.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rooms.ts<span class="code__lines">:29-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Presence {
+	id: string;
+	handle: string;
+}
+
+export interface RoomSnapshot {
+	id: string;
+	name: string;
+	pattern: Pattern;
+	version: number;
+	updatedAt: number;
+	/** Who has the room open right now, by connection. */
+	present: Presence[];
+}
+
+type Listener = (snapshot: RoomSnapshot) =&gt; void;
+
+/** Open streams per room. A connection is a listener plus who it belongs to. */
+const connections = new Map&lt;string, Map&lt;Listener, Presence&gt;&gt;();
+
+function presentIn(room: string): Presence[] {
+	const seen = new Map&lt;string, Presence&gt;();
+	for (const presence of connections.get(room)?.values() ?? []) seen.set(presence.id, presence);
+	return [...seen.values()];
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rooms.ts<span class="code__lines">:69-112</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Change a room's pattern and tell everybody.
+ *
+ * `mutate` runs on a freshly parsed copy, and the result is validated before
+ * it is written — a command that sets a step to velocity 900 is refused here,
+ * not stored and refused by every browser that reads it.
+ */
+export async function updateRoom(
+	id: string,
+	mutate: (pattern: Pattern) =&gt; void
+): Promise&lt;RoomSnapshot&gt; {
+	const current = await getRoom(id);
+	if (!current) throw new Error(`No room ${id}`);
+
+	const next = fromDto(toDto(current.pattern));
+	mutate(next);
+	const valid = v.parse(PatternSchema, next);
+
+	const [row] = await db
+		.update(schema.rooms)
+		.set({
+			data: JSON.stringify(toDto(valid)),
+			version: sql`${schema.rooms.version} + 1`,
+			updatedAt: Date.now()
+		})
+		.where(eq(schema.rooms.id, id))
+		.returning();
+
+	const snapshot: RoomSnapshot = {
+		id,
+		name: row!.name,
+		pattern: valid,
+		version: row!.version,
+		updatedAt: row!.updatedAt,
+		present: presentIn(id)
+	};
+
+	broadcast(id, snapshot);
+	return snapshot;
+}
+
+function broadcast(room: string, snapshot: RoomSnapshot): void {
+	for (const listener of connections.get(room)?.keys() ?? []) listener(snapshot);
+}</code></pre>
+</figure>
+<p><code>updateRoom</code> takes a *mutation*: a function that edits a freshly parsed copy of the pattern. The result is validated with the model’s <code>PatternSchema</code> before it is written, so a command that sets a step to velocity 900 is refused here — not stored and then refused by every browser that reads it. <code>version</code> goes up by one per write; a browser can tell “changed” from “same” without comparing two kilobytes of JSON.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rooms.ts<span class="code__lines">:114-143</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Join a room: register a listener and who it is. Returns the leave function.
+ * Joining and leaving both re-broadcast, because &quot;who is here&quot; is part of the
+ * snapshot and it just changed.
+ */
+export function join(room: string, who: Artist | null, listener: Listener): () =&gt; void {
+	const presence: Presence = who ?? {
+		id: `anon-${Math.random().toString(36).slice(2, 8)}`,
+		handle: 'someone'
+	};
+
+	let listeners = connections.get(room);
+	if (!listeners) {
+		listeners = new Map();
+		connections.set(room, listeners);
+	}
+	listeners.set(listener, presence);
+	void announce(room);
+
+	return () =&gt; {
+		listeners.delete(listener);
+		if (listeners.size === 0) connections.delete(room);
+		void announce(room);
+	};
+}
+
+async function announce(room: string): Promise&lt;void&gt; {
+	const snapshot = await getRoom(room);
+	if (snapshot) broadcast(room, snapshot);
+}</code></pre>
+</figure>
+<p>Joining registers a listener *and who it belongs to*. Both joining and leaving re-broadcast, because “who is here” is part of the snapshot and it just changed. An anonymous browser is “someone” with a random id — present, but nameless until it chooses a handle.</p>
+<h3 id="query-live"><code>query.live</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * JAM ROOMS, LIVE
+ * ===============
+ *
+ * `query.live` is a query whose function is an async *generator*: instead of
+ * returning once, it `yield`s every time there is something new, and SvelteKit
+ * streams each value to every browser that has the query open. When the last
+ * browser closes it, SvelteKit stops iterating — which runs the `finally`
+ * below, which leaves the room. There is no connection to manage by hand.
+ *
+ * During server rendering the generator is run for its *first* value only, so
+ * the page arrives with the room already drawn and takes over from there.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:57-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const watchRoom = query.live(v.string(), async function* (id) {
+	const exists = await getRoom(id);
+	if (!exists) error(404, 'No such room');
+
+	const mailbox = new Latest&lt;RoomSnapshot&gt;();
+	// Who this stream belongs to is read once, here. A browser that chooses a
+	// handle while in the room calls `watchRoom(id).reconnect()` from that form,
+	// which ends this generator and starts a fresh one that reads the new cookie.
+	const leave = join(id, currentArtist(), (snapshot) =&gt; mailbox.push(snapshot));
+
+	try {
+		yield (await getRoom(id))!;
+		while (true) yield await mailbox.next();
+	} finally {
+		leave();
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a generator</h4>
+	<p>A <code>query</code> returns once. A <code>query.live</code> is an async *generator*: it <code>yield</code>s every time there is something new, and SvelteKit streams each value — over server-sent events — to every browser that has the query open. When the last browser closes it, SvelteKit stops iterating the generator, which runs the <code>finally</code>, which calls <code>leave()</code>. There is no connection to manage, no <code>close</code> handler to forget. During server rendering the generator is run for its first value only, so the page arrives drawn.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:23-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A mailbox that holds one value.
+ *
+ * Live streams are not event logs: if the room changes three times while a
+ * slow browser is still receiving the first, it should get the *latest*, not
+ * a backlog. So a push while nobody is waiting replaces what was there, and a
+ * `next()` while nothing is there waits.
+ */
+class Latest&lt;T&gt; {
+	#value: T | undefined;
+	#waiting: ((value: T) =&gt; void) | null = null;
+
+	push(value: T): void {
+		if (this.#waiting) {
+			const resolve = this.#waiting;
+			this.#waiting = null;
+			resolve(value);
+		} else {
+			this.#value = value;
+		}
+	}
+
+	next(): Promise&lt;T&gt; {
+		if (this.#value !== undefined) {
+			const value = this.#value;
+			this.#value = undefined;
+			return Promise.resolve(value);
+		}
+		return new Promise((resolve) =&gt; {
+			this.#waiting = resolve;
+		});
+	}
+}</code></pre>
+</figure>
+<p>The mailbox holds *one* value. Live streams are not event logs: if the room changes three times while a slow browser is still receiving the first, it should get the latest, not a backlog. A push while nobody is waiting replaces what was there; a <code>next()</code> while nothing is there waits. Twenty lines, and it is the difference between a room that keeps up and one that falls further behind with every edit.</p>
+<h3 id="the-commands">Commands that refresh nothing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:79-99</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const RoomStep = v.object({
+	room: v.string(),
+	track: v.string(),
+	index: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(STEPS - 1)),
+	// `StepSchema` contains `v.instance(Note)`: the argument arrives through the
+	// `transport` hook and is a real `Note` by the time it is validated.
+	step: StepSchema
+});
+
+/**
+ * Commands do not refresh anything here, and do not need to: the room's live
+ * query yields the new snapshot to every browser — including the one that
+ * made the change — the moment `updateRoom` broadcasts it.
+ */
+export const setRoomStep = command(RoomStep, async ({ room, track, index, step }) =&gt; {
+	await updateRoom(room, (pattern) =&gt; {
+		const target = pattern.tracks.find((t) =&gt; t.id === track);
+		if (!target) error(404, 'No such track in this room');
+		target.steps[index] = { velocity: step.velocity, note: step.note };
+	});
+});</code></pre>
+</figure>
+<p><code>step: StepSchema</code> contains <code>v.instance(Note)</code> — the argument arrives through the <code>transport</code> hook (ch. 26) and is a real <code>Note</code> by the time it is validated. And the command refreshes nothing, on purpose: <code>updateRoom</code> broadcasts, the live query yields the new snapshot to every browser including this one, and the grid redraws from that. A refresh here would be a second copy of the same news.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:137-148</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const loadRoomPreset = command(
+	v.object({ room: v.string(), preset: v.picklist(PRESET_NAMES) }),
+	async ({ room, preset: name }) =&gt; {
+		await updateRoom(room, (pattern) =&gt; {
+			const fresh = preset(name);
+			pattern.title = fresh.title;
+			pattern.bpm = fresh.bpm;
+			pattern.swing = fresh.swing;
+			pattern.tracks = fresh.tracks;
+		});
+	}
+);</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what runs when the last browser leaves a room, and how SvelteKit causes it.</li><li>You can explain what would go wrong if the mailbox were a queue.</li><li>You can say why <code>setRoomStep</code> does not call <code>watchRoom(room).refresh()</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="writes.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Writes: command and form</span>
+			</a>
+			<a class="pager__link pager__link--next" href="hooks.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Hooks: around every request</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

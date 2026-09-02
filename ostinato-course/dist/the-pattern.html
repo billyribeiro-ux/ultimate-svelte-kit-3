@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The pattern — Building Ostinato</title>
+<meta name="description" content="Everything the sequencer plays, as plain data — a deliberate choice about what `$state` can and cannot see — plus the valibot schemas that check a pattern arriving from anywhere.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 15.384615384615385%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html" aria-current="page"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>The pattern</h1>
+			<p class="lede">Everything the sequencer plays, as plain data — a deliberate choice about what <code>$state</code> can and cannot see — plus the valibot schemas that check a pattern arriving from anywhere.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Design a model that is deeply reactive under <code>$state</code>, understand why it holds plain objects and one immutable class, and read a valibot schema that mirrors the type.</p></aside>
+			<p>A pattern is a tempo, a swing amount and up to eight tracks of sixteen steps. This file is the vocabulary the rest of the project speaks.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/model.ts<span class="code__lines">:1-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PATTERN
+ * ===========
+ *
+ * Everything the sequencer plays, as plain data: a tempo, a swing amount, and
+ * up to eight tracks of sixteen steps. This file is the vocabulary the rest of
+ * the project speaks — the studio edits one of these, the scheduler plays one,
+ * the codec squeezes one into a URL, the server stores one.
+ *
+ * PLAIN OBJECTS, ON PURPOSE
+ * -------------------------
+ * A pattern is `$state` in the studio, and `$state` proxies plain objects and
+ * arrays *deeply*: toggling `pattern.tracks[2].steps[7].velocity` updates the
+ * one grid cell that reads it and nothing else. A class with methods would be
+ * left alone by the proxy, and every change would have to replace the whole
+ * track to be noticed. So the model is data, and the operations on it are
+ * functions that take a pattern and mutate it in place.
+ *
+ * The exception is `Note`, which is a class and is immutable — see
+ * `music/note.ts` for why that combination is exactly what `$state` wants.
+ */
+
+import * as v from 'valibot';
+import { HIGHEST, LOWEST, Note } from '#lib/music/note.ts';</code></pre>
+</figure>
+<p>The header is the design. <code>$state</code> proxies plain objects and arrays *deeply*: toggling <code>pattern.tracks[2].steps[7].velocity</code> updates the one pad that reads it and nothing else. A class with methods would be left alone by the proxy, and every change would have to replace the whole track to be noticed. So the model is data, the operations on it are functions, and the one class — <code>Note</code> — is immutable for the reason the previous chapter gave.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/model.ts<span class="code__lines">:26-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Sixteen sixteenths: one bar of 4/4. */
+export const STEPS = 16;
+export const MAX_TRACKS = 8;
+
+/** The instruments. `sample` plays whatever file somebody dropped on the track. */
+export const KINDS = ['kick', 'snare', 'hat', 'clap', 'bass', 'lead', 'sample'] as const;
+export type Kind = (typeof KINDS)[number];
+
+/** The kinds that care which note a step carries. */
+export const MELODIC: ReadonlySet&lt;Kind&gt; = new Set(['bass', 'lead']);
+
+export interface Step {
+	/** 0 is a rest; 1–127 is how hard the step is hit. */
+	velocity: number;
+	/** Ignored by drums, kept so switching a track to `bass` does not lose it. */
+	note: Note;
+}
+
+export interface Track {
+	id: string;
+	kind: Kind;
+	name: string;
+	/** 0–1, applied as a gain before the pan. */
+	gain: number;
+	/** -1 (left) to 1 (right). */
+	pan: number;
+	/** 0–1; what it means depends on the instrument — filter cutoff, mostly. */
+	tone: number;
+	/** 0–1; how long the sound lasts. */
+	decay: number;
+	muted: boolean;
+	solo: boolean;
+	steps: Step[];
+}
+
+export interface Pattern {
+	title: string;
+	bpm: number;
+	/** 0 is straight sixteenths; 1 is a full triplet feel. */
+	swing: number;
+	tracks: Track[];
+}</code></pre>
+</figure>
+<p><code>KINDS</code> is a <code>const</code> tuple, so <code>Kind</code> is derived from it and <code>v.picklist(KINDS)</code> in the schema cannot drift from the type. <code>MELODIC</code> is a set of the kinds that care which note a step carries; drums keep a note anyway, so switching a track from a hat to a bass does not lose anything.</p>
+<h3 id="schemas">The same shape, as a schema</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/model.ts<span class="code__lines">:69-106</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Schemas                                                             */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The same shape, as a valibot schema, so that a pattern arriving from a URL, a
+ * form or a database row is checked before anything trusts it. `v.instance(Note)`
+ * is what ties the schema to the class: a step whose `note` is a bare number
+ * fails here, which is the point — the transport hook is supposed to have
+ * turned it into a `Note` already, and if it has not, something upstream is
+ * wrong and this is where it should be found.
+ */
+const unit = v.pipe(v.number(), v.minValue(0), v.maxValue(1));
+
+export const StepSchema = v.object({
+	velocity: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(127)),
+	note: v.instance(Note)
+});
+
+export const TrackSchema = v.object({
+	id: v.pipe(v.string(), v.regex(/^[a-z0-9]{6,12}$/)),
+	kind: v.picklist(KINDS),
+	name: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(24)),
+	gain: unit,
+	pan: v.pipe(v.number(), v.minValue(-1), v.maxValue(1)),
+	tone: unit,
+	decay: unit,
+	muted: v.boolean(),
+	solo: v.boolean(),
+	steps: v.pipe(v.array(StepSchema), v.length(STEPS))
+});
+
+export const PatternSchema = v.object({
+	title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give it a title'), v.maxLength(60)),
+	bpm: v.pipe(v.number(), v.integer(), v.minValue(40), v.maxValue(240)),
+	swing: unit,
+	tracks: v.pipe(v.array(TrackSchema), v.minLength(1), v.maxLength(MAX_TRACKS))
+});</code></pre>
+</figure>
+<p><code>v.instance(Note)</code> is what ties the schema to the class. A step whose <code>note</code> is a bare number fails here — and that is the point: the <code>transport</code> hook is supposed to have turned it into a <code>Note</code> already, and if it has not, something upstream is wrong and this is where it should be found, not three components later.</p>
+<h3 id="operations">Factories and operations</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/model.ts<span class="code__lines">:108-167</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Factories                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A short random id, safe in a URL and a CSS selector.
+ *
+ * `crypto.randomUUID()` would do, but a 36-character id on every one of a
+ * hundred and twenty-eight grid cells is a lot of DOM for a keyed `{#each}`.
+ */
+export function shortId(): string {
+	const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+	const bytes = crypto.getRandomValues(new Uint8Array(8));
+	return Array.from(bytes, (b) =&gt; alphabet[b % alphabet.length]).join('');
+}
+
+/** Sixteen rests on the note the instrument sounds best at. */
+export function emptySteps(note: Note = defaultNote('kick')): Step[] {
+	return Array.from({ length: STEPS }, () =&gt; ({ velocity: 0, note }));
+}
+
+/** Where a melodic track starts, and a placeholder for drums. */
+export function defaultNote(kind: Kind): Note {
+	return new Note(kind === 'bass' ? 40 : kind === 'lead' ? 64 : 60);
+}
+
+const LABELS: Record&lt;Kind, string&gt; = {
+	kick: 'Kick',
+	snare: 'Snare',
+	hat: 'Hi-hat',
+	clap: 'Clap',
+	bass: 'Bass',
+	lead: 'Lead',
+	sample: 'Sample'
+};
+
+export function createTrack(kind: Kind, overrides: Partial&lt;Track&gt; = {}): Track {
+	return {
+		id: shortId(),
+		kind,
+		name: LABELS[kind],
+		gain: 0.8,
+		pan: 0,
+		tone: 0.5,
+		decay: 0.5,
+		muted: false,
+		solo: false,
+		steps: emptySteps(defaultNote(kind)),
+		...overrides
+	};
+}
+
+export function emptyPattern(): Pattern {
+	return {
+		title: 'Untitled',
+		bpm: 120,
+		swing: 0,
+		tracks: [createTrack('kick'), createTrack('snare'), createTrack('hat'), createTrack('bass')]
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/model.ts<span class="code__lines">:173-218</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The steps a velocity toggle cycles through. Off → accent → soft → off is
+ * what a hardware groovebox does with repeated presses of a pad, and it is a
+ * better default than off/on because a groove is mostly ghost notes.
+ */
+export function cycleVelocity(velocity: number): number {
+	if (velocity === 0) return 112;
+	if (velocity &gt; 80) return 64;
+	return 0;
+}
+
+/** Which tracks actually sound, given mutes and solos. */
+export function audibleTracks(pattern: Pattern): Track[] {
+	const soloed = pattern.tracks.some((track) =&gt; track.solo);
+	return pattern.tracks.filter((track) =&gt; (soloed ? track.solo : !track.muted));
+}
+
+/** Everything a track's steps contain, on one line — a mini grid in a URL title. */
+export function stepGlyphs(track: Track): string {
+	return track.steps
+		.map((step) =&gt; (step.velocity === 0 ? '·' : step.velocity &gt; 80 ? '█' : '▄'))
+		.join('');
+}
+
+/** Clamp a note into the sequenceable range; used by the piano-roll keys. */
+export function clampNote(midi: number): Note {
+	return new Note(Math.min(HIGHEST, Math.max(LOWEST, midi)));
+}
+
+/**
+ * A deep copy with no proxies in it.
+ *
+ * `$state.snapshot` does the same thing for reactive state and is what callers
+ * inside a component should reach for; this exists for the places that hold a
+ * pattern outside Svelte — the scheduler's timer, the WAV renderer — and want
+ * a copy nothing else can mutate under them.
+ */
+export function clonePattern(pattern: Pattern): Pattern {
+	return {
+		...pattern,
+		tracks: pattern.tracks.map((track) =&gt; ({
+			...track,
+			steps: track.steps.map((step) =&gt; ({ ...step }))
+		}))
+	};
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why clonePattern exists when $state.snapshot does</h4>
+	<p><code>$state.snapshot</code> makes a plain copy of reactive state — and it does so with <code>structuredClone</code>, which drops the prototype of any class instance, after calling <code>toJSON()</code> if there is one. A <code>Note</code> would come back as a number. That is the right behaviour for plain data and the wrong tool for a model with a class in it. <code>clonePattern</code> knows what a <code>Note</code> is, and chapter 14 shows the session using it for anything that leaves Svelte.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain what “deeply reactive” means and why a class inside <code>$state</code> is not.</li><li>You can say what <code>v.instance(Note)</code> guards against.</li><li>You know why <code>clonePattern</code> exists next to <code>$state.snapshot</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="musical-time.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Musical time, in seconds</span>
+			</a>
+			<a class="pager__link pager__link--next" href="a-pattern-in-a-url.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A pattern in a URL</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

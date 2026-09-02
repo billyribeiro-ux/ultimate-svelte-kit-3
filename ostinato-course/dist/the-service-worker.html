@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The service worker — Building Ostinato</title>
+<meta name="description" content="The application shell cached on install from `$app/manifest`, versioned by `version` from `$app/env`, typed through `$app/service-worker` and its own tsconfig — and the two paths it must never cache, with the reason.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 89.74358974358975%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html" aria-current="page"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>The service worker</h1>
+			<p class="lede">The application shell cached on install from <code>$app/manifest</code>, versioned by <code>version</code> from <code>$app/env</code>, typed through <code>$app/service-worker</code> and its own tsconfig — and the two paths it must never cache, with the reason.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a service worker against SvelteKit 3’s split modules, type-check it with the WebWorker library, and know what a cached live query would do to you.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SERVICE WORKER
+ * ==================
+ *
+ * An instrument should not stop working because the train went into a
+ * tunnel. This caches the application shell — every immutable built file and
+ * every static file — on install, serves those from the cache, and lets
+ * everything else go to the network with the cache as a fallback for pages.
+ *
+ * WHAT IT MUST NOT CACHE
+ * ----------------------
+ * Remote function calls and the API. A `query.live` response is a stream that
+ * stays open as long as the page does; a cached clone of it would keep
+ * streaming into the cache long after the page closed, which is the failure
+ * the docs warn about by name. Both live under paths this file refuses to
+ * touch, and the `no-store` header those responses carry is checked as well —
+ * belt and braces, because the cost of being wrong is a leak.
+ *
+ * WHERE THE MANIFEST COMES FROM
+ * -----------------------------
+ * SvelteKit 3 split the old `$service-worker` module apart: the build's files
+ * are `$app/manifest` (`immutable`, `assets`, `prerendered`), the build id is
+ * `version` from `$app/env`, and `$app/service-worker` exports one thing — a
+ * correctly typed `self`, so the worker's global is a `ServiceWorkerGlobalScope`
+ * without a cast. This file is checked by `tsconfig.service-worker.json`,
+ * which uses the WebWorker library instead of the DOM one.
+ */</code></pre>
+</figure>
+<p>SvelteKit 3 split the old <code>$service-worker</code> module apart. The build’s files are <code>$app/manifest</code> — <code>immutable</code>, <code>assets</code>, <code>prerendered</code> — the build id is <code>version</code> from <code>$app/env</code>, and <code>$app/service-worker</code> exports one thing: a correctly typed <code>self</code>, so the worker’s global is a <code>ServiceWorkerGlobalScope</code> without a cast.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts<span class="code__lines">:29-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable, prerendered } from '$app/manifest';
+
+const CACHE = `ostinato-${version}`;
+
+/** The shell: hashed build output, everything in `static/`, and the prerendered pages. */
+const ASSETS = [...immutable, ...assets, ...prerendered].map((file) =&gt; file.path);
+
+self.addEventListener('install', (event) =&gt; {
+	event.waitUntil(
+		caches
+			.open(CACHE)
+			.then((cache) =&gt; cache.addAll(ASSETS))
+			.then(() =&gt; self.skipWaiting())
+	);
+});
+
+self.addEventListener('activate', (event) =&gt; {
+	event.waitUntil(
+		caches
+			.keys()
+			.then((keys) =&gt;
+				Promise.all(keys.filter((key) =&gt; key !== CACHE).map((key) =&gt; caches.delete(key)))
+			)
+			.then(() =&gt; self.clients.claim())
+	);
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts<span class="code__lines">:58-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">self.addEventListener('fetch', (event) =&gt; {
+	if (event.request.method !== 'GET') return;
+
+	const url = new URL(event.request.url);
+	if (url.origin !== location.origin) return;
+
+	// Data, never. See the header comment.
+	if (url.pathname.startsWith('/_app/remote/') || url.pathname.startsWith('/api/')) return;
+
+	// The shell: cache first, because these files are immutable by name.
+	if (ASSETS.includes(url.pathname)) {
+		event.respondWith(caches.match(event.request).then((cached) =&gt; cached ?? fetch(event.request)));
+		return;
+	}
+
+	// Pages: network first, cache as the fallback, the studio as the last resort.
+	event.respondWith(
+		fetch(event.request)
+			.then(async (response) =&gt; {
+				const control = response.headers.get('cache-control') ?? '';
+				if (response.ok &amp;&amp; !control.includes('no-store')) {
+					const cache = await caches.open(CACHE);
+					await cache.put(event.request, response.clone());
+				}
+				return response;
+			})
+			.catch(
+				async () =&gt;
+					(await caches.match(event.request)) ?? (await caches.match('/studio')) ?? Response.error()
+			)
+	);
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>A <code>query.live</code> response is a stream that stays open as long as the page does. A cached clone of it would keep streaming into the cache long after the page closed — the failure the docs warn about by name. Both remote functions and the API live under paths this file refuses to touch, and the <code>no-store</code> header those responses carry is checked as well: belt and braces, because the cost of being wrong is a leak.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.service-worker.json<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	// The WebWorker lib instead of the DOM one, and `$app/types` for the generated
+	// route and asset types. Generated by SvelteKit; extended rather than copied.
+	&quot;extends&quot;: &quot;$app/tsconfig/service-worker&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;strict&quot;: true,
+		&quot;noUncheckedIndexedAccess&quot;: true,
+		&quot;noImplicitReturns&quot;: true,
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true
+	},
+	&quot;include&quot;: [&quot;src/service-worker.ts&quot;]
+}</code></pre>
+</figure>
+<p>The worker is excluded from the main <code>tsconfig.json</code> and checked by its own, which extends <code>$app/tsconfig/service-worker</code> — generated by SvelteKit, with the WebWorker library instead of the DOM one. The <code>check</code> script runs both: <code>svelte-check</code> for the app, <code>tsc --noEmit -p tsconfig.service-worker.json</code> for this file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:45-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">use: {
+	baseURL: 'http://localhost:4173',
+	trace: 'retain-on-failure',
+	screenshot: 'only-on-failure',
+	// Web Audio refuses to start without a user gesture. Playwright's clicks
+	// count as gestures, but the studio also auto-resumes on the first
+	// keypress, and a keypress is not one — so the flag makes the two paths
+	// behave the same.
+	serviceWorkers: 'block',
+	launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] }
+},</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/service-worker.e2e.ts<span class="code__lines">:10-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the built service worker exists, is versioned, and refuses live data', async ({
+	request
+}) =&gt; {
+	const response = await request.get('/service-worker.js');
+	expect(response.status()).toBe(200);
+	expect(response.headers()['content-type']).toContain('javascript');
+
+	const script = await response.text();
+	// A per-build cache name: the version string is inlined by `$app/env`.
+	expect(script).toMatch(/ostinato-[a-z0-9.]+/);
+	// The refusals, by path prefix, survive minification as string literals.
+	expect(script).toContain('/_app/remote/');
+	expect(script).toContain('/api/');
+	expect(script).toContain('no-store');
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The end-to-end suite blocks service workers. Headless Chromium in a container with no sound device crashes with a segmentation fault when a context that has a registered worker is torn down while audio is running — found the hard way, three times. So the suite checks the worker as a document instead: that the build produced it, that it is versioned, and that the two refusals survive minification as string literals. It is a weaker test and an honest one.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three modules that replaced <code>$service-worker</code> and what each exports.</li><li>You can say what happens if the <code>/_app/remote/</code> guard is removed.</li><li>You can explain why the worker has its own tsconfig.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="an-adapter-from-scratch.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">An adapter, from scratch</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-security-posture.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The security posture</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

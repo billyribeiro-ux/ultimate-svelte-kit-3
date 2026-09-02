@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two clocks: the scheduler — Building Ostinato</title>
+<meta name="description" content="The heart of the instrument. Why `setInterval` cannot keep time, how a look-ahead timer and the audio clock together can, and why the playhead is a third clock.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 30.76923076923077%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html" aria-current="page"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>Two clocks: the scheduler</h1>
+			<p class="lede">The heart of the instrument. Why <code>setInterval</code> cannot keep time, how a look-ahead timer and the audio clock together can, and why the playhead is a third clock.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a sequencer that does not drift, understand which of its three clocks each piece of state belongs to, and know why the pattern is read through a getter.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SCHEDULER
+ * =============
+ *
+ * The heart of the instrument, and the part most people get wrong first.
+ *
+ * THE WRONG WAY
+ * -------------
+ * `setInterval(playStep, 125)` at 120bpm. JavaScript timers are not precise —
+ * they fire *at least* that late, later when the tab is busy, much later when
+ * it is in the background — and every late tick is a hit that lands late. The
+ * ear notices ten milliseconds. A groove built on `setInterval` drifts, lurches
+ * and never quite sits.
+ *
+ * THE RIGHT WAY: TWO CLOCKS
+ * -------------------------
+ * Web Audio has its own clock, `context.currentTime`, on the audio thread,
+ * accurate to a sample. And every sound can be told *when* to start on that
+ * clock: `osc.start(time)`. So the imprecise timer is used only to *look
+ * ahead*: every 25ms it asks &quot;which steps fall in the next 100ms?&quot; and
+ * schedules those on the audio clock, exactly. The timer can be late by 50ms
+ * and nothing is heard, because everything it needed to schedule was already
+ * scheduled last time. This is Chris Wilson's &quot;A Tale of Two Clocks&quot;, and it
+ * is the only sequencer design that works in a browser.
+ *
+ * THE PLAYHEAD IS A THIRD CLOCK
+ * -----------------------------
+ * The interface wants to know which step is *sounding now*, which is neither
+ * &quot;the last one scheduled&quot; (that is up to 100ms in the future) nor &quot;the timer
+ * tick&quot;. Each scheduled step is pushed onto a queue with its audio time, and a
+ * `requestAnimationFrame` loop pops the ones whose time has come. `step` is
+ * `$state`, so the grid highlights the right column on the frame it starts.
+ */
+
+import { stepSeconds } from '#lib/music/time.ts';
+import { STEPS, type Pattern } from '#lib/pattern/model.ts';
+import type { AudioEngine } from './engine.svelte.ts';
+import { scheduleStep, type Outputs } from './schedule.ts';
+
+/** How often the timer looks, and how far ahead it schedules. */
+const TICK_MS = 25;
+const LOOKAHEAD_S = 0.1;</code></pre>
+</figure>
+<p>Read the header slowly; it is the most important idea in the engine. A JavaScript timer fires *at least* as late as you asked, and later when the tab is busy. Web Audio has its own clock, accurate to a sample, and every sound can be told *when* to start on it. So the timer is used only to look ahead: every 25ms it schedules whatever falls in the next 100ms, exactly. The timer can be 50ms late and nothing is heard, because everything it needed to schedule was already scheduled last time.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:44-79</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Scheduler {
+	#engine: AudioEngine;
+	#pattern: () =&gt; Pattern;
+	#outputs: Outputs;
+
+	#timer: ReturnType&lt;typeof setInterval&gt; | null = null;
+	#frame = 0;
+	#nextStep = 0;
+	#nextTime = 0;
+
+	/*
+	 * Plain arrays and plain numbers, on purpose. This queue is touched forty
+	 * times a second from a timer and sixty times a second from an animation
+	 * frame; nothing renders from it, and a reactive proxy around it would be a
+	 * signal write per hit that notifies nobody.
+	 */
+	#queue: { step: number; time: number }[] = [];
+
+	playing = $state(false);
+	/** The step sounding now, or -1 when stopped. */
+	step = $state(-1);
+	/** Bars completed since play was pressed; the transport shows it. */
+	bars = $state(0);
+
+	/**
+	 * @param pattern a *getter*, not a value. The timer reads the pattern on
+	 * every tick, so a step toggled while playing is heard the next time the
+	 * playhead reaches it. Reading `$state` inside a timer is untracked, which
+	 * is what we want: nothing should re-run because the pattern changed —
+	 * the next tick simply sees the new one.
+	 */
+	constructor(engine: AudioEngine, pattern: () =&gt; Pattern, outputs: Outputs) {
+		this.#engine = engine;
+		this.#pattern = pattern;
+		this.#outputs = outputs;
+	}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the pattern is a getter</h4>
+	<p>The scheduler is built with <code>() =&gt; session.pattern</code>, not <code>session.pattern</code>. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading <code>$state</code> inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:81-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">async start(): Promise&lt;void&gt; {
+	if (this.playing) return;
+	await this.#engine.resume();
+
+	const ctx = this.#engine.context;
+	this.#nextStep = 0;
+	this.#nextTime = ctx.currentTime + 0.05;
+	this.#queue.length = 0;
+	this.bars = 0;
+	this.playing = true;
+
+	this.#tick();
+	this.#timer = setInterval(() =&gt; this.#tick(), TICK_MS);
+	this.#frame = requestAnimationFrame(() =&gt; this.#draw());
+}
+
+stop(): void {
+	if (!this.playing) return;
+	if (this.#timer) clearInterval(this.#timer);
+	cancelAnimationFrame(this.#frame);
+	this.#timer = null;
+	this.#queue.length = 0;
+	this.playing = false;
+	this.step = -1;
+}
+
+toggle(): Promise&lt;void&gt; | void {
+	return this.playing ? this.stop() : this.start();
+}
+
+/** Schedule everything due in the lookahead window. */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:112-141</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	#tick(): void {
+		const ctx = this.#engine.context;
+		const pattern = this.#pattern();
+
+		while (this.#nextTime &lt; ctx.currentTime + LOOKAHEAD_S) {
+			const at = scheduleStep(ctx, this.#outputs, pattern, this.#nextStep, this.#nextTime);
+			this.#queue.push({ step: this.#nextStep, time: at });
+
+			// Tempo is read per step, so a BPM change takes effect on the next
+			// sixteenth rather than the next bar — or the next restart.
+			this.#nextTime += stepSeconds(pattern.bpm);
+			this.#nextStep = (this.#nextStep + 1) % STEPS;
+		}
+	}
+
+	/** Advance the playhead to whichever queued step has started. */
+	#draw(): void {
+		const now = this.#engine.now;
+		let head = this.#queue[0];
+
+		while (head &amp;&amp; head.time &lt;= now) {
+			if (head.step === 0 &amp;&amp; this.step === STEPS - 1) this.bars += 1;
+			this.step = head.step;
+			this.#queue.shift();
+			head = this.#queue[0];
+		}
+
+		this.#frame = requestAnimationFrame(() =&gt; this.#draw());
+	}
+}</code></pre>
+</figure>
+<p>The tick loop schedules steps until it is 100ms ahead; tempo is read per step, so a BPM change lands on the next sixteenth rather than the next bar. Each scheduled step is pushed onto a queue with its audio time, and a <code>requestAnimationFrame</code> loop pops the ones whose time has come and sets <code>step</code> — which *is* <code>$state</code>, so the grid highlights the right column on the frame it starts. The queue itself is a plain array: nothing renders from it, and a proxy around something touched a hundred times a second would be a hundred signal writes to notify nobody.</p>
+<aside class="callout callout--note"><p>The ESLint rule <code>svelte/prefer-svelte-reactivity</code> is turned off for this one file, in <code>eslint.config.js</code>, with the reason written next to it. A rule that is right almost everywhere is worth keeping on almost everywhere, and the exception is worth recording where it is made.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain the two-clock design to somebody who has never used Web Audio.</li><li>You can name the three clocks and which state lives on each: the timer, the audio clock, the animation frame.</li><li>You can say why <code>step</code> is <code>$state</code> and the queue is not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-engine.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The engine: where the audio graph meets reactivity</span>
+			</a>
+			<a class="pager__link pager__link--next" href="render-to-a-file.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Render to a file, and load one</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

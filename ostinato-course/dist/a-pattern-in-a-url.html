@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A pattern in a URL — Building Ostinato</title>
+<meta name="description" content="A link is a save. The codec packs a pattern into about two hundred characters of base64url, versioned, with tests for every way a link can be damaged.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 17.94871794871795%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html" aria-current="page"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>A pattern in a URL</h1>
+			<p class="lede">A link is a save. The codec packs a pattern into about two hundred characters of base64url, versioned, with tests for every way a link can be damaged.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a small binary format with a version byte, understand base64url and why it needs no escaping, and test a codec the way a codec must be tested.</p></aside>
+			<p><code>/studio?p=…</code> is the whole pattern. No account, no database, no expiry — paste it into a chat and the other person opens your groove. That only works if the encoding is small: JSON of a four-track pattern is about two kilobytes, which some chat clients truncate. This packs the same thing into about two hundred characters.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A PATTERN IN A URL
+ * ==================
+ *
+ * `?p=…` on the studio is the whole pattern, so a link *is* a save. No account,
+ * no database, no &quot;this link will expire&quot; — paste it into a chat and the other
+ * person opens your groove.
+ *
+ * That only works if the encoding is small. JSON of a four-track pattern is
+ * about two kilobytes, which some chat clients truncate and every one of them
+ * makes ugly. This packs the same thing into around two hundred characters of
+ * base64url, which is a line.
+ *
+ * THE FORMAT
+ * ----------
+ * A byte layout, big-endian where it matters, and versioned by its first byte
+ * so that a link made today still opens after the format grows:
+ *
+ *   [version=1] [bpm] [swing×255] [title length] [title utf-8 …]
+ *   [track count]
+ *   per track:
+ *     [kind index] [gain×255] [pan+1 ×127] [tone×255] [decay×255] [flags]
+ *     [name length] [name utf-8 …]
+ *     16 × [velocity]
+ *     16 × [note]        — melodic tracks only; a drum has no use for one
+ *
+ * Track ids are not encoded — they are regenerated on decode, because they only
+ * exist to key a `{#each}` and mean nothing to another browser.
+ */
+
+import { Note } from '#lib/music/note.ts';
+import {
+	defaultNote,
+	KINDS,
+	MAX_TRACKS,
+	MELODIC,
+	STEPS,
+	shortId,
+	type Kind,
+	type Pattern,
+	type Track
+} from './model.ts';</code></pre>
+</figure>
+<p>The format is a byte layout, versioned by its first byte so that a link made today still opens after the format grows. Notes are written only for melodic tracks — a drum has no use for sixteen of them — which is where a third of the size went.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:44-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const VERSION = 1;
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+/** A number in `[0, 1]` as one byte, and back. Symmetric to within 1/255. */
+const toByte = (unit: number) =&gt; Math.round(Math.min(1, Math.max(0, unit)) * 255);
+const fromByte = (byte: number) =&gt; byte / 255;
+
+class Writer {
+	#bytes: number[] = [];
+
+	byte(value: number) {
+		this.#bytes.push(value &amp; 0xff);
+	}
+
+	/** A length-prefixed UTF-8 string, capped at 255 bytes. */
+	text(value: string) {
+		const bytes = encoder.encode(value).slice(0, 255);
+		this.byte(bytes.length);
+		for (const b of bytes) this.byte(b);
+	}
+
+	finish(): Uint8Array {
+		return Uint8Array.from(this.#bytes);
+	}
+}
+
+class Reader {
+	#offset = 0;
+
+	constructor(private readonly bytes: Uint8Array) {}
+
+	byte(): number {
+		const value = this.bytes[this.#offset];
+		if (value === undefined) throw new RangeError('Pattern data ended early');
+		this.#offset += 1;
+		return value;
+	}
+
+	text(): string {
+		const length = this.byte();
+		const slice = this.bytes.subarray(this.#offset, this.#offset + length);
+		if (slice.length &lt; length) throw new RangeError('Pattern data ended early');
+		this.#offset += length;
+		return decoder.decode(slice);
+	}
+}</code></pre>
+</figure>
+<p><code>Writer</code> and <code>Reader</code> are tiny cursors over a byte array. <code>Reader.byte()</code> throws a <code>RangeError</code> — &quot;Pattern data ended early&quot; — rather than returning <code>undefined</code>, so a truncated link fails with a sentence rather than with <code>NaN</code> bpm three functions later.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:92-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function encodePattern(pattern: Pattern): string {
+	const w = new Writer();
+
+	w.byte(VERSION);
+	w.byte(pattern.bpm);
+	w.byte(toByte(pattern.swing));
+	w.text(pattern.title);
+	w.byte(Math.min(MAX_TRACKS, pattern.tracks.length));
+
+	for (const track of pattern.tracks.slice(0, MAX_TRACKS)) {
+		w.byte(KINDS.indexOf(track.kind));
+		w.byte(toByte(track.gain));
+		w.byte(Math.round(((track.pan + 1) / 2) * 254));
+		w.byte(toByte(track.tone));
+		w.byte(toByte(track.decay));
+		w.byte((track.muted ? 1 : 0) | (track.solo ? 2 : 0));
+		w.text(track.name);
+		for (let i = 0; i &lt; STEPS; i += 1) w.byte(track.steps[i]?.velocity ?? 0);
+		if (MELODIC.has(track.kind)) {
+			for (let i = 0; i &lt; STEPS; i += 1) w.byte(track.steps[i]?.note.midi ?? 60);
+		}
+	}
+
+	return base64url(w.finish());
+}
+
+/**
+ * Throws on anything malformed. The caller — the studio's load — catches it and
+ * opens an empty pattern with a message, because a person who pasted a link
+ * that got cut in half should see &quot;that link is damaged&quot;, not a blank screen.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:123-170</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function decodePattern(text: string): Pattern {
+	const r = new Reader(fromBase64url(text));
+
+	const version = r.byte();
+	if (version !== VERSION) throw new RangeError(`Unknown pattern format ${version}`);
+
+	const bpm = r.byte();
+	const swing = fromByte(r.byte());
+	const title = r.text();
+	const count = r.byte();
+	if (count &lt; 1 || count &gt; MAX_TRACKS) throw new RangeError(`Bad track count ${count}`);
+
+	const tracks: Track[] = [];
+	for (let t = 0; t &lt; count; t += 1) {
+		const kind: Kind | undefined = KINDS[r.byte()];
+		if (!kind) throw new RangeError('Unknown instrument');
+
+		const gain = fromByte(r.byte());
+		const pan = (r.byte() / 254) * 2 - 1;
+		const tone = fromByte(r.byte());
+		const decay = fromByte(r.byte());
+		const flags = r.byte();
+		const name = r.text();
+
+		const velocities = Array.from({ length: STEPS }, () =&gt; r.byte());
+		const notes = MELODIC.has(kind)
+			? Array.from({ length: STEPS }, () =&gt; new Note(r.byte()))
+			: Array.from({ length: STEPS }, () =&gt; defaultNote(kind));
+
+		tracks.push({
+			id: shortId(),
+			kind,
+			name,
+			gain,
+			pan,
+			tone,
+			decay,
+			muted: (flags &amp; 1) !== 0,
+			solo: (flags &amp; 2) !== 0,
+			steps: velocities.map((velocity, i) =&gt; ({ velocity, note: notes[i]! }))
+		});
+	}
+
+	return { title, bpm, swing, tracks };
+}
+
+/*
+ * base64url: base64 with `+/` swapped for `-_` and no `=` padding, so the result</code></pre>
+</figure>
+<p>Track ids are not encoded — they are regenerated on decode. They exist only to key an <code>{#each}</code> and mean nothing to another browser; encoding them would be twelve bytes per track of nothing.</p>
+<h3 id="base64url">base64url</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:169-187</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * base64url: base64 with `+/` swapped for `-_` and no `=` padding, so the result
+ * survives a query string without percent-encoding. `btoa` wants a &quot;binary
+ * string&quot;, which is a JavaScript string whose char codes are the bytes.
+ */
+function base64url(bytes: Uint8Array): string {
+	let binary = '';
+	for (const b of bytes) binary += String.fromCharCode(b);
+	return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+
+function fromBase64url(text: string): Uint8Array {
+	const padded = text
+		.replaceAll('-', '+')
+		.replaceAll('_', '/')
+		.padEnd(Math.ceil(text.length / 4) * 4, '=');
+	const binary = atob(padded);
+	return Uint8Array.from(binary, (c) =&gt; c.charCodeAt(0));
+}</code></pre>
+</figure>
+<p>Ordinary base64 uses <code>+</code>, <code>/</code> and <code>=</code>, all of which need percent-encoding in a query string and turn a link into something nobody wants to look at. base64url swaps the first two and drops the padding, and the test asserts the property directly: <code>encodeURIComponent(text) === text</code>.</p>
+<h3 id="testing-a-codec">Testing a codec</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.spec.ts<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { Note } from '#lib/music/note.ts';
+import { decodePattern, encodePattern } from './codec.ts';
+import { toDto } from './dto.ts';
+import { createTrack, emptyPattern, KINDS, MELODIC, STEPS } from './model.ts';
+import { PRESETS } from './presets.ts';
+
+/**
+ * A codec has one job — `decode(encode(x))` is `x` — and one way to fail that
+ * nobody notices until a link from last month opens as silence. Every preset
+ * goes through here, and so does a pattern built to hit every edge at once.
+ */
+
+describe('round trips', () =&gt; {
+	it.each(Object.entries(PRESETS))('%s survives the URL', (_, build) =&gt; {
+		const original = build();
+		const restored = decodePattern(encodePattern(original));
+
+		expect(restored.title).toBe(original.title);
+		expect(restored.bpm).toBe(original.bpm);
+		expect(restored.swing).toBeCloseTo(original.swing, 2);
+		expect(restored.tracks).toHaveLength(original.tracks.length);
+
+		for (const [i, track] of original.tracks.entries()) {
+			const back = restored.tracks[i]!;
+			expect(back.kind).toBe(track.kind);
+			expect(back.name).toBe(track.name);
+			expect(back.gain).toBeCloseTo(track.gain, 2);
+			expect(back.pan).toBeCloseTo(track.pan, 2);
+			expect(back.steps.map((s) =&gt; s.velocity)).toEqual(track.steps.map((s) =&gt; s.velocity));
+			if (MELODIC.has(track.kind)) {
+				expect(back.steps.map((s) =&gt; s.note.midi)).toEqual(track.steps.map((s) =&gt; s.note.midi));
+			}
+		}
+	});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.spec.ts<span class="code__lines">:82-125</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the encoding itself', () =&gt; {
+	it('is a single line that needs no escaping in a query string', () =&gt; {
+		const text = encodePattern(PRESETS['two-step']!());
+
+		expect(text).toMatch(/^[A-Za-z0-9_-]+$/);
+		expect(encodeURIComponent(text)).toBe(text);
+	});
+
+	it('is small — the whole point', () =&gt; {
+		// Four tracks with names, one of them melodic: around two hundred
+		// characters, against a JSON form seven or eight times the size.
+		const pattern = PRESETS['four-on-the-floor']!();
+		const text = encodePattern(pattern);
+		const json = JSON.stringify(toDto(pattern));
+
+		expect(text.length).toBeLessThan(240);
+		expect(text.length * 6).toBeLessThan(json.length);
+	});
+});
+
+describe('damaged links', () =&gt; {
+	it('rejects an unknown version rather than guessing', () =&gt; {
+		expect(() =&gt; decodePattern('AgAA')).toThrow(/format/);
+	});
+
+	it('rejects data that ends early', () =&gt; {
+		// Cut on a four-character boundary so the base64 itself is intact and the
+		// failure is the one this test is about: valid bytes, not enough of them.
+		const good = encodePattern(emptyPattern());
+		const half = good.slice(0, Math.floor(good.length / 8) * 4);
+		expect(() =&gt; decodePattern(half)).toThrow(/ended early/);
+	});
+
+	it('rejects text that is not base64 at all', () =&gt; {
+		expect(() =&gt; decodePattern('not a link!')).toThrow();
+	});
+
+	it('rejects an instrument it has never heard of', () =&gt; {
+		// version 1, bpm 120, swing 0, empty title, one track of kind 200
+		const bytes = Uint8Array.from([1, 120, 0, 0, 1, 200]);
+		const text = btoa(String.fromCharCode(...bytes)).replace(/=+$/, '');
+		expect(() =&gt; decodePattern(text)).toThrow(/instrument/);
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the size test compares against JSON rather than a number</h4>
+	<p>The first version of this test said “under two hundred characters” and failed at 262. The honest fix was not to raise the number; it was to make the encoding smarter (no notes for drums) *and* to state the claim the codec actually makes — smaller than JSON by a wide margin — as a ratio measured against the real thing. A threshold picked to make a test pass is a test that only measures the day it was written.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain the version byte and what would happen without it.</li><li>You can say why base64url and not base64.</li><li>You can name the three ways a link can be damaged that the tests cover.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-pattern.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The pattern</span>
+			</a>
+			<a class="pager__link pager__link--next" href="stored-and-preset.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Stored patterns and presets</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

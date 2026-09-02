@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End to end, and what it found — Building Ostinato</title>
+<meta name="description" content="Thirty-three scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">38 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 97.43589743589743%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html" aria-current="page"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 38</p>
+			<h1>End to end, and what it found</h1>
+			<p class="lede">Thirty-three scenarios on a desktop and a Pixel 7, against <code>node build/index.js</code> on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an <code>await</code> that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run a suite against the adapter’s output rather than a dev server, and treat every flake as a bug until proven otherwise.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:3-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * END-TO-END CONFIGURATION
+ * ========================
+ *
+ * Against the **adapter's own output**, on its own database, in two viewports.
+ *
+ * WHY THE BUILT SERVER AND NOT `vite preview`
+ * -------------------------------------------
+ * `vite preview` serves the build through SvelteKit's preview server, which is
+ * fine for most projects and useless for this one: the adapter is part of what
+ * is being tested. `node build/index.js` is what a deployment would run, so it
+ * is what the suite runs — including the `pages`/`api` split and the
+ * `applyReroute` hand-off between them, neither of which exists in preview.
+ *
+ * WHY TWO VIEWPORTS AND NOT A RESPONSIVE ASSERTION
+ * ------------------------------------------------
+ * Because the studio genuinely renders different DOM at different widths: the
+ * mixer is a bottom sheet on a phone and a sidebar on a desktop, the step grid
+ * pages sixteen steps at a time below 40rem, and the transport collapses to
+ * icons. Those are the parts most likely to break and the parts nobody looks
+ * at, so they run as their own project rather than as a resize inside a test.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:68-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">webServer: {
+	/*
+	 * Prepare the database, build everything, run the adapter's server.
+	 *
+	 * `PUBLIC_ORIGIN` must be identical here and in the build, because it is
+	 * baked into the bundle at build time and compared against the request
+	 * origin at run time. A mismatch is a 403 on every form submission and a
+	 * confusing hour.
+	 */
+	command: 'node scripts/prepare-e2e-db.js &amp;&amp; npm run build &amp;&amp; node build/index.js',
+	port: 4173,
+	reuseExistingServer: !process.env.CI,
+	timeout: 240_000,
+	env: {
+		DATABASE_URL: 'file:e2e.db',
+		PUBLIC_ORIGIN: 'http://localhost:4173',
+		SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
+		TRACE_BUFFER: '200',
+		PORT: '4173'
+	}
+}</code></pre>
+</figure>
+<p><code>vite preview</code> serves the build through SvelteKit’s preview server, which is useless for this project: the adapter is part of what is being tested. The web server is <code>node build/index.js</code> — what a deployment would run — on its own database, prepared from nothing before every run. <code>PUBLIC_ORIGIN</code> is identical in the build and the server because it is baked into the bundle and compared at run time; a mismatch is a 403 on every form and a confusing hour.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/prepare-e2e-db.js<span class="code__lines">:28-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Start from nothing, every time. `drizzle-kit push` is incremental, so a schema
+ * change between runs leaves the old columns in place — and a test that passes
+ * against a table with a stale column can fail in production against a fresh
+ * one.
+ */
+for (const suffix of ['', '-shm', '-wal']) {
+	const path = `${DB}${suffix}`;
+	if (existsSync(path)) rmSync(path);
+}</code></pre>
+</figure>
+<p>Serial, deliberately: one SQLite file, one writer, and tests that publish and then expect to find what they published. No retries, because a flake that is retried is a flake nobody fixes — and every one of the bugs below started as a flake.</p>
+<h3 id="the-suite">The suite</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:8-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a toggle in one browser is heard in another', async ({ page, browser }) =&gt; {
+	const other = await browser.newContext();
+	const second = await other.newPage();
+
+	try {
+		await page.goto('/jam/lobby');
+		await second.goto('/jam/lobby');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('The lobby');
+		await expect(page.getByText('live')).toBeVisible();
+
+		// Two connections, two chips — anonymous, but counted.
+		await expect(page.locator('.presence .chip')).toHaveCount(2, { timeout: 10_000 });
+
+		const pad = (p: typeof page) =&gt;
+			p
+				.locator('.track')
+				.first()
+				.getByRole('button', { name: /^Step 3(,|$)/ });
+
+		// A pad cycles off → accent → soft → off. Whatever state the room was
+		// left in, three clicks — from alternating browsers — bring it round once,
+		// and after each one both browsers must agree.
+		for (const clicker of [page, second, page]) {
+			const before = await pad(page).getAttribute('aria-label');
+			await pad(clicker).click();
+			await expect(pad(clicker)).not.toHaveAttribute('aria-label', before!, { timeout: 10_000 });
+			const after = await pad(clicker).getAttribute('aria-label');
+			await expect(pad(page)).toHaveAttribute('aria-label', after!, { timeout: 10_000 });
+			await expect(pad(second)).toHaveAttribute('aria-label', after!, { timeout: 10_000 });
+		}
+	} finally {
+		await other.close();
+	}
+});</code></pre>
+</figure>
+<p>Two browsers, one room. Playwright gives each test a context; a second is opened by hand, and after each click from alternating browsers both must agree on the pad’s label. Whatever state the lobby was left in, three clicks bring the cycle round once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/pattern.e2e.ts<span class="code__lines">:33-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a vanity address is rerouted to the pattern without changing the URL', async ({ page }) =&gt; {
+	const response = await page.goto('/@ostinato/four-on-the-floor');
+	expect(response?.status()).toBe(200);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Four on the floor');
+	await expect(page).toHaveURL(/\/@ostinato\/four-on-the-floor$/);
+
+	// The catch-all function handled it and handed it on: `applyReroute`.
+	expect(response?.headers()['x-ostinato-entry']).toBe('router');
+});
+
+test('an unknown vanity address is a 404 from the catch-all', async ({ page }) =&gt; {
+	const response = await page.goto('/@nobody/nothing');
+	expect(response?.status()).toBe(404);
+	await expect(page.getByText('Back to the studio')).toBeVisible();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:9-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the adapter answers pages, api and the catch-all from different functions', async ({
+	page,
+	request
+}) =&gt; {
+	expect((await request.get('/studio')).headers()['x-ostinato-entry']).toBe('pages');
+	expect((await request.get('/api/resolve?handle=x&amp;slug=y')).headers()['x-ostinato-entry']).toBe(
+		'api'
+	);
+	expect((await request.get('/no-such-page')).headers()['x-ostinato-entry']).toBe('router');
+	expect((await request.get('/no-such-page')).status()).toBe(404);
+
+	// Prerendered pages are files: no function answers at all.
+	expect((await request.get('/')).headers()['x-ostinato-entry']).toBeUndefined();
+
+	await page.goto('/diagnostics');
+	// `getRuntime` is a remote function, so the `api` function answered it.
+	await expect(page.getByText('adapter-ostinato · api')).toBeVisible();
+	await expect(page.getByText('remote: true')).toBeVisible();
+});</code></pre>
+</figure>
+<p>The adapter is tested by the header it sets: <code>x-ostinato-entry</code> says which function answered, and a vanity address must say <code>router</code> — the catch-all handled it and handed it on. A prerendered page has no header at all, because no function answered.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:41-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('publish from the studio, find it in the gallery, delete it', async ({ page }, info) =&gt; {
+	const handle = `e2e_${info.project.name}_${Date.now().toString(36).slice(-5)}`;
+
+	await page.goto('/studio?preset=two-step');
+	await page.getByLabel('Pattern title').fill(`Published by ${info.project.name}`);
+	await page.getByRole('button', { name: 'Share' }).click();
+
+	const dialog = page.getByRole('dialog', { name: 'Share' });
+	await dialog.getByLabel('Handle').fill('no');
+	await dialog.getByLabel('Handle').press('Tab');
+	// Preflight: the client-side schema speaks before any request is made —
+	// once the field has been left, which is when SvelteKit counts it as touched.
+	await expect(dialog.getByText('Three to twenty')).toBeVisible();
+
+	await dialog.getByLabel('Handle').fill(handle);
+	await dialog.getByRole('button', { name: 'Publish', exact: true }).click();
+
+	const live = dialog.getByRole('link', { name: new RegExp(`/@${handle}/`) });
+	await expect(live).toBeVisible({ timeout: 10_000 });
+	await expect(dialog.getByRole('img', { name: /Share card/ })).toBeVisible();
+
+	// The header now knows who this browser is.
+	await expect(page.getByRole('link', { name: `@${handle}` })).toBeVisible();
+
+	await page.goto('/gallery');
+	const yours = page.locator('#yours .pattern-card');
+	await expect(yours).toHaveCount(1);
+	await expect(yours.first()).toContainText(`Published by ${info.project.name}`);
+
+	await yours.first().getByRole('button', { name: 'Delete' }).click();
+	await expect(page.locator('#yours .pattern-card')).toHaveCount(0);
+	await expect(page.locator('#yours')).toContainText('not published anything');
+});</code></pre>
+</figure>
+<h3 id="what-it-found">What it found</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:95-116</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * FORKED PRELOADS: OFF, AND THIS TIME IT IS THE SECOND PROJECT TO SAY SO.
+ *
+ * The feature preloads the next route inside a Svelte `fork()` — the
+ * new page's state is run speculatively and adopted or discarded.
+ * Project 5 turned it off after its suite found a one-in-three failure
+ * opening a trace. This project turned it *on*, with the same
+ * acceptance criterion — the end-to-end suite — and the suite found a
+ * different bug: navigate from the studio to the gallery and press
+ * back, and five times in eight the navigation *completes* — the URL
+ * changes, `navigation.complete` resolves, the view transition runs —
+ * while the gallery stays on screen. The studio never renders.
+ *
+ * The bisect was clean: fifteen runs with the flag off, fifteen passes,
+ * on both the desktop and the phone profile. Nothing else changed.
+ * Speculative state that is discarded rather than committed is exactly
+ * the sort of thing that would produce a navigation with no page, and a
+ * preload is a latency optimisation that is not worth a blank screen.
+ * Off, with the test that found it left in the suite as the criterion
+ * for turning it back on.
+ */
+forkPreloads: false</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/studio.e2e.ts<span class="code__lines">:110-133</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('survives a navigation away and back, and a reload', async ({ page }) =&gt; {
+	await page.goto('/studio?preset=two-step');
+	await page.getByLabel('Pattern title').fill('Kept');
+	await kickStep(page, 2).click();
+
+	// Snapshot: away and back restores the edited pattern for this history entry.
+	// Wait for the gallery to have *rendered* before going back — a popstate
+	// fired into a navigation that is still resolving its data is a race, in a
+	// test and for a person.
+	await page.getByRole('link', { name: 'Gallery' }).click();
+	await expect(page).toHaveURL(/\/gallery/);
+	await expect(page.locator('#main .pattern-card').first()).toBeVisible();
+	// `history.back()` from the page rather than Playwright's `goBack()`: the
+	// router answers a popstate without a document load, which is exactly what
+	// `goBack()` waits for and occasionally waits for in vain.
+	await page.evaluate(() =&gt; history.back());
+	await expect(page).toHaveURL(/\/studio\?preset=two-step$/);
+	await expect(page.getByLabel('Pattern title')).toHaveValue('Kept');
+	await expect(kickStep(page, 2)).toHaveAttribute('aria-pressed', 'true');
+
+	// localStorage: a fresh visit restores the last session.
+	await page.goto('/studio');
+	await expect(page.getByLabel('Pattern title')).toHaveValue('Kept');
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><strong><code>forkPreloads</code>.</strong> With the flag on, navigate from the studio to the gallery and press back: five times in eight the navigation *completed* — the URL changed, <code>navigation.complete</code> resolved, the view transition ran — while the gallery stayed on screen. Fifteen runs with the flag off, fifteen passes, on both profiles. The view transition’s timeout was the first suspect and was innocent. Off, with the test left in as the criterion for turning it back on.</p></aside>
+<p><strong><code>await</code> that ran once.</strong> The jam room showed the first snapshot forever: <code>{const snapshot = await room}</code> is a blocking promise, not a subscription. <code>$derived(await room)</code> was the fix, and then the same pattern was found in the header, the gallery, the pattern view and the diagnostics page (ch. 31). The two-browser test is what noticed.</p>
+<p><strong>The autosave that overwrote the save.</strong> A fresh visit renders a preset on the server and restores the saved session in <code>onMount</code>. The autosave effect fired once on creation with the preset and persisted it — a few milliseconds before <code>restore()</code> read the storage. The reload test above caught it; the <code>first</code> flag in <code>autosave()</code> is the fix (ch. 14).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/embed.e2e.ts<span class="code__lines">:31-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the element dispatches events on its host', async ({ page }) =&gt; {
+	await page.goto('/embed/demo#seedboom');
+	const player = page.locator('ostinato-player');
+	await expect(player).toContainText('Boom bap', { timeout: 10_000 });
+
+	const heard = await page.evaluate(
+		() =&gt;
+			new Promise&lt;string&gt;((resolve) =&gt; {
+				const el = document.querySelector('ostinato-player') as HTMLElement &amp; { play(): void };
+				el.addEventListener('play', () =&gt; resolve('play'), { once: true });
+				el.play();
+			})
+	);
+	expect(heard).toBe('play');
+
+	// Stop before the test ends. A context torn down with audio still running
+	// takes headless Chromium down with it in a container with no sound device.
+	await page.evaluate(() =&gt;
+		(document.querySelector('ostinato-player') as unknown as { stop(): void }).stop()
+	);
+	await expect(player).not.toHaveAttribute('playing', '');
+});</code></pre>
+</figure>
+<p><strong>Headless Chromium crashed.</strong> A context torn down with a registered service worker and audio still running took the browser down with <code>SEGV_MAPERR</code>, in a container with no sound device. Two changes: the suite blocks service workers and checks the worker as a document (ch. 35), and the embed test stops playback before it ends.</p>
+<p><strong>A 500 on every vanity address.</strong> <code>handleFetch</code> annotated the current span — and during <code>reroute</code> there is no route yet and no span. Two optional chains (ch. 26). The vanity-address test is why it was found before a person did.</p>
+<aside class="callout callout--note"><p>None of the five would have been found by unit tests, and four of them were framework-level rather than application-level. That is the case for an end-to-end suite against the real build: it is the only test that runs the same code a person does.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what the suite runs against and why not <code>vite preview</code>.</li><li>You can name the flake that turned out to be <code>forkPreloads</code> and say how it was bisected.</li><li>You can add a two-browser test for a new jam-room command.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="unit-and-browser-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Unit tests, and tests in a real browser</span>
+			</a>
+			<a class="pager__link pager__link--next" href="where-next.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Where next, and the tools that helped</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

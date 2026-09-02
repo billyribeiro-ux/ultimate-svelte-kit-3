@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panels that are history entries — Building Ostinato</title>
+<meta name="description" content="A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is `pushState`, closing it is the back button: shallow routing.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 46.15384615384615%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html" aria-current="page"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>Panels that are history entries</h1>
+			<p class="lede">A sheet on a phone, a sidebar on a desktop — one component, one <code>MediaQuery</code>. Opening it is <code>pushState</code>, closing it is the back button: shallow routing.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use <code>MediaQuery</code> to make one component behave two ways, and use <code>pushState</code> and <code>page.state</code> so that something covering the screen closes the way people expect.</p></aside>
+			<p>The sound panel and the share panel cover part of the screen. On a phone they slide up from the bottom; on a desktop they slide in from the right. Same content, same props, and the difference is one reactive media query deciding which axis the transition uses.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Sheet.svelte<span class="code__lines">:9-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A PANEL THAT KNOWS WHAT SCREEN IT IS ON
+ * =======================================
+ *
+ * On a phone it is a bottom sheet that slides up; on a desktop it is a
+ * side panel that slides in from the right. Same content, same props, and
+ * the difference is one `MediaQuery` — a reactive wrapper around
+ * `matchMedia` — deciding which axis the `fly` transition uses.
+ *
+ * It is *not* modal. The grid stays usable behind it, because a sound
+ * panel you have to close before you can hear the change is a panel nobody
+ * leaves open.
+ */
+let {
+	title,
+	onclose,
+	children
+}: {
+	title: string;
+	onclose: () =&gt; void;
+	children: Snippet;
+} = $props();
+
+const desktop = new MediaQuery('min-width: 64rem');
+const duration = $derived(prefersReducedMotion.current ? 0 : 260);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Sheet.svelte<span class="code__lines">:47-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:window onkeydown={keydown} /&gt;
+
+&lt;div
+	class={['sheet', { 'sheet--side': desktop.current }]}
+	role=&quot;dialog&quot;
+	aria-label={title}
+	transition:fly={desktop.current ? { x: 320, duration } : { y: 320, duration }}
+	{@attach focusIn}
+&gt;</code></pre>
+</figure>
+<p><code>new MediaQuery(&quot;min-width: 64rem&quot;)</code> is a <code>matchMedia</code> you can read in a template: <code>desktop.current</code> is true or false and changes when the window is resized. The <code>fly</code> transition’s options are chosen from it — <code>{ x: 320 }</code> for a sidebar, <code>{ y: 320 }</code> for a sheet — and <code>duration</code> is zero under reduced motion, from <code>prefersReducedMotion</code> in <code>svelte/motion</code>.</p>
+<aside class="callout callout--note"><p>Mobile first, with <code>min-width</code> breakpoints: the default is the phone layout, and the desktop is the exception that a media query adds. The stylesheet below the component reads the same way — <code>.sheet</code> is a bottom sheet, <code>.sheet--side</code> overrides it.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Sheet.svelte<span class="code__lines">:35-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Move focus in when the sheet opens, and back to where it was when it closes. */
+const focusIn: Attachment&lt;HTMLElement&gt; = (node) =&gt; {
+	const previous = document.activeElement as HTMLElement | null;
+	node.querySelector&lt;HTMLElement&gt;('[data-close]')?.focus();
+	return () =&gt; previous?.focus();
+};
+
+function keydown(event: KeyboardEvent) {
+	if (event.key === 'Escape') onclose();
+}</code></pre>
+</figure>
+<p>Focus goes to the close button when the sheet opens, and back to wherever it was when the sheet closes. An attachment is the right tool: it runs on mount with the element, and its return value runs on unmount. Escape closes it, through <code>&lt;svelte:window onkeydown&gt;</code>.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the sheet is not modal</h4>
+	<p>A sound panel you have to close before you can hear the change is a panel nobody leaves open. The grid stays usable behind the sheet, the transport keeps playing, and turning the tone knob while a loop runs is the whole point. <code>role=&quot;dialog&quot;</code> without <code>aria-modal</code> says exactly this to assistive technology: a dialog, and the page behind it is still there.</p>
+</aside>
+<h3 id="shallow-routing">Opening a panel is a history entry</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.d.ts<span class="code__lines">:28-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">interface PageState {
+	/**
+	 * Shallow routing: which panel the studio has open as a history entry.
+	 *
+	 * In history state rather than in a component, so the back button (or a
+	 * swipe, on a phone) closes the panel instead of leaving the studio and
+	 * losing the pattern being worked on.
+	 */
+	panel?: 'sound' | 'share' | 'samples';
+	/** The pattern a gallery card has expanded into, without leaving the gallery. */
+	preview?: string;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:97-114</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * SHALLOW ROUTING
+ * ===============
+ * Opening the sound panel pushes a history entry with `{ panel: 'sound' }`
+ * in its state and no change to the URL. The back button — or a swipe on a
+ * phone — closes it, which is what a person expects of something that
+ * covers the screen. `page.state.panel` is typed by `App.PageState`.
+ */
+function open(panel: NonNullable&lt;App.PageState['panel']&gt;) {
+	if (page.state.panel === panel) return;
+	pushState('', { panel });
+}
+
+function close() {
+	if (page.state.panel) history.back();
+}
+
+const selectedTrack = $derived(session.selected ? session.track(session.selected) : undefined);</code></pre>
+</figure>
+<p>Opening the sound panel pushes a history entry with <code>{ panel: &quot;sound&quot; }</code> in its state and *no change to the URL*. The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. <code>page.state</code> is typed by <code>App.PageState</code> in <code>app.d.ts</code>, so <code>page.state.panel</code> is <code>&quot;sound&quot; | &quot;share&quot; | undefined</code> and nothing else.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:329-337</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if page.state.panel === 'sound' &amp;&amp; selectedTrack}
+	&lt;Sheet title=&quot;Sound: {selectedTrack.name}&quot; onclose={close}&gt;
+		&lt;SoundPanel {session} track={selectedTrack} /&gt;
+	&lt;/Sheet&gt;
+{:else if page.state.panel === 'share'}
+	&lt;Sheet title=&quot;Share&quot; onclose={close}&gt;
+		&lt;SharePanel {session} /&gt;
+	&lt;/Sheet&gt;
+{/if}</code></pre>
+</figure>
+<p>The template reads <code>page.state.panel</code> and shows the matching sheet. <code>close()</code> calls <code>history.back()</code> rather than clearing the state itself, so that closing with the button and closing with the back gesture are the same operation and leave the history the same shape.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>MediaQuery</code> gives you that a CSS media query does not.</li><li>You can explain why opening a panel calls <code>pushState</code> and closing it calls <code>history.back()</code>.</li><li>You can say where <code>App.PageState</code> is declared and what it does for <code>page.state</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="transport-and-mixer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The transport and the mixer</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-studio-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The studio page</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
