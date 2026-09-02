@@ -1,9 +1,10 @@
 /**
- * PART 6 — SvelteKit 3 in anger (chapters 35–40)
+ * PART 6 — SvelteKit 3 in anger (chapters 35–41)
  *
- * Six chapters where the framework is the subject: the URL as state, shallow
- * routing, streamed loads, abort signals, remote functions and hooks. Each one
- * exists because this application needed it, not because it is on a list.
+ * Seven chapters where the framework is the subject: the URL as state, shallow
+ * routing, streamed loads, abort signals, remote functions, the read API and
+ * hooks. Each one exists because this application needed it, not because it is
+ * on a list.
  */
 
 import { code } from './quote.js';
@@ -285,7 +286,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'fields', text: 'Fields come from the form, not from a `name` attribute' },
-			code('src/routes/[tenant]/alerts/+page.svelte', 218, 233),
+			code('src/routes/[tenant]/alerts/+page.svelte', 213, 234),
 			{
 				type: 'terminal',
 				code: `
@@ -298,6 +299,29 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			{
 				type: 'p',
 				text: 'What the spread buys is worth the ceremony: the field carries its own `aria-invalid`, its value survives a failed submission without a re-render, and a rename in the valibot schema becomes a type error here rather than a form that silently posts a key the server ignores.'
+			},
+
+			{ type: 'h3', id: 'default-value', text: '`defaultValue`, because a remote form resets itself' },
+			code('src/routes/[tenant]/alerts/+page.svelte', 241, 264),
+			{
+				type: 'p',
+				text: 'A remote form resets after a successful submission — and a reset does not restore what is *selected*, it restores what each option says is its **default**: `option.defaultSelected`, which is the `selected` attribute. `fields.as(\'select\', …)` sets the select’s value **property** and marks no option at all, so before this line every option’s default was `false` and a reset fell to the first one.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ # delete the defaultValue attribute, keep everything else
+$ npx playwright test e2e/alerts.e2e.ts -g "form reset keeps the direction"
+
+  Error: expect(locator).toHaveValue(expected) failed
+  Expected: "below"
+  Received: "above"
+
+  1 failed`
+			},
+			{
+				type: 'p',
+				text: 'Editing a rule that fires **below** a threshold, saving it, and being left looking at **above** — a different rule, with the form still looking filled in. `defaultValue` on `<select>`, added in Svelte 5.57, is the reset target stated next to the value, and the test above exists so that deleting it fails rather than passing quietly.'
 			},
 
 			{ type: 'h3', id: 'invalid', text: 'And `invalid`, not `error`' },
@@ -326,6 +350,172 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 	},
 
 	{
+		slug: 'the-read-api',
+		title: 'The read API, and the HTTP method almost nobody uses',
+		summary:
+			'Where a remote function is the wrong tool, why `QUERY` rather than `GET` or `POST`, and why `POST` is accepted anyway.',
+		goal: 'Expose a read to callers that are not this application, without lying to caches about what it does.',
+		blocks: [
+			{
+				type: 'p',
+				text: 'The previous chapter’s rule for choosing between the four kinds of remote function has a case it does not cover, and it is not a rare one: **the caller is not a browser running this application.** A scheduled report, a Grafana panel, another service’s health check, somebody’s shell script. A remote function’s entire value is that a component imports it and the types run end to end, and none of that reaches a Go binary reading a YAML file. Those callers get an HTTP endpoint and an API key, the same way the collector does.'
+			},
+			{
+				type: 'p',
+				text: 'There is a second reason this route had to exist, and it is the more embarrassing one. The `read` scope has been in the schema since chapter 25, and until this route nothing accepted it — a key could hold a permission that no handler would honour. That is not a small gap: it is a permission that exists only in the mind of whoever ticked the box.'
+			},
+
+			{ type: 'h3', id: 'why-query', text: '`GET` cannot, and `POST` lies' },
+			{
+				type: 'p',
+				text: 'Running a query is a **read**: safe, idempotent, no side effects. `GET` says exactly that and cannot carry a body, so the SQF text has to travel in the URL — where three separate things go wrong.'
+			},
+			{
+				type: 'terminal',
+				code: `
+GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22…
+
+  1. length    SQF is bounded at 4,000 characters here. URLs are bounded at
+               about 2,000 by intermediaries that never announce it — so a long
+               query fails somewhere inside somebody's network with a 414.
+  2. logs      every proxy, load balancer and CDN on the path writes the full
+               URL to an access log. That user id is now in three log files
+               that were never meant to hold it.
+  3. escaping  a query is quotes, pipes, brackets and spaces. Percent-encoding
+               all of it is the step every client gets wrong once.`
+			},
+			{
+				type: 'p',
+				text: '`POST` fixes all three and then lies about the semantics. It tells every cache and every retry policy that this request *changes something*: nothing may cache it, and a well-behaved client library will refuse to retry it on a timeout — which for a read is the one case where retrying is obviously safe.'
+			},
+			code('src/routes/api/v1/query/+server.ts', 208, 211),
+			{
+				type: 'p',
+				text: '`QUERY` — which SvelteKit 3 added to `+server` handlers in `3.0.0-next.24` — is the method that means "a read, with a body". Safe and idempotent like `GET`, a body like `POST`. Exporting it is the same one-line shape as exporting `GET`, because it is just another method handler; what is new is that the router recognises the name.'
+			},
+			{
+				type: 'why',
+				title: 'Why `POST` is accepted as well',
+				text: '`QUERY` is new, and a great deal of software between a script and this server will refuse a method it has never heard of: old proxies, corporate egress filters, HTTP client libraries that validate the method against a hard-coded list. The alias costs one line and is the difference between an API somebody can use today and one they file a ticket about. The response names the method it was answered with, so a client can tell which path it actually got.'
+			},
+
+			{ type: 'h3', id: 'the-body', text: 'The body, in the vocabulary the interface already uses' },
+			code('src/routes/api/v1/query/+server.ts', 57, 77),
+			{
+				type: 'p',
+				text: '`range` takes the same expressions the address bar does — `-6h`, or `from..to` in epoch milliseconds — so a link somebody copied out of the interface pastes straight into a script. Sharing the vocabulary is most of what makes an API feel like the same product rather than a second one bolted on.'
+			},
+			{
+				type: 'p',
+				text: 'The default `maxRows` is lower than the interface’s ceiling on purpose. A machine asking for twenty thousand rows on a schedule is nearly always a query that wanted a `summarize`, and the honest way to find that out is a truncation flag in the first response rather than a slow endpoint nobody looks at.'
+			},
+
+			{ type: 'h3', id: 'the-scope', text: 'The scope, finally load-bearing' },
+			code('src/routes/api/v1/query/+server.ts', 93, 103, { partial: true }),
+			{
+				type: 'p',
+				text: 'The two scopes exist because they belong to different machines. A collector writes and must never be able to read another team’s logs; a reporting job is the exact reverse. A key that could do both would make a compromised collector a data breach rather than a nuisance — and a collector’s key lives in a config file on every host, which is the worst place a read credential could be.'
+			},
+			{
+				type: 'p',
+				text: 'The refusal is a **403, not a 401**. The credential is real; the scope is not. Answering 401 would tell the caller to go and fetch a better token, which it cannot do.'
+			},
+
+			{ type: 'h3', id: 'one-language', text: 'The same parser and the same checker' },
+			code('src/routes/api/v1/query/+server.ts', 126, 146, { partial: true }),
+			{
+				type: 'p',
+				text: 'Not a second, laxer path for machines. A query the interface refuses must be refused here too, or the two disagree about what the language *is* — and the API becomes the place people go to run the thing the product told them was wrong. The span comes back with the message so a client can underline exactly what the editor would.'
+			},
+
+			{ type: 'h3', id: 'the-response', text: 'What the response has to say out loud' },
+			code('src/routes/api/v1/query/+server.ts', 173, 205, { partial: true }),
+			{
+				type: 'p',
+				text: '`truncated` is in the payload rather than implied by the row count, because a machine cannot look at a banner. A script that pages by asking for a thousand rows and receiving a thousand has no way to distinguish "that is all of them" from "that is the first page" unless the response says so. `pushed` is the same courtesy about speed: it names which stages reached SQL, so a caller can tell a fast query from a slow one without timing it.'
+			},
+			{
+				type: 'warn',
+				text: '`Cache-Control: private, no-store` **and** `Vary: Authorization`. The response depends entirely on which key asked, and the key is in a header rather than the URL — so a shared cache keyed on the URL alone would serve one tenant’s rows to another. In a product whose whole content is other people’s logs, that is the worst caching bug available.'
+			},
+
+			{ type: 'h3', id: 'the-config-that-did-nothing', text: 'The CSRF exemption that did nothing' },
+			{
+				type: 'p',
+				text: 'Both this route and the ingest route used to end with `export const config = { csrf: { checkOrigin: false } }` and a confident paragraph about exempting machines from the cross-site check. It had no effect whatsoever, and the tests passed either way — which is exactly why it survived so long.'
+			},
+			{
+				type: 'terminal',
+				code: `
+node_modules/@sveltejs/kit/src/runtime/server/csrf.js
+
+  const mutating_form_methods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+  export function is_csrf_forbidden({ request, request_origin, self_origin, trusted_origins }) {
+      return (
+          (!request.headers.get('content-type') || is_form_content_type(request)) &&
+          mutating_form_methods.has(request.method) &&
+          request_origin !== self_origin &&
+          (!request_origin || !trusted_origins.includes(request_origin))
+      );
+  }`
+			},
+			{
+				type: 'p',
+				text: 'Three things fall out of those nine lines. **`export const config` is adapter configuration** — runtime, region, that sort of thing — and an unrecognised key is ignored in silence. **The check runs before route resolution**, in `respond.js`, against app-level settings; a route cannot opt out of a decision made before it has been found. And **`checkOrigin` is gone in SvelteKit 3** — the replacement is `csrf.trustedOrigins`, which takes origins and is app-wide.'
+			},
+			{
+				type: 'p',
+				text: 'The exemption was also unnecessary, which is the part worth remembering. The check only fires for content types a cross-site HTML form can actually produce. A collector sends JSON, so it was never in the checked set — and `QUERY` is not even a mutating form method, so it is not in the set at all.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ curl -X POST -H 'origin: https://evil.example' \\\\
+       -H 'content-type: application/json' -d '{}' …/api/v1/ingest
+HTTP/1.1 401 Unauthorized          ← reached the handler
+
+$ curl -X POST -H 'origin: https://evil.example' -d 'a=1' …/api/v1/ingest
+HTTP/1.1 403 Forbidden             ← a form submission, still refused
+
+$ curl -X PUT  -H 'content-type: application/json' -d '{}' …/api/v1/query
+HTTP/1.1 405 Method Not Allowed
+allow: POST, QUERY                 ← QUERY is a real method handler`
+			},
+			{
+				type: 'why',
+				title: 'So what does keep a browser out?',
+				text: 'The `Authorization` header. No cross-site form can set one, and a cross-origin `fetch` that sets one needs a preflight — which this app answers with a 405 and no `Access-Control-Allow-Origin`. The requests a browser can be tricked into making are exactly the ones these endpoints refuse; the ones they accept are the ones a browser cannot make. That was always the real argument, and the config export was standing in front of it taking the credit.'
+			},
+			{
+				type: 'warn',
+				text: 'A `POST` with **no** content type at all *is* in the checked set. A collector that omits the header gets a 403 about cross-site form submissions, which will make no sense to whoever is reading its log.'
+			},
+
+			{ type: 'h3', id: 'proving-it', text: 'Testing it as a machine, not as a browser' },
+			code('e2e/query-api.e2e.ts', 3, 12),
+			{
+				type: 'p',
+				text: 'Clearing `storageState` is the whole point of the setup. Playwright’s `request` fixture otherwise inherits the signed-in session, and the tests below would pass by authenticating as a person — proving nothing about the key path they claim to cover.'
+			},
+			code('e2e/query-api.e2e.ts', 116, 139),
+			{
+				type: 'p',
+				text: 'The key is minted through the settings form in a real browser, because that is the only place a key exists in clear — the database stores a hash, by design. It costs one page load and keeps the test honest: it uses a key a person could actually have created.'
+			},
+
+			{
+				type: 'checkpoint',
+				items: [
+					'`curl -X QUERY` with a `read` key returns rows; the same call with an ingest key returns 403.',
+					'A query the editor rejects is rejected here with the same message and span.',
+					'`maxRows: 5` on a bigger result comes back with `truncated: true`.'
+				]
+			}
+		]
+	},
+
+	{
 		slug: 'hooks',
 		title: 'Hooks: auth, security, `handleFetch`, `handleError` and `init`',
 		summary:
@@ -339,28 +529,63 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'vary', text: 'The header that is easy to forget' },
-			code('src/hooks.server.ts', 45, 87, { partial: true }),
+			code('src/hooks.server.ts', 105, 118, { partial: true }),
 			{
 				type: 'warn',
 				text: '`Vary: Cookie` on a response whose content depends on who is asking. Without it, any cache between the server and the browser — a CDN, a corporate proxy, the browser’s own — may serve one person’s page to another. On an application whose pages contain other people’s logs, that is the most serious single-line omission available.'
 			},
 
+			{ type: 'h3', id: 'preload', text: 'And the filter that fixed a font downloaded twice' },
+			{
+				type: 'p',
+				text: 'The same `resolve` call carries a `preload` filter, and it is there because of a bug that had been shipping quietly. SvelteKit preloads `js` and `css` by default and never fonts — it cannot know which a page will use — so this project did what everybody does: copy two font files into `static/`, and hand-write two `<link rel="preload">` tags against those stable paths.'
+			},
+			{
+				type: 'p',
+				text: 'The stylesheet, meanwhile, imports the fontsource CSS, whose `@font-face` rules point at the **bundled, hashed** files. So the two preloaded copies matched no `@font-face` at all. The browser fetched 88KB nothing ever used, warned about it in a console message that is easy to miss, and then downloaded the real faces a second time.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ grep -o 'src:url([^)]*)' .svelte-kit/output/client/_app/immutable/assets/*.css
+  …/inter-latin-wght-normal.Dx4kXJAl.woff2      ← what the CSS uses
+  …/jetbrains-mono-latin-wght-normal.B9CIFXIH.woff2
+
+$ grep -rl "/fonts/" .svelte-kit/output/client
+  (nothing)                                     ← what was preloaded`
+			},
+			{
+				type: 'p',
+				text: 'It could not be fixed before, and that is the point. A bundled font’s URL carries a content hash, so a filter could only match a path nobody can predict. SvelteKit 3.0.0-next.24 gives a `font` input a **`filename`** — the source path relative to the project root, before hashing — and matching on that is exact, survives every rebuild, and lets the fonts stay bundled.'
+			},
+			code('src/hooks.server.ts', 47, 59),
+			code('src/hooks.server.ts', 61, 103, { partial: true }),
+			{
+				type: 'p',
+				text: 'Only the two latin subsets. Inter ships seven and JetBrains Mono six; the `unicode-range` on each `@font-face` means the browser fetches only what a page needs, and preloading all thirteen would be four hundred kilobytes to save one round trip on two of them.'
+			},
+			{
+				type: 'why',
+				title: 'Why preloading matters more here than on most pages',
+				text: 'The charts and the flame graph draw their labels into a canvas, and canvas text is measured against whatever font is loaded *at that moment*. A face that arrives late makes the first frame lay out against a fallback and every frame after it against the real one, so labels jump and truncation is computed twice. On an ordinary page a late font is a reflow; here it is a wrong picture.'
+			},
+
 			{ type: 'h3', id: 'handlefetch', text: '`handleFetch`, which is not about the browser' },
-			code('src/hooks.server.ts', 68, 112),
+			code('src/hooks.server.ts', 122, 164, { partial: true }),
 			{
 				type: 'p',
 				text: '`handleFetch` intercepts `fetch` calls made **on the server**, inside a load or a remote function. Two things belong here and nowhere else: a timeout, because a `fetch` with no timeout will eventually hang a request handler forever; and a `User-Agent`, so that whoever receives the call can tell what is calling them.'
 			},
 
 			{ type: 'h3', id: 'handleerror', text: '`handleError`, keyed on `kind`' },
-			code('src/hooks.server.ts', 114, 131),
+			code('src/hooks.server.ts', 166, 183),
 			{
 				type: 'p',
 				text: 'SvelteKit distinguishes a 404, a thrown `error()`, a validation failure and something genuinely broken. Only the last is worth a log line and a correlation id — writing an id for every 404 buries the one that matters, which is the precise mechanism by which teams stop reading their own error logs.'
 			},
 
 			{ type: 'h3', id: 'init', text: '`init`, and an honest limitation' },
-			code('src/hooks.server.ts', 133, 167),
+			code('src/hooks.server.ts', 185, 219, { partial: true }),
 			{
 				type: 'p',
 				text: 'Reaching the database in `init` turns "the deploy is broken" into a process that never claims to be healthy — which is what a load balancer needs in order to keep the old version serving.'

@@ -5,10 +5,17 @@
 	The compile option *is* set — just not anywhere `svelte-check` looks.
 
 	`vite.config.ts` turns `customElement` on for this folder only, through
-	`dynamicCompileOptions`, so the rest of the application is not wrapped in
-	custom-element machinery it has no use for. `svelte-check` resolves compiler
-	options for itself and does not run the Vite plugin, so it sees the options
-	below with the flag apparently off and warns.
+	`dynamicCompileOptions`, so nothing else in the application is asked to
+	compile as an element. `svelte-check` resolves compiler options for itself
+	and does not run the Vite plugin, so it sees the options below with the flag
+	apparently off and warns.
+
+	What the warning does *not* mean is that the element is missing. The
+	`customElement` attribute below is what emits it, and the client compile
+	produces `customElements.define('tessera-board', …)` either way — identical
+	output, byte for byte, with the option on or off. The warning is the compiler
+	asking whether this file was meant to be an element; the answer is yes, and
+	`vite.config.ts` is where it is given.
 
 	A `svelte-ignore` comment does not help: the warning is attached to the
 	`customElement` attribute inside `<svelte:options>`, which is analysed before

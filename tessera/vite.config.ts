@@ -82,19 +82,49 @@ export default defineConfig(({ mode }) => {
 				 * ONE COMPONENT COMPILED AS A CUSTOM ELEMENT
 				 * =========================================
 				 *
-				 * `<svelte:options customElement>` describes the element, but the
-				 * compiler only *emits* one when `customElement: true` is set — and
-				 * setting it globally would wrap every component in the application in
-				 * custom-element machinery it does not need.
+				 * `<svelte:options customElement>` is what actually produces the element.
+				 * In Svelte 5 the client compile emits
+				 * `customElements.define('tessera-board', …)` from that tag whether or
+				 * not `customElement: true` is set — identical output, byte for byte,
+				 * either way. What the compile option changes is whether the compiler
+				 * warns:
 				 *
-				 * `dynamicCompileOptions` is the seam: it is called per file, so the
-				 * embeddable viewer compiles one way and everything else compiles the
-				 * other. Without it the build succeeds and `svelte-check` warns
-				 * "the customElement option is used when generating a custom element" —
-				 * which is easy to read as noise and is in fact "your element does not
-				 * exist".
+				 *     The `customElement` option is used when generating a custom
+				 *     element. Did you forget the `customElement: true` compile option?
+				 *
+				 * That is a question worth answering rather than muting, because it is
+				 * the compiler asking whether this file was *meant* to be an element.
+				 * Setting the option here answers yes for this folder only; setting it
+				 * globally would answer yes for every component in the application.
+				 *
+				 * `dynamicCompileOptions` is the seam that makes "this folder only"
+				 * expressible: it is called per file, and — since vite-plugin-svelte
+				 * 7.3.0 — per environment.
 				 */
-				dynamicCompileOptions({ filename }) {
+				dynamicCompileOptions({ filename, environment }) {
+					/*
+					 * `environment` as well as `filename`, since vite-plugin-svelte 7.3.0.
+					 *
+					 * BE HONEST ABOUT WHAT THIS LINE DOES: today, nothing to the output.
+					 * The Svelte compiler already ignores `customElement` when generating
+					 * for the server, and emits the element for the client either way,
+					 * because `<svelte:options customElement>` is what actually drives it:
+					 *
+					 *   generate: 'server'  customElement: false → 5,209 bytes, no wrapper
+					 *   generate: 'server'  customElement: true  → 5,209 bytes, no wrapper
+					 *   generate: 'client'  customElement: false → 7,732 bytes, wrapper
+					 *   generate: 'client'  customElement: true  → 7,732 bytes, wrapper
+					 *
+					 * What the option changes here is the *warning*, and what this guard
+					 * changes is the claim. `customElement: true` says "compile this as a
+					 * custom element", and a custom element is a browser thing — it
+					 * registers with `customElements.define` and has no server-rendered
+					 * form. Asking for one in the SSR pass is asking for something that
+					 * cannot exist, and it worked only because the compiler quietly
+					 * declined. That is a behaviour to depend on deliberately or not at
+					 * all, and the second argument is what makes "not at all" expressible.
+					 */
+					if (environment.name !== 'client') return {};
 					if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
 					return {};
 				}

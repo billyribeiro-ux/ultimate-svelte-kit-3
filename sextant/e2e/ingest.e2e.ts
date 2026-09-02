@@ -45,16 +45,17 @@ test('a malformed body is a 400 with the field that is wrong', async ({ request 
 	expect(response.status()).toBe(401);
 });
 
-test('the endpoint accepts a cross-origin POST, unlike every form in the app', async ({
-	request
-}) => {
+test('a cross-origin JSON POST reaches the handler', async ({ request }) => {
 	/*
-	 * `export const config = { csrf: { checkOrigin: false } }` on that route.
+	 * This pair of tests is the whole CSRF story, and it exists because the route
+	 * used to carry `export const config = { csrf: { checkOrigin: false } }` with
+	 * a comment claiming credit for this behaviour. That key does nothing —
+	 * SvelteKit runs the check before it resolves a route, from app-level
+	 * configuration — and the test passed anyway, which is exactly why nobody
+	 * noticed. Removing the config changes neither of these results.
 	 *
-	 * A collector is not a browser: it has no origin header worth checking, and
-	 * SvelteKit's default CSRF protection would reject every batch. Turning it off
-	 * is safe *specifically* because the route authenticates with a header rather
-	 * than a cookie — which is the whole reason sessions and keys are kept apart.
+	 * What actually decides it is the content type. JSON is not something a
+	 * cross-site HTML form can produce, so the check never applies to a collector.
 	 */
 	const response = await request.post('/api/v1/ingest', {
 		headers: { origin: 'https://somewhere-else.example', 'content-type': 'application/json' },
@@ -63,4 +64,22 @@ test('the endpoint accepts a cross-origin POST, unlike every form in the app', a
 
 	// 401, not 403: it got past the origin check and failed on the credential.
 	expect(response.status()).toBe(401);
+});
+
+test('a cross-origin form-encoded POST is still refused as cross-site', async ({ request }) => {
+	/*
+	 * The other half. `application/x-www-form-urlencoded` *is* something a
+	 * cross-site form can send, so this is refused before any handler runs — with
+	 * no route config anywhere able to change it.
+	 */
+	const response = await request.fetch('/api/v1/ingest', {
+		method: 'POST',
+		headers: {
+			origin: 'https://somewhere-else.example',
+			'content-type': 'application/x-www-form-urlencoded'
+		},
+		data: 'signal=logs'
+	});
+
+	expect(response.status()).toBe(403);
 });

@@ -80,7 +80,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'refuse-early', text: 'Refuse before you read' },
-			code('src/routes/api/v1/ingest/+server.ts', 26, 34),
+			code('src/routes/api/v1/ingest/+server.ts', 25, 33),
 			{
 				type: 'p',
 				text: 'The size check reads `content-length` **before** the body, so an oversized request costs one header parse rather than eight megabytes of buffering. A sender without a content-length is still bounded, because the read below counts as it goes — but the header check is what makes the common case cheap.'
@@ -114,6 +114,12 @@ export const part4 = [
 			{
 				type: 'p',
 				text: 'A token bucket per tenant, and — importantly — a `Retry-After` in the refusal. A 429 with no `Retry-After` is an invitation to retry immediately, which turns a rate limit into a hot loop.'
+			},
+
+			{ type: 'h3', id: 'csrf', text: 'And the CSRF exemption it does not have' },
+			{
+				type: 'p',
+				text: 'This route used to end with `export const config = { csrf: { checkOrigin: false } }`, because a collector sends no `Origin` and SvelteKit protects form submissions by checking it. The config did nothing — SvelteKit does not read a `csrf` key from a route’s `config` export, and it runs that check before it has resolved a route at all. It was also unnecessary: the check only covers content types a cross-site form can produce, and a collector sends JSON. Chapter 40 works through the evidence, because the failure mode here is the interesting one — a security control that is not there, with a comment claiming it is.'
 			},
 
 			{

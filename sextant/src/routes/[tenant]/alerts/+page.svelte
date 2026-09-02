@@ -240,10 +240,23 @@
 
 		<div class="field">
 			<label for="direction-{rule?.id ?? 'new'}">Fires when the value is</label>
+			<!--
+				`as('select', …)` sets the select's **value property**; `defaultValue`
+				sets the option a reset returns to. Only the second is `defaultSelected`,
+				and only `defaultSelected` survives a reset — so without this line every
+				option's default is false and a reset falls to the first one. Editing a
+				`below` rule and saving it then leaves the control showing `above`, which
+				is a different rule.
+
+				A remote form resets itself after a successful submission, so that is the
+				path rather than an edge case. `e2e/alerts.e2e.ts` deletes this attribute's
+				effect and watches the control read `above`; that is what it is for.
+			-->
 			<select
 				id="direction-{rule?.id ?? 'new'}"
 				class="select"
 				{...save.fields.direction.as('select', rule?.direction ?? 'above')}
+				defaultValue={rule?.direction ?? 'above'}
 			>
 				<option value="above">above the threshold</option>
 				<option value="below">below the threshold</option>

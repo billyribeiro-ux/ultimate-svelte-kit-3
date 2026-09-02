@@ -11,9 +11,8 @@
  * So this is a plain POST with an API key, a JSON body and honest status codes —
  * the contract a collector already knows how to speak.
  *
- * `export const config` sits at the bottom of the file: this route is
- * deliberately excluded from the CSRF check that protects everything else,
- * because a collector has no cookie to forge and no origin to send.
+ * The bottom of the file explains what protects it — and why the CSRF exemption
+ * that used to be there was doing nothing at all.
  */
 
 import type { RequestHandler } from './$types';
@@ -174,24 +173,51 @@ function concat(chunks: readonly Uint8Array[], size: number): Uint8Array {
 }
 
 /**
- * ROUTE CONFIGURATION
- * ===================
+ * WHAT PROTECTS THIS ROUTE, AND THE EXEMPTION THAT DID NOTHING
+ * ===========================================================
  *
- * SvelteKit 3 lets a route carry its own config, and this is the one place in
- * the application that needs it.
+ * This file used to end with
  *
- * `csrf.checkOrigin: false` because the caller is a machine. The CSRF check
- * compares the `Origin` header against the app's own, which is exactly right for
- * a browser and meaningless for a collector — a Go binary sends no `Origin` at
- * all, so with the check on, every ingest request is refused with a message
- * about cross-site requests that makes no sense to whoever is reading the
- * collector's log.
+ *     export const config = { csrf: { checkOrigin: false } };
  *
- * Turning it off here is safe for the reason CSRF exists to protect against does
- * not apply: there is no ambient credential. A browser cannot be tricked into
- * making this request usefully, because the request needs an `Authorization`
- * header that no cross-site form can set.
+ * and a confident paragraph about exempting collectors from the cross-site
+ * check. It had no effect whatsoever, and it is worth knowing why, because the
+ * mistake is easy to make and impossible to notice: nothing warns, and the
+ * endpoint works.
+ *
+ *   * **`export const config` is adapter configuration.** SvelteKit reads it for
+ *     things like a route's runtime or region. There is no per-route `csrf` key
+ *     for it to read, and an unknown key is simply ignored.
+ *   * **The check runs before the route exists.** It happens in `respond.js`,
+ *     against app-level configuration, before SvelteKit has worked out which
+ *     route the URL belongs to. A route cannot opt out of something that is
+ *     decided before it is found.
+ *   * **`checkOrigin` is gone in SvelteKit 3.** Its replacement is
+ *     `csrf.trustedOrigins`, which is app-wide and takes origins rather than a
+ *     boolean.
+ *
+ * The exemption was also unnecessary, which is why nothing ever failed. The
+ * check fires only for `POST`, `PUT`, `PATCH` and `DELETE` whose content type is
+ * one a cross-site HTML form can produce — `application/x-www-form-urlencoded`,
+ * `multipart/form-data`, `text/plain`, or none at all. A collector sends
+ * `application/json`, so it is never in the checked set:
+ *
+ *     $ curl -X POST -H 'origin: https://evil.example' \
+ *            -H 'content-type: application/json' -d '{}' …/api/v1/ingest
+ *     HTTP/1.1 401 Unauthorized        ← reached the handler
+ *
+ *     $ curl -X POST -H 'origin: https://evil.example' -d 'a=1' …/api/v1/ingest
+ *     HTTP/1.1 403 Forbidden           ← a form submission, still refused
+ *
+ * What keeps a browser out is the `Authorization` header. No cross-site form can
+ * set one, and a cross-origin `fetch` that sets one needs a preflight — which
+ * this app answers with a 405 and no `Access-Control-Allow-Origin`. The requests
+ * a browser can be tricked into making are exactly the ones this endpoint
+ * refuses; the ones it accepts are the ones a browser cannot make.
+ *
+ * ONE THING A COLLECTOR MUST DO
+ * -----------------------------
+ * Send a content type. A `POST` with none at all *is* in the checked set, and a
+ * collector that omits it gets a 403 about cross-site form submissions that will
+ * make no sense to whoever is reading its log.
  */
-export const config = {
-	csrf: { checkOrigin: false }
-};

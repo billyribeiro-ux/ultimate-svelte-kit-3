@@ -57,6 +57,48 @@ test('a valid rule is created and listed with its thresholds', async ({ page }, 
 	await expect(row).toHaveCount(0);
 });
 
+test('a form reset keeps the direction the rule actually has', async ({ page }, testInfo) => {
+	const name = `Traffic collapse (${testInfo.project.name})`;
+
+	await page.goto('/demo/alerts');
+	await page.getByRole('button', { name: 'New rule' }).click();
+
+	await page.getByLabel('Name').fill(name);
+	await page.getByLabel('Query').fill('from logs | summarize n = count()');
+	await page.getByLabel('Fires when the value is').selectOption('below');
+	await page.getByLabel('Threshold').fill('100');
+	await page.getByRole('button', { name: 'Create rule' }).click();
+
+	const row = page.getByRole('listitem').filter({ hasText: name });
+	await expect(row.getByText('below 100')).toBeVisible();
+
+	// Reopen it for editing: this is the form whose default matters, because the
+	// rule it is editing fires *below* and the first option is `above`.
+	await row.getByRole('button', { name: 'Edit' }).click();
+	const direction = page.getByLabel('Fires when the value is');
+	await expect(direction).toHaveValue('below');
+
+	/*
+	 * `fields.as('select', …)` sets the select's **value property**. It does not
+	 * mark any option with the `selected` attribute, and that attribute —
+	 * `defaultSelected` — is the only thing a form reset looks at. Without
+	 * `defaultValue` on the select, every option's default is false, so a reset
+	 * falls to the first one: editing a `below` rule and saving it leaves the
+	 * control showing `above`, which is a different rule.
+	 *
+	 * A remote form resets itself after a successful submission, so this is not a
+	 * hypothetical path — it is the path.
+	 */
+	await direction.evaluate((element) => {
+		(element as HTMLSelectElement).form?.reset();
+	});
+
+	await expect(direction).toHaveValue('below');
+
+	await row.getByRole('button', { name: 'Delete' }).click();
+	await expect(row).toHaveCount(0);
+});
+
 test('a rule that has never been evaluated does not claim to be ok', async ({ page }) => {
 	await page.goto('/demo/alerts');
 

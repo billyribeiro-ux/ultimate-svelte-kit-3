@@ -13,7 +13,7 @@ Five complete projects, each with its own build-along course.
 | [`tessera/`](./tessera) | **Project 4** — Tessera, a local-first collaborative canvas. Conflict-free data types written from scratch, an editor that keeps working with the network unplugged, and no server anywhere deciding who wins. |
 | [`tessera-course/`](./tessera-course) | Its 44-chapter course, for somebody who has finished project 3. Open `tessera-course/dist/index.html`. |
 | [`sextant/`](./sextant) | **Project 5** — Sextant, a self-hosted observability platform. Logs, traces, metrics, and a query language written from the characters up: a lexer, a Pratt parser, a type checker that knows a duration is not a number, and a planner that pushes what it can into SQL. |
-| [`sextant-course/`](./sextant-course) | Its 44-chapter course, for somebody who has finished project 4. Open `sextant-course/dist/index.html`. |
+| [`sextant-course/`](./sextant-course) | Its 45-chapter course, for somebody who has finished project 4. Open `sextant-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
 All five pin it in `.nvmrc` and `engines`.
@@ -115,7 +115,7 @@ is a sentence about a wall clock rather than a moment in time.
 - Better Auth for staff, a bearer token in an email for customers, and an
   authorisation layer that answers 404 for "not yours" and 403 for "not yours to
   change".
-- 118 unit tests, 80 end-to-end tests across desktop and Pixel 7.
+- 118 unit tests, 82 end-to-end tests across desktop and Pixel 7.
 
 ```bash
 cd halfpast-app
@@ -235,7 +235,7 @@ compiler.
   page; streamed loads that await what paints and stream what waits;
   `getAbortSignal()` around a streaming `fetch`; `query.batch`, `form`,
   `command`, `handleFetch`, `handleError` and `init`.
-- 316 unit tests and 57 end-to-end tests across desktop and a Pixel 7 profile.
+- 316 unit tests and 75 end-to-end tests across desktop and a Pixel 7 profile.
   Writing them found six real bugs, including a `forkPreloads` interaction that
   broke opening a trace one time in three, and a NUL byte in a series key that
   SQLite silently truncated at — collapsing every series into one row with no

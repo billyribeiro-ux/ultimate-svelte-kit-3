@@ -890,19 +890,49 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 	 * ONE COMPONENT COMPILED AS A CUSTOM ELEMENT
 	 * =========================================
 	 *
-	 * \`<svelte:options customElement>\` describes the element, but the
-	 * compiler only *emits* one when \`customElement: true\` is set — and
-	 * setting it globally would wrap every component in the application in
-	 * custom-element machinery it does not need.
+	 * \`<svelte:options customElement>\` is what actually produces the element.
+	 * In Svelte 5 the client compile emits
+	 * \`customElements.define('tessera-board', …)\` from that tag whether or
+	 * not \`customElement: true\` is set — identical output, byte for byte,
+	 * either way. What the compile option changes is whether the compiler
+	 * warns:
 	 *
-	 * \`dynamicCompileOptions\` is the seam: it is called per file, so the
-	 * embeddable viewer compiles one way and everything else compiles the
-	 * other. Without it the build succeeds and \`svelte-check\` warns
-	 * "the customElement option is used when generating a custom element" —
-	 * which is easy to read as noise and is in fact "your element does not
-	 * exist".
+	 *     The \`customElement\` option is used when generating a custom
+	 *     element. Did you forget the \`customElement: true\` compile option?
+	 *
+	 * That is a question worth answering rather than muting, because it is
+	 * the compiler asking whether this file was *meant* to be an element.
+	 * Setting the option here answers yes for this folder only; setting it
+	 * globally would answer yes for every component in the application.
+	 *
+	 * \`dynamicCompileOptions\` is the seam that makes "this folder only"
+	 * expressible: it is called per file, and — since vite-plugin-svelte
+	 * 7.3.0 — per environment.
 	 */
-	dynamicCompileOptions({ filename }) {
+	dynamicCompileOptions({ filename, environment }) {
+		/*
+		 * \`environment\` as well as \`filename\`, since vite-plugin-svelte 7.3.0.
+		 *
+		 * BE HONEST ABOUT WHAT THIS LINE DOES: today, nothing to the output.
+		 * The Svelte compiler already ignores \`customElement\` when generating
+		 * for the server, and emits the element for the client either way,
+		 * because \`<svelte:options customElement>\` is what actually drives it:
+		 *
+		 *   generate: 'server'  customElement: false → 5,209 bytes, no wrapper
+		 *   generate: 'server'  customElement: true  → 5,209 bytes, no wrapper
+		 *   generate: 'client'  customElement: false → 7,732 bytes, wrapper
+		 *   generate: 'client'  customElement: true  → 7,732 bytes, wrapper
+		 *
+		 * What the option changes here is the *warning*, and what this guard
+		 * changes is the claim. \`customElement: true\` says "compile this as a
+		 * custom element", and a custom element is a browser thing — it
+		 * registers with \`customElements.define\` and has no server-rendered
+		 * form. Asking for one in the SSR pass is asking for something that
+		 * cannot exist, and it worked only because the compiler quietly
+		 * declined. That is a behaviour to depend on deliberately or not at
+		 * all, and the second argument is what makes "not at all" expressible.
+		 */
+		if (environment.name !== 'client') return {};
 		if (filename.split(/[/\\\\]/).includes('embed')) return { customElement: true };
 		return {};
 	}
@@ -910,7 +940,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 			},
 			{
 				type: 'p',
-				text: '`<svelte:options customElement>` *describes* the element, but the compiler only **emits** one when `customElement: true` is set — and setting it globally would wrap every component in the application in custom-element machinery it does not need. `dynamicCompileOptions` is the seam: it is called per file.'
+				text: 'Measure before you believe a comment. `<svelte:options customElement>` is what **emits** the element: compile this component for the client with `customElement: false` and with `customElement: true` and you get the same 7,732 bytes, `customElements.define(\'tessera-board\', …)` included. Compile it for the server and you get the same 5,209 bytes, with no element either way. What the compile option changes is the *warning* — and a warning that asks "did you mean this?" is worth answering rather than muting. `dynamicCompileOptions` is what lets the answer be scoped: per file, and — since vite-plugin-svelte 7.3.0 — per environment.'
 			},
 			{
 				type: 'code',
@@ -924,10 +954,17 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 	The compile option *is* set — just not anywhere \`svelte-check\` looks.
 
 	\`vite.config.ts\` turns \`customElement\` on for this folder only, through
-	\`dynamicCompileOptions\`, so the rest of the application is not wrapped in
-	custom-element machinery it has no use for. \`svelte-check\` resolves compiler
-	options for itself and does not run the Vite plugin, so it sees the options
-	below with the flag apparently off and warns.
+	\`dynamicCompileOptions\`, so nothing else in the application is asked to
+	compile as an element. \`svelte-check\` resolves compiler options for itself
+	and does not run the Vite plugin, so it sees the options below with the flag
+	apparently off and warns.
+
+	What the warning does *not* mean is that the element is missing. The
+	\`customElement\` attribute below is what emits it, and the client compile
+	produces \`customElements.define('tessera-board', …)\` either way — identical
+	output, byte for byte, with the option on or off. The warning is the compiler
+	asking whether this file was meant to be an element; the answer is yes, and
+	\`vite.config.ts\` is where it is given.
 
 	A \`svelte-ignore\` comment does not help: the warning is attached to the
 	\`customElement\` attribute inside \`<svelte:options>\`, which is analysed before
@@ -938,7 +975,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 			},
 			{
 				type: 'warn',
-				text: 'Without the flag the build succeeds and `svelte-check` warns "the customElement option is used when generating a custom element" — which is easy to read as noise and is in fact **"your element does not exist"**. And a `svelte-ignore` comment does not help, because the warning attaches to the `customElement` attribute inside `<svelte:options>`, which is analysed before the element tree an ignore would apply to. The supported answer is the `--compiler-warnings` flag, which the `check` script passes.'
+				text: 'A `svelte-ignore` comment does not help here, because the warning attaches to the `customElement` attribute inside `<svelte:options>`, which is analysed before the element tree an ignore would apply to. The supported answer is the `--compiler-warnings "options_missing_custom_element:ignore"` flag, which the `check` script passes — and it is the right answer *only* because `vite.config.ts` has already set the option for the real build. Silencing a warning nothing else answers is how a project ends up with a compile flag it needs and does not have.'
 			},
 
 			{ type: 'h3', id: 'no-crdt', text: 'What the embed deliberately does not have' },

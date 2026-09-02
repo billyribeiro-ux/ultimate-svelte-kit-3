@@ -93,7 +93,13 @@
 
 				<div class="field">
 					<label for="key-scope">Scope</label>
-					<select id="key-scope" class="select" {...createKey.fields.scopes.as('select', 'ingest')}>
+					<!-- The reset target after a key is minted, stated rather than inferred. -->
+					<select
+						id="key-scope"
+						class="select"
+						{...createKey.fields.scopes.as('select', 'ingest')}
+						defaultValue="ingest"
+					>
 						<option value="ingest">ingest — write telemetry</option>
 						<option value="read">read — run queries</option>
 					</select>

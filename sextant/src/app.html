@@ -1,33 +1,21 @@
 <!doctype html>
-<html lang="%lang%">
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
 
 		<!--
-			Preload, with `crossorigin`.
+			The fonts are preloaded by the `preload` filter in `hooks.server.ts`,
+			not by hand.
 
-			A font is fetched in CORS mode whether or not you ask, so a preload without
-			`crossorigin` fetches the file a second time and the preload achieves
-			nothing except doubling the bytes. It is the most common way this tag is
-			written wrong, and the devtools warning about it is easy to miss.
+			They used to be two `<link rel="preload">` tags here, pointing at copies in
+			`static/fonts`, because a bundled font's URL carries a content hash that
+			nothing could predict. Those copies matched no `@font-face` — the
+			stylesheet uses the bundled files — so the preload fetched 88KB the page
+			never used and then downloaded the real faces again. SvelteKit 3 gives the
+			filter the source `filename`, which is the thing that is stable.
 		-->
-		<link
-			rel="preload"
-			href="%sveltekit.assets%/fonts/inter-latin-wght-normal.woff2"
-			as="font"
-			type="font/woff2"
-			crossorigin
-		/>
-		<link
-			rel="preload"
-			href="%sveltekit.assets%/fonts/jetbrains-mono-latin-wght-normal.woff2"
-			as="font"
-			type="font/woff2"
-			crossorigin
-		/>
-
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

@@ -89,14 +89,34 @@
 				error={saveSettings.fields.timeZone.issues()?.[0]?.message}
 			>
 				{#snippet children({ id, describedBy, invalid })}
+					<!--
+						`defaultValue` on the `<select>`, added in Svelte 5.57, rather than
+						`selected` on each `<option>`.
+
+						Both end up correct here, and it is worth saying so rather than
+						claiming a bug that was not there: `selected={zone === …}` compiles
+						to `set_selected`, which sets the `selected` *attribute*, which is
+						`defaultSelected`, which is what a form reset restores. There are
+						over four hundred zones in this list, so that is four hundred
+						comparisons re-run on every keystroke elsewhere in the form, to
+						express one fact.
+
+						What `defaultValue` adds beyond saying it once: it separates *what
+						a reset goes back to* from *what is currently chosen*. Svelte
+						applies a later `defaultValue` without moving the selection, so the
+						saved zone can change underneath somebody who is mid-edit and their
+						half-made choice survives. Writing it on the options cannot express
+						that — there, the default and the selection are the same thing.
+					-->
 					<select
 						{...saveSettings.fields.timeZone.as('select')}
+						defaultValue={settings.timeZone}
 						{id}
 						aria-describedby={describedBy}
 						aria-invalid={invalid}
 					>
 						{#each zones as zone (zone)}
-							<option value={zone} selected={zone === settings.timeZone}>{zone}</option>
+							<option value={zone}>{zone}</option>
 						{/each}
 					</select>
 				{/snippet}

@@ -1,5 +1,5 @@
 /**
- * PART 7 — The rest of the product, and proving it (chapters 41–44)
+ * PART 7 — The rest of the product, and proving it (chapters 42–45)
  *
  * Alerts end to end, the settings nobody thinks about until they matter, a seed
  * that tells a story, and the verification pass — which is where six real bugs
@@ -210,14 +210,14 @@ write status AND outbox row in one transaction; a worker delivers
 		slug: 'verifying-it',
 		title: 'Verifying it, and the six bugs the tests found',
 		summary:
-			'316 unit tests, 57 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
+			'316 unit tests, 75 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
 		goal: 'Get to green, and understand what each kind of test is actually for.',
 		blocks: [
 			{
 				type: 'p',
 				text: 'One command runs everything, in the order that fails fastest.'
 			},
-			code('package.json', 11, 31),
+			code('package.json', 11, 30),
 			{
 				type: 'p',
 				text: 'Type-check, lint, unit tests, **build**, then end to end. The build is before the end-to-end tests because the end-to-end tests run against the built output, and because a build failure is thirty seconds where an end-to-end failure is two minutes.'
@@ -283,7 +283,7 @@ write status AND outbox row in one transaction; a worker delivers
 				type: 'terminal',
 				code: `
 $ node sextant-course/verify.js
-44 chapters · 213 blocks quoted from sextant/ by line range · 0 illustrative
+45 chapters · 223 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
@@ -291,7 +291,7 @@ $ pnpm verify
 ✓ eslint           clean
 ✓ vitest           316 passed
 ✓ vite build       done
-✓ playwright       57 passed, 2 viewports`
+✓ playwright       75 passed, 4 skipped, 2 viewports`
 			},
 
 			{

@@ -44,8 +44,60 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
+/**
+ * The latin subsets, and only those.
+ *
+ * `@fontsource-variable/inter` ships seven subsets and JetBrains Mono six —
+ * cyrillic, greek, vietnamese, latin-ext and latin. The `unicode-range` on each
+ * `@font-face` means a browser fetches only the ones a page actually needs, and
+ * for this interface that is latin. Preloading all thirteen would be four
+ * hundred kilobytes to save one round trip on two of them.
+ */
+const PRELOAD_FONTS = [
+	'@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+	'@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'
+];
+
 const handleSecurity: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
+	const response = await resolve(event, {
+		/*
+		 * PRELOAD THE TWO FONTS THE FIRST PAINT NEEDS, BY SOURCE FILENAME.
+		 *
+		 * SvelteKit preloads `js` and `css` by default and never fonts, because it
+		 * cannot know which of them a page will use. Preloading matters more here
+		 * than on most pages: the charts and the flame graph draw their labels into
+		 * a canvas, and canvas text is measured against whatever font is loaded *at
+		 * that moment* — so a face that arrives late makes the first frame lay out
+		 * against a fallback and every frame after it against the real one.
+		 *
+		 * This used to be impossible to express. A bundled font's URL carries a
+		 * content hash, so a filter could only match on a path nobody can predict —
+		 * which is why the previous version of this project copied two files into
+		 * `static/fonts` and hand-wrote `<link rel="preload">` tags in `app.html`
+		 * against those stable paths.
+		 *
+		 * That workaround was quietly broken, and it is worth knowing how. The
+		 * stylesheet imports the fontsource CSS, whose `@font-face` rules point at
+		 * the *bundled, hashed* files — so the two preloaded copies matched no
+		 * `@font-face` at all. The browser fetched 88KB nothing ever used, warned
+		 * about it in a console message that is easy to miss, and then downloaded
+		 * the real faces a second time.
+		 *
+		 * SvelteKit 3 gives a `font` input a `filename`: the source path relative to
+		 * the project root, before hashing. Matching on that is exact, survives every
+		 * rebuild, and lets the fonts stay bundled — which also means they are served
+		 * from `_app/immutable` with a year-long cache rather than from `static/`.
+		 */
+		preload: (input) => {
+			if (input.type === 'js' || input.type === 'css') return true;
+			if (input.type !== 'font') return false;
+
+			// `endsWith` rather than equality: the filename is project-relative, so
+			// it carries a `node_modules/` prefix that a pnpm store layout can make
+			// longer than it looks.
+			return PRELOAD_FONTS.some((font) => input.filename.endsWith(font));
+		}
+	});
 
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');

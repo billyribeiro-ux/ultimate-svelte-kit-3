@@ -134,15 +134,32 @@
 					<!-- Experience -->
 					<div class="field">
 						<label class="field__label" for="guide-experience">Which best describes you?</label>
+						<!--
+							`defaultValue=""` says what a reset goes back to.
+
+							This form resets after a successful submission, and the placeholder
+							is what it must return to — otherwise the next person starts on a
+							real answer they never gave.
+
+							The `<option value="" disabled selected>` this replaced also worked:
+							a literal `selected` attribute *is* `defaultSelected`, which is what
+							a reset restores. What changed is where the fact lives. The value
+							comes from `fields.as('select')`, which sets the select's value
+							property and marks no option at all, so the reset target was an
+							attribute on one option that had to stay in step with a value set
+							somewhere else. `defaultValue`, added to `<select>` in Svelte 5.57,
+							puts it next to the value — one place, one thing to be wrong.
+						-->
 						<select
 							id="guide-experience"
 							class="field__input field__select"
 							{...requestGuide.fields.experience.as('select')}
+							defaultValue=""
 							aria-describedby={requestGuide.fields.experience.issues()
 								? 'guide-experience-error'
 								: undefined}
 						>
-							<option value="" disabled selected>Choose one…</option>
+							<option value="" disabled>Choose one…</option>
 							{#each experienceOptions as option (option.value)}
 								<option value={option.value}>{option.label}</option>
 							{/each}
