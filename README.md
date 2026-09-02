@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Three complete projects, each with its own build-along course.
+Four complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -10,9 +10,11 @@ Three complete projects, each with its own build-along course.
 | [`halfpast-course/`](./halfpast-course) | Its 35-chapter course, for somebody who has finished project 1. Open `halfpast-course/dist/index.html`. |
 | [`sequent/`](./sequent) | **Project 3** — Sequent, a stock exchange. A matching engine, an opening auction, central clearing, a double-entry ledger, and an event log the whole venue can be rebuilt from. |
 | [`sequent-course/`](./sequent-course) | Its 42-chapter course, for somebody who has finished project 2. Open `sequent-course/dist/index.html`. |
+| [`tessera/`](./tessera) | **Project 4** — Tessera, a local-first collaborative canvas. Conflict-free data types written from scratch, an editor that keeps working with the network unplugged, and no server anywhere deciding who wins. |
+| [`tessera-course/`](./tessera-course) | Its 44-chapter course, for somebody who has finished project 3. Open `tessera-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All three pin it in `.nvmrc` and `engines`.
+All four pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -27,10 +29,15 @@ pnpm run db:migrate && pnpm run db:seed && pnpm run dev
 # Project 3 — the exchange. Three processes, one command.
 cd sequent && pnpm install && cp .env.example .env
 pnpm run seed && pnpm run dev
+
+# Project 4 — the collaborative canvas. Open the printed link in two windows.
+cd tessera && pnpm install && cp .env.example .env
+pnpm run db:migrate && pnpm run db:seed && pnpm run dev
 ```
 
-The seed prints the demo studio's booking page, both sign-ins and a customer
-manage link.
+Each seed prints what you need to open the thing it built: Halfpast prints the
+demo studio's booking page, both sign-ins and a customer manage link; Tessera
+prints an owner, a viewer, and a board short link worth opening twice.
 
 ## Reading the courses
 
@@ -38,6 +45,7 @@ manage link.
 open strikeflow-course/dist/index.html
 open halfpast-course/dist/index.html
 open sequent-course/dist/index.html
+open tessera-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
@@ -121,4 +129,45 @@ exactly the same state.
 ```bash
 cd sequent
 pnpm run verify   # check, test, build
+```
+
+## Project 4 — Tessera
+
+A collaborative canvas. Two people draw on the same board at the same moment and
+both edits survive. One of them goes through a tunnel, keeps working, and
+everything they did arrives intact when the signal comes back. No server decides
+who wins, because no server is asked.
+
+- **A CRDT written from scratch, and property-tested.** Hybrid logical clocks, a
+  version vector keyed by stamp, an add-wins observed-remove set, per-field
+  last-write-wins registers, an RGA sequence for collaborative text, and base-62
+  fractional indexing for stacking order. A randomised suite replays hundreds of
+  thousands of hostile delivery schedules from printed seeds and asserts that
+  every replica ends up byte-identical. It found two real bugs.
+- **Local-first, in that order.** An edit changes the document synchronously,
+  persists to an IndexedDB outbox, and only then goes near the network. Nothing
+  in the interface waits for a server and nothing is disabled because one is
+  missing.
+- **Permissions checked per operation, on the server.** A collaborative editor
+  ships the document model *and the code that mutates it* to every browser, so
+  hiding the toolbar is a courtesy and the ingestion path is the only place a
+  "no" means anything.
+- **The whole of SvelteKit 3**: remote functions including `query.live`,
+  `form.for(id)` and single-flight mutations; universal `reroute` and `transport`
+  hooks; `defineParams` with Standard Schema matchers; `defineEnvVars`;
+  `$app/manifest` in a service worker; a layout reset; and one component compiled
+  to a custom element through `dynamicCompileOptions`.
+- **Svelte 5 throughout**: runes, `$state.raw`, `{@attach}` attachments,
+  `<svelte:boundary>`, `SvelteMap`/`SvelteSet`, and a `Tween` that holds both
+  instant and animated camera movement so there is only ever one source of truth
+  for where you are looking.
+- **Mobile first**, including a canvas: a bottom sheet that becomes a sidebar, a
+  toolbar that clears the home indicator, and the entire end-to-end suite run
+  twice — desktop and a Pixel 7 profile.
+- 115 unit tests and 28 end-to-end tests, three of which drive two independent
+  browser contexts against one board.
+
+```bash
+cd tessera
+pnpm run verify   # check, lint, unit, build, e2e
 ```
