@@ -416,6 +416,22 @@ function comparable(left: SqfType, right: SqfType): boolean {
 	// is resolved against the query's time range by the planner.
 	if (left === 'timestamp' && right === 'duration') return true;
 
+	/*
+	 * A timestamp against a number is allowed, and a duration against a number is
+	 * not. That looks inconsistent and is the point.
+	 *
+	 * A timestamp is an absolute instant in epoch milliseconds, and there is only
+	 * one way to write one as a number — so `timestamp > 1764547200000` is
+	 * unambiguous even if nobody types it by hand. A duration is a *quantity* with
+	 * no inherent unit, so `duration > 200` is a question the reader cannot answer
+	 * without knowing what was in the writer's head.
+	 *
+	 * The rule is not "numbers are dangerous". It is: reject the comparison whose
+	 * meaning depends on an unstated convention.
+	 */
+	if (left === 'timestamp' && right === 'number') return true;
+	if (left === 'number' && right === 'timestamp') return true;
+
 	return false;
 }
 
