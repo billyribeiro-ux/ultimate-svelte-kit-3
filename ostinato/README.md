@@ -24,6 +24,10 @@ room. Open `/studio`, `/gallery`, `/jam/lobby`, or `/@ostinato/four-on-the-floor
 pnpm run verify   # check, lint, unit + browser tests, build, end-to-end
 ```
 
+It needs the database from the step above: the landing page is prerendered
+from it, so a build against an empty file fails at the featured strip. The
+end-to-end suite prepares its own `e2e.db` and never touches `local.db`.
+
 The end-to-end suite runs against the output of the project's **own adapter**
 (`adapters/ostinato`) — `node build/index.js`, not `vite preview` — on desktop
 Chrome and a Pixel 7 profile.
@@ -41,7 +45,7 @@ Chrome and a Pixel 7 profile.
 | `src/hooks.ts` / `src/hooks.server.ts` | `transport`, async `reroute`, `handle`, `handleFetch`, `handleError`, `init`                                                    |
 | `src/instrumentation.server.ts`        | OpenTelemetry, exporting to an in-memory ring the diagnostics page reads                                                        |
 | `adapters/ostinato`                    | An adapter written from scratch: two functions and a catch-all joined by `applyReroute`                                         |
-| `e2e/`                                 | Thirty-three end-to-end scenarios on desktop and a Pixel 7 profile, including two-browser jam sessions |
+| `e2e/`                                 | Thirty-three end-to-end scenarios on desktop and a Pixel 7 profile, including two-browser jam sessions                          |
 
 ## Environment
 
