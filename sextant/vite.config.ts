@@ -139,7 +139,23 @@ export default defineConfig(({ mode }) => {
 						name: 'server',
 						environment: 'node',
 						include: ['src/**/*.{test,spec}.{js,ts}'],
-						exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+						exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+
+						/*
+						 * One file at a time.
+						 *
+						 * SQLite allows exactly one writer. `ingest.spec.ts` and
+						 * `storage.spec.ts` both seed real rows, and run in parallel they
+						 * meet `SQLITE_BUSY` — which surfaces as a dozen unrelated
+						 * assertions failing at random, in whichever file lost the race.
+						 *
+						 * WAL and a busy timeout (see `db/index.ts`) make the *application*
+						 * tolerate concurrent writers, and are worth having for their own
+						 * sake. They do not make a test suite deterministic, because a
+						 * timeout that is long enough is still a race. Serialising the files
+						 * costs about two seconds and removes the whole class.
+						 */
+						fileParallelism: false
 					}
 				}
 			]

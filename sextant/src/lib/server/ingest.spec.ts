@@ -434,6 +434,10 @@ describe('usage', () => {
 	it('does not count another tenant', async () => {
 		// The check that would catch a missing `where tenantId` — which is the one
 		// bug in a multi-tenant system that must never ship.
+		// Deleted first: a previous run that failed part way through leaves this
+		// behind, and the next run then fails on a unique slug rather than on
+		// whatever it was actually testing.
+		await db.delete(tenant).where(eq(tenant.id, 'other-tenant'));
 		await db.insert(tenant).values({ id: 'other-tenant', name: 'Other', slug: 'other-tenant' });
 		await ingest({ tenantId: 'other-tenant', now: NOW, batch: batch({ logs: [LOG] }) });
 
