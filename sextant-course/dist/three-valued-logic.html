@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Values, and three-valued logic — Building Sextant</title>
+<meta name="description" content="What `null` means in a query language, why `false and null` is `false`, and the one place comparison coerces a numeric string.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 46.15384615384615%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html" aria-current="page"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>Values, and three-valued logic</h1>
+			<p class="lede">What <code>null</code> means in a query language, why <code>false and null</code> is <code>false</code>, and the one place comparison coerces a numeric string.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Define the runtime value type and the comparison rules — and know which of them are conventions rather than facts.</p></aside>
+			<p>Before evaluating anything we have to say what a value *is*, and what happens when one is missing. Telemetry is full of missing values: a log line with no <code>trace_id</code>, an attribute bag without the key somebody asked for, a metric label that only some series carry.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/value.ts<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * VALUES AT RUNTIME
+ * =================
+ *
+ * A row is a plain object; a value is one of five things. The interesting part
+ * of this file is not the type — it is the comparison rules, which are where a
+ * dynamically-typed query language either behaves predictably or does not.
+ *
+ * THREE-VALUED LOGIC, AND WHY
+ * ---------------------------
+ * Telemetry is full of missing fields. `attributes.user_id` is present on some
+ * rows and not others, and `where attributes.user_id != &quot;bob&quot;` has to decide
+ * what to do with a row that has no `user_id` at all.
+ *
+ * SQL's answer is `NULL`: the comparison is neither true nor false, and a
+ * `WHERE` clause keeps only rows that are definitely true. That is unintuitive
+ * exactly once — `!=` does not return the rows you expected — and then it is
+ * right forever, because the alternative is `x == &quot;a&quot;` and `x != &quot;a&quot;` together
+ * failing to cover every row, which is worse.
+ *
+ * So: comparisons involving `null` produce `null`, `and`/`or` follow Kleene
+ * logic, and `where` keeps `true` only. It is the one place SQF copies SQL
+ * exactly, because SQL got it right and every language that tried something
+ * friendlier ended up with a different surprise.
+ */
+
+/** A runtime value. `null` means absent, and is the only falsy-by-absence value. */
+export type Value = string | number | boolean | null | Record&lt;string, unknown&gt;;
+
+export type Row = Record&lt;string, Value&gt;;</code></pre>
+</figure>
+<p><code>null</code> means <strong>absent</strong> rather than &quot;empty&quot;. That distinction is what forces three-valued logic: <code>a == 1</code> where <code>a</code> is absent is not false, it is *unknown*, and the difference shows up the moment somebody writes <code>not (a == 1)</code> and expects the rows where <code>a</code> is missing to come back.</p>
+<h3 id="kleene">Kleene logic, in nine lines</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/value.ts<span class="code__lines">:32-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Three-valued AND.
+ *
+ * `false and null` is `false`, not `null` — because whatever the unknown side
+ * turns out to be, the answer is false. Getting this wrong makes a predicate
+ * with a missing field drop rows it should keep, which reads as data loss.
+ */
+export function and3(a: boolean | null, b: boolean | null): boolean | null {
+	if (a === false || b === false) return false;
+	if (a === null || b === null) return null;
+	return true;
+}
+
+/** Three-valued OR. `true or null` is `true`, for the mirror reason. */
+export function or3(a: boolean | null, b: boolean | null): boolean | null {
+	if (a === true || b === true) return true;
+	if (a === null || b === null) return null;
+	return false;
+}
+
+export function not3(a: boolean | null): boolean | null {
+	return a === null ? null : !a;
+}
+
+/** What `where` does with a three-valued result: keep only definite truth. */
+export function isTrue(value: boolean | null): boolean {
+	return value === true;
+}</code></pre>
+</figure>
+<p><code>false and null</code> is <strong><code>false</code></strong>, not <code>null</code>, and that is not an optimisation — it is the definition. One operand being definitely false settles the conjunction whatever the other one is. The mirror holds for <code>true or null</code>.</p>
+<p>And then <code>isTrue</code> is where the three values collapse back to two: <code>where</code> keeps only definite truth. A row whose predicate is unknown is not kept, which is the same choice SQL makes and is worth being explicit about, because &quot;unknown&quot; and &quot;no&quot; are not the same and we are about to treat them the same.</p>
+<h3 id="comparison">Comparison, and one deliberate coercion</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/value.ts<span class="code__lines">:61-114</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Order two values, for `&lt;`, `sort`, `min` and `max`.
+ *
+ * Returns `null` when they are not comparable, which the caller turns into a
+ * `null` comparison result rather than an arbitrary answer. That is the
+ * difference between `sort by mixed_column` producing a stable, explicable order
+ * and producing whatever the JavaScript `&lt;` operator does between a string and a
+ * number — which is `false` both ways, and makes a sort that silently does
+ * nothing.
+ */
+export function compareValues(a: Value, b: Value): number | null {
+	if (a === null || b === null) return null;
+
+	if (typeof a === 'number' &amp;&amp; typeof b === 'number') {
+		// NaN never arrives here from ingest, which validates; if it does, treating
+		// it as incomparable is better than the `&lt;` operator's silent false.
+		if (Number.isNaN(a) || Number.isNaN(b)) return null;
+		return a &lt; b ? -1 : a &gt; b ? 1 : 0;
+	}
+
+	if (typeof a === 'string' &amp;&amp; typeof b === 'string') {
+		/*
+		 * `localeCompare` would sort &quot;correctly&quot; for a human and inconsistently
+		 * across machines — the ICU version on the server is not the one in the
+		 * browser, so a sort computed server-side and re-sorted client-side would
+		 * disagree. Code-point order is ugly for accented text and identical
+		 * everywhere, and identical everywhere is what a paginated result needs.
+		 */
+		return a &lt; b ? -1 : a &gt; b ? 1 : 0;
+	}
+
+	if (typeof a === 'boolean' &amp;&amp; typeof b === 'boolean') {
+		return a === b ? 0 : a ? 1 : -1;
+	}
+
+	/*
+	 * A number against a numeric string.
+	 *
+	 * Attribute bags are untyped, so `attributes.status` may be `500` from one
+	 * sender and `&quot;500&quot;` from another — for the same field, in the same query.
+	 * Refusing to compare them means a filter that silently misses half the data,
+	 * which is much worse than a coercion that is written down.
+	 */
+	if (typeof a === 'number' &amp;&amp; typeof b === 'string') {
+		const coerced = Number(b);
+		return b.trim() !== '' &amp;&amp; Number.isFinite(coerced) ? compareValues(a, coerced) : null;
+	}
+	if (typeof a === 'string' &amp;&amp; typeof b === 'number') {
+		const flipped = compareValues(b, a);
+		return flipped === null ? null : -flipped;
+	}
+
+	return null;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why comparison coerces and grouping does not</h4>
+	<p>A JSON attribute bag stores <code>&quot;status&quot;: &quot;500&quot;</code> as a string about as often as it stores <code>500</code> as a number, because that is what senders do. <code>attributes.status &gt;= 500</code> has to work in both cases or the feature is useless. Grouping is the opposite: <code>by status</code> must not merge <code>&quot;500&quot;</code> and <code>500</code> into one bucket, because those really are two distinct values as far as the sender is concerned, and merging them hides a bug in the sender.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/value.ts<span class="code__lines">:146-166</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The key a value contributes to a `by` grouping.
+ *
+ * Type-tagged, so the number `1` and the string `&quot;1&quot;` are different groups —
+ * which is the opposite of the comparison rule above, and deliberately so.
+ *
+ * Comparison answers &quot;is this row above the threshold&quot;, where coercing a
+ * numeric string helps. Grouping answers &quot;is this the same thing&quot;, where
+ * merging two senders' differently-typed values into one row would hide a real
+ * difference — and hiding it in the *grouping key* means it can never be seen
+ * again downstream.
+ */
+export function groupKey(value: Value): string {
+	if (value === null) return 'n';
+	if (typeof value === 'object') return 'o' + JSON.stringify(value);
+	return typeof value === 'string'
+		? 's' + value
+		: typeof value === 'number'
+			? 'd' + value
+			: 'b' + value;
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Two functions, two rules, both written down. The trap is a single <code>normalise()</code> used by both — it makes one of the two behaviours wrong and the wrongness is invisible until somebody notices a group that should have been two.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>null</code> means in SQF and why it is not &quot;empty&quot;.</li><li>You can explain why <code>false and null</code> is <code>false</code> without appealing to short-circuiting.</li><li>You can say why <code>compareValues</code> coerces a numeric string and <code>groupKey</code> does not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-type-checker.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The type checker</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-evaluator.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The evaluator</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

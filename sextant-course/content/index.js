@@ -12,13 +12,25 @@
 
 import { part0 } from './part0.js';
 import { part1 } from './part1.js';
+import { part2 } from './part2.js';
+import { part3 } from './part3.js';
+import { part4 } from './part4.js';
 
 export const chapters = [
 	// Part 0 — What we are building, and the decision everything follows from.
 	...part0,
 
 	// Part 1 — The front end of a language: characters in, a checked tree out.
-	...part1
+	...part1,
+
+	// Part 2 — Answering the question: the evaluator, and two sketches.
+	...part2,
+
+	// Part 3 — Time, shape and state.
+	...part3,
+
+	// Part 4 — Storage, ingest and access.
+	...part4
 ];
 
 /*

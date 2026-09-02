@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sessions for people, keys for machines — Building Sextant</title>
+<meta name="description" content="Two authentication paths that never meet, 404 versus 403, and why an API key is hashed with SHA-256 rather than bcrypt.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 96.15384615384616%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html" aria-current="page"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>Sessions for people, keys for machines</h1>
+			<p class="lede">Two authentication paths that never meet, 404 versus 403, and why an API key is hashed with SHA-256 rather than bcrypt.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Let a browser and a collector both in, without letting either use the other’s credential.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHO MAY DO WHAT
+ * ===============
+ *
+ * Two completely separate ways in, and keeping them separate is the point.
+ *
+ *   a **session** is a person in a browser: a cookie, a CSRF story, a role on a
+ *   tenant, and the ability to read anything that tenant has.
+ *
+ *   an **API key** is a machine: a header, no cookie, no CSRF, and a scope that
+ *   is almost always write-only.
+ *
+ * Code that tries to accept both on one path ends up accepting a key from a
+ * browser — which sounds harmless until you notice that a key in a browser is a
+ * key in a bookmark, in a screenshot, and in somebody's shell history. The two
+ * are checked by different functions and the types do not mix.
+ *
+ * READS ARE CHECKED TOO
+ * ---------------------
+ * The easy mistake in a telemetry product is to guard writes carefully and treat
+ * reads as harmless. They are not: logs are the highest-density personal data
+ * most companies hold, and a query language is a very effective exfiltration
+ * tool. Every read path here goes through `requireTenant`, and there is no
+ * &quot;internal&quot; query helper that skips it.
+ */</code></pre>
+</figure>
+<p>Two ways in, checked by different functions, with types that do not mix. Code that tries to accept both on one path ends up accepting a key from a browser — which sounds harmless until you notice that a key in a browser is a key in a bookmark, in a screenshot, and in somebody’s shell history.</p>
+<h3 id="reads-too">Reads are checked too</h3>
+<p>The easy mistake in a telemetry product is to guard writes carefully and treat reads as harmless. They are not: logs are the highest-density personal data most companies hold, and a query language is a very effective exfiltration tool. Every read path goes through <code>requireTenant</code>, and there is no &quot;internal&quot; helper that skips it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:63-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	return db
+		.select({ tenantId: tenant.id, slug: tenant.slug, role: membership.role })
+		.from(membership)
+		.innerJoin(tenant, eq(tenant.id, membership.tenantId))
+		.where(eq(membership.userId, userId))
+		.orderBy(tenant.name);
+}
+
+/**
+ * Resolve a tenant slug for a signed-in person, or refuse.
+ *
+ * **404 for no membership, 403 for insufficient role.** A person with no access
+ * must not be able to tell a real tenant slug from an invented one — otherwise
+ * the sign-in page becomes a way to enumerate every customer this deployment
+ * has, one guess at a time.
+ *
+ * One query with a join, for the same reason: fetching the tenant and then the
+ * membership leaks existence in the gap between them.
+ */
+export async function requireTenant(
+	userId: string | undefined,
+	slug: string,
+	minimum: Role = 'viewer'
+): Promise&lt;TenantAccess&gt; {
+	if (!userId) error(401, 'Sign in to continue.');
+
+	const rows = await db
+		.select({ tenantId: tenant.id, slug: tenant.slug, role: membership.role })
+		.from(tenant)
+		.innerJoin(membership, eq(membership.tenantId, tenant.id))
+		.where(and(eq(tenant.slug, slug), eq(membership.userId, userId)))
+		.limit(1);
+
+	const access = rows[0];
+	if (!access) error(404, 'No such workspace.');
+	if (!atLeast(access.role, minimum)) error(403, refusalFor(access.role, minimum));
+
+	return access;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>404 for no membership, 403 for the wrong role</h4>
+	<p>A person with no access must not be able to tell a real tenant slug from an invented one. Answering 403 for a tenant that exists and 404 for one that does not turns the sign-in page into a way to enumerate every customer this deployment has, one guess at a time. And it is one query with a join for the same reason: fetching the tenant and then the membership leaks existence in the gap between them.</p>
+</aside>
+<h3 id="hashing">SHA-256, deliberately, and not bcrypt</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/keys.ts<span class="code__lines">:19-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function prefixOf(key: string): string {
+	return key.slice(0, 12);
+}
+
+/**
+ * Hash a key for storage and lookup.
+ *
+ * SHA-256 rather than a password hash, and that is a deliberate difference from
+ * how passwords are stored. A password is low-entropy and human-chosen, so it
+ * needs a slow hash to make guessing expensive. An API key is 256 bits of
+ * randomness from `crypto.getRandomValues`, so guessing is not a threat and the
+ * only requirement is that the stored form is not usable — which SHA-256 gives.
+ *
+ * The practical consequence is that key lookup is an indexed equality on a hash
+ * computed in microseconds, rather than a scan comparing bcrypt hashes one row
+ * at a time. Using bcrypt here would mean ingest could not look a key up at all
+ * without scanning every key the tenant has.
+ */
+export async function hashKey(key: string): Promise&lt;string&gt; {
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+	return [...new Uint8Array(digest)].map((byte) =&gt; byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** Mint a key. Returned once, in clear, and never recoverable afterwards. */
+export function newKey(): string {
+	const bytes = crypto.getRandomValues(new Uint8Array(32));
+	const body = [...bytes].map((byte) =&gt; byte.toString(36).padStart(2, '0')).join('');
+	return `sxt_${body.slice(0, 40)}`;
+}</code></pre>
+</figure>
+<p>A password is low-entropy and human-chosen, so it needs a slow hash to make guessing expensive. An API key is 256 bits from <code>crypto.getRandomValues</code>, so guessing is not a threat and the only requirement is that the stored form is unusable.</p>
+<p>The practical consequence is what makes this a design decision rather than a preference: key lookup becomes an indexed equality on a hash computed in microseconds. With bcrypt, ingest could not look a key up at all without scanning every key the tenant has and comparing one at a time.</p>
+<h3 id="last-used">The column that is deliberately not updated here</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:148-162</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		tenantId: apiKey.tenantId,
+		scopes: apiKey.scopes,
+		revokedAt: apiKey.revokedAt
+	})
+	.from(apiKey)
+	.where(eq(apiKey.hash, hash))
+	.limit(1);
+
+const found = rows[0];
+if (!found || found.revokedAt !== null) return null;
+
+/*
+ * `lastUsedAt` is deliberately NOT updated here.
+ *
+ * It is the obvious place, and it would turn every ingest request — thousands</code></pre>
+</figure>
+<p>Updating <code>lastUsedAt</code> on authentication is the obvious place, and it would turn every ingest request — thousands a second — into a write to a single row: a write-lock convoy on exactly the table every request must read. The rollup job updates it in bulk instead, so the column is accurate to the minute, and nobody has ever needed better.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A session cannot ingest and a key cannot browse.</li><li>A tenant you are not a member of is a 404, whether or not it exists.</li><li>Key lookup is one indexed query regardless of how many keys a tenant has.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="pushdown.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Storage: pushdown, and the rule for when not to</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-tail.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Live tail: backpressure as a feature</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

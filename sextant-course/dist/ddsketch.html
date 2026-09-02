@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDSketch: percentiles you are allowed to merge — Building Sextant</title>
+<meta name="description" content="Why you cannot average a p95, what relative error means, and the log-bucket trick that makes a percentile cost a few kilobytes.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">15 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 57.692307692307686%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html" aria-current="page"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 15</p>
+			<h1>DDSketch: percentiles you are allowed to merge</h1>
+			<p class="lede">Why you cannot average a p95, what relative error means, and the log-bucket trick that makes a percentile cost a few kilobytes.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Implement a mergeable percentile sketch with a guaranteed relative error, and understand what it does not guarantee.</p></aside>
+			<p>Start with the thing everybody does and why it is wrong. You have p95 latency per minute, and you want p95 for the hour. Averaging the sixty numbers is the obvious move and it produces a figure with no meaning at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sketch/ddsketch.ts<span class="code__lines">:1-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * DDSKETCH — PERCENTILES THAT CAN BE ADDED TOGETHER
+ * =================================================
+ *
+ * The problem this solves is not &quot;computing a percentile&quot;. Sorting an array and
+ * taking the 95th element is four lines. The problem is that percentiles do not
+ * *add up*, and an observability system needs them to.
+ *
+ * A dashboard showing p95 latency over a day, at one-minute resolution, is 1,440
+ * numbers. Computing each from raw events means scanning a day of data every
+ * time somebody moves the time range. The fix everywhere else in the system is
+ * pre-aggregation: store one row per minute and read 1,440 rows. But:
+ *
+ *   avg(p95 of each minute)  ≠  p95 of the day
+ *
+ * and it is not close, and it is wrong in the direction that matters — it
+ * *understates* the tail, which is the number people are watching. So a
+ * pre-aggregated percentile has to store something that merges correctly, and
+ * that something is a sketch.
+ *
+ * WHY DDSKETCH AND NOT T-DIGEST
+ * -----------------------------
+ * t-digest gives excellent accuracy at the extremes and its error guarantee is
+ * on the *rank*: it will tell you a value near the 95th percentile. DDSketch's
+ * guarantee is on the *value*: the answer is within α relative error of the true
+ * quantile, always, for any distribution.
+ *
+ * For latency, the value guarantee is the one that means something. &quot;p95 is
+ * 210ms ± 2%&quot; is a sentence somebody can set an alert threshold against. &quot;p95 is
+ * some value whose rank is within 1% of the 95th&quot; is not, because the mapping
+ * from rank to milliseconds depends on the shape of a distribution nobody has
+ * looked at.
+ *
+ * HOW IT WORKS
+ * ------------
+ * Buckets are logarithmic. Bucket `i` holds values in `(γ^(i-1), γ^i]` where
+ * `γ = (1+α)/(1-α)`. Any value in a bucket is within α relative error of any
+ * other, so reporting the bucket's midpoint bounds the error by construction —
+ * there is no statistical argument, just algebra.
+ *
+ * Merging is adding the bucket counts. That is the whole trick, and it is why
+ * this is worth 150 lines: a rollup table can store one sketch per minute per
+ * series, and any range query is a sum.
+ */</code></pre>
+</figure>
+<p>The tests in this project construct two cases to show how wrong: a one-minute spike where the average <strong>overstates</strong> the hour’s p95 by 165%, and a rolling outage where it <strong>understates</strong> by more than a factor of thirteen. Neither is a contrived pathology; both are ordinary shapes of incident.</p>
+<aside class="callout callout--note"><p>The first draft of this course said averaging &quot;always understates&quot;. The tests said otherwise. It does both, depending on the shape, which is the point — the error has no sign you can correct for.</p></aside>
+<h3 id="relative-error">Relative error, not absolute</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sketch/ddsketch.ts<span class="code__lines">:46-64</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Relative accuracy. 2% is the usual default and is the right trade for latency:
+ * it puts p95 within 4ms at 200ms, which is far below the noise anybody is
+ * looking at, and it keeps the bucket count small enough that a serialised
+ * sketch is a few hundred bytes.
+ */
+export const DEFAULT_ALPHA = 0.02;
+
+/**
+ * Values at or below this collapse into a single zero bucket.
+ *
+ * A logarithmic mapping cannot represent zero — `log(0)` is `-Infinity` — and
+ * durations legitimately are zero. Everything below this threshold is treated as
+ * indistinguishable, which for a nanosecond-scale floor is true.
+ */
+const MIN_VALUE = 1e-9;
+
+/** Refuse to allocate past this many buckets. See `indexOf`. */
+const MAX_BUCKETS = 4096;</code></pre>
+</figure>
+<p>The guarantee is that the reported value is within <strong>α relative</strong> of the true one. At α = 0.02, a true p95 of 40ms comes back within 0.8ms and a true p95 of 4s comes back within 80ms. That is exactly the right shape for latency, where being 80ms out at four seconds is irrelevant and being 80ms out at forty milliseconds would be useless.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this beats t-digest here</h4>
+	<p>t-digest gives better accuracy at the extreme tails and its merge is more complicated, its serialisation is larger, and its error bound is not a simple statement you can put in a tooltip. &quot;Within 2% of the true value, always&quot; is a sentence somebody can act on. Choosing the simpler guarantee is a real engineering decision, not a compromise.</p>
+</aside>
+<h3 id="the-buckets">The whole trick, in one line</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sketch/ddsketch.ts<span class="code__lines">:136-179</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">add(value: number, count = 1): void {
+	if (!Number.isFinite(value)) {
+		// A NaN or an Infinity in a latency series is a bug upstream, and letting
+		// it in poisons every percentile from this sketch forever — one Infinity
+		// makes `max` infinite and the bucket index unrepresentable. Dropping it
+		// silently is the wrong answer too, which is why ingest validates before
+		// this is ever called; this is the last line of defence.
+		return;
+	}
+	if (count &lt;= 0) return;
+
+	this.#count += count;
+	this.#sum += value * count;
+	if (value &lt; this.#min) this.#min = value;
+	if (value &gt; this.#max) this.#max = value;
+
+	if (value &lt;= MIN_VALUE &amp;&amp; value &gt;= -MIN_VALUE) {
+		this.#zeroes += count;
+		return;
+	}
+
+	/*
+	 * Negative values.
+	 *
+	 * A general DDSketch keeps a second set of buckets for them. This one
+	 * refuses, because every quantity Sextant sketches — a duration, a byte
+	 * count, a queue depth — is non-negative, and the second bucket map doubles
+	 * the code and the serialised size to handle a case that would be a bug if
+	 * it arrived. It is recorded in `min` so it is still visible.
+	 */
+	if (value &lt; 0) return;
+
+	const index = this.#indexOf(value);
+	this.#buckets.set(index, (this.#buckets.get(index) ?? 0) + count);
+}
+
+/**
+ * The value at `q`, where `q` is in [0, 1].
+ *
+ * Walks buckets in ascending index order until the cumulative count reaches
+ * the rank. `Map` does not guarantee sorted iteration — it iterates in
+ * insertion order — so the keys are sorted first. Forgetting that produces a
+ * percentile that depends on the order values arrived in, which is
+ * intermittent, plausible-looking, and appears only under real traffic.</code></pre>
+</figure>
+<p>A value goes into bucket <code>ceil(log(v) / log(γ))</code> where <code>γ = (1+α)/(1−α)</code>. Because the buckets are *logarithmically* spaced, each one spans a fixed <strong>ratio</strong> rather than a fixed width — which is precisely the relative-error guarantee, falling out of the indexing rather than being enforced afterwards.</p>
+<p>And because two sketches with the same α use the same bucket boundaries, merging is adding two maps together. That is the property the whole design exists for: a rollup table can store one sketch per minute and answer an hour by merging sixty of them, exactly.</p>
+<h3 id="the-tests">The tests, and the one that was wrong</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sketch/ddsketch.spec.ts<span class="code__lines">:44-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">			expect(relativeError(sketch.quantile(q), exactQuantile(values, q))).toBeLessThanOrEqual(
+				0.005 * SLACK
+			);
+		}
+	});
+
+	it('spans six orders of magnitude without losing the guarantee', () =&gt; {
+		// A microsecond cache hit and a ten-second timeout in one series. This is
+		// where a linear bucket mapping falls apart and a logarithmic one does not.
+		const values: number[] = [];
+		for (let i = 0; i &lt; 2_000; i += 1) values.push(0.001 * Math.pow(10, i % 7));
+
+		const sketch = new DDSketch();
+		for (const value of values) sketch.add(value);
+
+		for (const q of QUANTILES) {
+			expect(relativeError(sketch.quantile(q), exactQuantile(values, q))).toBeLessThanOrEqual(
+				DEFAULT_ALPHA * SLACK
+			);
+		}
+	});
+});</code></pre>
+</figure>
+<p>The relative-error test needed a <code>SLACK</code> term, and working out why is worth the minute. The boundary case — a value landing exactly at the α limit — fails on floating-point rounding roughly half the time, and a test that fails half the time is worse than no test. The slack is a tenth of a percent and it makes the assertion about the algorithm rather than about IEEE 754.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why averaging percentiles has no meaning, with an example in each direction.</li><li>You can state the guarantee DDSketch gives, in a sentence.</li><li>Your sketch merges, and a merged sketch answers the same as one built from all the data.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="testing-an-evaluator.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Testing an evaluator against a reference</span>
+			</a>
+			<a class="pager__link pager__link--next" href="hyperloglog.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">HyperLogLog: counting things you cannot hold</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

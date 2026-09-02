@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live tail: backpressure as a feature — Building Sextant</title>
+<meta name="description" content="Server-sent events with a bounded buffer, a dropped count that is shown rather than logged, and the ping that stops a proxy killing the stream.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html" aria-current="page"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>Live tail: backpressure as a feature</h1>
+			<p class="lede">Server-sent events with a bounded buffer, a dropped count that is shown rather than logged, and the ping that stops a proxy killing the stream.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Stream matching rows as they arrive, and be honest when there are more than anybody can read.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:1-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * LIVE TAIL
+ * =========
+ *
+ * Server-sent events carrying matching rows as they arrive.
+ *
+ * WHY THIS IS A ROUTE AND NOT A LIVE QUERY
+ * ----------------------------------------
+ * `query.live` streams *query results*, and re-running a query is the wrong
+ * shape for &quot;here are the eleven lines that just matched&quot;. The board list in
+ * chapter 32 of the previous project used it correctly, because a list genuinely
+ * is a query result. This is a log tail, and a log tail wants a push.
+ *
+ * BACKPRESSURE IS THE FEATURE
+ * ---------------------------
+ * A tail is opened precisely when something is going wrong, which is precisely
+ * when volume is highest. A naive implementation enqueues every matching row and
+ * discovers that a browser rendering ten thousand lines a second cannot, so the
+ * stream's internal buffer grows until the tab dies — and the last thing anybody
+ * saw was two minutes stale.
+ *
+ * So this one buffers a bounded number of rows, **counts what it dropped**, and
+ * sends the count. &quot;Showing 200 of 4,182 lines a second&quot; is a true and useful
+ * sentence. Silently showing 200 is a lie that makes somebody conclude the error
+ * stopped happening.
+ */</code></pre>
+</figure>
+<p>A tail is opened precisely when something is going wrong, which is precisely when volume is highest. The naive implementation enqueues every matching row and discovers that a browser rendering ten thousand lines a second cannot — the stream’s internal buffer grows until the tab dies, and the last thing anybody saw was two minutes stale.</p>
+<h3 id="the-buffer">A bounded buffer, and a number</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:37-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The most rows to hold between flushes.
+ *
+ * Sized against what a person can read rather than what a socket can carry: past
+ * a few hundred lines a second nobody is reading individual lines anyway, they
+ * are watching the shape — and the shape is better served by the dropped count
+ * than by more lines nobody sees.
+ */
+const BUFFER = 200;
+
+/** How often the buffer is flushed. 100ms reads as instant and batches usefully. */
+const FLUSH_MS = 100;
+
+/**
+ * A comment frame every twenty seconds.
+ *
+ * Proxies close an idle connection after thirty to sixty seconds, and to the
+ * browser that looks like a failure worth retrying — so a quiet tail reconnects
+ * every minute forever, replaying its catch-up query each time. Two bytes ends
+ * the cycle.
+ */
+const PING_MS = 20_000;</code></pre>
+</figure>
+<p>Two hundred rows between flushes, sized against what a person can read rather than what a socket can carry. Past a few hundred lines a second nobody is reading individual lines anyway — they are watching the shape, and the shape is better served by the dropped count than by more lines nobody sees.</p>
+<p>&quot;Showing 200 of 4,182 lines a second&quot; is a true and useful sentence. Silently showing 200 is a lie that makes somebody conclude the error stopped happening.</p>
+<h3 id="filter-on-the-server">The filter runs on the server</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:119-142</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">unsubscribe = subscribe(access.tenantId, (batch) =&gt; {
+	if (batch.signal !== signal) return;
+
+	/*
+	 * The filter runs here, on the server, against the same evaluator the
+	 * query path uses.
+	 *
+	 * Sending everything and filtering in the browser would be simpler and
+	 * would send a tenant's entire firehose to every open tab — which is
+	 * both a bandwidth problem and, more seriously, a permissions one: a
+	 * viewer scoped to one service would receive every other service's log
+	 * lines and be trusted not to look.
+	 */
+	const kept = evaluate(query, batch.rows, { maxRows: BUFFER * 4 }).rows;
+	matched += kept.length;
+
+	for (const row of kept) {
+		if (pending.length &gt;= BUFFER) {
+			dropped += 1;
+			continue;
+		}
+		pending.push(row);
+	}
+});</code></pre>
+</figure>
+<p>Sending everything and filtering in the browser would be simpler and would send a tenant’s entire firehose to every open tab. That is a bandwidth problem and, more seriously, a permissions one: a viewer scoped to one service would receive every other service’s log lines and be trusted not to look.</p>
+<h3 id="refusals">What a tail refuses</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:76-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * A tail only makes sense over raw rows.
+ *
+ * `summarize` produces one row per group over a *window*, and there is no
+ * meaningful streaming answer to &quot;the p95 so far&quot; that is not either wrong or
+ * a different feature. Refusing with a sentence that says what to do instead
+ * is better than streaming something that looks like an answer.
+ */
+if (query.stages.some((stage) =&gt; stage.kind === 'summarize')) {
+	error(400, {
+		message: 'A tail cannot summarize. Remove the summarize, or use the chart instead.'
+	});
+}</code></pre>
+</figure>
+<p>There is no meaningful streaming answer to &quot;the p95 so far&quot; that is not either wrong or a different feature. Refusing with a sentence that says what to do instead is better than streaming something that looks like an answer.</p>
+<h3 id="the-headers">Two headers and a ping</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:175-191</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">return new Response(stream, {
+	headers: {
+		'content-type': 'text/event-stream',
+		/*
+		 * `no-transform` as well as `no-store`.
+		 *
+		 * Without it a reverse proxy will happily buffer the whole stream and
+		 * deliver it when the connection closes — which for an endless stream is
+		 * never. The symptom is a tail that works locally and is dead behind
+		 * nginx, and `x-accel-buffering` is the same instruction said again in
+		 * the dialect nginx actually reads.
+		 */
+		'cache-control': 'no-store, no-transform',
+		'x-accel-buffering': 'no',
+		connection: 'keep-alive'
+	}
+});</code></pre>
+</figure>
+<p><code>no-transform</code> as well as <code>no-store</code>, because without it a reverse proxy will happily buffer the whole stream and deliver it when the connection closes — which for an endless stream is never. The symptom is a tail that works locally and is dead behind nginx, and <code>x-accel-buffering</code> is the same instruction said again in the dialect nginx reads.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/tail/+server.ts<span class="code__lines">:47-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** How often the buffer is flushed. 100ms reads as instant and batches usefully. */
+const FLUSH_MS = 100;
+
+/**
+ * A comment frame every twenty seconds.
+ *
+ * Proxies close an idle connection after thirty to sixty seconds, and to the
+ * browser that looks like a failure worth retrying — so a quiet tail reconnects
+ * every minute forever, replaying its catch-up query each time. Two bytes ends
+ * the cycle.</code></pre>
+</figure>
+<p>And a comment frame every twenty seconds, because proxies close an idle connection after thirty to sixty — which to the browser looks like a failure worth retrying. Without it a quiet tail reconnects every minute forever, replaying its catch-up query each time.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A tail under load shows a bounded number of lines and a count of what it dropped.</li><li>A tail on a <code>summarize</code> query is refused with a sentence.</li><li>An idle tail stays open for an hour.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="sessions-and-keys.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Sessions for people, keys for machines</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

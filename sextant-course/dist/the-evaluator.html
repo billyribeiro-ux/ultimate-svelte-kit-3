@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The evaluator — Building Sextant</title>
+<meta name="description" content="Rows in, rows out, one stage at a time — plus the regex cache, the truncation flag, and why `summarize` builds its groups in one pass.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 50%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html" aria-current="page"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>The evaluator</h1>
+			<p class="lede">Rows in, rows out, one stage at a time — plus the regex cache, the truncation flag, and why <code>summarize</code> builds its groups in one pass.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run a checked query over an array of rows, and know where every allocation goes.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.ts<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE EVALUATOR
+ * =============
+ *
+ * Run a checked query over rows. This is the reference implementation: correct,
+ * straightforward, and the thing the storage layer's pushed-down SQL is tested
+ * *against*. Two implementations of the same language sounds like duplication
+ * and is the opposite — it is the only way to know the fast path is right, and
+ * `pushdown.spec.ts` runs both over the same data and compares.
+ *
+ * WHAT THIS DELIBERATELY IS NOT
+ * -----------------------------
+ * Not vectorised, not columnar, not lazy. It walks rows and evaluates an AST per
+ * row, which is roughly the slowest reasonable design. That is fine, because it
+ * runs on at most a few thousand rows: the storage layer pushes `where`, `sort`
+ * and `take` into SQL, and this evaluates what comes back. The moment it becomes
+ * the bottleneck, the fix is to push more down rather than to make this clever —
+ * and having it stay simple is what makes that comparison trustworthy.
+ *
+ * AGGREGATION AND THE SKETCHES
+ * ----------------------------
+ * `percentile` and `dcount` go through the mergeable sketches, even here where
+ * an exact answer is available from the rows in hand. That is deliberate: the
+ * numbers a person sees must not change depending on whether a query happened to
+ * hit a rollup or the raw table. A p95 that shifts by 1.5% when the time range
+ * crosses the rollup boundary is a bug report nobody can reproduce.
+ */
+
+import type { Aliased, Expr, Query, Stage } from './ast.ts';
+import { functionFor } from './schema.ts';
+import { DDSketch } from '#lib/sketch/ddsketch.ts';
+import { HyperLogLog } from '#lib/sketch/hyperloglog.ts';
+import {
+	and3,
+	asNumber,
+	asString,
+	compareValues,
+	equals3,
+	groupKey,
+	isTrue,
+	not3,
+	or3,
+	type Row,
+	type Value
+} from './value.ts';</code></pre>
+</figure>
+<p>The evaluator assumes its input has been <strong>checked</strong>. That is a real precondition, not a wish: it means <code>evalBinary</code> never has to ask whether a duration is being compared to a string, because the checker refused that query before anything reached here.</p>
+<h3 id="truncation">Truncation, said out loud</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.ts<span class="code__lines">:47-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface EvalOptions {
+	/**
+	 * A ceiling on rows produced, independent of `take`.
+	 *
+	 * A query with no `take` over a wide range would otherwise materialise
+	 * everything. The limit is applied after `where` and before `sort`, so it
+	 * truncates rather than sampling — and the caller is told, so the interface
+	 * can say &quot;showing the first N&quot; rather than implying it is all of them.
+	 */
+	readonly maxRows?: number;
+}
+
+export interface EvalResult {
+	readonly columns: readonly string[];
+	readonly rows: readonly Row[];
+	/** True when `maxRows` cut the result short. The interface must say so. */
+	readonly truncated: boolean;
+}
+
+const DEFAULT_MAX_ROWS = 10_000;</code></pre>
+</figure>
+<p>A result that was cut off must never look complete. The evaluator is handed a ceiling and reports whether it hit it, and every layer above passes that upwards until the table can say &quot;showing the first 20,000 rows&quot; rather than implying it is all of them.</p>
+<aside class="callout callout--warn"><p>There is a subtlety here that bit this project and we will meet again in chapter 24: the storage layer reads <code>maxRows + 1</code> rows from SQL. Without the extra row, a query that fills the ceiling exactly is indistinguishable from one that stopped there, and the result silently claims to be complete.</p></aside>
+<h3 id="stages">One pass per stage</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.ts<span class="code__lines">:68-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function evaluate(
+	query: Query,
+	input: Iterable&lt;Row&gt;,
+	options: EvalOptions = {}
+): EvalResult {
+	const maxRows = options.maxRows ?? DEFAULT_MAX_ROWS;
+
+	let rows: Row[] = [];
+	let truncated = false;
+
+	for (const row of input) {
+		if (rows.length &gt;= maxRows) {
+			truncated = true;
+			break;
+		}
+		rows.push(row);
+	}
+
+	let columns: string[] | null = null;
+
+	for (const stage of query.stages) {
+		switch (stage.kind) {
+			case 'where':
+				rows = rows.filter((row) =&gt; isTrue(asBoolean(evalExpr(stage.predicate, row))));
+				break;
+
+			case 'summarize': {
+				const result = summarize(stage, rows);
+				rows = result.rows;
+				columns = result.columns;
+				// A summarize collapses everything: whatever was truncated before it no
+				// longer describes the output, and saying so would be a lie in the
+				// alarming direction.</code></pre>
+</figure>
+<p>Nothing clever: a fold over the stages, each one taking an array and returning an array. It allocates more than a fused implementation would, and the fused version would be a compiler — which is the right answer at a hundred times this data and the wrong one here.</p>
+<h3 id="summarize">Grouping in one pass</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.ts<span class="code__lines">:328-337</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The running state of one aggregate within one group. */
+interface Accumulator {
+	count: number;
+	sum: number;
+	/** Present only for the aggregates that need them, so a `count()` costs nothing. */
+	sketch?: DDSketch;
+	hll?: HyperLogLog;
+	min?: Value;
+	max?: Value;
+}</code></pre>
+</figure>
+<p>One accumulator per group, built as the rows go past. The alternative — collect the rows per group, then aggregate — needs memory proportional to the *data* rather than to the number of groups, and the number of groups is the small number.</p>
+<p>This is also where DDSketch and HyperLogLog appear: an accumulator for <code>percentile</code> holds a sketch rather than a list of samples, so a percentile over ten million rows costs a few kilobytes. Those are the next two chapters.</p>
+<h3 id="regex-cache">A cache with a bound, and why the bound exists</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.ts<span class="code__lines">:600-631</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A tiny cache, because a `where` compiles the same pattern once per row.
+ *
+ * Bounded, because the key is user input: an editor sending a query on every
+ * keystroke produces a new pattern each time, and an unbounded cache keyed by
+ * user input is a memory leak with a friendly name.
+ */
+const REGEX_CACHE = new Map&lt;string, RegExp | null&gt;();
+const REGEX_CACHE_MAX = 256;
+
+function compileRegex(pattern: string): RegExp | null {
+	const cached = REGEX_CACHE.get(pattern);
+	if (cached !== undefined) return cached;
+
+	let compiled: RegExp | null;
+	try {
+		compiled = new RegExp(pattern);
+	} catch {
+		compiled = null;
+	}
+
+	if (REGEX_CACHE.size &gt;= REGEX_CACHE_MAX) {
+		// Evict the oldest. `Map` iterates in insertion order, so the first key is
+		// the least recently added — not the least recently *used*, which would need
+		// a second structure to track and is not worth it for a 256-entry cache.
+		const oldest = REGEX_CACHE.keys().next();
+		if (!oldest.done) REGEX_CACHE.delete(oldest.value);
+	}
+
+	REGEX_CACHE.set(pattern, compiled);
+	return compiled;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Every cache in a query engine needs a bound</h4>
+	<p>The pattern in <code>=~</code> comes from the query, and queries come from people. An unbounded cache keyed by pattern is a memory leak with an attacker-controlled key: a loop of distinct patterns fills it forever. The bound is 256 and the eviction is &quot;clear it&quot; rather than LRU, because an LRU here would be forty lines to avoid re-compiling a handful of regexes.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>evaluate(parse(&quot;from logs | where level == \&quot;error\&quot; | take 5&quot;).query, rows)</code> gives five rows.</li><li>A result that hit the ceiling reports <code>truncated: true</code>.</li><li>You can say why <code>summarize</code> accumulates rather than collecting.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="three-valued-logic.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Values, and three-valued logic</span>
+			</a>
+			<a class="pager__link pager__link--next" href="testing-an-evaluator.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Testing an evaluator against a reference</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

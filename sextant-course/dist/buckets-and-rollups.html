@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buckets, steps and rollups — Building Sextant</title>
+<meta name="description" content="A fixed ladder of steps where every rung divides the next, absolute rather than now-relative boundaries, and the gap a chart must draw as a gap.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 65.38461538461539%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html" aria-current="page"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>Buckets, steps and rollups</h1>
+			<p class="lede">A fixed ladder of steps where every rung divides the next, absolute rather than now-relative boundaries, and the gap a chart must draw as a gap.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Bucket a time range so that two charts of the same data agree, and a coarse series can be built from a finer one.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/bucket.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TIME BUCKETS
+ * ============
+ *
+ * Turning &quot;the last six hours&quot; and &quot;a chart 900 pixels wide&quot; into a step, and
+ * aligning a range to it.
+ *
+ * THE RULE THAT MATTERS: BUCKETS ARE ABSOLUTE, NOT RELATIVE
+ * --------------------------------------------------------
+ * A five-minute bucket starts at :00, :05, :10 — never at &quot;five minutes before
+ * now&quot;. Aligning to the query time would give every request a different set of
+ * bucket boundaries, which means:
+ *
+ *   - no two dashboards agree, because they loaded a second apart
+ *   - nothing can be cached, because the key includes the current millisecond
+ *   - a rollup table is useless, because its rows are on absolute boundaries
+ *   - a chart appears to shimmer as it refreshes, because every point moves
+ *
+ * All four are consequences of one line: `Math.floor(t / step) * step`. Getting
+ * it wrong is easy — `now - i * step` reads naturally — and every one of those
+ * symptoms is investigated separately before somebody finds the cause.
+ *
+ * THE STEPS ARE A FIXED LADDER
+ * ----------------------------
+ * Not `range / pixels` rounded to something tidy. A fixed ladder means the step
+ * changes in visible jumps as you zoom, which is what makes a rollup table
+ * possible at all: pre-aggregating at 1m, 5m, 1h and 1d covers every step a
+ * query can ask for, and an arbitrary step would need a rollup per width.
+ */</code></pre>
+</figure>
+<p>Two decisions, both of which look like details and are not.</p>
+<h3 id="absolute">Absolute boundaries, not now-relative</h3>
+<p>A bucket starts at a multiple of its step <strong>since the epoch</strong>, not at &quot;now minus n steps&quot;. The difference only shows up when two things bucket the same data a second apart — a chart and the alert evaluator, say — and disagree about which minute a point belongs to. Absolute boundaries mean everything that buckets at 1m produces the same buckets, forever, everywhere.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/bucket.ts<span class="code__lines">:91-99</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Round a timestamp down to the start of its bucket. Absolute, not relative. */
+export function floorTo(timestamp: number, step: number): number {
+	return Math.floor(timestamp / step) * step;
+}
+
+/** Round up. Used for the exclusive end of an aligned range. */
+export function ceilTo(timestamp: number, step: number): number {
+	return Math.ceil(timestamp / step) * step;
+}</code></pre>
+</figure>
+<h3 id="the-ladder">A ladder where every rung divides the next</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/bucket.ts<span class="code__lines">:36-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The steps a chart may use, ascending.
+ *
+ * Every one divides the next one that is a multiple of it, so a coarser series
+ * can always be built by merging finer buckets — which is what lets a 1h rollup
+ * answer a 6h query without touching raw data. `10s` into `30s` into `1m` into
+ * `5m` and so on: check the ladder against that property when adding a step, or
+ * the rollup merge silently produces buckets that straddle boundaries.
+ */
+export const STEPS: readonly number[] = [
+	SECOND,
+	5 * SECOND,
+	10 * SECOND,
+	30 * SECOND,
+	MINUTE,
+	5 * MINUTE,
+	10 * MINUTE,
+	30 * MINUTE,
+	HOUR,
+	3 * HOUR,
+	6 * HOUR,
+	12 * HOUR,
+	DAY
+];
+
+/** The rollup resolutions actually stored. A query picks the finest that divides its step. */
+export const ROLLUPS: readonly number[] = [MINUTE, 5 * MINUTE, HOUR, DAY];</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The property that makes rollups possible</h4>
+	<p>Because <code>10s</code> divides <code>30s</code> divides <code>1m</code> divides <code>5m</code>, a coarser series can always be built by merging finer buckets — which is what lets an hourly rollup answer a six-hour query without touching raw data. Add a step that breaks the property and the rollup merge silently produces buckets that straddle boundaries, which is a wrong chart rather than an error.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/bucket.ts<span class="code__lines">:71-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The finest step that keeps the number of buckets under `maxBuckets`.
+ *
+ * `maxBuckets` is the chart's pixel width, near enough: drawing more buckets
+ * than there are pixels is work whose result is thrown away by the rasteriser,
+ * and it is the single most common reason a metrics UI is slow.
+ */
+export function stepFor(range: Range, maxBuckets: number): number {
+	const span = Math.max(0, range.to - range.from);
+	if (span === 0) return STEPS[0]!;
+
+	for (const step of STEPS) {
+		if (span / step &lt;= maxBuckets) return step;
+	}
+
+	// Past the ladder: a range of years. Use the coarsest and accept more buckets
+	// rather than inventing a step no rollup can serve.
+	return STEPS.at(-1)!;
+}</code></pre>
+</figure>
+<p><code>maxBuckets</code> is the chart’s pixel width, near enough. Drawing more buckets than there are pixels is work whose result is thrown away by the rasteriser, and it is the single most common reason a metrics interface is slow.</p>
+<h3 id="gaps">A gap has to be a gap</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/bucket.ts<span class="code__lines">:140-160</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Fill in the buckets a series does not have.
+ *
+ * A metric that reported nothing for ten minutes has no rows for those buckets,
+ * and a chart drawn from the rows alone connects the two sides of the gap with a
+ * straight line — which reads as &quot;it was fine the whole time&quot; rather than &quot;we
+ * have no idea&quot;. Explicit nulls are what let the renderer break the line.
+ *
+ * The distinction matters most for exactly the series people watch during an
+ * incident, because an agent that has stopped reporting is a symptom.
+ */
+export function densify&lt;T&gt;(
+	points: readonly { readonly at: number; readonly value: T }[],
+	range: Range,
+	step: number
+): { at: number; value: T | null }[] {
+	const byBucket = new Map&lt;number, T&gt;();
+	for (const point of points) byBucket.set(floorTo(point.at, step), point.value);
+
+	return buckets(range, step).map((at) =&gt; ({ at, value: byBucket.get(at) ?? null }));
+}</code></pre>
+</figure>
+<p>A query returns rows for the buckets that had data. Handing those straight to a chart draws a straight line across the outage — and a straight line is indistinguishable from a steady value. <code>densify</code> fills the missing buckets explicitly, so the drawing code can see the hole and leave it.</p>
+<aside class="callout callout--warn"><p>This is the one in the list most likely to ship broken, because the chart looks *better* without it. A line with no gaps looks tidy. It also means the most important minute of the day is drawn as if nothing happened.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Two components bucketing the same range a second apart produce identical bucket starts.</li><li>Every step in your ladder divides the next one that is a multiple of it.</li><li>A range with a missing minute produces a point for that minute, not a shorter array.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hyperloglog.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">HyperLogLog: counting things you cannot hold</span>
+			</a>
+			<a class="pager__link pager__link--next" href="lttb.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">LTTB: keeping the shape</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

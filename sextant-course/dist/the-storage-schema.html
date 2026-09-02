@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The schema, and the indexes that decide everything — Building Sextant</title>
+<meta name="description" content="Three tables of telemetry, one composite index that every query uses, and two timestamps that must never be conflated.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">21 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 80.76923076923077%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html" aria-current="page"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 21</p>
+			<h1>The schema, and the indexes that decide everything</h1>
+			<p class="lede">Three tables of telemetry, one composite index that every query uses, and two timestamps that must never be conflated.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Design tables where the common query is an index seek, and know why each index is in that order.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:1-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE DATABASE
+ * ============
+ *
+ * Four kinds of table, and the difference between them is the whole design:
+ *
+ *   raw        `event` and `span`. Append-only, never updated, deleted in bulk
+ *              by the retention job. The source of truth.
+ *   derived    `rollup`. Pre-aggregated buckets holding serialised sketches.
+ *              A cache: truncate it and the numbers still come out, slower.
+ *   config     tenants, members, keys, saved views, alert rules. Ordinary CRUD.
+ *   state      `alert_status`, `outbox`. Small, mutable, and the only tables
+ *              where a race would matter.
+ *
+ * That split is worth stating because it decides what needs a transaction, what
+ * needs an index, and what can be thrown away under pressure. Ingest writes only
+ * to `raw` and never reads; the rollup job writes only to `derived`; a query
+ * reads `derived` when it can and `raw` when it must.
+ *
+ * WHY SQLITE FOR A TELEMETRY STORE
+ * --------------------------------
+ * Because this is a *teaching* system that must be honest about its limits
+ * rather than pretend to be Clickhouse. libSQL gives real indexes, real
+ * transactions and a real query planner, and it is genuinely the right choice up
+ * to a few hundred million rows on one box — which is more telemetry than most
+ * teams have. Past that, the shape here transfers: the raw tables become a
+ * columnar store, the rollups become materialised views, and everything above
+ * `storage.ts` is unchanged. What does *not* transfer is a design that assumed a
+ * document database and stored one JSON blob per event, which is why this looks
+ * like a schema rather than a bucket.
+ */
+
+import { relations, sql } from 'drizzle-orm';
+import {
+	index,
+	integer,
+	primaryKey,
+	real,
+	sqliteTable,
+	text,
+	uniqueIndex
+} from 'drizzle-orm/sqlite-core';
+import { user } from './auth.schema.ts';
+
+/*
+ * The extension is required.
+ *
+ * Vite resolves an extensionless import; the plain Node loader that runs
+ * `scripts/seed.ts` does not, and the failure is `ERR_MODULE_NOT_FOUND` pointing
+ * at a path with no suffix.
+ */
+export * from './auth.schema.ts';</code></pre>
+</figure>
+<p>Every table is scoped to a tenant and every query is bounded by time. That pair is the access path for the entire product, and the index order follows from it rather than from what looks reasonable.</p>
+<h3 id="two-timestamps">Two timestamps, and why both</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:154-163</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Log lines.
+ *
+ * `timestamp` is the *sender's* clock and `receivedAt` is ours. Both are kept,
+ * and the distinction matters more than it looks: a query filters on `timestamp`
+ * because that is when the thing happened, while retention deletes on
+ * `receivedAt` because that is when we became responsible for it. Using one
+ * column for both means a sender with a wrong clock either escapes retention
+ * forever or is deleted the moment it arrives.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The bug you get from having one</h4>
+	<p>A query filters on <code>timestamp</code> because that is when the thing happened. Retention deletes on <code>receivedAt</code> because that is when we became responsible for it. Use one column for both and a sender with a wrong clock either escapes retention forever — a timestamp in 2030 is never old enough to delete — or is deleted the moment it arrives.</p>
+</aside>
+<h3 id="the-index">The index every query uses</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:187-209</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	(table) =&gt; [
+		/*
+		 * THE INDEX EVERY QUERY USES
+		 *
+		 * `(tenant, timestamp)` and nothing before it. Every query is scoped to one
+		 * tenant and one time range, so this is the access path for all of them, and
+		 * putting `service` first — which looks reasonable, since most queries also
+		 * filter on it — would make a query without a service filter scan the table.
+		 *
+		 * Descending on timestamp because every default view is &quot;most recent first&quot;,
+		 * and SQLite can walk an index backwards but pays for it.
+		 */
+		index('event_tenant_time_idx').on(table.tenantId, table.timestamp),
+
+		// The two filters common enough to earn their own index. Both include the
+		// tenant first for the same reason.
+		index('event_tenant_service_time_idx').on(table.tenantId, table.service, table.timestamp),
+		index('event_tenant_trace_idx').on(table.tenantId, table.traceId),
+
+		// Retention deletes by arrival, not by event time. See the note above.
+		index('event_received_idx').on(table.receivedAt)
+	]
+);</code></pre>
+</figure>
+<p><code>(tenant, timestamp)</code> and nothing before it. Putting <code>service</code> first looks reasonable — most queries also filter on a service — and makes every query *without* a service filter scan the table. The rule is that the column present in <strong>all</strong> queries goes first.</p>
+<h3 id="series">Series, and the column that makes cardinality countable</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:289-320</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Which series a tenant has seen, and when.
+ *
+ * Exists solely to enforce the cardinality limit without a `count(distinct)` on
+ * the hot path. Ingest checks this table, which is small, rather than the sample
+ * table, which is not.
+ *
+ * `firstSeen` makes &quot;what appeared in the last hour&quot; answerable, which is the
+ * question somebody asks the moment a cardinality alarm goes off — and the
+ * answer is almost always one deploy that added a label.
+ */
+export const series = sqliteTable(
+	'series',
+	{
+		tenantId: text('tenant_id')
+			.notNull()
+			.references(() =&gt; tenant.id, { onDelete: 'cascade' }),
+		metric: text('metric').notNull(),
+		seriesKey: text('series_key').notNull(),
+		labels: text('labels').notNull().default('{}'),
+		firstSeen: integer('first_seen').notNull(),
+		lastSeen: integer('last_seen').notNull()
+	},
+	(table) =&gt; [
+		primaryKey({ columns: [table.tenantId, table.metric, table.seriesKey] }),
+		index('series_tenant_metric_idx').on(table.tenantId, table.metric)
+	]
+);
+
+/* ------------------------------------------------------------------ */
+/* Rollups — the derived table                                         */
+/* ------------------------------------------------------------------ */</code></pre>
+</figure>
+<p>A metric sample does not store its labels; it stores a <strong>series key</strong>, and the labels live once on the series row. That is what makes &quot;how many distinct label combinations does this tenant have for this metric&quot; a <code>count(*)</code> on an indexed table rather than a scan over every sample — and cheap cardinality counting is the difference between a limit that is enforced and a limit that is documented.</p>
+<p>How that key is built is the subject of chapter 23, and it is where this project’s strangest bug lived.</p>
+<h3 id="wal">And three PRAGMAs</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The database handle.
+ *
+ * One client for the process, created at import time. libSQL pools internally,
+ * so a second client would mean a second pool competing for the same file — and
+ * with SQLite, two pools writing to one file is how you meet `SQLITE_BUSY`.
+ */
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL } from '$app/env/private';
+import * as schema from './schema.ts';
+
+const client = createClient({
+	url: DATABASE_URL,
+
+	/*
+	 * WRITE-AHEAD LOGGING AND A BUSY TIMEOUT
+	 * ======================================
+	 *
+	 * SQLite's default journal mode allows one writer *and blocks readers while
+	 * it writes*. For a telemetry store that is exactly backwards: ingest writes
+	 * continuously and every dashboard reads continuously, so the default turns
+	 * every query into a queue behind whatever batch happens to be landing.
+	 *
+	 * WAL lets readers proceed against the last committed state while a writer
+	 * appends, which is the access pattern this whole application has. It is the
+	 * single highest-value line in the file.
+	 *
+	 * `busy_timeout` covers the case WAL does not: two *writers*. SQLite still
+	 * allows only one, and without a timeout the second gets `SQLITE_BUSY`
+	 * immediately rather than waiting the few milliseconds the first needs. That
+	 * surfaces as an ingest request failing at random under load — and as tests
+	 * failing when two spec files touch the database at once, which is how this
+	 * was found.
+	 */
+	intMode: 'number'
+});
+
+/*
+ * Pragmas, applied once at startup.</code></pre>
+</figure>
+<p>WAL mode so a reader is not blocked by a writer, a busy timeout so a writer waits rather than failing, and <code>synchronous = normal</code> because on a WAL database that is the setting that trades an fsync per commit for an fsync per checkpoint — which for telemetry, where losing the last few milliseconds of a crash is survivable, is the right trade.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every telemetry table is <code>(tenant, timestamp)</code>-indexed first.</li><li>You can say what breaks if <code>timestamp</code> and <code>receivedAt</code> are the same column.</li><li>You can explain why a series key exists rather than storing labels per sample.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-alert-machine.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The alert state machine</span>
+			</a>
+			<a class="pager__link pager__link--next" href="ingest.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Ingest: streamed, bounded, idempotent</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

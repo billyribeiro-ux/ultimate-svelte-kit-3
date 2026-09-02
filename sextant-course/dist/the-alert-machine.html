@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The alert state machine — Building Sextant</title>
+<meta name="description" content="`for` duration, hysteresis, and the one case that decides whether an alerting system is trustworthy: no data is not zero.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 76.92307692307693%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html" aria-current="page"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>The alert state machine</h1>
+			<p class="lede"><code>for</code> duration, hysteresis, and the one case that decides whether an alerting system is trustworthy: no data is not zero.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write alert evaluation as a pure function, and get the three cases right that make alerts worth having.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/alert/machine.ts<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE ALERT STATE MACHINE
+ * =======================
+ *
+ * When does a number crossing a line become somebody's phone ringing at 3am?
+ *
+ * The naive answer — &quot;when value &gt; threshold&quot; — produces an alerting system
+ * people turn off. Three things go wrong with it, and each needs a different
+ * piece of state:
+ *
+ *   **Flapping.** A metric oscillating either side of the line fires and
+ *   resolves every evaluation. Ten pages in ten minutes for one problem, and
+ *   after the third nobody reads them.
+ *
+ *   **Spikes.** A single bad sample is usually a scrape hiccup, a GC pause, or
+ *   one unlucky request. Paging on it trains people to wait and see, which is
+ *   the opposite of what an alert is for.
+ *
+ *   **No memory.** Without knowing it already fired, an alert cannot say &quot;still
+ *   firing&quot; or &quot;resolved after 14 minutes&quot; — and &quot;resolved&quot; is the message that
+ *   lets somebody stop looking.
+ *
+ * So: four states, a `for` duration before firing, and a separate `clearsAt`
+ * threshold with hysteresis.
+ *
+ *      ┌──────┐  above       ┌─────────┐  above for `for`   ┌────────┐
+ *      │  ok  │─────────────▶│ pending │───────────────────▶│ firing │
+ *      └──────┘              └─────────┘                    └────────┘
+ *          ▲                      │                              │
+ *          │  below clearsAt      │  below clearsAt              │
+ *          └──────────────────────┴──────────────────────────────┘
+ *
+ * WHY THIS IS A PURE FUNCTION
+ * ---------------------------
+ * `step(state, sample) -&gt; state` takes the clock as an argument and touches
+ * nothing else. That makes the whole of alerting exhaustively testable in
+ * milliseconds — every transition, every boundary, every ordering — without a
+ * database, a scheduler or a fake timer. The evaluator that calls it is the only
+ * part that needs either, and it is thirty lines.
+ */</code></pre>
+</figure>
+<p>Three states, and the middle one is the whole point. <code>pending</code> is &quot;the threshold has been crossed but not for long enough&quot;, which is what stops a single bad sample paging somebody at 3am.</p>
+<h3 id="hysteresis">Hysteresis, and why it is not optional</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/alert/machine.ts<span class="code__lines">:44-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface AlertRule {
+	readonly id: string;
+	/** Fire when the value is above this. */
+	readonly threshold: number;
+	/**
+	 * Resolve when the value falls below this. Defaults to `threshold`.
+	 *
+	 * HYSTERESIS, AND WHY IT IS NOT OPTIONAL
+	 *
+	 * With one threshold, a metric sitting at exactly the line fires and resolves
+	 * on alternate evaluations forever. Two thresholds give the metric somewhere
+	 * to be that is neither firing nor resolving, and the gap only has to be
+	 * bigger than the metric's noise — which for a p95 latency is a few percent.
+	 *
+	 * It is separate from `for` and does a different job: `for` stops a *brief*
+	 * excursion from paging, and `clearsAt` stops a *sustained* value near the
+	 * line from paging repeatedly.
+	 */
+	readonly clearsAt?: number;
+	/**
+	 * How long the value must stay above the threshold before firing.
+	 *
+	 * Zero means fire on the first sample, which is right for a rule on something
+	 * that is never briefly true — &quot;the certificate expires in under a day&quot; — and
+	 * wrong for anything sampled.
+	 */
+	readonly forMs: number;
+	/** Direction. `below` for &quot;throughput dropped&quot;, which is the same machine mirrored. */
+	readonly direction?: 'above' | 'below';
+}</code></pre>
+</figure>
+<p>With one threshold, a metric sitting exactly on the line fires and resolves on alternate evaluations, forever. Two thresholds give it somewhere to be that is neither firing nor resolving, and the gap only has to be bigger than the metric’s noise.</p>
+<p>It does a <strong>different</strong> job from <code>for</code>, and conflating them is common. <code>for</code> stops a *brief* excursion from paging. <code>clearsAt</code> stops a *sustained* value near the line from paging repeatedly. A rule can need both.</p>
+<h3 id="no-data">No data is not zero</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/alert/machine.ts<span class="code__lines">:113-130</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	readonly effect: AlertEffect;
+}
+
+/**
+ * Advance the machine by one evaluation.
+ *
+ * `value` is `null` when the query returned no data, which is a case worth
+ * naming: it is *not* the same as zero. A rule on error rate whose query returns
+ * nothing means no requests were made, not that the error rate is fine — and
+ * treating it as zero silently resolves an alert during a total outage, which is
+ * the single worst failure an alerting system can have.
+ */
+export function step(
+	rule: AlertRule,
+	status: AlertStatus,
+	value: number | null,
+	at: number
+): StepResult {</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>This is the single most important case in the file. A rule on error rate whose query returns nothing means <strong>no requests were served</strong> — not that the error rate is fine. Treating it as zero silently resolves the alert during a total outage, which is the worst thing an alerting system can do, and it is the default behaviour of the obvious implementation.</p></aside>
+<p>The machine therefore *holds* its state on <code>null</code>. A firing alert stays firing; an ok alert stays ok. Neither is perfect and both are better than a confident wrong answer.</p>
+<h3 id="pure">Pure, and what that buys</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/alert/machine.ts<span class="code__lines">:101-114</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type AlertEffect =
+	| { readonly kind: 'none' }
+	| { readonly kind: 'fired'; readonly value: number; readonly at: number }
+	| {
+			readonly kind: 'resolved';
+			readonly value: number | null;
+			readonly at: number;
+			readonly firedFor: number;
+	  };
+
+export interface StepResult {
+	readonly status: AlertStatus;
+	readonly effect: AlertEffect;
+}</code></pre>
+</figure>
+<p><code>step</code> returns the new status <strong>and</strong> what should happen to the outside world, rather than performing it. That is what lets the caller decide: write a row and send a notification during normal evaluation, and neither during a backfill that replays six hours of history to see whether a rule would have fired.</p>
+<p>It is also what makes the tests trivial. No clock, no database, no mocks — a table of <code>(rule, status, value, at)</code> in and <code>(status, effect)</code> out.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/alert/machine.spec.ts<span class="code__lines">:33-60</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	return { states, effects, status };
+}
+
+const MIN = 60_000;
+
+describe('the happy path', () =&gt; {
+	it('waits out the `for` duration before firing', () =&gt; {
+		/*
+		 * A single bad sample is usually a scrape hiccup, a GC pause, or one unlucky
+		 * request. Paging on it trains people to wait and see, which is the opposite
+		 * of what an alert is for.
+		 */
+		const { states, effects } = drive(RULE, [
+			[0, 100],
+			[1 * MIN, 250],
+			[2 * MIN, 250],
+			[3 * MIN, 250],
+			[4 * MIN, 250],
+			[5 * MIN, 250],
+			[6 * MIN, 250]
+		]);
+
+		expect(states).toEqual(['ok', 'pending', 'pending', 'pending', 'pending', 'pending', 'firing']);
+		expect(effects).toEqual(['fired']);
+	});
+
+	it('fires exactly when the duration elapses, not a sample later', () =&gt; {
+		const { states } = drive(RULE, [</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A rule with <code>for: 5m</code> does not fire on a single bad sample.</li><li>A metric sitting on the threshold does not flap.</li><li>A query returning no rows holds the state instead of resolving it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="assembling-a-trace.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Assembling a trace from spans that arrive in any order</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-storage-schema.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The schema, and the indexes that decide everything</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

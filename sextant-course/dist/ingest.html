@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingest: streamed, bounded, idempotent — Building Sextant</title>
+<meta name="description" content="Reading a body without buffering it, refusing before parsing, and a unique index that makes a retry free.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">22 / 26</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 84.61538461538461%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html" aria-current="page"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 22</p>
+			<h1>Ingest: streamed, bounded, idempotent</h1>
+			<p class="lede">Reading a body without buffering it, refusing before parsing, and a unique index that makes a retry free.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write an endpoint that survives the day the thing it is watching breaks.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * INGEST
+ * ======
+ *
+ * The only way telemetry enters. Everything a collector sends arrives here, and
+ * everything that leaves is trustworthy — which is the property every read path
+ * relies on when it stops re-validating.
+ *
+ * THE FAILURE MODE THIS FILE EXISTS FOR
+ * -------------------------------------
+ * An observability platform fails in one specific way, and it is worth naming
+ * because it shapes every decision below: **the thing it is watching breaks, the
+ * volume of telemetry goes up by two orders of magnitude, and the platform falls
+ * over at the exact moment somebody needs it.**
+ *
+ * A service in a crash loop logs its stack trace on every restart. A retry storm
+ * multiplies every request by five. A debug flag left on in production doubles
+ * the line count. All three happen *during* an incident, and all three arrive
+ * here.
+ *
+ * So the rule is: **refuse early, refuse loudly, and never refuse silently.**
+ * Every limit below returns a 429 with a `Retry-After`, and every rejection is
+ * counted where the tenant can see it. A dropped log line that nobody knows was
+ * dropped is worse than an error, because it turns a capacity problem into a
+ * debugging problem — somebody spends an afternoon looking for the log line that
+ * explains the outage, and it was never stored.
+ */
+
+import { and, eq, gte, sql } from 'drizzle-orm';
+import * as v from 'valibot';
+import { db } from './db/index.ts';
+import { event, sample, series, span, tenant } from './db/schema.ts';
+import {
+	INGEST_MAX_BATCH,
+	INGEST_RATE_PER_MINUTE,
+	SERIES_CARDINALITY_LIMIT
+} from '$app/env/private';</code></pre>
+</figure>
+<p>The whole file is arranged around one scenario: the service being watched has broken, telemetry volume is up a hundredfold, and this endpoint is the thing standing between a bad day and a worse one.</p>
+<h3 id="refuse-early">Refuse before you read</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/ingest/+server.ts<span class="code__lines">:26-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The most bytes one request may carry.
+ *
+ * Checked against `content-length` *before* the body is read, so an oversized
+ * request costs one header parse rather than eight megabytes of buffering. A
+ * sender without a content-length is still bounded — the read below counts as it
+ * goes — but the header check is what makes the common case cheap.
+ */
+const MAX_BYTES = 4 * 1024 * 1024;</code></pre>
+</figure>
+<p>The size check reads <code>content-length</code> <strong>before</strong> the body, so an oversized request costs one header parse rather than eight megabytes of buffering. A sender without a content-length is still bounded, because the read below counts as it goes — but the header check is what makes the common case cheap.</p>
+<h3 id="validation">The schema is the documentation</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts<span class="code__lines">:54-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A timestamp, in milliseconds, that is plausibly a timestamp.
+ *
+ * The bounds catch the two mistakes senders actually make. Seconds instead of
+ * milliseconds gives a number around 1.7e9, which is 1970 — the data lands
+ * fifty years in the past, falls outside every query range, and looks like it
+ * was dropped. Nanoseconds gives 1.7e18, which is the year 55 million and
+ * breaks every bucket calculation downstream.
+ *
+ * Rejecting both with a message that names the likely unit turns a silent
+ * disappearance into a line in the collector's log.
+ */
+const timestamp = v.pipe(
+	v.number(),
+	v.integer(),
+	v.minValue(
+		1_500_000_000_000,
+		'Timestamp is before 2017 — are these seconds rather than milliseconds?'
+	),
+	v.maxValue(
+		4_000_000_000_000,
+		'Timestamp is after 2096 — are these microseconds or nanoseconds rather than milliseconds?'
+	)
+);
+
+/** A short identifier. Bounded, because everything here is stored per row. */
+const name = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(200));
+
+/**
+ * An attribute bag.
+ *
+ * Depth and size are both bounded. A sender with a recursive structure would
+ * otherwise store an unbounded blob per row, and — worse — the query path walks
+ * these with `attributes.a.b.c`, so a deeply nested bag makes every query on
+ * that column slow for everybody in the tenant.
+ */
+const attributes = v.pipe(
+	v.record(v.string(), v.unknown()),
+	v.check((value) =&gt; JSON.stringify(value).length &lt;= 8_192, 'Attributes are too large (8KB limit)')
+);</code></pre>
+</figure>
+<p>A timestamp has bounds, and they are not arbitrary. A sender with a clock a year out is a real thing that happens, and accepting its data means a retention job that never deletes it and a chart with a point in 2030 that ruins every axis.</p>
+<p>The attribute bag has a size limit checked on the *serialised* form, because that is the thing that is stored. A limit on the number of keys is easy to satisfy with one enormous value.</p>
+<h3 id="idempotence">A retry has to be free</h3>
+<p>Collectors retry. They retry on a timeout, on a 5xx, and on a connection reset — and a timeout means the request may well have succeeded. Every ingest endpoint therefore receives duplicates, and the question is only whether it notices.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:236-245</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Idempotent ingest.
+ *
+ * A collector that loses its connection mid-request does not know whether
+ * the batch landed, so it sends it again. With this index that costs one
+ * conflict per span and changes nothing; without it a trace grows a
+ * duplicate of every span sent during a flaky minute, and the waterfall
+ * renders each one twice.
+ */
+uniqueIndex('span_tenant_span_uidx').on(table.tenantId, table.spanId),</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the database enforces this and not the code</h4>
+	<p>A &quot;check then insert&quot; in application code has a window between the two, and two collector replicas retrying the same batch will find it. A unique index has no window. <code>onConflictDoNothing</code> then makes the retry a no-op rather than an error, which is what lets a collector be simple.</p>
+</aside>
+<h3 id="rate-limit">A limiter that says when to come back</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts<span class="code__lines">:171-215</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Rate limiting                                                       */
+/* ------------------------------------------------------------------ */
+
+interface Bucket {
+	tokens: number;
+	lastRefill: number;
+}
+
+/**
+ * A token bucket per tenant, in memory.
+ *
+ * In memory and not in the database, deliberately. A rate limiter that writes to
+ * a row on every request is a write-lock convoy on exactly the path that is
+ * under pressure — the limiter becomes the outage it was meant to prevent. The
+ * cost is that two instances each allow the full rate, which is a factor of two
+ * and not a factor of a thousand; the fix, when there are two instances, is
+ * Redis, and the interface below does not change.
+ */
+const buckets = new Map&lt;string, Bucket&gt;();
+
+function allow(tenantId: string, count: number, ratePerMinute: number, now: number): boolean {
+	const bucket = buckets.get(tenantId) ?? { tokens: ratePerMinute, lastRefill: now };
+
+	// Refill proportionally to elapsed time rather than on a timer: a tenant that
+	// sends nothing for an hour should have a full bucket, and a timer that only
+	// fires while requests arrive never refills an idle one.
+	const elapsed = Math.max(0, now - bucket.lastRefill);
+	bucket.tokens = Math.min(ratePerMinute, bucket.tokens + (elapsed / 60_000) * ratePerMinute);
+	bucket.lastRefill = now;
+
+	/*
+	 * Allow a batch that would take the bucket negative, then go negative.
+	 *
+	 * The alternative — reject any batch bigger than the remaining tokens —
+	 * starves large senders while small ones get through, which is backwards:
+	 * the large sender is usually the one whose data matters. Going negative
+	 * means the next batch waits, which is fair and self-correcting.
+	 */
+	const allowed = bucket.tokens &gt; 0;
+	if (allowed) bucket.tokens -= count;
+
+	buckets.set(tenantId, bucket);
+	return allowed;
+}</code></pre>
+</figure>
+<p>A token bucket per tenant, and — importantly — a <code>Retry-After</code> in the refusal. A 429 with no <code>Retry-After</code> is an invitation to retry immediately, which turns a rate limit into a hot loop.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A batch sent twice inserts once and returns success both times.</li><li>An oversized body is refused without being read.</li><li>A tenant over its rate gets a 429 with a <code>Retry-After</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-storage-schema.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The schema, and the indexes that decide everything</span>
+			</a>
+			<a class="pager__link pager__link--next" href="cardinality-and-the-nul-byte.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Cardinality, and the NUL byte that ate every series</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
