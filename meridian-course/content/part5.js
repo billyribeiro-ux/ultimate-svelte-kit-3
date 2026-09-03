@@ -164,8 +164,8 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'state', text: 'The state object' },
-			code(`${TRIP}/state.svelte.ts`, 1, 28),
-			code(`${TRIP}/state.svelte.ts`, 30, 76),
+			code(`${TRIP}/state.svelte.ts`, 1, 29),
+			code(`${TRIP}/state.svelte.ts`, 31, 65),
 			{
 				type: 'p',
 				text: 'Two kinds of thing, kept apart. What the server says — the document — is derived from whichever is newer: the live query’s latest snapshot, or the first paint’s document until the stream delivers. What this person is doing — the selected stop, the tab — is local `$state` that is never sent anywhere. Everything else is `$derived` from the two, so a change on the server or a click on the screen re-derives exactly the parts that depend on it. The `$derived.by` closures are there because the private fields are assigned in the constructor, after field initialisers run; the comment explains the TypeScript reason.'
@@ -177,12 +177,12 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'the-view', text: 'The view' },
-			code(`${TRIP}/TripView.svelte`, 26, 58),
+			code(`${TRIP}/TripView.svelte`, 27, 59),
 			{
 				type: 'p',
 				text: '`watchTrip(slug)` is the live query; `.current` is the latest snapshot and `.connected` says whether the stream is up. It is created inside `untrack`, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and `untrack` both says so and quiets the compiler’s fair question. The tab comes from the URL: `?tab=map` is a link, so it works with the back button, can be shared, and needs no state.'
 			},
-			code(`${TRIP}/TripView.svelte`, 69, 109),
+			code(`${TRIP}/TripView.svelte`, 70, 107),
 			{
 				type: 'p',
 				text: 'Read the comment above the effects slowly; it records two bugs the end-to-end suite found, and both are general. First, an effect that read `view.trip` re-ran every time the live query yielded — because `view.trip` is a new object each time — and its cleanup said goodbye, which woke the room, which yielded, which re-ran the effect: a loop through the server. The id is a string that never changes, so it is read once. Second, a remote command keeps a little reactive state of its own and reads it as it starts; called inside an effect, that read becomes a dependency and the write that follows re-runs the effect synchronously until Svelte stops it with `effect_update_depth_exceeded`. `untrack` around the call says: run this, depend on nothing it touches.'
@@ -191,14 +191,19 @@ export const part5 = [
 				type: 'warn',
 				text: 'The general rule: an `$effect` should read the reactive values it *reacts to* and nothing else. Anything it merely *uses* — a remote function, a library call that keeps state, a derived object you only need one field of — goes inside `untrack`, or is read once outside the effect. The Svelte MCP autofixer flags every function call inside an effect for exactly this reason; most are fine, and the ones that are not are loops.'
 			},
-			code(`${TRIP}/TripView.svelte`, 124, 167),
-			code(`${TRIP}/TripView.svelte`, 169, 180),
-			code(`${TRIP}/TripView.svelte`, 182, 212, { partial: true }),
+			code('src/lib/remote/fire-and-forget.ts', 1, 22),
+			{
+				type: 'p',
+				text: 'The heartbeat and the goodbye are sent and not awaited, and the first version wrote `.catch(() => {})` after each — reasonable for a heartbeat, whose next attempt is fifteen seconds away, and exactly how a real bug hid for an afternoon: when the seeded ids turned out not to be UUIDs (chapter 13), every heartbeat that named a seeded stop failed validation on the server and nobody heard. `fireAndForget()` keeps the production behaviour — nothing a person could act on — and adds a console warning in development, where somebody is looking. Silence is a decision; it should be one you can see in the code.'
+			},
+			code(`${TRIP}/TripView.svelte`, 128, 171),
+			code(`${TRIP}/TripView.svelte`, 173, 184),
+			code(`${TRIP}/TripView.svelte`, 186, 216, { partial: true }),
 			{
 				type: 'p',
 				text: 'The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — `live.reconnect()` is the method SvelteKit gives every live query. The tabs are links with `data-sveltekit-noscroll`. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
 			},
-			code(`${TRIP}/TripView.svelte`, 256, 264),
+			code(`${TRIP}/TripView.svelte`, 260, 268),
 			{
 				type: 'checkpoint',
 				items: [
@@ -381,7 +386,7 @@ export const part5 = [
 				type: 'p',
 				text: 'Threlte is Svelte for three.js. `<T.Mesh>` is a `THREE.Mesh`; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.'
 			},
-			code(`${TRIP}/TripView.svelte`, 213, 246, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 217, 250, { partial: true }),
 			{
 				type: 'p',
 				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'

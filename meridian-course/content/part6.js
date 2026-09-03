@@ -291,8 +291,8 @@ Error: Cannot access url.search on a page with prerendering enabled
 				text: 'Two compilers see this file. Inside the app, `dynamicCompileOptions` compiles anything under `embed` with `customElement: true` for the client build only — the server build compiles it as a plain component it never renders. Outside the app, a second Vite config with no SvelteKit builds `src/lib/embed/element.ts` into one IIFE file in `static/embed`, which SvelteKit then serves like any static asset at `/embed/meridian-route.js`. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The `build` and `dev` scripts run it first.'
 			},
 			code('src/lib/embed/element.ts', 1, 13),
-			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 1, 42),
-			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 44, 59),
+			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 1, 43),
+			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 45, 60),
 			{
 				type: 'p',
 				text: 'The settings page shows both snippets and a live preview: it imports the element module on mount — importing is what defines the element — and writes `<meridian-route>` into its own markup. The snippet strings are assembled in two halves because a literal closing script tag inside a script block would end the block as far as the Svelte parser is concerned; that sentence is in the source too, because the next person to touch it would otherwise “fix” it.'

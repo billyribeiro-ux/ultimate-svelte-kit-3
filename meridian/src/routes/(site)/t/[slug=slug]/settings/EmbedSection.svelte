@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
+	import type { Visibility } from '#lib/domain/schemas.ts';
 
 	/**
 	 * PUTTING A TRIP ON ANOTHER PAGE
@@ -19,7 +20,7 @@
 	 */
 	interface Props {
 		slug: string;
-		visibility: string;
+		visibility: Visibility;
 	}
 
 	let { slug, visibility }: Props = $props();

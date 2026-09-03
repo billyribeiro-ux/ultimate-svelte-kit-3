@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { CURRENCIES, type Currency } from '#lib/domain/money.ts';
+	import { CURRENCIES } from '#lib/domain/money.ts';
 	import type { Visibility } from '#lib/domain/schemas.ts';
 	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
 	import type { Trip } from '#lib/server/db/schema.ts';
@@ -23,7 +23,7 @@
 	let description = $state(initial.description);
 	let startDate = $state(initial.startDate);
 	let endDate = $state(initial.endDate);
-	let currency: Currency = $state(initial.currency as Currency);
+	let currency = $state(initial.currency);
 	let visibility: Visibility = $state(initial.visibility);
 	let saving = $state(false);
 

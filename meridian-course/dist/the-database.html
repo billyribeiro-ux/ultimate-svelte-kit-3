@@ -71,7 +71,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:41-61</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:42-62</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Every table gets the same primary key shape, so define it once. */
@@ -100,7 +100,7 @@ const tripRef = () =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:67-131</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:68-132</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const trip = sqliteTable(
@@ -117,7 +117,7 @@ const tripRef = () =&gt;
 		startDate: text('start_date').notNull(),
 		endDate: text('end_date').notNull(),
 		/** ISO 4217. Every expense is entered in it. */
-		currency: text('currency').notNull(),
+		currency: text('currency').$type&lt;Currency&gt;().notNull(),
 		/** `private`: members only. `link`: anybody with the slug may read. */
 		visibility: text('visibility').$type&lt;Visibility&gt;().notNull().default('private'),
 		/**
@@ -173,7 +173,7 @@ export const invite = sqliteTable(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:137-159</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:138-160</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const stop = sqliteTable(
@@ -203,7 +203,7 @@ export const invite = sqliteTable(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:165-213</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:166-214</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const expense = sqliteTable(
@@ -214,7 +214,7 @@ export const invite = sqliteTable(
 		title: text('title').notNull(),
 		/** Minor units — cents. Never a float. */
 		amountMinor: integer('amount_minor').notNull(),
-		currency: text('currency').notNull(),
+		currency: text('currency').$type&lt;Currency&gt;().notNull(),
 		category: text('category').$type&lt;ExpenseCategory&gt;().notNull().default('other'),
 		date: text('date').notNull(),
 		paidBy: text('paid_by')
@@ -260,7 +260,7 @@ export const note = sqliteTable('note', {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:219-258</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:220-259</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const tripRelations = relations(trip, ({ one, many }) =&gt; ({
@@ -557,7 +557,7 @@ export const DEMO_PASSWORD = 'meridian-demo-2026';
 const seedId = (suffix: string): string =&gt;
 	v.parse(IdSchema, `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`);</code></pre>
 </figure>
-<p><code>seedId()</code> deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the <code>IdSchema</code> check on the server, where a fire-and-forget <code>.catch(() =&gt; {})</code> swallowed it. Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.</p>
+<p><code>seedId()</code> deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the <code>IdSchema</code> check on the server, where a fire-and-forget <code>.catch(() =&gt; {})</code> swallowed it (it warns in development now — <code>fireAndForget()</code> in chapter 31). Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.</p>
 
 <figure class="code">
 	<figcaption>

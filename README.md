@@ -111,7 +111,7 @@ built pages — and its `verify` and `build` run in CI beside the project's own
 suite, with `git diff --exit-code` on `dist/` so the committed pages are always
 the ones the build produces.
 
-The Meridian course is the same again — 322 blocks quoted by line range, the
+The Meridian course is the same again — 323 blocks quoted by line range, the
 range checker, the page checker, and the CI job — and is the one to read for
 the ecosystem: a part of four chapters on which libraries were chosen, which
 were rejected and why, and the three shapes a library takes when it meets

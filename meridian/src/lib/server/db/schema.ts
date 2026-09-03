@@ -25,6 +25,7 @@
  */
 
 import { relations, sql } from 'drizzle-orm';
+import type { Currency } from '#lib/domain/money.ts';
 import {
 	index,
 	integer,
@@ -78,7 +79,7 @@ export const trip = sqliteTable(
 		startDate: text('start_date').notNull(),
 		endDate: text('end_date').notNull(),
 		/** ISO 4217. Every expense is entered in it. */
-		currency: text('currency').notNull(),
+		currency: text('currency').$type<Currency>().notNull(),
 		/** `private`: members only. `link`: anybody with the slug may read. */
 		visibility: text('visibility').$type<Visibility>().notNull().default('private'),
 		/**
@@ -170,7 +171,7 @@ export const expense = sqliteTable(
 		title: text('title').notNull(),
 		/** Minor units — cents. Never a float. */
 		amountMinor: integer('amount_minor').notNull(),
-		currency: text('currency').notNull(),
+		currency: text('currency').$type<Currency>().notNull(),
 		category: text('category').$type<ExpenseCategory>().notNull().default('other'),
 		date: text('date').notNull(),
 		paidBy: text('paid_by')

@@ -10,6 +10,7 @@
 	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { canEdit, isOwner, type ViewerRole } from '#lib/domain/roles.ts';
+	import { fireAndForget } from '#lib/remote/fire-and-forget.ts';
 	import { heartbeat, leave, watchTrip } from '#lib/remote/live.remote.ts';
 	import { updateStop } from '#lib/remote/stops.remote.ts';
 	import type { TripDocument } from '#lib/server/trips.ts';
@@ -93,19 +94,22 @@
 	$effect(() => {
 		if (!member) return;
 		const beat = () =>
-			heartbeat({ tripId, stopId: untrack(() => view.selectedStopId) }).catch(() => {});
+			fireAndForget(
+				heartbeat({ tripId, stopId: untrack(() => view.selectedStopId) }),
+				'presence heartbeat'
+			);
 		untrack(beat);
 		const timer = setInterval(beat, 15_000);
 		return () => {
 			clearInterval(timer);
-			leave({ tripId }).catch(() => {});
+			fireAndForget(leave({ tripId }), 'presence goodbye');
 		};
 	});
 
 	$effect(() => {
 		if (!member) return;
 		const stopId = view.selectedStopId;
-		untrack(() => heartbeat({ tripId, stopId }).catch(() => {}));
+		untrack(() => fireAndForget(heartbeat({ tripId, stopId }), 'presence heartbeat'));
 	});
 
 	/** The stop dialog: closed, adding at a day (and maybe a point), or editing a stop. */

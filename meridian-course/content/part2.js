@@ -223,23 +223,23 @@ export const part2 = [
 				text: 'Seven tables around one idea: a trip that several people plan together. The doc comment at the top of the schema is the map, and the three conventions under it are the decisions of chapters 09 and 10 written into column types.'
 			},
 			code('src/lib/server/db/schema.ts', 1, 25),
-			code('src/lib/server/db/schema.ts', 41, 61),
+			code('src/lib/server/db/schema.ts', 42, 62),
 			{
 				type: 'p',
 				text: 'Four helpers so that every table gets the same primary key, the same timestamps and the same trip reference. `nowMs` spells out SQLite’s “now in milliseconds” once, because SQLite has no `now()` Drizzle can default to. `$onUpdate` on `updatedAt` makes Drizzle set it on every update without any query having to remember. `tripRef` cascades: delete a trip and its stops, members, expenses and note go with it, in the database, where a forgotten cleanup cannot leave orphans.'
 			},
-			code('src/lib/server/db/schema.ts', 67, 131),
+			code('src/lib/server/db/schema.ts', 68, 132),
 			{
 				type: 'p',
 				text: 'The `trip` row carries a `version` that goes up by one on every change to anything under it; chapter 18 shows the live query watching that one number. `member` has a composite primary key — one row per person per trip — and `invite` is keyed by its token, which is the secret in the link: unguessable, single-use through `usedAt`, expiring through `expiresAt`, so a link pasted into the wrong chat is a bounded mistake.'
 			},
-			code('src/lib/server/db/schema.ts', 137, 159),
-			code('src/lib/server/db/schema.ts', 165, 213),
+			code('src/lib/server/db/schema.ts', 138, 160),
+			code('src/lib/server/db/schema.ts', 166, 214),
 			{
 				type: 'p',
 				text: 'A stop’s `date` is nullable — `null` is an idea with no day yet — and the index on `(trip, date, position)` exists for exactly one query: the itinerary page reading one trip’s stops in day-then-position order. `expense.amountMinor` is an integer with the comment “never a float” beside it, and `expense_share` is a weight per participant. The note is one row per trip, keyed by the trip, holding Tiptap’s JSON in a `text` column with `mode: "json"` so Drizzle parses it on the way out.'
 			},
-			code('src/lib/server/db/schema.ts', 219, 258),
+			code('src/lib/server/db/schema.ts', 220, 259),
 			{
 				type: 'p',
 				text: 'Relations are what make `db.query.trip.findFirst({ with: { stops: true } })` possible, and `loadDocument` in chapter 16 uses every one of them. The `$inferSelect` types at the bottom are the row types the whole app uses — `Stop`, `Trip`, `Expense` — so a column added here changes a type everywhere it is read.'
@@ -268,7 +268,7 @@ export const part2 = [
 			code('scripts/seed.ts', 1, 53),
 			{
 				type: 'p',
-				text: '`seedId()` deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the `IdSchema` check on the server, where a fire-and-forget `.catch(() => {})` swallowed it. Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.'
+				text: '`seedId()` deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the `IdSchema` check on the server, where a fire-and-forget `.catch(() => {})` swallowed it (it warns in development now — `fireAndForget()` in chapter 31). Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.'
 			},
 			code('scripts/seed.ts', 96, 116),
 			{

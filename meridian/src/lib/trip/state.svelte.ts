@@ -8,8 +8,9 @@
  *   - what the SERVER says: the document, arriving first from `tripBySlug`
  *     and then, whenever anything changes, from the live query. `document`
  *     is derived from whichever is newer; nothing here ever mutates it.
- *   - what THIS PERSON is doing: the selected stop, the open tab. Local
- *     `$state`, never sent anywhere.
+ *   - what THIS PERSON is doing: the selected stop. Local `$state`, never
+ *     sent anywhere. (The open tab is not here: it lives in the URL, so a
+ *     link to the expenses tab is a link to the expenses tab.)
  *
  * Everything else — the days, the stops grouped by day, the scheduled
  * route and its length — is `$derived` from the two, so a change on the
@@ -32,7 +33,6 @@ export class TripState {
 	#live: () => LiveTrip | null | undefined;
 
 	selectedStopId: string | null = $state(null);
-	tab: Tab = $state('itinerary');
 
 	/*
 	 * `$derived.by` with a closure rather than `$derived(expr)`: the private
@@ -49,25 +49,14 @@ export class TripState {
 	readonly scheduled: Stop[] = $derived(
 		this.groups.filter((group) => group.date !== null).flatMap((group) => group.stops)
 	);
-	readonly ideas: Stop[] = $derived(this.groups.find((group) => group.date === null)?.stops ?? []);
-
 	/** metres along the scheduled stops */
 	readonly total: number = $derived(pathLength(this.scheduled));
 
 	readonly presence = $derived.by(() => this.#live()?.presence ?? []);
-	readonly updatedAt: number | null = $derived.by(() => this.#live()?.at ?? null);
-
-	readonly selected: Stop | null = $derived(
-		this.document.stops.find((stop) => stop.id === this.selectedStopId) ?? null
-	);
 
 	constructor(initial: TripDocument, live: () => LiveTrip | null | undefined) {
 		this.#initial = initial;
 		this.#live = live;
-	}
-
-	member(userId: string) {
-		return this.document.members.find((member) => member.userId === userId);
 	}
 
 	select(id: string | null): void {
