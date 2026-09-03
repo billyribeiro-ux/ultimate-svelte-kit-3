@@ -1,0 +1,164 @@
+# Project 8 — Meridian, and its course.
+#
+# `verify` runs exactly what a developer runs before pushing: `pnpm run verify`
+# — type-check, prettier + eslint, unit and browser tests, the production build
+# (library, messages, element, app), and the end-to-end suite on a desktop and
+# a phone profile against `node build/index.js`, with two browser contexts on
+# one trip. `verify:package` proves the library the way a consumer would meet
+# it: svelte-package, publint, arethetypeswrong.
+#
+# `image` builds the Dockerfile and starts the container the way a deployment
+# would, then asks the health endpoint whether the migration ran and the
+# database answers. A Dockerfile that is never built is documentation.
+#
+# `course` proves the course: every quoted range is a whole thing in a real
+# file (`verify.js`), the pages build, and the built pages pass the reader-side
+# checks in `tools/check-dist.js`.
+#
+# Path filters keep this from running for the other seven projects; they are
+# verified the same way from their own folders.
+
+name: meridian
+
+on:
+  push:
+    paths:
+      - "meridian/**"
+      - "meridian-course/**"
+      - ".github/workflows/meridian.yml"
+  pull_request:
+    paths:
+      - "meridian/**"
+      - "meridian-course/**"
+      - ".github/workflows/meridian.yml"
+
+concurrency:
+  group: meridian-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: meridian
+
+jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e · package)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: "true"
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the unit tests and the build.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      STOP_LIMIT: "200"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: meridian/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: meridian/.nvmrc
+          cache: pnpm
+          cache-dependency-path: meridian/pnpm-lock.yaml
+
+      # `prepare` builds the library, compiles the messages and syncs the types.
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # The unit tests that touch the database need one with the schema in it;
+      # the end-to-end suite builds its own again, from nothing.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+      - run: pnpm run verify:package
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: meridian/test-results
+          if-no-files-found: ignore
+
+  image:
+    name: image (build · run · health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: meridian
+          build-args: PUBLIC_ORIGIN=http://localhost:3000
+          tags: meridian:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Start it the way compose does, wait for the health check, and ask.
+      - name: run the container and probe /healthz
+        run: |
+          docker run -d --name meridian -p 3000:3000 \
+            -e BETTER_AUTH_SECRET=ci-only-secret-of-at-least-thirty-two-characters \
+            meridian:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/healthz; then echo; echo "healthy after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the container never became healthy"; docker logs meridian; exit 1
+
+      - name: the prerendered guides are served from the image
+        run: |
+          curl -fsS http://localhost:3000/guides | grep -q 'Guides'
+          curl -fsS http://localhost:3000/de/guides | grep -q 'lang="de"'
+
+      - name: the container stops cleanly on SIGTERM
+        run: |
+          docker stop -t 15 meridian
+          code=$(docker inspect meridian --format '{{.State.ExitCode}}')
+          echo "exit code $code"
+          test "$code" = "0"
+
+      - if: failure()
+        run: docker logs meridian || true
+
+  course:
+    name: course (verify ranges · build · check pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: meridian/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: meridian/.nvmrc
+          cache: pnpm
+          cache-dependency-path: meridian/pnpm-lock.yaml
+
+      # The course quotes the project and its page checker borrows the
+      # project's Playwright, so the project's dependencies are installed.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node ../meridian-course/verify.js
+      - run: node ../meridian-course/build.js
+      - run: node ../meridian-course/tools/check-dist.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- meridian-course/dist

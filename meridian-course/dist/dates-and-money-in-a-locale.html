@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dates, money and distances in a locale — Building Meridian</title>
+<meta name="description" content="Everything that is not interface text: dates and ranges through cached `Intl` formatters, a headless date range picker that speaks `CalendarDate`, a `transport` hook that carries one across the wire, amounts in and out of minor units, and distances in kilometres or miles.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">21 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 46.666666666666664%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html" aria-current="page"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 21</p>
+			<h1>Dates, money and distances in a locale</h1>
+			<p class="lede">Everything that is not interface text: dates and ranges through cached <code>Intl</code> formatters, a headless date range picker that speaks <code>CalendarDate</code>, a <code>transport</code> hook that carries one across the wire, amounts in and out of minor units, and distances in kilometres or miles.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Format and parse locale-dependent values with <code>Intl</code> and <code>@internationalized/date</code>, and move a calendar date from a picker to the server without turning it into a string by accident.</p></aside>
+			<p>The translated strings are a few hundred keys. The values around them — every date, every amount, every distance, every country name — are not strings anybody wrote; they are computed, and the locale changes the computation. This chapter is about the three places a value crosses from data to a person’s eyes and back.</p>
+<h3 id="dates">Dates and ranges</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/dates.ts<span class="code__lines">:78-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * FORMATTING, CACHED
+ * ------------------
+ * An `Intl.DateTimeFormat` costs a few hundred microseconds to build — it
+ * loads locale data — and an itinerary formats forty dates per render. The
+ * cache key includes the locale, because project 5 once cached by options
+ * alone and served German dates to an English page.
+ */
+const formatters = new Map&lt;string, DateFormatter&gt;();
+
+function formatter(locale: string, options: Intl.DateTimeFormatOptions): DateFormatter {
+	const key = `${locale}|${JSON.stringify(options)}`;
+	let f = formatters.get(key);
+	if (!f) {
+		f = new DateFormatter(locale, { ...options, timeZone: 'UTC' });
+		formatters.set(key, f);
+	}
+	return f;
+}
+
+export type DateStyle = 'day' | 'short' | 'long';
+
+const STYLES: Record&lt;DateStyle, Intl.DateTimeFormatOptions&gt; = {
+	day: { weekday: 'short', day: 'numeric' },
+	short: { day: 'numeric', month: 'short' },
+	long: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+};
+
+/**
+ * `toDate('UTC')` plus a UTC formatter: the calendar date becomes midnight
+ * UTC and is formatted in UTC, so it comes back out as the same date
+ * wherever the formatting happens.
+ */
+export function formatDate(date: string, locale: string, style: DateStyle = 'short'): string {
+	return formatter(locale, STYLES[style]).format(fromIso(date).toDate('UTC'));
+}
+
+/** &quot;10 – 17 May 2026&quot;, collapsing what the two ends share. */
+export function formatRange(start: string, end: string, locale: string): string {
+	return formatter(locale, { day: 'numeric', month: 'short', year: 'numeric' }).formatRange(
+		fromIso(start).toDate('UTC'),
+		fromIso(end).toDate('UTC')
+	);
+}</code></pre>
+</figure>
+<p>Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. <code>formatDate(&quot;2026-05-10&quot;, &quot;de&quot;, &quot;day&quot;)</code> is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. <code>formatRange</code> for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the <code>DateFormatter</code> from <code>@internationalized/date</code> is <code>Intl.DateTimeFormat</code> with a fix for a Safari bug, and it knows.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:67-79</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;p class=&quot;muted&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
+&lt;p class=&quot;cluster muted trip__facts&quot;&gt;
+	&lt;span&gt;{m.trips_days({ count: dayCount(trip.startDate, trip.endDate) })}&lt;/span&gt;
+	&lt;span&gt;·&lt;/span&gt;
+	&lt;span&gt;{m.trips_stops({ count: stops })}&lt;/span&gt;
+	&lt;span&gt;·&lt;/span&gt;
+	&lt;span&gt;{m.trips_companions({ count: members })}&lt;/span&gt;
+	{#if preview.total &gt; 0}
+		&lt;span&gt;·&lt;/span&gt;
+		&lt;span&gt;{formatDistance(preview.total, locale)}&lt;/span&gt;
+	{/if}
+&lt;/p&gt;
+&lt;span class=&quot;chip&quot; class:chip--sea={role === 'owner'}&gt;{roleLabel[role]()}&lt;/span&gt;</code></pre>
+</figure>
+<p>The trips page puts them together with the plural messages from the last chapter: a date range from <code>Intl</code>, three counts through Paraglide’s plural rules, and a distance through the library’s <code>formatDistance</code>. Four sources of locale-awareness in one paragraph, and the component knows about none of them.</p>
+<h3 id="the-picker">A date range picker that speaks the domain’s type</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:1-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { DateRangePicker } from 'bits-ui';
+	import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from 'phosphor-svelte';
+	import { untrack } from 'svelte';
+	import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
+	import { getLocale } from '#lib/paraglide/runtime.js';
+
+	/**
+	 * A DATE RANGE, THE ACCESSIBLE WAY
+	 * ================================
+	 *
+	 * Bits UI is *headless*: it renders the markup, the ARIA and the keyboard
+	 * model of a date range picker — segmented inputs you can type into,
+	 * arrow keys between segments, a calendar grid you can arrow around — and
+	 * nothing else. Every visible pixel here is ours, from `tokens.css`.
+	 *
+	 * The value is a pair of `CalendarDate`s from `@internationalized/date`,
+	 * the same type the domain uses, so there is no conversion to get wrong.
+	 * `name` on each input renders a hidden `&lt;input&gt;` with the ISO date, which
+	 * is how the value reaches a remote `form` — and how it would reach a
+	 * plain HTML form with JavaScript off.
+	 */
+	interface Props {
+		label: string;
+		startName: string;
+		endName: string;
+		start?: string;
+		end?: string;
+		/** Validation messages from the form, shown under the field. */
+		issues?: readonly { message: string }[];
+		/** Both ends as ISO dates, whenever a complete range is picked. */
+		onchange?: (start: string, end: string) =&gt; void;
+		/**
+		 * Refuse dates before today. On for a new trip; off when editing one that
+		 * may already have happened, where &quot;before today&quot; is the whole point.
+		 */
+		futureOnly?: boolean;
+	}
+
+	let {
+		label,
+		startName,
+		endName,
+		start,
+		end,
+		issues = [],
+		onchange,
+		futureOnly = false
+	}: Props = $props();</code></pre>
+</figure>
+<p>Bits UI is headless: it renders the markup, the ARIA and the keyboard model of a date range picker — segmented inputs you can type into, arrow keys between segments, a calendar grid — and nothing visible. Its value is a pair of <code>CalendarDate</code>s from <code>@internationalized/date</code>, the type chapter 09 chose for the domain, so there is no conversion to get wrong. The <code>name</code> on each input renders a hidden <code>&lt;input&gt;</code> with the ISO date, which is how the value reaches a remote <code>form</code> and how it would reach a plain HTML form with JavaScript off.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:51-86</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	const locale = getLocale();
+
+	const parse = (iso: string | undefined): DateValue | undefined =&gt; {
+		if (!iso) return undefined;
+		const [y, m, d] = iso.split('-').map(Number);
+		return new CalendarDate(y!, m!, d!);
+	};
+
+	// The props are the *initial* value only — after that the picker owns it.
+	// `untrack` says so out loud, and quiets the compiler's fair question.
+	let value = $state(untrack(() =&gt; ({ start: parse(start), end: parse(end) })));
+	const placeholder = today(getLocalTimeZone());
+&lt;/script&gt;
+
+&lt;DateRangePicker.Root
+	bind:value
+	onValueChange={(range) =&gt; {
+		if (range.start &amp;&amp; range.end) onchange?.(range.start.toString(), range.end.toString());
+	}}
+	{placeholder}
+	{locale}
+	weekdayFormat=&quot;short&quot;
+	fixedWeeks
+	minValue={futureOnly ? placeholder : undefined}
+	class=&quot;range&quot;
+&gt;
+	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
+
+	&lt;div class=&quot;range__row&quot; class:range__row--invalid={issues.length &gt; 0}&gt;
+		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
+			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input&quot;&gt;
+				{#snippet children({ segments })}
+					{#each segments as { part, value: text }, i (part + i)}
+						&lt;DateRangePicker.Segment {part} class=&quot;range__segment&quot;&gt;{text}&lt;/DateRangePicker.Segment&gt;
+					{/each}
+				{/snippet}</code></pre>
+</figure>
+<p>The <code>locale</code> prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. <code>untrack</code> around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no.</p>
+<h3 id="transport">A <code>CalendarDate</code> across the wire</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:29-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const transport: Transport = {
+	CalendarDate: {
+		// Something falsy for &quot;not mine&quot; is how devalue asks &quot;is this yours?&quot;.
+		encode: (value) =&gt; value instanceof CalendarDate &amp;&amp; value.toString(),
+		decode: (iso: string) =&gt; parseDate(iso)
+	}
+};</code></pre>
+</figure>
+<p>Load results and remote function arguments cross the wire through devalue, which knows <code>Map</code>, <code>Set</code>, <code>Date</code>, typed arrays — and nothing about a class from <code>@internationalized/date</code>. The <code>transport</code> hook teaches it: <code>encode</code> returns something falsy for “not mine” and the ISO string for a <code>CalendarDate</code>; <code>decode</code> parses it back. With this, a value that leaves the browser as a <code>CalendarDate</code> arrives on the server as one, with <code>.compare()</code> and <code>.add()</code> working, rather than as a string somebody has to remember to parse. It is small; it is also the difference between a type that holds across the boundary and one that does not.</p>
+<h3 id="money">Money in and out</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const formatters = new Map&lt;string, Intl.NumberFormat&gt;();
+
+export function formatMoney(minor: number, currency: string, locale: string): string {
+	const key = `${locale}|${currency}`;
+	let f = formatters.get(key);
+	if (!f) {
+		f = new Intl.NumberFormat(locale, { style: 'currency', currency });
+		formatters.set(key, f);
+	}
+	return f.format(fromMinor(minor, currency));
+}
+
+/**
+ * A typed amount in the person's own notation, as a number, or `null`.
+ *
+ * The separators are *discovered* by formatting a known number with the
+ * locale and reading the parts back, so &quot;1.234,50&quot; parses in German and
+ * &quot;1,234.50&quot; in English without a table of locales in the code. Anything
+ * that is not a digit or one of those separators — a currency sign, a
+ * space, a stray letter — is dropped before parsing.
+ */
+export function parseAmount(text: string, locale: string): number | null {
+	const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
+	const group = parts.find((p) =&gt; p.type === 'group')?.value ?? ',';
+	const decimal = parts.find((p) =&gt; p.type === 'decimal')?.value ?? '.';
+
+	let s = text.trim();
+	s = s.split(group).join('');
+	s = s.split(decimal).join('.');
+	s = s.replace(/[^\d.-]/g, '');
+
+	if (!/^-?\d+(\.\d+)?$|^-?\.\d+$/.test(s)) return null;
+	const n = Number(s);
+	return Number.isFinite(n) ? n : null;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:348-361</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;label class=&quot;field&quot;&gt;
+	&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()} ({currency})&lt;/span&gt;
+	&lt;input
+		class=&quot;input&quot;
+		{...addExpense.fields.amount.as('number')}
+		step=&quot;0.01&quot;
+		min=&quot;0.01&quot;
+		inputmode=&quot;decimal&quot;
+		required
+	/&gt;
+	{#each addExpense.fields.amount.issues() ?? [] as issue (issue.message)}
+		&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+	{/each}
+&lt;/label&gt;</code></pre>
+</figure>
+<p>The amount field is <code>type=&quot;number&quot;</code> with <code>inputmode=&quot;decimal&quot;</code>, so a phone shows a numeric keyboard with the locale’s decimal separator, and the browser hands the form a plain number — which is why the remote form’s schema takes <code>v.number()</code> and the server converts to minor units with the trip’s currency. <code>formatMoney</code> on the way out uses <code>Intl.NumberFormat</code> with <code>style: &quot;currency&quot;</code>: “€12.60”, “12,60 €”, “R$ 12,60”. <code>parseAmount</code> exists for the one place a free-text amount is typed, and it discovers the separators from <code>Intl</code> rather than knowing them.</p>
+<h3 id="distances-and-countries">Distances, and a hundred country names for free</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:291-326</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function formatDistance(
+	meters: number,
+	locale = 'en',
+	unit: DistanceUnit = 'metric'
+): string {
+	if (unit === 'imperial') {
+		const miles = meters / METERS_PER_MILE;
+		if (miles &lt; 0.1) {
+			return new Intl.NumberFormat(locale, {
+				style: 'unit',
+				unit: 'foot',
+				maximumFractionDigits: 0
+			}).format(meters * FEET_PER_METER);
+		}
+		return new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit: 'mile',
+			maximumFractionDigits: miles &lt; 10 ? 1 : 0
+		}).format(miles);
+	}
+
+	if (meters &lt; 1000) {
+		return new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit: 'meter',
+			maximumFractionDigits: 0
+		}).format(meters);
+	}
+
+	const km = meters / 1000;
+	return new Intl.NumberFormat(locale, {
+		style: 'unit',
+		unit: 'kilometer',
+		maximumFractionDigits: km &lt; 10 ? 1 : 0
+	}).format(km);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:28-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const locale = getLocale();
+const regions = new Intl.DisplayNames(locale, { type: 'region' });
+const countryName = (code: string) =&gt; regions.of(code) ?? code;</code></pre>
+</figure>
+<p>Two more <code>Intl</code> APIs. <code>style: &quot;unit&quot;</code> formats a kilometre or a mile with the right abbreviation and spacing for the locale; a unit the code has never seen still comes out right. <code>Intl.DisplayNames</code> with <code>type: &quot;region&quot;</code> turns <code>PT</code> into “Portugal” and <code>JP</code> into “Japan”, “Japan” or “Japão” — a hundred country names in three languages that nobody translated, from the browser’s own locale data. The gazetteer stores a two-letter code and nothing else.</p>
+<aside class="callout callout--note"><p>Every <code>Intl</code> object here is created once and cached — a <code>DateTimeFormat</code> or <code>NumberFormat</code> loads locale data when it is built, and an itinerary formats forty dates a render. The cache keys always include the locale. That sentence is the whole of project 5’s i18n bug, and it is why <code>formatter()</code> in <code>dates.ts</code> exists.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>formatRange</code> does that two <code>formatDate</code> calls do not.</li><li>You can explain the <code>transport</code> hook’s encode/decode contract and what devalue does without it.</li><li>You can name the four <code>Intl</code> APIs this chapter uses and what each replaces.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="three-languages-with-paraglide.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Three languages with Paraglide</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-design-system.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The design system</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploying: three stages, one process, a health check and a pipeline that runs the container — Building Meridian</title>
+<meta name="description" content="The Dockerfile builds the library, the messages, the element and the app in one stage and copies only what running needs into a slim, non-root image whose one process migrates the database and then serves. Compose gives it a volume and a secret. The workflow verifies the project, builds and *runs* the image, and proves the course — because a Dockerfile that is never built is documentation.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">44 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 97.77777777777777%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html" aria-current="page"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 44</p>
+			<h1>Deploying: three stages, one process, a health check and a pipeline that runs the container</h1>
+			<p class="lede">The Dockerfile builds the library, the messages, the element and the app in one stage and copies only what running needs into a slim, non-root image whose one process migrates the database and then serves. Compose gives it a volume and a secret. The workflow verifies the project, builds and *runs* the image, and proves the course — because a Dockerfile that is never built is documentation.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build and run the image locally with one command, explain each stage and each environment variable, and read the workflow well enough to add a job to it.</p></aside>
+			<p>Everything before this chapter runs on a developer’s machine with <code>pnpm</code>. Production is a different place: a machine that has never seen the repository, no <code>devDependencies</code>, no <code>.env</code>, and a process manager that will send <code>SIGTERM</code> when it wants the process gone. A container is the honest way to describe that place, because it *is* that place — the build runs in it, and what works there works in production for the same reasons.</p>
+<h3 id="stages">Three stages</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:20-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">ARG NODE_VERSION=24.20.0
+
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-slim AS deps
+WORKDIR /app
+
+# pnpm through corepack, pinned by `packageManager` in package.json.
+RUN corepack enable
+
+# A workspace install needs every package.json the lockfile mentions, so the
+# library's manifest is copied beside the root's before `pnpm install`.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/waypoint/package.json packages/waypoint/
+# The lockfile is the contract: `--frozen-lockfile` fails the build if it
+# disagrees with package.json instead of silently resolving something newer.
+# `--ignore-scripts` skips the root `prepare`, which would try to build the
+# library before its source is here; the build stage runs those steps itself.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts</code></pre>
+</figure>
+<p>The <code>deps</code> stage installs dependencies, and nothing else, so that the layer is cached until the lockfile changes. Three details are the difference between a Dockerfile that works and one that works reliably. <strong>The workspace needs every <code>package.json</code> the lockfile mentions</strong>, so the library’s manifest is copied beside the root’s before <code>pnpm install</code> — without it, pnpm refuses the frozen install because the lockfile describes a package that is not there. <strong><code>--frozen-lockfile</code></strong> fails the build if the lockfile disagrees with <code>package.json</code> instead of quietly resolving something newer; the lockfile is the contract. <strong><code>--ignore-scripts</code></strong> skips the root <code>prepare</code> script, which would try to build the library before its source has been copied; the build stage runs those steps itself, in order, where it can see them. The <code>--mount=type=cache</code> keeps pnpm’s store between builds without putting it in a layer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:41-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">FROM deps AS build
+ARG PUBLIC_ORIGIN
+ENV PUBLIC_ORIGIN=${PUBLIC_ORIGIN}
+# The build needs *a* value for every variable in `src/env.ts`; these two are
+# never read at build time and never make it into the image.
+ENV DATABASE_URL=file:build-time-unused.db
+ENV BETTER_AUTH_SECRET=build-time-only-value-that-is-never-used-at-runtime
+
+COPY . .
+RUN test -n &quot;$PUBLIC_ORIGIN&quot; || (echo &quot;PUBLIC_ORIGIN build argument is required&quot; &amp;&amp; exit 1)
+
+# What `prepare` does on a developer's machine, spelled out: the library,
+# the messages, the generated types. Then the element and the app.
+RUN pnpm run package &amp;&amp; pnpm run i18n &amp;&amp; pnpm exec svelte-kit sync &amp;&amp; pnpm run build
+
+# Production dependencies only, for the runtime stage. `--prod` drops
+# everything under devDependencies: the compilers, the test runners, drizzle-kit.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm prune --prod --ignore-scripts</code></pre>
+</figure>
+<p>The <code>build</code> stage is <code>prepare</code> spelled out: package the library, compile the messages, sync the types, then build the element and the app. <code>PUBLIC_ORIGIN</code> is a <strong>build argument</strong>, and the stage refuses to continue without it, because SvelteKit bakes <code>paths.origin</code> into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — <code>src/env.ts</code> validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. <code>pnpm prune --prod</code> then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of <code>node_modules</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:62-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">FROM node:${NODE_VERSION}-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# The `node` user ships with the base image. Nothing here needs root, so
+# nothing here runs as root.
+RUN mkdir -p /data &amp;&amp; chown node:node /data
+USER node
+
+COPY --from=build --chown=node:node /app/package.json ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/build ./build
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --from=build --chown=node:node /app/scripts/migrate.ts ./scripts/migrate.ts
+
+# adapter-node reads these. `HOST=0.0.0.0` so the container's port is
+# reachable; a graceful shutdown that outlasts the orchestrator's grace period
+# is a SIGKILL anyway, so it is shorter than the default of thirty seconds.
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV SHUTDOWN_TIMEOUT=10
+ENV BODY_SIZE_LIMIT=8M
+ENV DATABASE_URL=file:/data/meridian.db
+
+VOLUME [&quot;/data&quot;]
+EXPOSE 3000
+
+# The same question a load balancer asks, so `docker ps` shows the truth.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e &quot;fetch('http://127.0.0.1:3000/healthz').then(r =&gt; process.exit(r.ok ? 0 : 1), () =&gt; process.exit(1))&quot;
+
+# SIGTERM is what adapter-node listens for; it stops accepting connections,
+# lets in-flight requests finish, and exits. `node` is PID 1 so it receives
+# the signal directly — no shell in between to swallow it.
+STOPSIGNAL SIGTERM
+
+# Migrate, then serve, in one process: `--import` runs the migration module to
+# completion before the server's entry point starts listening.
+CMD [&quot;node&quot;, &quot;--import&quot;, &quot;./scripts/migrate.ts&quot;, &quot;build&quot;]</code></pre>
+</figure>
+<p>The <code>runtime</code> stage starts from a clean <code>node:slim</code> and copies five things from the build: the manifest, the pruned <code>node_modules</code>, the <code>build/</code> directory, the <code>drizzle/</code> migrations and the migration script. Nothing else — no source, no tests, no <code>.git</code>. It runs as the <code>node</code> user the base image ships with, because nothing here needs root and a process that does not need root should not have it. <code>/data</code> is a volume owned by that user, and <code>DATABASE_URL</code> points into it, so the database outlives the container.</p>
+<ul><li><code>HOST=0.0.0.0</code> — adapter-node binds to localhost by default, which inside a container means “reachable by nobody”.</li><li><code>SHUTDOWN_TIMEOUT=10</code> — on <code>SIGTERM</code>, adapter-node stops accepting connections, lets in-flight requests finish for this many seconds, and exits. An orchestrator’s grace period is usually thirty; a shutdown that outlasts it is a <code>SIGKILL</code> anyway, so this is shorter.</li><li><code>BODY_SIZE_LIMIT=8M</code> — the largest request body the server will read. Notes and expenses are kilobytes; this leaves room for the future without accepting a gigabyte.</li><li><code>HEALTHCHECK</code> — the same question a load balancer asks, so <code>docker ps</code> shows the truth about the container rather than whether the process exists.</li><li><code>STOPSIGNAL SIGTERM</code> and <code>CMD [&quot;node&quot;, …]</code> in exec form — <code>node</code> is PID 1 and receives the signal directly. A <code>CMD</code> written as a shell string would put <code>sh</code> in front, and <code>sh</code> does not forward signals; the container would hang until it was killed.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/migrate.ts<span class="code__lines">:20-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { drizzle } from 'drizzle-orm/libsql';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import { createClient } from '@libsql/client';
+
+if (!process.env.DATABASE_URL) {
+	try {
+		process.loadEnvFile('.env');
+	} catch {
+		// no .env: the variables must already be in the environment
+	}
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set');
+
+const client = createClient({ url, intMode: 'number' });
+const started = performance.now();
+await migrate(drizzle(client), { migrationsFolder: 'drizzle' });
+console.info(`Migrations applied in ${Math.round(performance.now() - started)} ms`);
+client.close();</code></pre>
+</figure>
+<p>The <code>CMD</code> is <code>node --import ./scripts/migrate.ts build</code>: the migration module runs to completion before the server’s entry point starts listening, in one process. A separate migration container is the alternative, and the right one for a fleet; for one service with one database, the simplest thing that cannot be forgotten is a server that migrates itself. Drizzle records which migrations have run, so a restart applies nothing and takes milliseconds. Node runs TypeScript directly — the file has no build step — which is what makes it possible to copy one source file into the image and run it.</p>
+<h3 id="health">The health endpoint and the first request</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:19-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const startedAt = Date.now();
+
+export const GET: RequestHandler = async () =&gt; {
+	const headers = { 'cache-control': 'no-store' };
+	try {
+		await client.execute('select 1');
+	} catch {
+		return json({ ok: false, version }, { status: 503, headers });
+	}
+	return json(
+		{ ok: true, version, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
+		{ headers }
+	);
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:200-204</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const init: ServerInit = async () =&gt; {
+	if (building) return;
+	const { client } = await import('#lib/server/db/index.ts');
+	await client.execute('select 1');
+};</code></pre>
+</figure>
+<p>“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and <code>select 1</code> is the cheapest way to ask. The response carries the <code>version</code> — the commit the build was made from, through <code>kit.version.name</code> in chapter 03 — so “which version is live?” is one request, and <code>cache-control: no-store</code>, because a cached “healthy” is worse than none. <code>init</code> in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/instrumentation.server.ts<span class="code__lines">:19-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { RingExporter } from '#lib/server/tracing.ts';
+
+const provider = new NodeTracerProvider({
+	spanProcessors: [new SimpleSpanProcessor(new RingExporter())]
+});
+
+provider.register();</code></pre>
+</figure>
+<p>The tracing provider (chapter 35) is registered in <code>instrumentation.server.ts</code>, which adapter-node imports *before* the server — that ordering is the whole reason the file exists, and it is why the diagnostics page shows spans from the very first request in the container rather than from the second.</p>
+<h3 id="compose">Compose: the whole deployment on one machine</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">compose.yaml<span class="code__lines">:10-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">services:
+  meridian:
+    build:
+      context: .
+      args:
+        PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET to at least thirty-two random characters}
+      DATABASE_URL: file:/data/meridian.db
+      STOP_LIMIT: '500'
+    ports:
+      - '3000:3000'
+    volumes:
+      - meridian-data:/data
+    restart: unless-stopped
+    # The Dockerfile's HEALTHCHECK does the probing; this makes `depends_on`
+    # in a larger compose file wait for a healthy app rather than a started one.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          &quot;fetch('http://127.0.0.1:3000/healthz').then(r =&gt; process.exit(r.ok ? 0 : 1), () =&gt; process.exit(1))&quot;
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    # Stop by SIGTERM and give in-flight requests the same ten seconds the
+    # server gives them.
+    stop_grace_period: 15s
+
+volumes:
+  meridian-data:</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ PUBLIC_ORIGIN=http://localhost:3000 BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up --build
+…
+meridian-1  | Migrations applied in 41 ms
+meridian-1  | Listening on http://0.0.0.0:3000
+
+$ curl -s localhost:3000/healthz
+{&quot;ok&quot;:true,&quot;version&quot;:&quot;a1b2c3d&quot;,&quot;uptimeSeconds&quot;:12}
+
+$ docker compose down     # SIGTERM, in-flight requests finish, exit code 0</code></pre>
+</figure>
+<p>The compose file adds what the image cannot know: the secret, which is *required* — the <code>:?</code> syntax makes compose refuse to start without it, with a message that says what is missing — the volume, the port, and a <code>stop_grace_period</code> slightly longer than the server’s own shutdown timeout, so compose never kills a server that is still finishing a request. The health check is repeated here because compose’s <code>depends_on: condition: service_healthy</code> reads it, so a reverse proxy in a larger file can wait for a healthy app rather than a started one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.dockerignore<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># Everything the build does not need, so the context is small and a stray
+# local database or secret can never end up in a layer.
+node_modules
+packages/*/node_modules
+packages/*/dist
+packages/*/.svelte-kit
+build
+.svelte-kit
+static/embed
+src/lib/paraglide
+test-results
+playwright-report
+coverage
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+.git
+.github
+.claude
+e2e
+*.md
+Dockerfile
+compose.yaml
+.dockerignore</code></pre>
+</figure>
+<p>The ignore file is a security file as much as a size file. A local database, a <code>.env</code> with a real secret, the <code>.git</code> history: none of them may end up in a layer, where they would be visible to anyone who can pull the image. The generated directories are ignored too, because the build stage regenerates them and a stale copy from a developer’s machine would be a source of mysteries.</p>
+<h3 id="pipeline">The pipeline</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:46-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e · package)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: &quot;true&quot;
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the unit tests and the build.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      STOP_LIMIT: &quot;200&quot;
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: meridian/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: meridian/.nvmrc
+          cache: pnpm
+          cache-dependency-path: meridian/pnpm-lock.yaml
+
+      # `prepare` builds the library, compiles the messages and syncs the types.
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # The unit tests that touch the database need one with the schema in it;
+      # the end-to-end suite builds its own again, from nothing.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+      - run: pnpm run verify:package
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: meridian/test-results
+          if-no-files-found: ignore</code></pre>
+</figure>
+<p>The <code>verify</code> job runs exactly what a developer runs before pushing — <code>pnpm run verify</code>: type-check, formatting and lint, the unit and browser tests, the production build, the end-to-end suite in both profiles — and then <code>verify:package</code> for the library. Nothing in the job is a step a person could not run locally, which is the property that keeps a pipeline debuggable. One Chromium serves both Vitest’s browser project and Playwright. The traces are uploaded only on failure, because a green run has nothing to show.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:92-135</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">  image:
+    name: image (build · run · health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: meridian
+          build-args: PUBLIC_ORIGIN=http://localhost:3000
+          tags: meridian:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Start it the way compose does, wait for the health check, and ask.
+      - name: run the container and probe /healthz
+        run: |
+          docker run -d --name meridian -p 3000:3000 \
+            -e BETTER_AUTH_SECRET=ci-only-secret-of-at-least-thirty-two-characters \
+            meridian:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/healthz; then echo; echo &quot;healthy after ${i}s&quot;; exit 0; fi
+            sleep 1
+          done
+          echo &quot;the container never became healthy&quot;; docker logs meridian; exit 1
+
+      - name: the prerendered guides are served from the image
+        run: |
+          curl -fsS http://localhost:3000/guides | grep -q 'Guides'
+          curl -fsS http://localhost:3000/de/guides | grep -q 'lang=&quot;de&quot;'
+
+      - name: the container stops cleanly on SIGTERM
+        run: |
+          docker stop -t 15 meridian
+          code=$(docker inspect meridian --format '{{.State.ExitCode}}')
+          echo &quot;exit code $code&quot;
+          test &quot;$code&quot; = &quot;0&quot;
+
+      - if: failure()
+        run: docker logs meridian || true</code></pre>
+</figure>
+<p>The <code>image</code> job is the one this chapter is named for. It builds the Dockerfile with the same build argument compose uses, <strong>starts the container</strong>, polls the health endpoint for up to thirty seconds, fetches a prerendered guide in two languages out of the running image, and then stops the container and asserts that the exit code was zero — which is the graceful shutdown, tested. A Dockerfile that is built and never run proves that it builds; this proves that the migration ran, the database answered, the prerendered files were copied, and <code>SIGTERM</code> reaches the process.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:137-164</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">  course:
+    name: course (verify ranges · build · check pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: meridian/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: meridian/.nvmrc
+          cache: pnpm
+          cache-dependency-path: meridian/pnpm-lock.yaml
+
+      # The course quotes the project and its page checker borrows the
+      # project's Playwright, so the project's dependencies are installed.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node ../meridian-course/verify.js
+      - run: node ../meridian-course/build.js
+      - run: node ../meridian-course/tools/check-dist.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- meridian-course/dist</code></pre>
+</figure>
+<p>The <code>course</code> job checks the thing you are reading: every quoted range is a whole thing in a real file, the pages build, and the built pages pass the reader-side checks — no horizontal overflow at a phone width, no console errors, every link resolves. Its last step diffs the committed <code>dist/</code> against a fresh build, so the course that is published is the course the source produces. The path filters at the top of the file keep this workflow from running for the other seven projects, each of which is verified the same way from its own folder.</p>
+
+<aside class="callout callout--why">
+	<h4>Why adapter-node and a container, and not a platform adapter</h4>
+	<p>The project could deploy to a serverless platform with a change of adapter, and for a marketing site it should. It does not, for three reasons that are all in this part. The live query is a long-lived server-sent stream and presence is a heartbeat; both want a process that stays up. The database is a file, and a file wants one writer on one disk. And the tracing exporter keeps spans in the process’s memory for the diagnostics page. A container running one process is the simplest shape that gives all three, and it runs identically on a laptop, a small VPS and a Kubernetes cluster. If the project outgrew one machine, the first move would be a libSQL server for the database and a pub/sub for the rooms — and the code that would change is in chapter 18 and chapter 13, not here.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why <code>PUBLIC_ORIGIN</code> is a build argument and what “one image per origin” means for a staging environment.</li><li>You can say what each of the three stages produces and why the runtime stage copies exactly five things.</li><li>You can describe what the <code>image</code> job proves that a <code>docker build</code> alone does not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="security-headers-and-csp.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Security: the policy, the headers, the redirect and the one framed route</span>
+			</a>
+			<a class="pager__link pager__link--next" href="what-i-would-do-next.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">What I would do next, and what you now know</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

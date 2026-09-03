@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore, and diagnostics — Building Meridian</title>
+<meta name="description" content="A dynamic page reading prerendered data, debounced with runed, grouped with `Intl.DisplayNames`, linking with typed `resolve()`; and a page that reads the server’s own OpenTelemetry spans out of a ring buffer through `src/instrumentation.server.ts`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 77.77777777777779%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html" aria-current="page"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>Explore, and diagnostics</h1>
+			<p class="lede">A dynamic page reading prerendered data, debounced with runed, grouped with <code>Intl.DisplayNames</code>, linking with typed <code>resolve()</code>; and a page that reads the server’s own OpenTelemetry spans out of a ring buffer through <code>src/instrumentation.server.ts</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Mix prerendered data into a per-request page, use a utility library where it earns its place, and turn SvelteKit 3’s built-in tracing into a page you can read.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:10-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * EXPLORE
+ * =======
+ *
+ * The hundred places in the gazetteer, grouped by country, with a filter.
+ * Two things to notice.
+ *
+ * `places()` is a `prerender` remote function: its answer was written to a
+ * static file at build time, so the first call is a GET of a file a CDN
+ * can cache, and the browser keeps it in the Cache API across reloads.
+ * The page itself is dynamic — it has a header that knows who you are —
+ * and the data on it is not. That split is what `prerender` is for.
+ *
+ * `Intl.DisplayNames` turns `PT` into &quot;Portugal&quot;, or &quot;Portugal&quot;, or
+ * &quot;Portugal&quot; — and `JP` into &quot;Japan&quot;, &quot;Japan&quot; and &quot;Japão&quot;. The gazetteer
+ * stores a code and the browser's own locale data does the naming, which
+ * is a hundred strings per language that nobody had to translate.
+ */
+const locale = getLocale();
+const regions = new Intl.DisplayNames(locale, { type: 'region' });
+const countryName = (code: string) =&gt; regions.of(code) ?? code;
+
+let query = $state('');
+/*
+ * runed's `Debounced` follows a reactive value with a delay: `current`
+ * changes 150 ms after the last keystroke, so the list is not rebuilt
+ * on every one. It is a getter, so `query` stays a plain `$state`.
+ */
+const settled = new Debounced(() =&gt; query, 150);
+
+const all = await places();
+
+const filtered = $derived.by(() =&gt; {
+	const needle = settled.current.trim().toLocaleLowerCase(locale);
+	if (!needle) return all;
+	return all.filter(
+		(place) =&gt;
+			place.name.toLocaleLowerCase(locale).includes(needle) ||
+			countryName(place.country).toLocaleLowerCase(locale).includes(needle)
+	);
+});</code></pre>
+</figure>
+<p>Three things in forty lines. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:52-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">interface Country {
+	readonly code: string;
+	readonly name: string;
+	readonly places: Place[];
+}
+
+const countries: Country[] = $derived.by(() =&gt; {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation, never mutated after
+	const groups = new Map&lt;string, Place[]&gt;();
+	for (const place of filtered) {
+		const list = groups.get(place.country);
+		if (list) list.push(place);
+		else groups.set(place.country, [place]);
+	}
+	return [...groups]
+		.map(([code, places]) =&gt; ({ code, name: countryName(code), places }))
+		.sort((a, b) =&gt; a.name.localeCompare(b.name, locale));
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:100-136</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each countries as country (country.code)}
+	&lt;section class=&quot;stack stack--sm&quot;&gt;
+		&lt;h2 class=&quot;country&quot;&gt;
+			{country.name}
+			&lt;span class=&quot;muted tabular&quot;&gt;{country.places.length}&lt;/span&gt;
+		&lt;/h2&gt;
+		&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
+			{#each country.places as place (place.id)}
+				{@const guide = guideForPlace(place.id)}
+				&lt;li class=&quot;card place&quot;&gt;
+					&lt;div class=&quot;stack stack--sm&quot;&gt;
+						&lt;strong&gt;{place.name}&lt;/strong&gt;
+						&lt;span class=&quot;muted tabular coords&quot;&gt;
+							{place.lat.toFixed(2)}°, {place.lng.toFixed(2)}°
+						&lt;/span&gt;
+					&lt;/div&gt;
+					&lt;div class=&quot;cluster&quot;&gt;
+						{#if guide}
+							&lt;a
+								class=&quot;btn btn--sm btn--ghost&quot;
+								href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}
+							&gt;
+								{m.explore_guide()}
+							&lt;/a&gt;
+						{/if}
+						&lt;a
+							class=&quot;btn btn--sm&quot;
+							href={localizeHref(`${resolve('/(site)/(app)/trips/new')}?place=${place.id}`)}
+						&gt;
+							{m.explore_start()}
+						&lt;/a&gt;
+					&lt;/div&gt;
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
+	&lt;/section&gt;
+{/each}</code></pre>
+</figure>
+<p>Two <code>resolve()</code> calls, one with a parameter and one without. The route id for the new-trip page is <code>/(site)/(app)/trips/new</code> — route ids include their groups, which surprises people the first time — and <code>resolve</code> gives back the pathname <code>/trips/new</code>, type-checked against the routes that exist. <code>localizeHref</code> then adds the language prefix. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34.</p>
+
+<aside class="callout callout--why">
+	<h4>Why runed, for one debounce</h4>
+	<p>A debounce is fifteen lines to write and one to import, and the fifteen lines are the kind that get a subtle bug — a timer that survives unmount, a value that updates once too often. runed is a collection of such utilities written against runes by people who maintain Bits UI, and <code>Debounced</code>, <code>useEventListener</code>, <code>ElementSize</code> and <code>PersistedState</code> are the ones most apps reach for. The rule from chapter 01 holds: it sits behind one line, and removing it is writing the fifteen lines. Chapter 40 has the longer argument about utility libraries.</p>
+</aside>
+<h3 id="diagnostics">Diagnostics: the server’s own traces</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/instrumentation.server.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * INSTRUMENTATION
+ * ===============
+ *
+ * SvelteKit 3 runs this file before any application code, with nothing to
+ * switch on: in development through the Vite server, in production because
+ * adapter-node wires it in front of the entry point. The ordering is the
+ * reason the file exists — an OpenTelemetry provider has to be registered
+ * as the *global* one before anything asks for a tracer, or those early
+ * spans go to a no-op provider and vanish.
+ *
+ * What is registered is small: one tracer provider, one processor that
+ * hands each finished span straight to the exporter, and the exporter in
+ * `lib/server/tracing.ts` that keeps them in memory. `register()` also
+ * installs the async-context manager, which is what lets
+ * `event.tracing.current` find the right span from inside an `await`.
+ */
+
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { RingExporter } from '#lib/server/tracing.ts';
+
+const provider = new NodeTracerProvider({
+	spanProcessors: [new SimpleSpanProcessor(new RingExporter())]
+});
+
+provider.register();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHERE THE SPANS GO
+ * ==================
+ *
+ * With `tracing.server` on, SvelteKit emits an OpenTelemetry span for every
+ * `handle`, `load`, form action and remote function, and OpenTelemetry hands
+ * finished spans to an *exporter*. The usual one sends them to a collector
+ * over the network. This one keeps the last few hundred in memory, which is
+ * all a single-process app needs to answer &quot;what did that request actually
+ * do?&quot; on its own diagnostics page — including, for this project, how long
+ * a live query stayed open and which command woke it.
+ *
+ * It is deliberately not a collector. It forgets on restart, holds one
+ * process's spans, and is bounded so that a busy hour cannot become a leak.
+ */
+
+import { ExportResultCode, type ExportResult } from '@opentelemetry/core';
+import type { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base';
+
+export interface SpanRecord {
+	readonly traceId: string;
+	readonly spanId: string;
+	readonly parentId: string | null;
+	readonly name: string;
+	/** Unix milliseconds. */
+	readonly start: number;
+	/** Milliseconds, to a tenth. */
+	readonly duration: number;
+	readonly ok: boolean;
+	readonly attributes: Record&lt;string, string | number | boolean&gt;;
+}</code></pre>
+</figure>
+<p>With <code>tracing.server</code> on, SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function. <code>src/instrumentation.server.ts</code> is loaded before any application code — in development through Vite, in production because adapter-node wires it in front of the entry point — and registers a tracer provider with one processor that hands every finished span to an exporter. The usual exporter sends spans to a collector over the network; this one keeps the last three hundred in memory, which is all a single-process app needs to answer “what did that request do?” on its own page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:33-77</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const CAPACITY = 300;
+
+/*
+ * Module-level state on the server is shared by every request, which is
+ * usually the bug. Here it is the point: the ring *is* the cross-request
+ * memory, it holds nothing private to any one person, and only the
+ * diagnostics page reads it.
+ */
+const ring: SpanRecord[] = [];
+
+/** `[seconds, nanoseconds]` → milliseconds. */
+const ms = ([s, ns]: readonly [number, number]) =&gt; s * 1000 + ns / 1e6;
+
+export function record(span: ReadableSpan): void {
+	const attributes: Record&lt;string, string | number | boolean&gt; = {};
+	for (const [key, value] of Object.entries(span.attributes)) {
+		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+			attributes[key] = value;
+		}
+	}
+
+	ring.push({
+		traceId: span.spanContext().traceId,
+		spanId: span.spanContext().spanId,
+		parentId: span.parentSpanContext?.spanId ?? null,
+		name: span.name,
+		start: Math.round(ms(span.startTime)),
+		duration: Math.round(ms(span.duration) * 10) / 10,
+		// 0 is UNSET, 1 is OK, 2 is ERROR — an unset status is a span nobody complained about.
+		ok: span.status.code !== 2,
+		attributes
+	});
+
+	while (ring.length &gt; CAPACITY) ring.shift();
+}
+
+/** Newest first. A copy, so a reader cannot reach into the ring. */
+export function recentSpans(limit = CAPACITY): SpanRecord[] {
+	return ring.slice(-limit).reverse();
+}
+
+/** One request's spans, oldest first, for drawing as a waterfall. */
+export function trace(traceId: string): SpanRecord[] {
+	return ring.filter((span) =&gt; span.traceId === traceId);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:79-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The exporter OpenTelemetry calls with each batch of finished spans and a
+ * callback to say how it went. A push into an array cannot go wrong, so it
+ * always says success.
+ */
+export class RingExporter implements SpanExporter {
+	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) =&gt; void): void {
+		for (const span of spans) record(span);
+		resultCallback({ code: ExportResultCode.SUCCESS });
+	}
+
+	shutdown(): Promise&lt;void&gt; {
+		return Promise.resolve();
+	}
+}</code></pre>
+</figure>
+<p>The ring is module-level state shared by every request, which is usually the bug and here is the point: it holds nothing private, and only the diagnostics page reads it. <code>record</code> flattens a span to the fields the page shows; <code>recentSpans</code> returns a copy, newest first, so a reader cannot reach into the ring. The exporter is the OpenTelemetry interface — an <code>export</code> with a callback, and a <code>shutdown</code> — implemented in twelve lines.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/diagnostics.remote.ts<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT THE SERVER SAW
+ * ===================
+ *
+ * One query for the diagnostics page: the last spans the tracing exporter
+ * kept, which live queries are open on which trips, and the three facts
+ * about the process a person asks first. It requires a signed-in person —
+ * the spans carry route names and timings, which are not secrets but are
+ * not for strangers either.
+ */
+
+import { version } from '$app/env';
+import { query } from '$app/server';
+import { requireUser } from '#lib/server/access.ts';
+import { liveRooms } from '#lib/server/live.ts';
+import { recentSpans } from '#lib/server/tracing.ts';
+
+const startedAt = Date.now();
+
+export const diagnostics = query(async () =&gt; {
+	requireUser();
+	return {
+		version,
+		node: process.version,
+		startedAt,
+		now: Date.now(),
+		spans: recentSpans(80).sort((a, b) =&gt; b.start - a.start),
+		rooms: liveRooms()
+	};
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(app)/diagnostics/+page.svelte<span class="code__lines">:52-120</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	{#snippet failed(error)}
+		&lt;p class=&quot;issue&quot;&gt;{error instanceof Error ? error.message : m.error_title()}&lt;/p&gt;
+	{/snippet}
+
+	{const report = await diagnostics()}
+
+	&lt;dl class=&quot;facts card card--pad&quot;&gt;
+		&lt;div&gt;
+			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_version()}&lt;/dt&gt;
+			&lt;dd&gt;&lt;code&gt;{report.version}&lt;/code&gt;&lt;/dd&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_node()}&lt;/dt&gt;
+			&lt;dd&gt;&lt;code&gt;{report.node}&lt;/code&gt;&lt;/dd&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_uptime()}&lt;/dt&gt;
+			&lt;dd&gt;{uptime(report.startedAt, report.now)}&lt;/dd&gt;
+		&lt;/div&gt;
+	&lt;/dl&gt;
+
+	&lt;section class=&quot;stack stack--sm&quot;&gt;
+		&lt;h2&gt;{m.diagnostics_rooms()}&lt;/h2&gt;
+		{#if report.rooms.length === 0}
+			&lt;p class=&quot;muted&quot;&gt;{m.diagnostics_no_rooms()}&lt;/p&gt;
+		{:else}
+			&lt;ul class=&quot;cluster&quot; role=&quot;list&quot;&gt;
+				{#each report.rooms as room (room.tripId)}
+					&lt;li class=&quot;chip chip--sea&quot;&gt;
+						&lt;code&gt;{room.tripId.slice(0, 8)}&lt;/code&gt;
+						{m.diagnostics_watchers({ count: room.watchers })}
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+		{/if}
+	&lt;/section&gt;
+
+	&lt;section class=&quot;stack stack--sm&quot;&gt;
+		&lt;h2&gt;{m.diagnostics_spans()}&lt;/h2&gt;
+		&lt;div class=&quot;table-wrap&quot;&gt;
+			&lt;table class=&quot;table&quot;&gt;
+				&lt;thead&gt;
+					&lt;tr&gt;
+						&lt;th&gt;{m.diagnostics_name()}&lt;/th&gt;
+						&lt;th class=&quot;num&quot;&gt;{m.diagnostics_duration()}&lt;/th&gt;
+						&lt;th&gt;{m.diagnostics_status()}&lt;/th&gt;
+						&lt;th&gt;{m.diagnostics_trace()}&lt;/th&gt;
+					&lt;/tr&gt;
+				&lt;/thead&gt;
+				&lt;tbody&gt;
+					{#each report.spans as span (span.spanId)}
+						&lt;tr class:span--child={span.parentId !== null}&gt;
+							&lt;td&gt;
+								&lt;span class=&quot;span__name&quot;&gt;{span.name}&lt;/span&gt;
+								&lt;span class=&quot;muted&quot;&gt;{clock.format(span.start)}&lt;/span&gt;
+							&lt;/td&gt;
+							&lt;td class=&quot;num tabular&quot;&gt;{millis.format(span.duration)} ms&lt;/td&gt;
+							&lt;td&gt;
+								&lt;span class=&quot;chip&quot; class:chip--coral={!span.ok}&gt;{span.ok ? 'ok' : 'error'}&lt;/span&gt;
+							&lt;/td&gt;
+							&lt;td&gt;&lt;code class=&quot;muted&quot;&gt;{span.traceId.slice(0, 8)}&lt;/code&gt;&lt;/td&gt;
+						&lt;/tr&gt;
+					{/each}
+				&lt;/tbody&gt;
+			&lt;/table&gt;
+		&lt;/div&gt;
+	&lt;/section&gt;
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<p>The page is one query and a table: version, Node version, uptime formatted by <code>Intl</code> units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Open the trip page in another tab, come back, refresh — and the <code>watchTrip</code> span is there, with the <code>heartbeat</code> commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the explore page is dynamic and its data is prerendered, and what each half costs.</li><li>You can give the route id for the new-trip page and say why it looks like that.</li><li>You can trace a span from <code>tracing: { server: true }</code> through the instrumentation file to the table.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="guides-prerendered-with-mdsvex.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Guides: Markdown, prerendered, no JavaScript</span>
+			</a>
+			<a class="pager__link pager__link--next" href="embedding-a-trip.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Embedding a trip: a frame and a custom element</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

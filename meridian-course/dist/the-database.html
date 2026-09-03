@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The database: seven tables and Better Auth’s four — Building Meridian</title>
+<meta name="description" content="The Drizzle schema for trips, members, invites, stops, expenses, shares and notes, with three conventions; Better Auth’s tables kept by hand; one libSQL connection in WAL mode; drizzle-kit for migrations; and a seed that is idempotent.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 28.888888888888886%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html" aria-current="page"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>The database: seven tables and Better Auth’s four</h1>
+			<p class="lede">The Drizzle schema for trips, members, invites, stops, expenses, shares and notes, with three conventions; Better Auth’s tables kept by hand; one libSQL connection in WAL mode; drizzle-kit for migrations; and a seed that is idempotent.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a Drizzle schema and know what each convention is protecting against, and set up a SQLite database that several readers and one writer can share.</p></aside>
+			<p>Seven tables around one idea: a trip that several people plan together. The doc comment at the top of the schema is the map, and the three conventions under it are the decisions of chapters 09 and 10 written into column types.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE MERIDIAN SCHEMA
+ * ===================
+ *
+ * Seven tables around one idea: a *trip* that several people plan together.
+ *
+ *   trip           the plan: a name, a date range, a currency, a share link
+ *   member         who may see or change it, with a role
+ *   invite         a link that turns a stranger into a member, once, for a while
+ *   stop           a place on a day (or an idea with no day yet), in order
+ *   expense        who paid what, when, for what
+ *   expense_share  who that expense is split between, by weight
+ *   note           one rich-text document per trip
+ *
+ * Three conventions run through the file:
+ *
+ *   1. Dates are `YYYY-MM-DD` strings (see `domain/dates.ts`). A trip starts
+ *      on a date, not at an instant, and a string compares and sorts the way
+ *      a date should. Instants — created, updated, expires — are integer
+ *      milliseconds since 1970 UTC, which Drizzle hands back as a `Date`.
+ *   2. Money is an integer of minor units plus a currency code
+ *      (see `domain/money.ts`).
+ *   3. `trip.version` goes up by one on every change to anything under the
+ *      trip. The live query watches that one number.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:41-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Every table gets the same primary key shape, so define it once. */
+const id = () =&gt;
+	text('id')
+		.primaryKey()
+		.$defaultFn(() =&gt; newId());
+
+/** SQLite has no `now()` that Drizzle can default to, so spell it out once. */
+const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+const createdAt = () =&gt; integer('created_at', { mode: 'timestamp_ms' }).notNull().default(nowMs);
+
+const updatedAt = () =&gt;
+	integer('updated_at', { mode: 'timestamp_ms' })
+		.notNull()
+		.default(nowMs)
+		.$onUpdate(() =&gt; new Date());
+
+const tripRef = () =&gt;
+	text('trip_id')
+		.notNull()
+		.references(() =&gt; trip.id, { onDelete: 'cascade' });</code></pre>
+</figure>
+<p>Four helpers so that every table gets the same primary key, the same timestamps and the same trip reference. <code>nowMs</code> spells out SQLite’s “now in milliseconds” once, because SQLite has no <code>now()</code> Drizzle can default to. <code>$onUpdate</code> on <code>updatedAt</code> makes Drizzle set it on every update without any query having to remember. <code>tripRef</code> cascades: delete a trip and its stops, members, expenses and note go with it, in the database, where a forgotten cleanup cannot leave orphans.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:67-131</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const trip = sqliteTable(
+	'trip',
+	{
+		id: id(),
+		/** The public address: `/t/kx7m4p2q9w`. Ten characters from `newSlug()`. */
+		slug: text('slug').notNull(),
+		name: text('name').notNull(),
+		description: text('description').notNull().default(''),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		startDate: text('start_date').notNull(),
+		endDate: text('end_date').notNull(),
+		/** ISO 4217. Every expense is entered in it. */
+		currency: text('currency').notNull(),
+		/** `private`: members only. `link`: anybody with the slug may read. */
+		visibility: text('visibility').$type&lt;Visibility&gt;().notNull().default('private'),
+		/**
+		 * Bumped on every change to the trip or anything under it. The live
+		 * query compares this number, not the rows, to decide whether to send.
+		 */
+		version: integer('version').notNull().default(1),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) =&gt; [
+		uniqueIndex('trip_slug_idx').on(table.slug),
+		index('trip_owner_idx').on(table.ownerId)
+	]
+);
+
+export const member = sqliteTable(
+	'member',
+	{
+		tripId: tripRef(),
+		userId: text('user_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		role: text('role').$type&lt;Role&gt;().notNull(),
+		joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull().default(nowMs)
+	},
+	(table) =&gt; [
+		// One row per person per trip: the pair is the key.
+		primaryKey({ columns: [table.tripId, table.userId] }),
+		index('member_user_idx').on(table.userId)
+	]
+);
+
+export const invite = sqliteTable(
+	'invite',
+	{
+		/** The secret in the link. Unguessable, single-use, and it expires. */
+		token: text('token').primaryKey(),
+		tripId: tripRef(),
+		role: text('role').$type&lt;'editor' | 'viewer'&gt;().notNull(),
+		createdBy: text('created_by')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+		usedBy: text('used_by').references(() =&gt; user.id, { onDelete: 'set null' }),
+		usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+		createdAt: createdAt()
+	},
+	(table) =&gt; [index('invite_trip_idx').on(table.tripId)]
+);</code></pre>
+</figure>
+<p>The <code>trip</code> row carries a <code>version</code> that goes up by one on every change to anything under it; chapter 18 shows the live query watching that one number. <code>member</code> has a composite primary key — one row per person per trip — and <code>invite</code> is keyed by its token, which is the secret in the link: unguessable, single-use through <code>usedAt</code>, expiring through <code>expiresAt</code>, so a link pasted into the wrong chat is a bounded mistake.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:137-159</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const stop = sqliteTable(
+	'stop',
+	{
+		id: id(),
+		tripId: tripRef(),
+		name: text('name').notNull(),
+		kind: text('kind').$type&lt;StopKind&gt;().notNull().default('place'),
+		lng: real('lng').notNull(),
+		lat: real('lat').notNull(),
+		/** `null` is an idea: a stop that has not been given a day. */
+		date: text('date'),
+		/** Order within the day, from zero. See `domain/itinerary.ts`. */
+		position: integer('position').notNull().default(0),
+		notes: text('notes').notNull().default(''),
+		/** The gazetteer entry it came from, if it came from one. */
+		placeId: text('place_id'),
+		createdBy: text('created_by').references(() =&gt; user.id, { onDelete: 'set null' }),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	// The itinerary page reads one trip's stops in day-then-position order.
+	(table) =&gt; [index('stop_trip_day_idx').on(table.tripId, table.date, table.position)]
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:165-213</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const expense = sqliteTable(
+	'expense',
+	{
+		id: id(),
+		tripId: tripRef(),
+		title: text('title').notNull(),
+		/** Minor units — cents. Never a float. */
+		amountMinor: integer('amount_minor').notNull(),
+		currency: text('currency').notNull(),
+		category: text('category').$type&lt;ExpenseCategory&gt;().notNull().default('other'),
+		date: text('date').notNull(),
+		paidBy: text('paid_by')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		createdAt: createdAt(),
+		updatedAt: updatedAt()
+	},
+	(table) =&gt; [index('expense_trip_date_idx').on(table.tripId, table.date)]
+);
+
+export const expenseShare = sqliteTable(
+	'expense_share',
+	{
+		expenseId: text('expense_id')
+			.notNull()
+			.references(() =&gt; expense.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		/** Relative weight; 1 for an even split. */
+		weight: integer('weight').notNull().default(1)
+	},
+	(table) =&gt; [primaryKey({ columns: [table.expenseId, table.userId] })]
+);
+
+/* -------------------------------------------------------------------------- */
+/* Notes                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export const note = sqliteTable('note', {
+	/** One note per trip, so the trip id is the key. */
+	tripId: text('trip_id')
+		.primaryKey()
+		.references(() =&gt; trip.id, { onDelete: 'cascade' }),
+	/** A Tiptap document, as JSON. */
+	doc: text('doc', { mode: 'json' }).$type&lt;NoteDoc&gt;().notNull(),
+	updatedBy: text('updated_by').references(() =&gt; user.id, { onDelete: 'set null' }),
+	updatedAt: updatedAt()
+});</code></pre>
+</figure>
+<p>A stop’s <code>date</code> is nullable — <code>null</code> is an idea with no day yet — and the index on <code>(trip, date, position)</code> exists for exactly one query: the itinerary page reading one trip’s stops in day-then-position order. <code>expense.amountMinor</code> is an integer with the comment “never a float” beside it, and <code>expense_share</code> is a weight per participant. The note is one row per trip, keyed by the trip, holding Tiptap’s JSON in a <code>text</code> column with <code>mode: &quot;json&quot;</code> so Drizzle parses it on the way out.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:219-258</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const tripRelations = relations(trip, ({ one, many }) =&gt; ({
+	owner: one(user, { fields: [trip.ownerId], references: [user.id] }),
+	members: many(member),
+	stops: many(stop),
+	expenses: many(expense),
+	note: one(note, { fields: [trip.id], references: [note.tripId] })
+}));
+
+export const memberRelations = relations(member, ({ one }) =&gt; ({
+	trip: one(trip, { fields: [member.tripId], references: [trip.id] }),
+	user: one(user, { fields: [member.userId], references: [user.id] })
+}));
+
+export const inviteRelations = relations(invite, ({ one }) =&gt; ({
+	trip: one(trip, { fields: [invite.tripId], references: [trip.id] }),
+	inviter: one(user, { fields: [invite.createdBy], references: [user.id] })
+}));
+
+export const stopRelations = relations(stop, ({ one }) =&gt; ({
+	trip: one(trip, { fields: [stop.tripId], references: [trip.id] })
+}));
+
+export const expenseRelations = relations(expense, ({ one, many }) =&gt; ({
+	trip: one(trip, { fields: [expense.tripId], references: [trip.id] }),
+	payer: one(user, { fields: [expense.paidBy], references: [user.id] }),
+	shares: many(expenseShare)
+}));
+
+export const expenseShareRelations = relations(expenseShare, ({ one }) =&gt; ({
+	expense: one(expense, { fields: [expenseShare.expenseId], references: [expense.id] }),
+	user: one(user, { fields: [expenseShare.userId], references: [user.id] })
+}));
+
+export type Trip = typeof trip.$inferSelect;
+export type Member = typeof member.$inferSelect;
+export type Invite = typeof invite.$inferSelect;
+export type Stop = typeof stop.$inferSelect;
+export type Expense = typeof expense.$inferSelect;
+export type ExpenseShare = typeof expenseShare.$inferSelect;
+export type Note = typeof note.$inferSelect;</code></pre>
+</figure>
+<p>Relations are what make <code>db.query.trip.findFirst({ with: { stops: true } })</code> possible, and <code>loadDocument</code> in chapter 16 uses every one of them. The <code>$inferSelect</code> types at the bottom are the row types the whole app uses — <code>Stop</code>, <code>Trip</code>, <code>Expense</code> — so a column added here changes a type everywhere it is read.</p>
+<h3 id="auth-tables">Better Auth’s tables, kept by hand</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/auth.schema.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Better Auth's four tables, in the shape Better Auth 1.7 expects.
+ *
+ * `pnpm exec auth generate` would write this file from `auth.ts`; it is kept
+ * by hand so that the column names follow the same `snake_case` convention as
+ * the rest of the schema and so that the one column added in 1.7 — `issuer` —
+ * carries a comment saying why it is there.
+ */
+import { relations, sql } from 'drizzle-orm';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+
+const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+export const user = sqliteTable('user', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	email: text('email').notNull().unique(),
+	emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
+	image: text('image'),
+	createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(nowMs).notNull(),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+		.default(nowMs)
+		.$onUpdate(() =&gt; /* @__PURE__ */ new Date())
+		.notNull()
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/auth.schema.ts<span class="code__lines">:46-80</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const account = sqliteTable(
+	'account',
+	{
+		id: text('id').primaryKey(),
+		accountId: text('account_id').notNull(),
+		providerId: text('provider_id').notNull(),
+		/*
+		 * Who vouches for this account — required since Better Auth 1.7. OAuth
+		 * accounts store the provider's issuer URL; password accounts store the
+		 * synthetic `local:credential`. Sign-in filters on it, so a row without
+		 * it is a user who exists and can never log in.
+		 */
+		issuer: text('issuer').notNull().default('local:credential'),
+		userId: text('user_id')
+			.notNull()
+			.references(() =&gt; user.id, { onDelete: 'cascade' }),
+		accessToken: text('access_token'),
+		refreshToken: text('refresh_token'),
+		idToken: text('id_token'),
+		accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp_ms' }),
+		refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp_ms' }),
+		scope: text('scope'),
+		password: text('password'),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' }).default(nowMs).notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.$onUpdate(() =&gt; /* @__PURE__ */ new Date())
+			.notNull()
+	},
+	(table) =&gt; [
+		index('account_userId_idx').on(table.userId),
+		// Mirrors the unique constraint Better Auth 1.7 declares: one account per
+		// (issuer, accountId) pair.
+		uniqueIndex('account_issuer_accountId_idx').on(table.issuer, table.accountId)
+	]
+);</code></pre>
+</figure>
+<p>Better Auth can generate this file. It is kept by hand so the column names follow the same <code>snake_case</code> as the rest of the schema, and so that the one column Better Auth 1.7 added — <code>issuer</code> — carries a comment saying what it is for. Sign-in filters on it, so an <code>account</code> row without it is a person who exists and can never log in; the seed sets it with <code>createLocalAccountIssuer(&quot;credential&quot;)</code> from Better Auth itself for exactly that reason.</p>
+<h3 id="connection">One connection, two pragmas</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * One connection, one Drizzle instance, both schemas.
+ *
+ * `DATABASE_URL` comes from `$app/env/private`, which exists only on the
+ * server: a component that imported this file by mistake would fail to
+ * build rather than ship a connection string to a browser.
+ */
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL } from '$app/env/private';
+import * as auth from './auth.schema.ts';
+import * as app from './schema.ts';
+
+export const schema = { ...auth, ...app };
+
+/*
+ * `intMode: 'number'`: libSQL can hand integers back as BigInt, which is
+ * correct for a 64-bit column and wrong for every timestamp and every amount
+ * in this schema, all of which fit in a JavaScript number with room to spare.
+ */
+export const client = createClient({ url: DATABASE_URL, intMode: 'number' });
+
+/*
+ * WAL lets readers proceed while a writer appends — a shared trip is many
+ * readers and one writer at a time — and the busy timeout makes a second
+ * writer wait a few milliseconds instead of failing at once.
+ */
+await client.execute('pragma journal_mode = wal');
+await client.execute('pragma busy_timeout = 5000');
+
+export const db = drizzle(client, { schema });
+
+export type Database = typeof db;</code></pre>
+</figure>
+<p><code>DATABASE_URL</code> comes from <code>$app/env/private</code>, a module that exists only on the server — a component that imported this file by mistake fails to build rather than shipping a connection string. <code>intMode: &quot;number&quot;</code> stops libSQL handing back <code>BigInt</code>s for columns that hold timestamps and cents. And the two pragmas are the difference between a shared trip working and not: WAL lets readers proceed while a writer appends, and the busy timeout makes a second writer wait five seconds instead of failing at once. This file has top-level <code>await</code>, which is why it is imported and never re-exported by a <code>.svelte</code> file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">drizzle.config.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'drizzle-kit';
+
+/*
+ * drizzle-kit runs as its own process, outside SvelteKit, so `$app/env/private`
+ * is not available to it — hence `process.env` here and nowhere else in the
+ * project. drizzle-kit loads `.env` on its own.
+ */
+if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+
+export default defineConfig({
+	// Two schema files, one database: Better Auth's tables and ours.
+	schema: ['./src/lib/server/db/auth.schema.ts', './src/lib/server/db/schema.ts'],
+	out: './drizzle',
+	dialect: 'sqlite',
+	dbCredentials: { url: process.env.DATABASE_URL },
+
+	// Print the SQL before running it, and ask before anything destructive.
+	verbose: true,
+	strict: true
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/migrate.ts<span class="code__lines">:1-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * MIGRATE
+ * =======
+ *
+ * Bring the database up to the schema, by applying the SQL files in
+ * `drizzle/` that have not been applied yet. Drizzle keeps a table of which
+ * ones have, so running this on an up-to-date database does nothing and
+ * running it twice is the same as running it once.
+ *
+ * Two ways to run it:
+ *
+ *   node scripts/migrate.ts                     before starting the server
+ *   node --import ./scripts/migrate.ts build    what the Dockerfile does —
+ *                                               the migration runs first, then
+ *                                               the server, in one process,
+ *                                               so `node` stays PID 1 and
+ *                                               SIGTERM reaches it
+ */
+
+import { drizzle } from 'drizzle-orm/libsql';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import { createClient } from '@libsql/client';
+
+if (!process.env.DATABASE_URL) {
+	try {
+		process.loadEnvFile('.env');
+	} catch {
+		// no .env: the variables must already be in the environment
+	}
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set');
+
+const client = createClient({ url, intMode: 'number' });
+const started = performance.now();
+await migrate(drizzle(client), { migrationsFolder: 'drizzle' });
+console.info(`Migrations applied in ${Math.round(performance.now() - started)} ms`);
+client.close();</code></pre>
+</figure>
+<p>drizzle-kit runs outside SvelteKit, so it reads <code>process.env</code> — the only file that does. <code>migrate.ts</code> applies whatever SQL in <code>drizzle/</code> has not been applied yet, and its comment gives the two ways to run it: on its own before the server, or as <code>node --import ./scripts/migrate.ts build</code>, which the Dockerfile uses so that migration and server share one process and <code>node</code> stays PID 1 to receive SIGTERM. <code>process.loadEnvFile</code> is Node’s built-in <code>.env</code> reader; no <code>dotenv</code> dependency.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:1-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SEED
+ * ====
+ *
+ * Three people and a trip they are planning together, so that the app opens
+ * onto something and the end-to-end suite has known rows to find.
+ *
+ * Runs outside SvelteKit — `node scripts/seed.ts` — so it cannot import
+ * `$app/env/private` or `#lib/server/db/index.ts`, and builds its own client
+ * from `process.env`. Everything else it needs it imports from the project:
+ * the schema and the id helpers are plain TypeScript.
+ *
+ * Idempotent: every id is fixed, and the seeded rows are deleted before they
+ * are written, so running it twice gives one trip rather than two.
+ */
+
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
+import { inArray } from 'drizzle-orm';
+import { hashPassword } from 'better-auth/crypto';
+import { createLocalAccountIssuer } from 'better-auth/db';
+import * as v from 'valibot';
+import { IdSchema } from '../src/lib/domain/schemas.ts';
+import * as auth from '../src/lib/server/db/auth.schema.ts';
+import * as app from '../src/lib/server/db/schema.ts';
+
+if (!process.env.DATABASE_URL) {
+	try {
+		process.loadEnvFile('.env');
+	} catch {
+		// no .env: the variables must already be in the environment
+	}
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set');
+
+const client = createClient({ url, intMode: 'number' });
+const db = drizzle(client, { schema: { ...auth, ...app } });
+await client.execute('pragma busy_timeout = 10000');
+
+/** Every seeded person signs in with this. Twelve characters is the minimum. */
+export const DEMO_PASSWORD = 'meridian-demo-2026';
+
+/**
+ * A fixed, recognisable id that is still a UUID. Built *through* the schema
+ * the app validates with, so a malformed one throws here, at seed time. The
+ * first version wrote these by hand and left the last group one character
+ * short; every command that named a seeded row then failed validation on
+ * the server, and the end-to-end suite was the first to notice.
+ */
+const seedId = (suffix: string): string =&gt;
+	v.parse(IdSchema, `00000000-0000-4000-8000-${suffix.padStart(12, '0')}`);</code></pre>
+</figure>
+<p><code>seedId()</code> deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the <code>IdSchema</code> check on the server, where a fire-and-forget <code>.catch(() =&gt; {})</code> swallowed it. Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:96-116</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">console.log('· people');
+
+/**
+ * Create a Better Auth account the way Better Auth would: a `user` row for
+ * the identity and an `account` row with `providerId: 'credential'` for the
+ * password. `hashPassword` comes from Better Auth itself — the hash format is
+ * its business, and a hand-rolled scrypt that is subtly different produces a
+ * person who cannot log in and no error saying why.
+ */
+const password = await hashPassword(DEMO_PASSWORD);
+for (const person of Object.values(USERS)) {
+	await db.insert(auth.user).values({ ...person, emailVerified: true });
+	await db.insert(auth.account).values({
+		id: `${person.id}-account`,
+		accountId: person.id,
+		providerId: 'credential',
+		issuer: createLocalAccountIssuer('credential'),
+		userId: person.id,
+		password
+	});
+}</code></pre>
+</figure>
+<p>The seed is idempotent — fixed ids, deleted before written — so running it twice gives one trip. The people are created the way Better Auth would create them: a <code>user</code> row and an <code>account</code> row with <code>providerId: &quot;credential&quot;</code>, the password hashed by Better Auth’s own <code>hashPassword</code>. A hand-rolled scrypt that differs by one parameter produces a person who cannot log in and no error saying why, and the comment says so, because that is the bug the first version had.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ node scripts/migrate.ts
+Migrations applied in 31 ms
+$ node scripts/seed.ts
+· clearing seeded rows
+· people
+· Iberia by rail
+· Japan in autumn
+
+Seeded. Sign in as any of these with the password &quot;meridian-demo-2026&quot;:
+
+  ana@meridian.test   owner of &quot;Iberia by rail&quot;        /t/seediberia
+  ben@meridian.test   editor of it, owner of &quot;Japan in autumn&quot;  /t/seedjapan2
+  cal@meridian.test   viewer of &quot;Iberia by rail&quot;</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three schema conventions and the chapter each one comes from.</li><li>You can say what WAL mode and the busy timeout change for a shared trip.</li><li>You know why the seed uses Better Auth’s own password hash and issuer helpers.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="schemas-with-valibot.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Schemas with valibot, and who may do what</span>
+			</a>
+			<a class="pager__link pager__link--next" href="environment-and-hooks.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Environment and hooks</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

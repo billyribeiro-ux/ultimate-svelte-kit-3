@@ -1,0 +1,44 @@
+# The whole deployment on one machine: the app, a volume for its database,
+# and the secret it needs from the environment.
+#
+#   PUBLIC_ORIGIN=http://localhost:3000 BETTER_AUTH_SECRET=$(openssl rand -base64 32) docker compose up --build
+#
+# Behind a reverse proxy that terminates TLS, set PUBLIC_ORIGIN to the public
+# https address — it is baked into the image at build time — and have the
+# proxy forward to port 3000.
+
+services:
+  meridian:
+    build:
+      context: .
+      args:
+        PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET to at least thirty-two random characters}
+      DATABASE_URL: file:/data/meridian.db
+      STOP_LIMIT: '500'
+    ports:
+      - '3000:3000'
+    volumes:
+      - meridian-data:/data
+    restart: unless-stopped
+    # The Dockerfile's HEALTHCHECK does the probing; this makes `depends_on`
+    # in a larger compose file wait for a healthy app rather than a started one.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    # Stop by SIGTERM and give in-flight requests the same ten seconds the
+    # server gives them.
+    stop_grace_period: 15s
+
+volumes:
+  meridian-data:

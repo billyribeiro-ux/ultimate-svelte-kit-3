@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The map with no tile server — Building Meridian</title>
+<meta name="description" content="svelte-maplibre over MapLibre GL: a style built from the prerendered world, a worker URL set once in a module script, great-circle legs as a GeoJSON line layer, draggable markers, a theme-following style patched with `diffStyleUpdates`, and geolocation through `createSubscriber`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 60%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html" aria-current="page"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>The map with no tile server</h1>
+			<p class="lede">svelte-maplibre over MapLibre GL: a style built from the prerendered world, a worker URL set once in a module script, great-circle legs as a GeoJSON line layer, draggable markers, a theme-following style patched with <code>diffStyleUpdates</code>, and geolocation through <code>createSubscriber</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Put an interactive vector map in a SvelteKit app that works offline, in CI and under a strict CSP, and wire its state in and out of Svelte.</p></aside>
+			<p>The map is where most trip planners send you to a tile provider, an API key and a <code>connect-src</code> that names somebody else’s domain. This one draws every country from a bundled atlas and needs none of that. What it costs is streets, and at the scale a trip is planned — a country, a coastline, a city as a dot — that is the right trade for a project that has to work on a train and in CI.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/style.ts<span class="code__lines">:1-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A MAP STYLE WITH NO TILE SERVER
+ * ===============================
+ *
+ * A MapLibre style is JSON: sources, and layers that draw them. This one
+ * has a single source — the prerendered `/api/world.json` — and three
+ * layers: the sea (a background colour), the land (a fill) and the borders
+ * (a line). No raster tiles, no vector tiles, no API key, no sprite, no
+ * glyphs, because no layer draws text.
+ *
+ * What it costs: no streets. At the scale a trip is planned — a country, a
+ * coastline, a city as a dot — that is the right trade for a demo that has
+ * to work in CI, on a train, and under `connect-src 'self'`. The chapter on
+ * the map says exactly what to change to put OpenFreeMap tiles under it.
+ *
+ * Colours are literal rather than CSS variables: MapLibre paints a canvas
+ * and does not read the cascade. The function takes the resolved scheme
+ * and the component rebuilds the style when the theme flips.
+ */
+
+import type { StyleSpecification } from 'maplibre-gl';
+
+export function worldStyle(
+	scheme: 'light' | 'dark',
+	worldUrl = '/api/world.json'
+): StyleSpecification {
+	const colours =
+		scheme === 'dark'
+			? { water: '#0c1117', land: '#1c232d', border: '#33404f' }
+			: { water: '#dbe7ee', land: '#f6f1e6', border: '#c4baa6' };
+
+	return {
+		version: 8,
+		sources: {
+			world: { type: 'geojson', data: worldUrl }
+		},
+		layers: [
+			{ id: 'water', type: 'background', paint: { 'background-color': colours.water } },
+			{ id: 'land', type: 'fill', source: 'world', paint: { 'fill-color': colours.land } },
+			{
+				id: 'borders',
+				type: 'line',
+				source: 'world',
+				paint: { 'line-color': colours.border, 'line-width': 0.8 }
+			}
+		]
+	};
+}</code></pre>
+</figure>
+<p>A MapLibre style is JSON: sources and layers. One GeoJSON source, the prerendered <code>/api/world.json</code> from chapter 16, and three layers — sea, land, borders. No sprite, no glyphs, because no layer draws text. The colours are literals rather than tokens, and the comment says why: MapLibre paints a canvas and does not read the cascade, so the function takes the resolved scheme and the component rebuilds the style when the theme flips. The comment also says exactly what to change to put OpenFreeMap tiles under it — one source and one CSP line.</p>
+<h3 id="the-component">The component</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script module lang=&quot;ts&quot;&gt;
+	/*
+	 * MapLibre parses tiles and geometry in a Web Worker. Vite has to be told
+	 * to emit that worker as a file, which `?worker&amp;url` does; the resulting
+	 * URL is handed to MapLibre once, before the first map is made. A module
+	 * script runs once per module, not once per instance, which is exactly
+	 * the right place.
+	 */
+	import * as maplibregl from 'maplibre-gl';
+	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&amp;url';
+
+	maplibregl.setWorkerUrl(maplibreWorkerUrl);
+&lt;/script&gt;</code></pre>
+</figure>
+<p>MapLibre parses geometry in a Web Worker, and Vite has to be told to emit that worker as a file — <code>?worker&amp;url</code> does — and MapLibre has to be handed the URL once, before the first map. A <code>&lt;script module&gt;</code> runs once per module, not once per instance, which is exactly the place. The CSP’s <code>worker-src &quot;self&quot; blob:</code> in chapter 03 is for this file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { FeatureCollection, LineString } from 'geojson';
+	import type { LngLatBoundsLike, Map as MapLibreMap } from 'maplibre-gl';
+	import { GeoJSON, LineLayer, MapLibre, Marker } from 'svelte-maplibre';
+	import { CrosshairIcon, FrameCornersIcon } from 'phosphor-svelte';
+	import { arc, bounds, pad } from '@meridian/waypoint/geo';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { StopKind } from '#lib/domain/schemas.ts';
+	import { theme } from '#lib/ui/theme.svelte.ts';
+	import { Geolocation } from './geolocation.svelte.ts';
+	import { worldStyle } from './style.ts';
+
+	export interface MapStop {
+		readonly id: string;
+		readonly name: string;
+		readonly kind: StopKind;
+		readonly lng: number;
+		readonly lat: number;
+	}
+
+	interface Props {
+		/** Scheduled stops, in itinerary order. The route joins them. */
+		stops: readonly MapStop[];
+		selected?: string | null;
+		editable?: boolean;
+		/** A click on empty map, when editable. */
+		onadd?: (point: { lng: number; lat: number }) =&gt; void;
+		onselect?: (id: string | null) =&gt; void;
+		/** A marker dropped somewhere new, when editable. */
+		onmove?: (id: string, point: { lng: number; lat: number }) =&gt; void;
+	}
+
+	let { stops, selected = null, editable = false, onadd, onselect, onmove }: Props = $props();
+
+	/*
+	 * The style follows the theme. `diffStyleUpdates` makes MapLibre patch
+	 * the running style — three paint properties — rather than tear the map
+	 * down and rebuild it when somebody flips to dark.
+	 */
+	const style = $derived(worldStyle(theme.resolved));
+
+	/** One great-circle line per leg, as GeoJSON for a line layer. */
+	const route: FeatureCollection&lt;LineString&gt; = $derived.by(() =&gt; ({
+		type: 'FeatureCollection',
+		features: stops.slice(1).map((to, i) =&gt; ({
+			type: 'Feature',
+			properties: {},
+			geometry: { type: 'LineString', coordinates: arc(stops[i]!, to, 48).map((p) =&gt; [...p]) }
+		}))
+	}));
+
+	const fit: LngLatBoundsLike | undefined = $derived.by(() =&gt; {
+		const box = bounds(stops);
+		if (!box) return undefined;
+		const padded = pad(box);
+		return [
+			[padded.west, padded.south],
+			[padded.east, padded.north]
+		];
+	});
+
+	let map: MapLibreMap | undefined = $state();
+	let showMe = $state(false);
+	const geo = new Geolocation();
+
+	function fitRoute() {
+		if (map &amp;&amp; fit) map.fitBounds(fit, { padding: 40, maxZoom: 11, duration: 600 });
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+<p>The route is one great-circle line per leg — <code>arc()</code> from the library, forty-eight segments, unwrapped across the date line — as a GeoJSON <code>FeatureCollection</code> the <code>LineLayer</code> draws. <code>fit</code> is the padded bounds from the same library. <code>diffStyleUpdates</code> makes MapLibre patch three paint properties when the theme flips rather than tear the map down. <code>bind:map</code> hands the underlying <code>Map</code> instance back for the one imperative call, <code>fitBounds</code> on a button.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:85-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;map&quot;&gt;
+	&lt;MapLibre
+		bind:map
+		{style}
+		diffStyleUpdates
+		bounds={fit}
+		fitBoundsOptions={{ padding: 40, maxZoom: 11 }}
+		center={[0, 20]}
+		zoom={1.4}
+		attributionControl={false}
+		cooperativeGestures
+		class=&quot;map__canvas&quot;
+		onclick={(e) =&gt; {
+			if (editable) onadd?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+		}}
+	&gt;
+		&lt;GeoJSON id=&quot;route&quot; data={route}&gt;
+			&lt;LineLayer
+				paint={{
+					'line-color': theme.resolved === 'dark' ? '#5eead4' : '#0f766e',
+					'line-width': 2.5,
+					'line-dasharray': [2, 1.5]
+				}}
+				layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+			/&gt;
+		&lt;/GeoJSON&gt;
+
+		{#each stops as stop, i (stop.id)}
+			&lt;Marker
+				lngLat={[stop.lng, stop.lat]}
+				draggable={editable}
+				asButton
+				onclick={() =&gt; onselect?.(stop.id)}
+				ondragend={(e) =&gt; onmove?.(stop.id, { lng: e.lngLat[0], lat: e.lngLat[1] })}
+			&gt;
+				&lt;span
+					class=&quot;pin&quot;
+					class:pin--selected={stop.id === selected}
+					data-kind={stop.kind}
+					title={stop.name}
+				&gt;
+					{i + 1}
+				&lt;/span&gt;
+			&lt;/Marker&gt;
+		{/each}
+
+		&lt;!-- Reading `geo.fix` is what starts the position watch; not reading it stops it. --&gt;
+		{#if showMe &amp;&amp; geo.fix}
+			&lt;Marker lngLat={[geo.fix.lng, geo.fix.lat]}&gt;
+				&lt;span class=&quot;me&quot; title={m.map_locate()}&gt;&lt;/span&gt;
+			&lt;/Marker&gt;
+		{/if}
+	&lt;/MapLibre&gt;</code></pre>
+</figure>
+<p>svelte-maplibre’s components are thin and declarative: <code>&lt;GeoJSON&gt;</code> is a source, <code>&lt;LineLayer&gt;</code> a layer inside it, <code>&lt;Marker&gt;</code> a DOM element positioned by the map. Markers are <code>asButton</code> so they are focusable, draggable when the viewer may edit, and the pin inside is ours — numbered, coloured by kind through the same <code>--kind</code> property the card uses, scaled when selected. A click on empty map calls <code>onadd</code> with a point; the dialog in the last chapter opens with it.</p>
+<h3 id="geolocation">Where am I, as a reactive value</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/geolocation.svelte.ts<span class="code__lines">:1-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHERE AM I, AS A REACTIVE VALUE
+ * ===============================
+ *
+ * `createSubscriber` from `svelte/reactivity` turns an external source of
+ * events into something a template can read like state. The function it is
+ * given runs when the value is first *read inside an effect* — a template,
+ * a `$derived` — and its cleanup runs when nothing reads it any more.
+ *
+ * So the browser's position watch starts the moment a component shows
+ * `geo.fix` and stops the moment it stops showing it. Nobody calls
+ * `start()`; nobody forgets to call `stop()`; the &quot;Where am I&quot; button
+ * toggles a boolean and the watch follows. That is the whole point of the
+ * pattern, and it is why this is a class with getters rather than a store.
+ */
+
+import { createSubscriber } from 'svelte/reactivity';
+
+export interface Fix {
+	readonly lng: number;
+	readonly lat: number;
+	/** metres */
+	readonly accuracy: number;
+	/** Unix milliseconds */
+	readonly at: number;
+}
+
+export class Geolocation {
+	#fix: Fix | null = null;
+	#error: string | null = null;
+	#subscribe: () =&gt; void;
+
+	constructor() {
+		this.#subscribe = createSubscriber((update) =&gt; {
+			if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+				this.#error = 'unsupported';
+				update();
+				return;
+			}
+
+			const id = navigator.geolocation.watchPosition(
+				(position) =&gt; {
+					this.#fix = {
+						lng: position.coords.longitude,
+						lat: position.coords.latitude,
+						accuracy: position.coords.accuracy,
+						at: position.timestamp
+					};
+					this.#error = null;
+					update();
+				},
+				(error) =&gt; {
+					this.#error = error.message || 'unavailable';
+					update();
+				},
+				{ enableHighAccuracy: false, maximumAge: 30_000, timeout: 20_000 }
+			);
+
+			return () =&gt; navigator.geolocation.clearWatch(id);
+		});
+	}
+
+	/** The last position, or `null` before the first one arrives. Reading it starts the watch. */
+	get fix(): Fix | null {
+		this.#subscribe();
+		return this.#fix;
+	}
+
+	get error(): string | null {
+		this.#subscribe();
+		return this.#error;
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:139-175</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	&lt;div class=&quot;map__tools no-print&quot;&gt;
+		&lt;button
+			class=&quot;btn btn--sm btn--icon&quot;
+			type=&quot;button&quot;
+			title={m.map_fit()}
+			aria-label={m.map_fit()}
+			onclick={fitRoute}
+		&gt;
+			&lt;FrameCornersIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+		&lt;/button&gt;
+		&lt;button
+			class=&quot;btn btn--sm btn--icon&quot;
+			class:btn--primary={showMe}
+			type=&quot;button&quot;
+			title={m.map_locate()}
+			aria-label={m.map_locate()}
+			aria-pressed={showMe}
+			onclick={() =&gt; (showMe = !showMe)}
+		&gt;
+			&lt;CrosshairIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+		&lt;/button&gt;
+	&lt;/div&gt;
+
+	{#if showMe}
+		&lt;p class=&quot;map__status&quot; role=&quot;status&quot;&gt;
+			{#if geo.error}
+				{m.map_no_location()}
+			{:else if !geo.fix}
+				{m.map_locating()}
+			{/if}
+		&lt;/p&gt;
+	{/if}
+
+	{#if editable}
+		&lt;p class=&quot;map__hint no-print&quot;&gt;{m.map_click_hint()}&lt;/p&gt;
+	{/if}
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>createSubscriber</code> from <code>svelte/reactivity</code> turns an external source of events into something a template can read like state. The function it is given runs when the value is first read inside an effect and its cleanup runs when nothing reads it any more — so the browser’s position watch starts the moment the template shows <code>geo.fix</code> and stops the moment it stops showing it. Nobody calls start; nobody forgets stop; the “Where am I” button toggles a boolean and the watch follows. That is the pattern for any subscription-shaped API — a <code>BroadcastChannel</code>, a <code>ResizeObserver</code>, a WebSocket — and chapter 40 returns to it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why svelte-maplibre and not the MapLibre API through an attachment</h4>
+	<p>Because a map has a lot of *declarative* state — sources, layers, markers with positions — and a wrapper that turns those into components lets the itinerary’s stops become markers with an <code>{#each}</code>. An attachment would be right for the map instance itself and wrong for thirty markers that come and go. The line is: use a wrapper when the library’s objects map onto a tree the template already has; use an attachment when the library wants one element and owns it. Tiptap, in chapter 30, is the second case.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what the style contains, what it costs, and what one change would add tiles.</li><li>You can explain why the worker URL is set in a module script and which CSP line it needs.</li><li>You can describe <code>createSubscriber</code> and give one other API it would fit.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-command-palette.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The command palette</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-globe.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The globe: Threlte, on demand</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

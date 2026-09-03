@@ -1,0 +1,18 @@
+# A workspace of two: the app at the root, and the library it publishes in
+# `packages/waypoint`. The app depends on the library as `workspace:*`, which
+# links the folder rather than downloading a tarball — so the app is the
+# library's first consumer, and the packaging is proved on every build.
+packages:
+  - 'packages/*'
+
+# pnpm 11 refuses to run a dependency's install scripts unless you say so by
+# name, which is the correct default: `postinstall` is arbitrary code from a
+# transitive dependency you have never read. esbuild needs it to unpack its
+# platform binary, and Vite needs esbuild.
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@libsql/client@0.18.0'
+  - '@libsql/core@0.18.0'
+  - maplibre-gl@6.7.0

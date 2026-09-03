@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embedding a trip: a frame and a custom element — Building Meridian</title>
+<meta name="description" content="A JSON endpoint with CORS for link-visible trips only; the one route that may be framed and the CSP override that allows it; `&lt;meridian-route&gt;` compiled as a custom element by `dynamicCompileOptions`, built standalone by a second Vite config, previewed on the settings page; and a health endpoint for the machines.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">36 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 80%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html" aria-current="page"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 36</p>
+			<h1>Embedding a trip: a frame and a custom element</h1>
+			<p class="lede">A JSON endpoint with CORS for link-visible trips only; the one route that may be framed and the CSP override that allows it; <code>&lt;meridian-route&gt;</code> compiled as a custom element by <code>dynamicCompileOptions</code>, built standalone by a second Vite config, previewed on the settings page; and a health endpoint for the machines.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Let a trip leave the app safely — as an iframe and as a custom element on a stranger’s page — and know which compiler and CSP settings each needs.</p></aside>
+			<p>A trip leaves the app in two shapes: an <code>&lt;iframe&gt;</code> pointing at <code>/embed/&lt;slug&gt;</code>, and a <code>&lt;meridian-route&gt;</code> element a host page includes with one script tag. Both exist only for trips the owner made visible by link, and both are the reason for two exceptions in the security configuration.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:1-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { error, json } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
+import type { RequestHandler } from './$types';
+import { db, schema } from '#lib/server/db/index.ts';
+import { listStops } from '#lib/server/trips.ts';
+
+/**
+ * A TRIP FOR ANOTHER PAGE
+ * =======================
+ *
+ * What the `&lt;meridian-route&gt;` custom element fetches: the trip's name, its
+ * dates and its scheduled stops — nothing else. Only trips whose owner made
+ * them visible by link answer here; a private trip is a 404 whether or not
+ * the caller is signed in, because the element runs on somebody else's
+ * page, where our cookies are not sent and should not matter.
+ *
+ * `access-control-allow-origin: *` is what makes it usable from another
+ * origin at all, and is safe precisely because the response holds nothing
+ * that was not already public by link.
+ */
+const CORS = {
+	'access-control-allow-origin': '*',
+	'access-control-allow-methods': 'GET, OPTIONS'
+};
+
+export const GET: RequestHandler = async ({ params }) =&gt; {
+	const trip = await db.query.trip.findFirst({ where: eq(schema.trip.slug, params.slug) });
+	if (!trip || trip.visibility !== 'link') error(404, 'No such trip.');
+
+	const stops = await listStops(trip.id);
+	return json(
+		{
+			name: trip.name,
+			slug: trip.slug,
+			startDate: trip.startDate,
+			endDate: trip.endDate,
+			stops: stops
+				.filter((stop) =&gt; stop.date !== null)
+				.map((stop) =&gt; ({
+					name: stop.name,
+					kind: stop.kind,
+					date: stop.date,
+					lng: stop.lng,
+					lat: stop.lat
+				}))
+		},
+		{ headers: { ...CORS, 'cache-control': 'public, max-age=60' } }
+	);
+};
+
+export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204, headers: CORS });</code></pre>
+</figure>
+<p>The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. <code>access-control-allow-origin: *</code> is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. <code>[slug=slug].json</code> in a folder name is SvelteKit’s way of giving an endpoint an extension.</p>
+<h3 id="the-frame">The frame</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/embed/[slug=slug]/+page.ts<span class="code__lines">:1-7</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The frame. `/embed/&lt;slug&gt;` is the one route `hooks.server.ts` allows other
+ * sites to put in an `&lt;iframe&gt;`, and it is server-rendered with no client
+ * JavaScript at all: a route summary does not need any, and a frame that
+ * ships nothing cannot slow the page around it.
+ */
+export const csr = false;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/embed/[slug=slug]/+page.svelte<span class="code__lines">:1-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { error } from '@sveltejs/kit';
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { formatDate, formatRange } from '#lib/domain/dates.ts';
+	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import RouteThumb from '#lib/ui/RouteThumb.svelte';
+
+	const slug = $derived(page.params.slug ?? '');
+	const locale = getLocale();
+&lt;/script&gt;
+
+{const { document } = await tripBySlug(slug)}
+
+&lt;!--
+	Only a trip visible by link may be framed. `tripBySlug` already refuses a
+	private trip to a stranger; this refuses it to a *member* too, because
+	the frame is on somebody else's page and their visitors are strangers.
+--&gt;
+{#if document.trip.visibility !== 'link'}
+	{error(404, 'No such trip.')}
+{/if}
+
+{const scheduled = document.stops.filter((stop) =&gt; stop.date !== null)}
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{m.embed_title({ name: document.trip.name })}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;article class=&quot;embed&quot;&gt;
+	&lt;header class=&quot;stack stack--sm&quot;&gt;
+		&lt;h1 class=&quot;embed__name&quot;&gt;{document.trip.name}&lt;/h1&gt;
+		&lt;p class=&quot;muted&quot;&gt;{formatRange(document.trip.startDate, document.trip.endDate, locale)}&lt;/p&gt;
+	&lt;/header&gt;
+
+	&lt;RouteThumb
+		points={scheduled.map((stop): [number, number] =&gt; [stop.lng, stop.lat])}
+		width={320}
+		height={160}
+		label={document.trip.name}
+	/&gt;
+
+	&lt;ol class=&quot;embed__stops&quot;&gt;
+		{#each scheduled as stop (stop.id)}
+			&lt;li&gt;
+				&lt;span&gt;{stop.name}&lt;/span&gt;
+				{#if stop.date}&lt;span class=&quot;muted&quot;&gt;{formatDate(stop.date, locale, 'short')}&lt;/span&gt;{/if}
+			&lt;/li&gt;
+		{/each}
+	&lt;/ol&gt;
+
+	&lt;a class=&quot;embed__powered&quot; href={localizeHref(`/t/${slug}`)} target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;
+		{m.embed_powered()}
+	&lt;/a&gt;
+&lt;/article&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:119-136</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * THE ONE ROUTE THAT MAY BE FRAMED
+ * --------------------------------
+ * `vite.config.ts` says `frame-ancestors 'none'` for the whole app, which
+ * is right: a trip planner inside somebody else's iframe is a clickjacking
+ * target. `/embed/&lt;slug&gt;` exists to be framed — it is the read-only route
+ * summary the custom element loads — so for that route, and only that
+ * route, the directive is replaced after SvelteKit has built the policy.
+ */
+if (event.url.pathname.startsWith('/embed/')) {
+	const policy = response.headers.get('content-security-policy');
+	if (policy) {
+		response.headers.set(
+			'content-security-policy',
+			policy.replace(/frame-ancestors [^;]*/, 'frame-ancestors *')
+		);
+	}
+}</code></pre>
+</figure>
+<p>The frame page is outside the <code>(site)</code> group — no header — and has <code>csr = false</code>, so it is a few kilobytes of HTML and CSS. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which <code>hooks.server.ts</code> replaces <code>frame-ancestors &quot;none&quot;</code> with <code>*</code> after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.</p>
+<h3 id="the-element">The custom element</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:1-10</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:options
+	customElement={{
+		tag: 'meridian-route',
+		shadow: 'open',
+		props: {
+			slug: { attribute: 'slug', type: 'String' },
+			origin: { attribute: 'origin', type: 'String' }
+		}
+	}}
+/&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:12-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	/**
+	 * &lt;meridian-route slug=&quot;…&quot; origin=&quot;…&quot;&gt;
+	 * ====================================
+	 *
+	 * A trip's route on any page: one script tag, one element, no framework
+	 * on the host page. Svelte compiles this component to a custom element
+	 * — `customElements.define('meridian-route', …)` happens on import — with
+	 * a shadow root, so the host page's CSS cannot reach in and ours cannot
+	 * leak out. The style block below is the whole of its styling.
+	 *
+	 * It fetches `/api/route/&lt;slug&gt;.json` from the app's origin and draws the
+	 * stops as a small projected line, the same way `RouteThumb` does inside
+	 * the app. It is deliberately not the app's component: an element that
+	 * imported the design tokens would bring the tokens with it.
+	 */
+	interface RouteStop {
+		readonly name: string;
+		readonly kind: string;
+		readonly date: string | null;
+		readonly lng: number;
+		readonly lat: number;
+	}
+
+	interface RouteData {
+		readonly name: string;
+		readonly slug: string;
+		readonly startDate: string;
+		readonly endDate: string;
+		readonly stops: readonly RouteStop[];
+	}
+
+	interface Props {
+		slug?: string;
+		origin?: string;
+	}
+
+	let { slug = '', origin = '' }: Props = $props();
+
+	const base = $derived(origin || (typeof location === 'undefined' ? '' : location.origin));
+
+	async function load(slug: string, base: string): Promise&lt;RouteData&gt; {
+		if (!slug) throw new Error('meridian-route needs a slug attribute');
+		const response = await fetch(`${base}/api/route/${slug}.json`);
+		if (!response.ok) throw new Error(`Meridian answered ${response.status}`);
+		return (await response.json()) as RouteData;
+	}
+
+	const WIDTH = 320;
+	const HEIGHT = 160;
+
+	/** Longitude across, latitude up, scaled to fit — right for a trip, wrong for the world. */
+	function project(stops: readonly RouteStop[]): string {
+		if (stops.length === 0) return '';
+		const lngs = stops.map((s) =&gt; s.lng);
+		const lats = stops.map((s) =&gt; s.lat);
+		const west = Math.min(...lngs);
+		const south = Math.min(...lats);
+		const spanX = Math.max(Math.max(...lngs) - west, 0.5);
+		const spanY = Math.max(Math.max(...lats) - south, 0.5);
+		const inset = 14;
+		const scale = Math.min((WIDTH - inset * 2) / spanX, (HEIGHT - inset * 2) / spanY);
+		const offsetX = (WIDTH - spanX * scale) / 2;
+		const offsetY = (HEIGHT - spanY * scale) / 2;
+		return stops
+			.map(
+				(s) =&gt;
+					`${(offsetX + (s.lng - west) * scale).toFixed(1)},${(HEIGHT - offsetY - (s.lat - south) * scale).toFixed(1)}`
+			)
+			.join(' ');
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+<p><code>&lt;svelte:options customElement&gt;</code> names the tag, asks for an open shadow root, and maps two attributes onto props — so <code>&lt;meridian-route slug=&quot;…&quot;&gt;</code> on a host page becomes <code>slug</code> in the component. The element fetches the JSON and draws the stops as a projected line the way <code>RouteThumb</code> does. It is deliberately not the app’s component: an element that imported the design tokens would bring the tokens with it, and a shadow root means the host page’s CSS cannot reach in and ours cannot leak out.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	{#snippet pending()}
+		&lt;div class=&quot;card&quot;&gt;&lt;p class=&quot;muted&quot;&gt;Loading the route…&lt;/p&gt;&lt;/div&gt;
+	{/snippet}
+	{#snippet failed(error)}
+		&lt;div class=&quot;card&quot;&gt;
+			&lt;p class=&quot;muted&quot;&gt;
+				{error instanceof Error ? error.message : 'The route could not be loaded.'}
+			&lt;/p&gt;
+		&lt;/div&gt;
+	{/snippet}
+
+	{const route = await load(slug, base)}
+	{const points = project(route.stops)}
+
+	&lt;div class=&quot;card&quot;&gt;
+		&lt;p class=&quot;title&quot;&gt;{route.name}&lt;/p&gt;
+		&lt;p class=&quot;muted&quot;&gt;{route.startDate} → {route.endDate}&lt;/p&gt;
+		&lt;svg viewBox=&quot;0 0 {WIDTH} {HEIGHT}&quot; role=&quot;img&quot; aria-label=&quot;Route of {route.name}&quot;&gt;
+			{#if points}
+				&lt;polyline {points} /&gt;
+				{#each points.split(' ') as point, index (index)}
+					{@const [x, y] = point.split(',')}
+					&lt;circle cx={x} cy={y} r=&quot;4&quot; /&gt;
+				{/each}
+			{/if}
+		&lt;/svg&gt;
+		&lt;ol&gt;
+			{#each route.stops as stop, index (index)}
+				&lt;li&gt;{stop.name}{stop.date ? ` · ${stop.date}` : ''}&lt;/li&gt;
+			{/each}
+		&lt;/ol&gt;
+		&lt;a class=&quot;powered&quot; href=&quot;{base}/t/{route.slug}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;
+			Planned with Meridian
+		&lt;/a&gt;
+	&lt;/div&gt;
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:75-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * ONE FOLDER OF CUSTOM ELEMENTS
+ * =============================
+ *
+ * `src/lib/embed` holds `&lt;meridian-route&gt;`, which is compiled as a
+ * custom element — `customElements.define`, a shadow root — rather
+ * than as an ordinary component. That is a per-file compiler option,
+ * and `dynamicCompileOptions` is how a per-file option is set.
+ *
+ * `environment.name === 'client'` because a custom element has no
+ * server-rendered form: it registers itself with the browser and is
+ * imported on mount. The server build compiles the same file as a
+ * plain component it never renders.
+ */
+dynamicCompileOptions({ filename, environment }) {
+	if (environment.name !== 'client') return {};
+	if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+	return {};
+},</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.element.config.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+/**
+ * THE STANDALONE ELEMENT
+ * ======================
+ *
+ * A second Vite build, without SvelteKit, that turns `src/lib/embed` into one
+ * file: `static/embed/meridian-route.js`. A host page includes it with a
+ * `&lt;script&gt;` tag and writes `&lt;meridian-route slug=&quot;…&quot; origin=&quot;…&quot;&gt;`.
+ *
+ * One file, an IIFE, no chunks — the opposite of the app's `bundleStrategy:
+ * 'split'`, because a host page cannot resolve our chunk names. The Svelte
+ * runtime is bundled in; a page that embeds a route should not need to know
+ * what it was written with.
+ *
+ * SvelteKit copies `static/` into the build, so the app serves the result at
+ * `/embed/meridian-route.js` with the same caching as everything else. The
+ * `build` script runs this first (see `package.json`).
+ */
+export default defineConfig({
+	plugins: [
+		svelte({
+			compilerOptions: {
+				customElement: true,
+				runes: true,
+				experimental: { async: true }
+			}
+		})
+	],
+	build: {
+		lib: {
+			entry: 'src/lib/embed/element.ts',
+			formats: ['iife'],
+			name: 'Meridian',
+			fileName: () =&gt; 'meridian-route.js'
+		},
+		outDir: 'static/embed',
+		emptyOutDir: true,
+		sourcemap: false
+	}
+});</code></pre>
+</figure>
+<p>Two compilers see this file. Inside the app, <code>dynamicCompileOptions</code> compiles anything under <code>embed</code> with <code>customElement: true</code> for the client build only — the server build compiles it as a plain component it never renders. Outside the app, a second Vite config with no SvelteKit builds <code>src/lib/embed/element.ts</code> into one IIFE file in <code>static/embed</code>, which SvelteKit then serves like any static asset at <code>/embed/meridian-route.js</code>. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The <code>build</code> and <code>dev</code> scripts run it first.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/element.ts<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Importing the component is what defines the element: `&lt;svelte:options
+ * customElement={{ tag: 'meridian-route' }}&gt;` registers it with
+ * `customElements.define` as a side effect of the import. This module is the
+ * one entry for both places that need it — the settings page, which imports
+ * it on mount to show a preview, and the standalone build in
+ * `vite.element.config.ts`, which turns it into one file a host page can
+ * include with a `&lt;script&gt;` tag.
+ */
+
+import MeridianRoute from './MeridianRoute.svelte';
+
+export { MeridianRoute };</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+
+	/**
+	 * PUTTING A TRIP ON ANOTHER PAGE
+	 * ==============================
+	 *
+	 * Two ways, and the snippets for both. The frame is `/embed/&lt;slug&gt;`, the
+	 * one route the security hook allows to be framed. The element is
+	 * `&lt;meridian-route&gt;`, a custom element built from `src/lib/embed` — here
+	 * it is imported on mount, so the preview below is the real thing, and
+	 * the standalone file a host page would load is built by
+	 * `vite.element.config.ts` into `static/embed/`.
+	 *
+	 * Only a trip visible by link can be embedded; both routes say no to a
+	 * private one, and so does this section.
+	 */
+	interface Props {
+		slug: string;
+		visibility: string;
+	}
+
+	let { slug, visibility }: Props = $props();
+
+	onMount(() =&gt; {
+		void import('#lib/embed/element.ts');
+	});
+
+	const origin = $derived(page.url.origin);
+
+	// Assembled in two halves: a literal closing script tag inside this script
+	// block would end the block, as far as the Svelte parser is concerned.
+	const closeScript = '&lt;/' + 'script&gt;';
+	const frameSnippet = $derived(
+		`&lt;iframe src=&quot;${origin}/embed/${slug}&quot; width=&quot;400&quot; height=&quot;420&quot; loading=&quot;lazy&quot; title=&quot;Meridian&quot;&gt;&lt;/iframe&gt;`
+	);
+	const elementSnippet = $derived(
+		`&lt;script src=&quot;${origin}/embed/meridian-route.js&quot;&gt;${closeScript}\n&lt;meridian-route slug=&quot;${slug}&quot; origin=&quot;${origin}&quot;&gt;&lt;/meridian-route&gt;`
+	);
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:44-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;card card--pad stack&quot;&gt;
+	&lt;h2&gt;{m.embed_heading()}&lt;/h2&gt;
+	{#if visibility !== 'link'}
+		&lt;p class=&quot;muted&quot;&gt;{m.embed_only_link()}&lt;/p&gt;
+	{:else}
+		&lt;div class=&quot;stack stack--sm&quot;&gt;
+			&lt;h3 class=&quot;label&quot;&gt;{m.embed_iframe()}&lt;/h3&gt;
+			&lt;pre class=&quot;snippet&quot;&gt;&lt;code&gt;{frameSnippet}&lt;/code&gt;&lt;/pre&gt;
+		&lt;/div&gt;
+		&lt;div class=&quot;stack stack--sm&quot;&gt;
+			&lt;h3 class=&quot;label&quot;&gt;{m.embed_element()}&lt;/h3&gt;
+			&lt;pre class=&quot;snippet&quot;&gt;&lt;code&gt;{elementSnippet}&lt;/code&gt;&lt;/pre&gt;
+		&lt;/div&gt;
+		&lt;meridian-route {slug} {origin}&gt;&lt;/meridian-route&gt;
+	{/if}
+&lt;/section&gt;</code></pre>
+</figure>
+<p>The settings page shows both snippets and a live preview: it imports the element module on mount — importing is what defines the element — and writes <code>&lt;meridian-route&gt;</code> into its own markup. The snippet strings are assembled in two halves because a literal closing script tag inside a script block would end the block as far as the Svelte parser is concerned; that sentence is in the source too, because the next person to touch it would otherwise “fix” it.</p>
+<h3 id="health">And one endpoint for the machines</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { json } from '@sveltejs/kit';
+import { version } from '$app/env';
+import type { RequestHandler } from './$types';
+import { client } from '#lib/server/db/index.ts';
+
+/**
+ * THE HEALTH ENDPOINT
+ * ===================
+ *
+ * The question a load balancer, a container runtime and a person with
+ * `curl` all ask: is this process able to serve? &quot;Able&quot; means the database
+ * answers — a server that is up and cannot reach its data is a server that
+ * should not be receiving traffic.
+ *
+ * `version` is the commit the build was made from (see `vite.config.ts`), so
+ * &quot;which version is live?&quot; is one request. `no-store`, because a cached
+ * &quot;healthy&quot; is worse than none.
+ */
+const startedAt = Date.now();
+
+export const GET: RequestHandler = async () =&gt; {
+	const headers = { 'cache-control': 'no-store' };
+	try {
+		await client.execute('select 1');
+	} catch {
+		return json({ ok: false, version }, { status: 503, headers });
+	}
+	return json(
+		{ ok: true, version, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
+		{ headers }
+	);
+};</code></pre>
+</figure>
+<p>The question a load balancer, a container runtime and a person with <code>curl</code> all ask: is this process able to serve? “Able” means the database answers. <code>version</code> from <code>$app/env</code> is the commit the build was made from, so “which version is live?” is one request. <code>no-store</code>, because a cached “healthy” is worse than none. Chapter 44 shows the Dockerfile and the CI job asking it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which two security exceptions the embed needs and where each is made.</li><li>You can explain <code>dynamicCompileOptions</code> and why the element also has its own Vite config.</li><li>You know why the element has its own styles and its own colours.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="explore-and-diagnostics.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Explore, and diagnostics</span>
+			</a>
+			<a class="pager__link pager__link--next" href="choosing-libraries.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The survey: what was chosen, what was rejected, and why</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

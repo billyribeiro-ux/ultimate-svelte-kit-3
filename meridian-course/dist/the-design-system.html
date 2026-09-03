@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The design system — Building Meridian</title>
+<meta name="description" content="Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash, fonts from fontsource preloaded by filename, an `&lt;enhanced:img&gt;` hero, a GSAP reveal as an attachment, and the rule that nothing in the app writes a hex code.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">22 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 48.888888888888886%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html" aria-current="page"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 22</p>
+			<h1>The design system</h1>
+			<p class="lede">Tokens with <code>light-dark()</code>, a theme class on <code>MediaQuery</code>, the boot script that stops the flash, fonts from fontsource preloaded by filename, an <code>&lt;enhanced:img&gt;</code> hero, a GSAP reveal as an attachment, and the rule that nothing in the app writes a hex code.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a light-and-dark design system that never flashes, respects reduced motion, and keeps every colour in one file.</p></aside>
+			<p>Four CSS files, imported in order: tokens define, reset clears, base styles, utilities lay out. Every colour, size and duration the interface uses is named once in the first, and components reference the names. The one rule with no exceptions is that nothing else in <code>src</code> writes a hex code — the map style and the globe are the exceptions that prove it, and both say why.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/index.css<span class="code__lines">:1-5</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/* Order matters: tokens define, reset clears, base styles, utilities lay out. */
+@import './tokens.css';
+@import './reset.css';
+@import './base.css';
+@import './utilities.css';</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Every colour, size and duration the interface uses, named once. Components
+ * reference the names; nothing else in the project writes a hex code.
+ *
+ * Colour is done with `light-dark()`: each token holds its light value and
+ * its dark value, and the browser picks by `color-scheme` — which follows
+ * the system by default and is pinned by `data-theme` on &lt;html&gt; when a
+ * person chooses. No duplicated blocks, no cascade tricks, no flash.
+ *
+ * The palette is &quot;a map on a table&quot;: warm paper, ink, and a teal that reads
+ * as water. It is deliberately quiet, because the map, the globe and the
+ * photographs are the colour.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:18-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">:root {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--paper: light-dark(#f8f5ee, #101318);
+	--paper-2: light-dark(#ffffff, #171b22);
+	--paper-3: light-dark(#efeae0, #1e232c);
+	--line: light-dark(#dcd5c7, #2b323d);
+	--line-2: light-dark(#c9c0ae, #3a4350);
+
+	/* Ink */
+	--ink: light-dark(#171a1f, #eef1f5);
+	--ink-2: light-dark(#4b5160, #aeb6c2);
+	--ink-3: light-dark(#7a8191, #7c8595);
+
+	/* Accents */
+	--sea: light-dark(#0f766e, #2dd4bf);
+	--sea-2: light-dark(#0d9488, #5eead4);
+	--sea-soft: light-dark(#d6f0ec, #103b37);
+	--sun: light-dark(#b45309, #f59e0b);
+	--sun-soft: light-dark(#fdebd0, #3d2a08);
+	--coral: light-dark(#be123c, #fb7185);
+	--coral-soft: light-dark(#fde2e7, #4a1220);
+
+	/* Stop kinds — one hue each, used on the map and in the itinerary */
+	--kind-place: var(--sea);
+	--kind-lodging: light-dark(#7c3aed, #a78bfa);
+	--kind-food: var(--sun);
+	--kind-transport: light-dark(#2563eb, #60a5fa);
+	--kind-activity: var(--coral);
+	--kind-idea: var(--ink-3);
+
+	/* Focus */
+	--focus: light-dark(#2563eb, #93c5fd);
+
+	/* Type */
+	--font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+	--font-body:
+		'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;</code></pre>
+</figure>
+<p><code>light-dark()</code> is the whole theming mechanism. Each token holds its light value and its dark value and the browser picks by <code>color-scheme</code>, which follows the system by default and is pinned by <code>data-theme</code> on <code>&lt;html&gt;</code> when a person chooses. No duplicated <code>@media (prefers-color-scheme)</code> blocks, no <code>.dark</code> cascade, and — because the choice is applied before the first paint — no flash. The palette is “a map on a table”: warm paper, ink, a teal that reads as water, and one hue per kind of stop that the itinerary and the map share through <code>--kind-*</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:1-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * BASE
+ * ====
+ *
+ * Typography, links, and the handful of shared classes that every page
+ * uses: buttons, inputs, cards, chips, badges. Each is small and boring on
+ * purpose — a component library's job is to be predictable.
+ */
+
+body {
+	font-family: var(--font-body);
+	font-size: var(--text-md);
+	color: var(--ink);
+	background: var(--paper);
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 500;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	font-variation-settings: 'opsz' 96;
+}
+
+h1 {
+	font-size: var(--text-2xl);
+}
+h2 {
+	font-size: var(--text-xl);
+}
+h3 {
+	font-size: var(--text-lg);
+}
+h4 {
+	font-size: var(--text-md);
+	font-weight: 600;
+}</code></pre>
+</figure>
+<p>The display face is Fraunces, a variable font with an optical-size axis; <code>font-variation-settings: &quot;opsz&quot; 96</code> on headings asks for the display cut. The body is Inter. Both come from fontsource as stylesheets of <code>@font-face</code> rules with <code>unicode-range</code>, so a browser downloads the latin subset and nothing else — and chapter 14’s <code>preload</code> filter names those two files by their source filename.</p>
+<h3 id="theme">The theme, and the flash it prevents</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * LIGHT, DARK, OR WHATEVER THE SYSTEM SAYS
+ * ========================================
+ *
+ * The CSS does the real work: every colour token is a `light-dark()` pair
+ * and `color-scheme` picks the side. This class only decides what
+ * `color-scheme` is — the system's preference by default, or the person's
+ * choice, remembered in `localStorage` and applied as `data-theme` on
+ * `&lt;html&gt;` (the inline script in `app.html` applies it before first paint).
+ *
+ * `MediaQuery` from `svelte/reactivity` is the system's preference as a
+ * reactive value: `resolved` updates when the OS switches at sunset without
+ * anybody polling.
+ */
+
+import { MediaQuery } from 'svelte/reactivity';
+import { browser } from '$app/env';
+
+export type Theme = 'system' | 'light' | 'dark';
+
+const KEY = 'meridian:theme';
+
+class ThemeState {
+	choice: Theme = $state('system');
+
+	#systemDark = new MediaQuery('(prefers-color-scheme: dark)');
+
+	readonly resolved: 'light' | 'dark' = $derived(
+		this.choice === 'system' ? (this.#systemDark.current ? 'dark' : 'light') : this.choice
+	);
+
+	constructor() {
+		if (!browser) return;
+		try {
+			const saved = localStorage.getItem(KEY);
+			if (saved === 'light' || saved === 'dark') this.choice = saved;
+		} catch {
+			// Storage can be unavailable (private mode, blocked). The system wins.
+		}
+	}
+
+	set(next: Theme): void {
+		this.choice = next;
+		if (!browser) return;
+		try {
+			if (next === 'system') localStorage.removeItem(KEY);
+			else localStorage.setItem(KEY, next);
+		} catch {
+			// same as above
+		}
+		if (next === 'system') delete document.documentElement.dataset.theme;
+		else document.documentElement.dataset.theme = next;
+	}
+}
+
+export const theme = new ThemeState();</code></pre>
+</figure>
+<p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html<span class="code__lines">:12-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;!--
+	The theme a person chose, applied before the first paint so a dark
+	choice on a light system never flashes light. This script is the one
+	inline script in the app: `vite.config.ts` reads it out of this file,
+	hashes it, and adds the hash to `script-src` — so it runs under the
+	Content Security Policy on prerendered pages (hashes) and rendered
+	ones (nonces) alike.
+--&gt;
+&lt;script&gt;
+	try {
+		var t = localStorage.getItem('meridian:theme');
+		if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+	} catch (e) {}
+&lt;/script&gt;</code></pre>
+</figure>
+<p>The one inline script in the app, and the reason <code>vite.config.ts</code> hashes it. A dark choice on a light system would otherwise paint light for one frame before hydration; this runs before the first paint and sets <code>data-theme</code> from storage. It carries no nonce attribute, because the guides are prerendered and SvelteKit refuses to prerender a template with <code>%sveltekit.nonce%</code> in it — the hash in <code>script-src</code> allows it everywhere.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/ThemeToggle.svelte<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { MonitorIcon, MoonIcon, SunIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { theme, type Theme } from './theme.svelte.ts';
+
+	const options: { value: Theme; label: () =&gt; string; icon: typeof SunIcon }[] = [
+		{ value: 'system', label: m.theme_system, icon: MonitorIcon },
+		{ value: 'light', label: m.theme_light, icon: SunIcon },
+		{ value: 'dark', label: m.theme_dark, icon: MoonIcon }
+	];
+&lt;/script&gt;
+
+&lt;!--
+	A radio group, because that is what it is: one of three, always exactly
+	one. Arrow keys move between them for free, and a screen reader says
+	&quot;Theme, Light, 2 of 3&quot; without any ARIA of our own beyond the fieldset.
+--&gt;
+&lt;fieldset class=&quot;theme&quot;&gt;
+	&lt;legend class=&quot;visually-hidden&quot;&gt;{m.theme_label()}&lt;/legend&gt;
+	{#each options as option (option.value)}
+		{@const Icon = option.icon}
+		&lt;label class=&quot;theme__option&quot; title={option.label()}&gt;
+			&lt;input
+				class=&quot;visually-hidden&quot;
+				type=&quot;radio&quot;
+				name=&quot;theme&quot;
+				value={option.value}
+				checked={theme.choice === option.value}
+				onchange={() =&gt; theme.set(option.value)}
+			/&gt;
+			&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
+			&lt;span class=&quot;visually-hidden&quot;&gt;{option.label()}&lt;/span&gt;
+		&lt;/label&gt;
+	{/each}
+&lt;/fieldset&gt;</code></pre>
+</figure>
+<p>A radio group, because that is what it is: one of three, always exactly one. Arrow keys move between them for free, and a screen reader says “Theme, Light, 2 of 3” with no ARIA beyond the fieldset. <code>:has(input:checked)</code> styles the label from the state of the input inside it, which is what <code>:has()</code> was made for.</p>
+<h3 id="hero">A picture that is four pictures</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:18-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;hero container&quot;&gt;
+	&lt;div class=&quot;hero__copy stack&quot; {@attach reveal()}&gt;
+		&lt;p class=&quot;eyebrow&quot;&gt;{m.app_tagline()}&lt;/p&gt;
+		&lt;h1 class=&quot;hero__title&quot;&gt;{m.home_hero_title()}&lt;/h1&gt;
+		&lt;p class=&quot;hero__lede&quot;&gt;{m.home_hero_lede()}&lt;/p&gt;
+		&lt;div class=&quot;cluster&quot;&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href={localizeHref('/trips/new')}&gt;{m.home_cta()}&lt;/a&gt;
+			&lt;a class=&quot;btn&quot; href={localizeHref('/t/seedjapan2')}&gt;{m.home_cta_secondary()}&lt;/a&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+
+	&lt;!--
+		`&lt;enhanced:img&gt;` is rewritten at build time into a `&lt;picture&gt;` with AVIF
+		and WebP sources at several widths, plus width/height so nothing shifts
+		while it loads. The source is a PNG drawn by `scripts/make-hero.ts`.
+		`sizes` tells the browser how wide the image is on screen, so it picks
+		the smallest file that is still sharp for that width.
+	--&gt;
+	&lt;enhanced:img
+		class=&quot;hero__img&quot;
+		src=&quot;../../lib/assets/hero.png&quot;
+		alt=&quot;&quot;
+		sizes=&quot;(min-width: 64em) 40rem, 100vw&quot;
+		fetchpriority=&quot;high&quot;
+	/&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+<p><code>&lt;enhanced:img&gt;</code> is rewritten at build time — by the preprocessor that must come first in <code>vite.config.ts</code> — into a <code>&lt;picture&gt;</code> with AVIF and WebP sources at several widths, plus <code>width</code> and <code>height</code> so nothing shifts while it loads. <code>sizes</code> tells the browser how wide the image is on screen, so it picks the smallest file that is still sharp. The source PNG is drawn by <code>scripts/make-hero.ts</code> with sharp, which is why sharp is a devDependency named out loud rather than a transitive one hoped for.</p>
+<h3 id="motion">One reveal, three rules</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/reveal.ts<span class="code__lines">:1-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * REVEAL ON SCROLL
+ * ================
+ *
+ * An attachment: a function that receives an element and returns a cleanup.
+ * `{@attach reveal()}` on a container fades its children in, staggered,
+ * the first time it scrolls into view.
+ *
+ * Three rules keep it honest:
+ *
+ *   1. Nothing is hidden until JavaScript runs. The server renders every
+ *      element visible; only this function, in the browser, sets the
+ *      starting opacity. With JavaScript off, or before it loads, the page
+ *      is simply there.
+ *   2. Reduced motion means no motion. Not &quot;less&quot; — none. The function
+ *      returns before touching a style.
+ *   3. It runs once. An `IntersectionObserver` fires when the container is
+ *      in view, the tween plays, and the observer disconnects. Scrolling
+ *      back up does not replay it; that is a slot machine, not a page.
+ */
+
+import type { Attachment } from 'svelte/attachments';
+import { gsap } from 'gsap';
+
+export interface RevealOptions {
+	/** pixels the children travel up as they appear */
+	y?: number;
+	/** seconds between each child starting */
+	stagger?: number;
+	/** seconds each child takes */
+	duration?: number;
+}
+
+export function reveal({
+	y = 18,
+	stagger = 0.07,
+	duration = 0.7
+}: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
+	return (node) =&gt; {
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		const targets = node.children.length &gt; 0 ? Array.from(node.children) : [node];
+		gsap.set(targets, { opacity: 0, y });
+
+		const observer = new IntersectionObserver(
+			(entries) =&gt; {
+				if (!entries.some((entry) =&gt; entry.isIntersecting)) return;
+				gsap.to(targets, {
+					opacity: 1,
+					y: 0,
+					duration,
+					stagger,
+					ease: 'power3.out',
+					overwrite: true
+				});
+				observer.disconnect();
+			},
+			{ rootMargin: '0px 0px -10% 0px' }
+		);
+		observer.observe(node);
+
+		return () =&gt; {
+			observer.disconnect();
+			gsap.killTweensOf(targets);
+		};
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:45-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`{const}` in markup: the list of features exists only for this loop, so it
+	is declared where the loop is, in the markup, rather than a screen away in
+	the script. It re-runs when the messages' locale changes.
+--&gt;
+{const features = [
+	{ icon: MapPinIcon, title: m.home_feature_map_title(), text: m.home_feature_map_text() },
+	{
+		icon: GlobeHemisphereWestIcon,
+		title: m.home_feature_globe_title(),
+		text: m.home_feature_globe_text()
+	},
+	{ icon: ReceiptIcon, title: m.home_feature_split_title(), text: m.home_feature_split_text() },
+	{ icon: UsersThreeIcon, title: m.home_feature_live_title(), text: m.home_feature_live_text() }
+]}
+
+&lt;section class=&quot;container features grid&quot; {@attach reveal({ stagger: 0.1 })}&gt;
+	{#each features as feature (feature.title)}
+		{@const Icon = feature.icon}
+		&lt;article class=&quot;card card--pad stack stack--sm&quot;&gt;
+			&lt;Icon size={28} weight=&quot;duotone&quot; class=&quot;feature__icon&quot; aria-hidden=&quot;true&quot; /&gt;
+			&lt;h2&gt;{feature.title}&lt;/h2&gt;
+			&lt;p class=&quot;muted&quot;&gt;{feature.text}&lt;/p&gt;
+		&lt;/article&gt;
+	{/each}
+&lt;/section&gt;</code></pre>
+</figure>
+<p>The project’s cinematic budget is spent on the globe. Everything else moves the way a good editor cuts: rarely, and for a reason. The reveal is an attachment — a function that receives an element and returns a cleanup — with three rules the comment states: nothing is hidden until JavaScript runs, reduced motion means no motion, and it plays once. GSAP does the tween because its easing and stagger are better than hand-written keyframes and because it is the tool the earlier projects taught; it is used in one file.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain <code>light-dark()</code> and why the theme class only sets <code>color-scheme</code>.</li><li>You know why the boot script has a hash and no nonce.</li><li>You can state the three rules of the reveal and where each is enforced.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="dates-and-money-in-a-locale.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Dates, money and distances in a locale</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-shell.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The shell: a root that knows nobody</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

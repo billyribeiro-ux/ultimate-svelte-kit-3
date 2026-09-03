@@ -1,0 +1,36 @@
+<!doctype html>
+<!--
+	The two placeholders on the html tag are filled per request by the Paraglide
+	middleware in `hooks.server.ts` (`transformPageChunk`), so a German page says
+	`lang="de"` and a right-to-left locale, if one is ever added, says `dir="rtl"`
+	— without a component having to know.
+-->
+<html lang="%paraglide.lang%" dir="%paraglide.dir%">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<!--
+			The theme a person chose, applied before the first paint so a dark
+			choice on a light system never flashes light. This script is the one
+			inline script in the app: `vite.config.ts` reads it out of this file,
+			hashes it, and adds the hash to `script-src` — so it runs under the
+			Content Security Policy on prerendered pages (hashes) and rendered
+			ones (nonces) alike.
+		-->
+		<script>
+			try {
+				var t = localStorage.getItem('meridian:theme');
+				if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+			} catch (e) {}
+		</script>
+		<!--
+			The fonts are preloaded by the `preload` filter in `hooks.server.ts`,
+			which matches on the source `filename` SvelteKit 3 hands it. Nothing here
+			has to know what hash the bundler gave them.
+		-->
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

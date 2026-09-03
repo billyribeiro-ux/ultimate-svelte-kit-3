@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote functions: the writes — Building Meridian</title>
+<meta name="description" content="`form` where a page has a button and must work without JavaScript, `command` where the action only exists once JavaScript is running; `requested().refreshAll()` for single-flight updates; `invalid()` with a field-bound issue; and how a form’s field names carry their types.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">17 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 37.77777777777778%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html" aria-current="page"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 17</p>
+			<h1>Remote functions: the writes</h1>
+			<p class="lede"><code>form</code> where a page has a button and must work without JavaScript, <code>command</code> where the action only exists once JavaScript is running; <code>requested().refreshAll()</code> for single-flight updates; <code>invalid()</code> with a field-bound issue; and how a form’s field names carry their types.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Decide between <code>form</code> and <code>command</code> for a write, refresh the queries a mutation affects in the same round trip, and return a validation error to the field it belongs to.</p></aside>
+			<p>Two flavours write. <code>form</code> returns an object you spread onto a <code>&lt;form&gt;</code>: it has <code>method</code> and <code>action</code>, so it works with JavaScript off, and an attachment that enhances it when JavaScript is on. <code>command</code> is a function you call from anywhere JavaScript is running. The rule this project follows is in the doc comment of <code>trips.remote.ts</code>: a page with a button is a <code>form</code>; a drag, a map click or a settings control is a <code>command</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/trips.remote.ts<span class="code__lines">:38-63</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const createTrip = form(TripInputSchema, async (input) =&gt; {
+	const user = requireUser();
+	const trip = await trips.createTrip(user, input);
+	redirect(303, localizeHref(`/t/${trip.slug}`));
+});
+
+export const updateTrip = command(TripPatchSchema, async (patch) =&gt; {
+	await requireMember(patch.id, 'owner');
+	await trips.updateTrip(patch);
+	await bump(patch.id);
+	/*
+	 * SINGLE-FLIGHT: the client that sent this command asked for `tripBySlug`
+	 * to be refreshed in the same response, so the settings panel shows the
+	 * new dates without a second round trip. `requested` hands back exactly
+	 * the instances that client is holding — at most one here.
+	 */
+	await requested(tripBySlug, 1).refreshAll();
+});
+
+export const deleteTrip = form(v.object({ id: IdSchema }), async ({ id }) =&gt; {
+	await requireMember(id, 'owner');
+	await trips.deleteTrip(id);
+	// Wake anybody still watching, so their live query ends rather than hangs.
+	publish(id);
+	redirect(303, localizeHref('/trips'));
+});</code></pre>
+</figure>
+<p><code>createTrip</code> and <code>deleteTrip</code> redirect, because after them the person should be somewhere else — and a <code>redirect</code> thrown inside a <code>form</code> is followed by the browser whether or not JavaScript ran. <code>updateTrip</code> is a <code>command</code>, and its last line is the single-flight idea: the client that sends the command asks, in the same request, for <code>tripBySlug</code> to be refreshed, and <code>requested(tripBySlug, 1).refreshAll()</code> refreshes exactly the instances that client is holding — at most one here, and the limit is required because the list is client-controlled. The settings form in chapter 31 is the other half: <code>updateTrip(patch).updates(tripBySlug(slug))</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * STOPS
+ * =====
+ *
+ * Add, change, move, remove. Every one is a `command` — a stop is placed by
+ * clicking a map or dropping a card, neither of which exists without
+ * JavaScript — and every one ends with `bump`, which wakes the room.
+ *
+ * `moveStop` is the one with a shape worth reading: it takes *where the
+ * card was dropped* (a day and an index), asks `place()` in the domain what
+ * has to change to make that true, and writes exactly those rows. The same
+ * `place()` runs in the browser first, optimistically, so the card lands
+ * before the server answers and lands in the same spot when it does.
+ */
+
+import * as v from 'valibot';
+import { error } from '@sveltejs/kit';
+import { command, getRequestEvent } from '$app/server';
+import { STOP_LIMIT } from '$app/env/private';
+import { and, eq } from 'drizzle-orm';
+import { nextPosition, place } from '#lib/domain/itinerary.ts';
+import { IdSchema, MoveStopSchema, StopInputSchema, StopPatchSchema } from '#lib/domain/schemas.ts';
+import { bump, requireMember } from '#lib/server/access.ts';
+import { db, schema } from '#lib/server/db/index.ts';
+import * as trips from '#lib/server/trips.ts';
+
+export const addStop = command(StopInputSchema, async (input) =&gt; {
+	const { user, trip } = await requireMember(input.tripId, 'editor');
+
+	if ((await trips.countStops(trip.id)) &gt;= STOP_LIMIT) {
+		error(422, `A trip holds at most ${STOP_LIMIT} stops`);
+	}
+
+	const position = nextPosition(await trips.listStops(trip.id), input.date);
+	const [row] = await db
+		.insert(schema.stop)
+		.values({ ...input, position, createdBy: user.id })
+		.returning();
+
+	await bump(trip.id);
+	return row!;
+});</code></pre>
+</figure>
+<p><code>addStop</code> reads <code>STOP_LIMIT</code> — a number, by chapter 14 — and answers 422 when a trip is full. <code>nextPosition</code> from the domain puts the new stop after the last one on its day. <code>returning()</code> gives the row back so the client can select it immediately. And <code>bump</code> wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:44-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const updateStop = command(StopPatchSchema, async ({ id, ...patch }) =&gt; {
+	const existing = await db.query.stop.findFirst({ where: eq(schema.stop.id, id) });
+	if (!existing) error(404, 'Not found');
+	await requireMember(existing.tripId, 'editor');
+
+	await db.update(schema.stop).set(patch).where(eq(schema.stop.id, id));
+	await bump(existing.tripId);
+});
+
+export const moveStop = command(MoveStopSchema, async ({ tripId, id, date, index }) =&gt; {
+	await requireMember(tripId, 'editor');
+
+	const stops = await trips.listStops(tripId);
+	if (!stops.some((s) =&gt; s.id === id)) error(404, 'Not found');
+
+	const changes = place(stops, id, date, index);
+	if (changes.length &gt; 0) {
+		await db.transaction(async (tx) =&gt; {
+			for (const change of changes) {
+				await tx
+					.update(schema.stop)
+					.set({ date: change.date, position: change.position })
+					.where(and(eq(schema.stop.id, change.id), eq(schema.stop.tripId, tripId)));
+			}
+		});
+		await bump(tripId);
+	}
+	return changes;
+});
+
+export const removeStop = command(
+	v.object({ tripId: IdSchema, id: IdSchema }),
+	async ({ tripId, id }) =&gt; {
+		await requireMember(tripId, 'editor');
+		await db.delete(schema.stop).where(and(eq(schema.stop.id, id), eq(schema.stop.tripId, tripId)));
+		await bump(tripId);
+	}
+);
+
+/** The person's own id, for the client to tell its own presence chip apart. */
+export const me = command(async () =&gt; getRequestEvent().locals.user?.id ?? null);</code></pre>
+</figure>
+<p><code>moveStop</code> is chapter 11 at the wire. It takes where the card was dropped, asks <code>place()</code> what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. <code>updateStop</code> looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. <code>me</code> is a command with no argument, for the presence chip to tell its own entry apart.</p>
+<h3 id="forms-and-fields">A form whose fields carry their types</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * EXPENSES
+ * ========
+ *
+ * `addExpense` is a `form`, and a form's values arrive as what a form
+ * sends: strings, unless the field was rendered with `fields.amount.as('number')`,
+ * in which case SvelteKit coerces it before the schema runs, and a set of
+ * checkboxes rendered with `fields.participants.as('checkbox', id)` arrives
+ * as a `string[]`. The schema below is therefore *typed* by the form, and the
+ * component's `as()` calls are checked against it: a checkbox for a field
+ * the schema says is a number is a compile error.
+ *
+ * The amount is converted to minor units here, once, with the trip's
+ * currency — the form never sees cents, and the database never sees a float.
+ */
+
+import * as v from 'valibot';
+import { error, invalid } from '@sveltejs/kit';
+import { command, form, requested } from '$app/server';
+import { and, eq } from 'drizzle-orm';
+import { toMinor } from '#lib/domain/money.ts';
+import { ExpenseCategorySchema, IdSchema, IsoDateSchema } from '#lib/domain/schemas.ts';
+import { bump, requireMember } from '#lib/server/access.ts';
+import { db, schema } from '#lib/server/db/index.ts';
+import { tripBySlug } from './trips.remote.ts';
+
+export const addExpense = form(
+	v.object({
+		tripId: IdSchema,
+		title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Say what it was for'), v.maxLength(120)),
+		amount: v.pipe(
+			v.number('Enter an amount'),
+			v.minValue(0.01, 'Enter an amount'),
+			v.maxValue(10_000_000, 'That is more than a trip costs')
+		),
+		category: ExpenseCategorySchema,
+		date: IsoDateSchema,
+		paidBy: v.pipe(v.string(), v.minLength(1, 'Who paid?')),
+		participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
+	}),</code></pre>
+</figure>
+<p>The doc comment is the lesson. A form sends strings, unless a field was rendered with <code>fields.amount.as(&quot;number&quot;)</code>, in which case its name carries a prefix and SvelteKit coerces the value before the schema runs; a set of checkboxes rendered with <code>fields.participants.as(&quot;checkbox&quot;, id)</code> arrives as a <code>string[]</code>. So the schema is typed by the form, and the component’s <code>as()</code> calls are checked against it — a checkbox for a field the schema says is a number is a compile error. The amount is a decimal *here*, and becomes minor units once, with the trip’s currency, on the way into the database.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:41-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	async (data, issue) =&gt; {
+		const { trip } = await requireMember(data.tripId, 'editor');
+
+		// Only companions can pay or share. Anything else is a stale form.
+		const members = await db.query.member.findMany({
+			where: eq(schema.member.tripId, trip.id),
+			columns: { userId: true }
+		});
+		const ids = new Set(members.map((m) =&gt; m.userId));
+		if (!ids.has(data.paidBy)) error(400, 'The payer is not on this trip');
+		const participants = data.participants.filter((id) =&gt; ids.has(id));
+		// `invalid` with a field-bound issue lands under that field in the form.
+		if (participants.length === 0) invalid(issue.participants('Pick a companion'));
+
+		await db.transaction(async (tx) =&gt; {
+			const [row] = await tx
+				.insert(schema.expense)
+				.values({
+					tripId: trip.id,
+					title: data.title,
+					amountMinor: toMinor(data.amount, trip.currency),
+					currency: trip.currency,
+					category: data.category,
+					date: data.date,
+					paidBy: data.paidBy
+				})
+				.returning({ id: schema.expense.id });
+			await tx
+				.insert(schema.expenseShare)
+				.values(participants.map((userId) =&gt; ({ expenseId: row!.id, userId, weight: 1 })));
+		});
+
+		await bump(trip.id);
+		await requested(tripBySlug, 1).refreshAll();
+	}
+);</code></pre>
+</figure>
+<p><code>invalid(issue.participants(&quot;Pick a companion&quot;))</code> is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and <code>invalid</code> with a field-bound issue lands the message under that field in the form as if the schema had produced it. The transaction writes the expense and its shares together, <code>bump</code> wakes the room, and the same <code>requested().refreshAll()</code> gives the submitting client its updated <code>tripBySlug</code> in the same response.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/notes.remote.ts<span class="code__lines">:13-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import * as v from 'valibot';
+import { command } from '$app/server';
+import { IdSchema, NoteDocSchema } from '#lib/domain/schemas.ts';
+import { bump, requireMember } from '#lib/server/access.ts';
+import { db, schema } from '#lib/server/db/index.ts';
+
+export const saveNote = command(
+	v.object({ tripId: IdSchema, doc: NoteDocSchema }),
+	async ({ tripId, doc }) =&gt; {
+		const { user } = await requireMember(tripId, 'editor');
+
+		await db
+			.insert(schema.note)
+			.values({ tripId, doc, updatedBy: user.id })
+			.onConflictDoUpdate({
+				target: schema.note.tripId,
+				set: { doc, updatedBy: user.id, updatedAt: new Date() }
+			});
+
+		await bump(tripId);
+	}
+);</code></pre>
+</figure>
+<p>The note is one <code>command</code> and one upsert — <code>onConflictDoUpdate</code> on the trip id — because a note is a page and last-writer-wins on a page two people rarely edit at the same moment is the honest trade against a CRDT nobody asked for. The doc comment says so and points at project 4, which built the CRDT.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:26-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The default landing place, used whenever we cannot trust what we were given. */
+const HOME = '/trips';
+
+/**
+ * A redirect target we are willing to follow: one leading slash, and only
+ * one. `//evil.example` starts with a slash and still leaves the site —
+ * a protocol-relative URL — so the second character is checked too.
+ *
+ * Sanitised rather than rejected: the value lives in a hidden field the
+ * person cannot see, so a crafted link would otherwise leave them staring
+ * at &quot;invalid redirect&quot; with no way in. Falling back to `/trips` is safe.
+ */
+const SAFE_REDIRECT = /^\/(?!\/)[^\s]{0,512}$/;
+
+const RedirectSchema = v.optional(
+	v.pipe(
+		v.string(),
+		v.transform((value) =&gt; (SAFE_REDIRECT.test(value) ? value : HOME))
+	),
+	HOME
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:48-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const signIn = form(
+	v.object({
+		email: EmailSchema,
+		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		redirectTo: RedirectSchema
+	}),
+	async (data, issue) =&gt; {
+		const { request } = getRequestEvent();
+
+		try {
+			await auth.api.signInEmail({
+				body: { email: data.email, password: data.password },
+				headers: request.headers
+			});
+		} catch {
+			/*
+			 * One message for both &quot;no such account&quot; and &quot;wrong password&quot;, on
+			 * purpose. Distinguishing them turns the sign-in form into a tool for
+			 * discovering which email addresses have accounts.
+			 */
+			invalid(issue.password(m.auth_no_match()));
+		}
+
+		redirect(303, localizeHref(data.redirectTo));
+	}
+);</code></pre>
+</figure>
+<p>The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses <code>//evil.example</code> — a protocol-relative URL that starts with a slash and still leaves the site.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say when a write is a <code>form</code> and when it is a <code>command</code>, and what each gives up.</li><li>You can explain single-flight mutations from both ends: <code>requested()</code> on the server and <code>.updates()</code> on the client.</li><li>You know how a form field’s <code>as()</code> type reaches the schema, and what <code>invalid()</code> is for.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="remote-functions-the-reads.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Remote functions: the reads</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-collaboration.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Live collaboration: a room, a mailbox and a generator</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

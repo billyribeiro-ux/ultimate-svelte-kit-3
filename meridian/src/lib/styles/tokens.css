@@ -1,0 +1,119 @@
+/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Every colour, size and duration the interface uses, named once. Components
+ * reference the names; nothing else in the project writes a hex code.
+ *
+ * Colour is done with `light-dark()`: each token holds its light value and
+ * its dark value, and the browser picks by `color-scheme` — which follows
+ * the system by default and is pinned by `data-theme` on <html> when a
+ * person chooses. No duplicated blocks, no cascade tricks, no flash.
+ *
+ * The palette is "a map on a table": warm paper, ink, and a teal that reads
+ * as water. It is deliberately quiet, because the map, the globe and the
+ * photographs are the colour.
+ */
+
+:root {
+	color-scheme: light dark;
+
+	/* Surfaces */
+	--paper: light-dark(#f8f5ee, #101318);
+	--paper-2: light-dark(#ffffff, #171b22);
+	--paper-3: light-dark(#efeae0, #1e232c);
+	--line: light-dark(#dcd5c7, #2b323d);
+	--line-2: light-dark(#c9c0ae, #3a4350);
+
+	/* Ink */
+	--ink: light-dark(#171a1f, #eef1f5);
+	--ink-2: light-dark(#4b5160, #aeb6c2);
+	--ink-3: light-dark(#7a8191, #7c8595);
+
+	/* Accents */
+	--sea: light-dark(#0f766e, #2dd4bf);
+	--sea-2: light-dark(#0d9488, #5eead4);
+	--sea-soft: light-dark(#d6f0ec, #103b37);
+	--sun: light-dark(#b45309, #f59e0b);
+	--sun-soft: light-dark(#fdebd0, #3d2a08);
+	--coral: light-dark(#be123c, #fb7185);
+	--coral-soft: light-dark(#fde2e7, #4a1220);
+
+	/* Stop kinds — one hue each, used on the map and in the itinerary */
+	--kind-place: var(--sea);
+	--kind-lodging: light-dark(#7c3aed, #a78bfa);
+	--kind-food: var(--sun);
+	--kind-transport: light-dark(#2563eb, #60a5fa);
+	--kind-activity: var(--coral);
+	--kind-idea: var(--ink-3);
+
+	/* Focus */
+	--focus: light-dark(#2563eb, #93c5fd);
+
+	/* Type */
+	--font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+	--font-body:
+		'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+	/* A fluid scale: each step is a clamp between a phone and a desktop size. */
+	--text-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.8125rem);
+	--text-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
+	--text-md: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+	--text-lg: clamp(1.125rem, 1.05rem + 0.4vw, 1.25rem);
+	--text-xl: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
+	--text-2xl: clamp(1.75rem, 1.4rem + 1.8vw, 2.5rem);
+	--text-3xl: clamp(2.25rem, 1.6rem + 3.2vw, 3.75rem);
+
+	/* Space */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-7: 3rem;
+	--space-8: 4rem;
+
+	/* Shape */
+	--radius-sm: 6px;
+	--radius: 10px;
+	--radius-lg: 16px;
+	--radius-pill: 999px;
+
+	--shadow-1: 0 1px 2px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.4));
+	--shadow-2:
+		0 4px 12px light-dark(rgb(23 26 31 / 0.08), rgb(0 0 0 / 0.5)),
+		0 1px 3px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.4));
+	--shadow-3:
+		0 16px 40px light-dark(rgb(23 26 31 / 0.14), rgb(0 0 0 / 0.6)),
+		0 2px 6px light-dark(rgb(23 26 31 / 0.08), rgb(0 0 0 / 0.5));
+
+	/* Motion — the restraint is the point. */
+	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--dur-fast: 120ms;
+	--dur: 220ms;
+	--dur-slow: 420ms;
+
+	/* Layout */
+	--measure: 68ch;
+	--container: 76rem;
+	--header-h: 3.5rem;
+}
+
+/* A person's choice beats the system's. */
+:root[data-theme='light'] {
+	color-scheme: light;
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--dur-fast: 0ms;
+		--dur: 0ms;
+		--dur-slow: 0ms;
+	}
+}

@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The shell: a root that knows nobody — Building Meridian</title>
+<meta name="description" content="The root layout has no header and no `load`; the `(site)` group has both; the header computes its links with `{const}` and reads `scrollY` from `svelte/reactivity/window`; view transitions in `onNavigate`; a version banner from `updated.current`; two error pages sharing one view.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 51.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html" aria-current="page"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>The shell: a root that knows nobody</h1>
+			<p class="lede">The root layout has no header and no <code>load</code>; the <code>(site)</code> group has both; the header computes its links with <code>{const}</code> and reads <code>scrollY</code> from <code>svelte/reactivity/window</code>; view transitions in <code>onNavigate</code>; a version banner from <code>updated.current</code>; two error pages sharing one view.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Arrange layouts so that prerendered pages and per-request pages can coexist, and know what belongs at the root and what does not.</p></aside>
+			<p>The layout split is the decision this chapter is about, and it came from a failure. The first version had the header in the root layout, fed by a root <code>+layout.server.ts</code> that loaded the signed-in person. Then the guides were prerendered, and a prerendered page is rendered once, at build time, with nobody signed in — and that answer is baked into its data. A signed-in person navigating to a guide would see “Sign in” in the header. So the root knows nobody, and the pages that need to know live in a group.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	/*
+	 * Fonts come from fontsource: each import is a stylesheet of `@font-face`
+	 * rules with `unicode-range`, so a browser downloads the latin subset and
+	 * nothing else. `standard.css` is Fraunces with both its weight and its
+	 * optical-size axes; `hooks.server.ts` preloads exactly these two files.
+	 */
+	import '@fontsource-variable/fraunces/standard.css';
+	import '@fontsource-variable/inter/index.css';
+	import '#lib/styles/index.css';
+
+	import { onMount } from 'svelte';
+	import { beforeNavigate, onNavigate } from '$app/navigation';
+	import { updated } from '$app/state';
+	import { Toaster } from 'svelte-sonner';
+	import UpdateBanner from '#lib/ui/UpdateBanner.svelte';
+	import { theme } from '#lib/ui/theme.svelte.ts';
+
+	/*
+	 * THE ROOT LAYOUT KNOWS NOBODY
+	 * ============================
+	 *
+	 * No header here, and no `load`. The header shows who is signed in, and
+	 * a layout that loads the signed-in person cannot sit above a prerendered
+	 * page: the page is rendered once, at build time, with nobody signed in,
+	 * and that answer is baked into its data. So the application pages live
+	 * in the `(site)` group, which has the `load` and the header, and the
+	 * guides — prerendered, shipped without JavaScript — live outside it with
+	 * a chrome of their own that does not claim to know who you are.
+	 *
+	 * What is left here is what every page shares: fonts, the stylesheet, the
+	 * theme, the toaster, view transitions, and the deploy banner.
+	 */
+	let { children } = $props();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:36-75</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * VIEW TRANSITIONS
+ * ----------------
+ * `onNavigate` runs before every client-side navigation. Wrapping the
+ * completion in `document.startViewTransition` lets the browser cross-fade
+ * the old page into the new one — and lets any element with a
+ * `view-transition-name` (a trip card becoming a trip header) morph.
+ * Browsers without the API, and people who prefer reduced motion (the
+ * CSS turns the animation off), get an ordinary navigation.
+ */
+onNavigate((navigation) =&gt; {
+	if (!document.startViewTransition) return;
+	return new Promise((resolve) =&gt; {
+		document.startViewTransition(async () =&gt; {
+			resolve();
+			await navigation.complete;
+		});
+	});
+});
+
+/*
+ * A new version was deployed while this tab was open. Client-side
+ * navigation would ask for chunks that no longer exist, so the next
+ * navigation becomes a full page load. `version.pollInterval` in
+ * `vite.config.ts` is what makes `updated.current` flip.
+ */
+beforeNavigate(({ willUnload, to }) =&gt; {
+	if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) location.href = to.url.href;
+});
+
+/*
+ * One attribute that says &quot;the JavaScript is running&quot;. `onMount` in the
+ * root layout fires once the whole tree has hydrated, so anything that
+ * must wait for that — a stylesheet hiding a JavaScript-only control, or
+ * the end-to-end test that proves typing before hydration is safe — has
+ * something honest to wait for.
+ */
+onMount(() =&gt; {
+	document.documentElement.dataset.hydrated = '';
+});</code></pre>
+</figure>
+<p>The last thing in the script is one line in <code>onMount</code>: a <code>data-hydrated</code> attribute on the root element. <code>onMount</code> in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter 32).</p>
+<p>What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. <code>onNavigate</code> wraps the completion of every client-side navigation in <code>document.startViewTransition</code>, so the old page cross-fades into the new — and an element with a <code>view-transition-name</code>, like the trip title, morphs. <code>beforeNavigate</code> turns the next navigation into a full page load when <code>updated.current</code> says a new build was deployed, so no chunk from the old build is ever requested.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:78-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{@render children()}
+
+&lt;Toaster position=&quot;bottom-center&quot; theme={theme.resolved} richColors closeButton /&gt;
+
+{#if updated.current}
+	&lt;UpdateBanner /&gt;
+{/if}
+
+&lt;style&gt;
+	:global(body) {
+		display: flex;
+		flex-direction: column;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		:global(::view-transition-old(root)) {
+			animation: 160ms var(--ease-out) both fade-out;
+		}
+		:global(::view-transition-new(root)) {
+			animation: 220ms var(--ease-out) both fade-in;
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+	@keyframes fade-out {
+		to {
+			opacity: 0;
+		}
+	}
+&lt;/style&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+layout.server.ts<span class="code__lines">:1-11</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { LayoutServerLoad } from './$types';
+
+/**
+ * Who is signed in, for the header. The only `load` in the project: identity
+ * is needed by every page and by the shell around them, which is exactly the
+ * case a layout `load` exists for. Everything page-specific comes through
+ * remote functions instead.
+ */
+export const load: LayoutServerLoad = ({ locals }) =&gt; ({
+	user: locals.user ? { id: locals.user.id, name: locals.user.name } : null
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+layout.svelte<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { m } from '#lib/paraglide/messages.js';
+	import Footer from '#lib/ui/Footer.svelte';
+	import Header from '#lib/ui/Header.svelte';
+
+	/*
+	 * THE SITE
+	 * ========
+	 *
+	 * Everything that is rendered per request: the home page, the trips, the
+	 * sign-in pages, the trip itself. `+layout.server.ts` beside this file
+	 * loads who is signed in, and this layout puts it in the header. The
+	 * guides, which are prerendered, live outside this group — the root
+	 * layout says why.
+	 */
+	let { data, children } = $props();
+&lt;/script&gt;
+
+&lt;a class=&quot;skip&quot; href=&quot;#main&quot;&gt;{m.nav_skip()}&lt;/a&gt;
+
+&lt;Header user={data.user} /&gt;
+
+&lt;main id=&quot;main&quot; class=&quot;main&quot;&gt;
+	{@render children()}
+&lt;/main&gt;
+
+&lt;Footer /&gt;</code></pre>
+</figure>
+<p>The only <code>load</code> in the project. Identity is needed by every page and by the shell around them, which is exactly the case a layout <code>load</code> exists for; everything page-specific comes through remote functions. The <code>(app)</code> group inside <code>(site)</code> adds a second layout load that redirects strangers to sign in — chapter 32 quotes it — so a page under it cannot forget to check.</p>
+<h3 id="header">The header</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { scrollY } from 'svelte/reactivity/window';
+	import { CompassRoseIcon, ListIcon, PlusIcon, XIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { signOut } from '#lib/remote/auth.remote.ts';
+	import LocaleSwitcher from './LocaleSwitcher.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
+
+	interface Props {
+		user: { id: string; name: string } | null;
+	}
+
+	let { user }: Props = $props();
+
+	/*
+	 * `svelte/reactivity/window` exposes the window's scroll position as a
+	 * reactive value with the listener managed for us — no `onMount`, no
+	 * `removeEventListener`, and `undefined` on the server, where there is
+	 * no window to ask.
+	 */
+	const scrolled = $derived((scrollY.current ?? 0) &gt; 8);
+
+	let open = $state(false);
+
+	const isCurrent = (href: string) =&gt;
+		page.url.pathname === localizeHref(href) ||
+		page.url.pathname.startsWith(localizeHref(href) + '/');
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:32-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`{const}` is a declaration tag: a value computed in the markup, scoped to
+	the block it sits in, re-evaluated when its dependencies change. The links
+	depend on whether somebody is signed in, and the header is the only place
+	that needs the list — so the list lives here, not in the script.
+--&gt;
+{const links = [
+	...(user ? [{ href: '/trips', label: m.nav_trips() }] : []),
+	{ href: '/explore', label: m.nav_explore() },
+	{ href: '/guides', label: m.nav_guides() }
+]}</code></pre>
+</figure>
+<p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup, scoped to the block, re-evaluated when its dependencies change. The link list depends on whether somebody is signed in, and the header is the only place that needs it, so it lives where it is used.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:44-101</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={scrolled}&gt;
+	&lt;div class=&quot;container header__row&quot;&gt;
+		&lt;a class=&quot;brand&quot; href={localizeHref('/')}&gt;
+			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
+			&lt;span&gt;{m.app_name()}&lt;/span&gt;
+		&lt;/a&gt;
+
+		&lt;nav id=&quot;primary-nav&quot; class=&quot;nav&quot; class:nav--open={open} aria-label=&quot;Primary&quot;&gt;
+			{#each links as link (link.href)}
+				&lt;a
+					class=&quot;nav__link&quot;
+					href={localizeHref(link.href)}
+					aria-current={isCurrent(link.href) ? 'page' : undefined}
+					onclick={() =&gt; (open = false)}
+				&gt;
+					{link.label}
+				&lt;/a&gt;
+			{/each}
+
+			&lt;div class=&quot;nav__tools&quot;&gt;
+				&lt;LocaleSwitcher /&gt;
+				&lt;ThemeToggle /&gt;
+			&lt;/div&gt;
+
+			&lt;div class=&quot;nav__account&quot;&gt;
+				{#if user}
+					&lt;a class=&quot;btn btn--primary btn--sm&quot; href={localizeHref('/trips/new')}&gt;
+						&lt;PlusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+						{m.nav_new_trip()}
+					&lt;/a&gt;
+					&lt;!-- A form, so signing out works with JavaScript off too. --&gt;
+					&lt;form {...signOut}&gt;
+						&lt;button class=&quot;btn btn--ghost btn--sm&quot; type=&quot;submit&quot; title={user.name}&gt;
+							{m.auth_sign_out()}
+						&lt;/button&gt;
+					&lt;/form&gt;
+				{:else}
+					&lt;a class=&quot;btn btn--sm&quot; href={localizeHref('/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+				{/if}
+			&lt;/div&gt;
+		&lt;/nav&gt;
+
+		&lt;button
+			class=&quot;btn btn--icon btn--ghost menu&quot;
+			type=&quot;button&quot;
+			aria-expanded={open}
+			aria-controls=&quot;primary-nav&quot;
+			aria-label={m.nav_menu()}
+			onclick={() =&gt; (open = !open)}
+		&gt;
+			{#if open}
+				&lt;XIcon size={20} aria-hidden=&quot;true&quot; /&gt;
+			{:else}
+				&lt;ListIcon size={20} aria-hidden=&quot;true&quot; /&gt;
+			{/if}
+		&lt;/button&gt;
+	&lt;/div&gt;
+&lt;/header&gt;</code></pre>
+</figure>
+<p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at fifty-two ems it becomes a row and the button disappears. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Footer.svelte<span class="code__lines">:1-15</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { version } from '$app/env';
+&lt;/script&gt;
+
+&lt;footer class=&quot;footer&quot;&gt;
+	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
+		&lt;p class=&quot;muted&quot;&gt;{m.footer_made()} &lt;code class=&quot;muted&quot;&gt;{version}&lt;/code&gt;&lt;/p&gt;
+		&lt;nav class=&quot;cluster&quot; aria-label=&quot;Meta&quot;&gt;
+			&lt;a class=&quot;muted&quot; href={localizeHref('/guides')}&gt;{m.nav_guides()}&lt;/a&gt;
+			&lt;a class=&quot;muted&quot; href={localizeHref('/diagnostics')}&gt;{m.footer_diagnostics()}&lt;/a&gt;
+		&lt;/nav&gt;
+	&lt;/div&gt;
+&lt;/footer&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/UpdateBanner.svelte<span class="code__lines">:1-15</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { m } from '#lib/paraglide/messages.js';
+&lt;/script&gt;
+
+&lt;!--
+	Shown when `updated.current` is true: a new build has been deployed since
+	this page loaded. The link is a plain reload; there is nothing to save
+	that the server does not already have.
+--&gt;
+&lt;div class=&quot;update&quot; role=&quot;status&quot;&gt;
+	&lt;span&gt;{m.update_available()}&lt;/span&gt;
+	&lt;button class=&quot;btn btn--sm btn--primary&quot; type=&quot;button&quot; onclick={() =&gt; location.reload()}&gt;
+		{m.update_reload()}
+	&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The footer shows <code>version</code> from <code>$app/env</code> — the commit hash — so “which build is this?” is answered on every page. The banner appears when <code>updated.current</code> flips; its button is a plain reload, because there is nothing to save that the server does not already have.</p>
+<h3 id="errors">Two error pages, one view</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/ErrorView.svelte<span class="code__lines">:1-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+
+	/**
+	 * What an error page says. Two `+error.svelte` files render it — the root
+	 * one, for a URL that matches no route, and the one inside `(site)`, for
+	 * an error on a page that has a header — so the words live once.
+	 */
+	const notFound = $derived(page.status === 404);
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{page.status} — {m.app_name()}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;section class=&quot;container error stack&quot;&gt;
+	&lt;p class=&quot;muted tabular&quot;&gt;{page.status}&lt;/p&gt;
+	&lt;h1&gt;{notFound ? m.error_not_found() : m.error_title()}&lt;/h1&gt;
+	{#if !notFound &amp;&amp; page.error?.message}
+		&lt;p class=&quot;muted&quot;&gt;{page.error.message}&lt;/p&gt;
+	{/if}
+	{#if page.error?.id}
+		&lt;p class=&quot;hint&quot;&gt;&lt;code&gt;{m.error_id({ id: page.error.id })}&lt;/code&gt;&lt;/p&gt;
+	{/if}
+	&lt;p&gt;&lt;a class=&quot;btn&quot; href={localizeHref('/trips')}&gt;{m.error_back()}&lt;/a&gt;&lt;/p&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+error.svelte<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { CompassRoseIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import ErrorView from '#lib/ui/ErrorView.svelte';
+
+	/*
+	 * The root error page: a URL that matches nothing at all lands here, in
+	 * the root layout, which has no header. So this one brings a small one
+	 * of its own — the name, and a way home.
+	 */
+&lt;/script&gt;
+
+&lt;header class=&quot;bare container&quot;&gt;
+	&lt;a class=&quot;bare__brand&quot; href={localizeHref('/')}&gt;
+		&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
+		{m.app_name()}
+	&lt;/a&gt;
+&lt;/header&gt;
+
+&lt;main class=&quot;main&quot;&gt;
+	&lt;ErrorView /&gt;
+&lt;/main&gt;</code></pre>
+</figure>
+<p>A URL that matches no route lands on the root <code>+error.svelte</code>, inside the root layout, which has no header — so the root error page brings a small one of its own. An error on a site page renders <code>(site)/+error.svelte</code>, inside the site layout, with the full header. Both render <code>ErrorView</code>, so the words live once: the status, a sentence, and the reference id from <code>handleError</code> when there is one.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the root layout has no <code>load</code>, and what would go wrong if it did.</li><li>You can explain what <code>onNavigate</code> and <code>beforeNavigate</code> each do here.</li><li>You know why there are two <code>+error.svelte</code> files and what each one adds.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-design-system.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The design system</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-trip-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The trip page: one await, one state object, one stream</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

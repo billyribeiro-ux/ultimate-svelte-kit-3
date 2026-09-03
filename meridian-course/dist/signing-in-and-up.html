@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signing in and up — Building Meridian</title>
+<meta name="description" content="Two remote forms, a hidden redirect field the server sanitises, `issues()` under each input, a group layout that redirects strangers before rendering, and a sign-out that is a form with no fields.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 71.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html" aria-current="page"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>Signing in and up</h1>
+			<p class="lede">Two remote forms, a hidden redirect field the server sanitises, <code>issues()</code> under each input, a group layout that redirects strangers before rendering, and a sign-out that is a form with no fields.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the identity pages so they work with JavaScript off, come back to where the person was going, and never help an attacker enumerate accounts.</p></aside>
+			<p>The identity pages are the plainest pages in the app and the ones with the most to get right. Every one is a remote <code>form</code> spread onto a real <code>&lt;form&gt;</code>: it submits with JavaScript off and enhances with it on.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:1-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { keepTyped } from '#lib/forms/keep-typed.ts';
+	import { signIn } from '#lib/remote/auth.remote.ts';
+
+	// Anything typed into the server-rendered form before the bundle arrived
+	// survives hydration. See `keep-typed.ts` for the failure it prevents.
+	keepTyped(signIn.fields.email, signIn.fields.password);
+
+	/*
+	 * Where to go afterwards rides in a hidden field. The server sanitises it
+	 * (see `auth.remote.ts`), so a crafted link cannot send somebody who has
+	 * just typed a password to another site.
+	 */
+	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/trips');
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:20-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:head&gt;
+	&lt;title&gt;{m.auth_sign_in()} — {m.app_name()}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;!--
+	A remote `form`: spread onto a real &lt;form&gt;, it submits with JavaScript
+	off and progressively enhances with it on. `fields.x.as('email')` writes
+	the name, the type and the current value; `issues()` are the validation
+	messages for that field, from the schema or from `invalid()` on the server.
+--&gt;
+&lt;form class=&quot;card card--pad stack&quot; {...signIn}&gt;
+	&lt;h1&gt;{m.auth_sign_in()}&lt;/h1&gt;
+
+	&lt;input {...signIn.fields.redirectTo.as('hidden', redirectTo)} /&gt;
+
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;label&quot;&gt;{m.auth_email()}&lt;/span&gt;
+		&lt;input class=&quot;input&quot; {...signIn.fields.email.as('email')} autocomplete=&quot;email&quot; required /&gt;
+		{#each signIn.fields.email.issues() ?? [] as issue (issue.message)}
+			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+		{/each}
+	&lt;/label&gt;
+
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;label&quot;&gt;{m.auth_password()}&lt;/span&gt;
+		&lt;input
+			class=&quot;input&quot;
+			{...signIn.fields.password.as('password')}
+			autocomplete=&quot;current-password&quot;
+			required
+		/&gt;
+		{#each signIn.fields.password.issues() ?? [] as issue (issue.message)}
+			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+		{/each}
+	&lt;/label&gt;
+
+	&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={signIn.pending &gt; 0}&gt;
+		{m.auth_sign_in()}
+	&lt;/button&gt;
+
+	&lt;p class=&quot;muted&quot;&gt;
+		{m.auth_no_account()}
+		&lt;a href={localizeHref(`/signup?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
+			{m.auth_sign_up()}
+		&lt;/a&gt;
+	&lt;/p&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p><code>fields.email.as(&quot;email&quot;)</code> writes the name, the type and the current value; <code>issues()</code> are the validation messages for that field — from the schema, or from <code>invalid()</code> on the server, which chapter 17 showed putting “That email and password do not match” on the password field. Where to go afterwards rides in a hidden field; the server sanitises it, so a crafted link cannot send somebody who has just typed a password to another site. <code>pending</code> disables the button while a submission is in flight.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(auth)/signup/+page.svelte<span class="code__lines">:17-63</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;form class=&quot;card card--pad stack&quot; {...signUp}&gt;
+	&lt;h1&gt;{m.auth_sign_up()}&lt;/h1&gt;
+
+	&lt;input {...signUp.fields.redirectTo.as('hidden', redirectTo)} /&gt;
+
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;label&quot;&gt;{m.auth_name()}&lt;/span&gt;
+		&lt;input class=&quot;input&quot; {...signUp.fields.name.as('text')} autocomplete=&quot;name&quot; required /&gt;
+		{#each signUp.fields.name.issues() ?? [] as issue (issue.message)}
+			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+		{/each}
+	&lt;/label&gt;
+
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;label&quot;&gt;{m.auth_email()}&lt;/span&gt;
+		&lt;input class=&quot;input&quot; {...signUp.fields.email.as('email')} autocomplete=&quot;email&quot; required /&gt;
+		{#each signUp.fields.email.issues() ?? [] as issue (issue.message)}
+			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+		{/each}
+	&lt;/label&gt;
+
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;label&quot;&gt;{m.auth_password()}&lt;/span&gt;
+		&lt;input
+			class=&quot;input&quot;
+			{...signUp.fields.password.as('password')}
+			autocomplete=&quot;new-password&quot;
+			minlength=&quot;12&quot;
+			required
+		/&gt;
+		&lt;span class=&quot;hint&quot;&gt;{m.auth_password_hint()}&lt;/span&gt;
+		{#each signUp.fields.password.issues() ?? [] as issue (issue.message)}
+			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+		{/each}
+	&lt;/label&gt;
+
+	&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={signUp.pending &gt; 0}&gt;
+		{m.auth_sign_up()}
+	&lt;/button&gt;
+
+	&lt;p class=&quot;muted&quot;&gt;
+		{m.auth_have_account()}
+		&lt;a href={localizeHref(`/signin?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
+			{m.auth_sign_in()}
+		&lt;/a&gt;
+	&lt;/p&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>Sign-up is the same shape with a name and a <code>minlength</code> on the password that matches the schema’s twelve — the browser refuses first, the schema refuses second, Better Auth refuses third, and the message under the field is the same in all three languages. <code>autocomplete=&quot;new-password&quot;</code> lets a password manager offer to generate one.</p>
+<h3 id="typed-early">What was typed before the page woke up</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/forms/keep-typed.ts<span class="code__lines">:29-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">interface TextField {
+	as(type: 'text'): { readonly name: string };
+	value(): string | undefined;
+	set(value: string): unknown;
+}
+
+export function keepTyped(...fields: readonly TextField[]): void {
+	if (!browser) return;
+	for (const field of fields) {
+		const { name } = field.as('text');
+		const input = document.querySelector&lt;HTMLInputElement&gt;(`input[name=&quot;${CSS.escape(name)}&quot;]`);
+		if (input?.value &amp;&amp; !field.value()) field.set(input.value);
+	}
+}</code></pre>
+</figure>
+<p>Both pages call <code>keepTyped()</code> at the top of their script, and it earns its place with a bug the end-to-end suite found. A server-rendered form is usable before the JavaScript arrives — that is the point of rendering it on the server — and on a slow connection a person can have typed their email by the time the bundle runs. Then hydration happens: the field spreads its *current* value onto the input, the current value is the empty string the server knew about, and what was typed is gone. The person presses the button and the browser says “Please fill out this field” about a field they filled. Playwright types faster than a bundle loads, so about one run in ten signed in with an email that had vanished.</p>
+<p>The fix uses an ordering guarantee worth knowing: a component’s <code>&lt;script&gt;</code> runs *before* its template is hydrated, while the server’s HTML is still on the page. So the helper reads what is in each input now, and makes it the field’s value with <code>set()</code>, and hydration writes the typed text back instead of nothing. It finds the input by the exact generated name the field’s own <code>as()</code> reports — <code>email/&lt;hash&gt;/signIn</code> — so a field on some other form can never be mistaken for this one, and on a client-side navigation there is no server HTML, the query finds nothing, and nothing happens.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:38-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('what is typed before the page has hydrated is kept', async ({ page }) =&gt; {
+	// Hold the client bundle back, so for a while the sign-in page is exactly
+	// what a slow connection sees: server-rendered HTML with no JavaScript yet.
+	let release: () =&gt; void = () =&gt; {};
+	const held = new Promise&lt;void&gt;((resolve) =&gt; (release = resolve));
+	await page.route('**/_app/immutable/entry/start.*.js', async (route) =&gt; {
+		await held;
+		await route.continue();
+	});
+
+	await page.goto('/signin?redirectTo=%2Ftrips');
+	await page.getByLabel('Email').fill(USERS.ana);
+	await page.getByLabel('Password').fill(PASSWORD);
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(0);
+
+	// Now let it wake up. Hydration must not throw away what was typed.
+	release();
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+	await expect(page.getByLabel('Email')).toHaveValue(USERS.ana);
+	await expect(page.getByLabel('Password')).toHaveValue(PASSWORD);
+
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await expect(page).toHaveURL(/\/trips$/);
+});</code></pre>
+</figure>
+<p>The test that pins it holds the client bundle back with <code>page.route</code>, types into the server-rendered page, checks that the root element has no <code>data-hydrated</code> attribute yet, lets the bundle through, waits for the attribute the root layout sets in <code>onMount</code> (chapter 23), and only then asserts that the text is still there and that the sign-in goes through. Without the attribute the test would have nothing honest to wait for, and a <code>waitForTimeout</code> would be a guess.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(auth)/+layout.svelte<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	let { children } = $props();
+&lt;/script&gt;
+
+&lt;!-- One centred card for both sign-in and sign-up; the pages own the form. --&gt;
+&lt;div class=&quot;auth container&quot;&gt;
+	{@render children()}
+&lt;/div&gt;
+
+&lt;style&gt;
+	.auth {
+		display: grid;
+		place-items: center;
+		padding-block: var(--space-7);
+		max-width: 28rem;
+	}
+
+	.auth &gt; :global(*) {
+		width: 100%;
+	}
+&lt;/style&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(app)/+layout.server.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { redirect } from '@sveltejs/kit';
+import type { LayoutServerLoad } from './$types';
+import { localizeHref } from '#lib/paraglide/runtime.js';
+
+/**
+ * THE SIGNED-IN GROUP
+ * ===================
+ *
+ * Every route under `(app)` needs a person. Checking once here, in a layout
+ * `load`, means no page inside can forget — and it means the check happens
+ * before rendering starts, so the answer is a real HTTP redirect rather than
+ * a page that renders and then discovers it should not have.
+ *
+ * (The remote functions check too — `requireUser()` — because a remote
+ * function can be called from anywhere, not just from these pages. Belt and
+ * braces, on purpose.)
+ *
+ * The trip page itself is *not* in this group: a trip whose owner made it
+ * visible by link is readable without an account.
+ */
+export const load: LayoutServerLoad = ({ locals, url }) =&gt; {
+	if (!locals.user) {
+		const back = `${url.pathname}${url.search}`;
+		redirect(303, localizeHref(`/signin?redirectTo=${encodeURIComponent(back)}`));
+	}
+	return {};
+};</code></pre>
+</figure>
+<p>The <code>(auth)</code> group is a centred card; the <code>(app)</code> group is a guard. Every route under <code>(app)</code> needs a person, and checking once in a layout <code>load</code> means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with <code>redirectTo</code> carrying the page they wanted. The remote functions check too, with <code>requireUser()</code>, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:68-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;nav__account&quot;&gt;
+	{#if user}
+		&lt;a class=&quot;btn btn--primary btn--sm&quot; href={localizeHref('/trips/new')}&gt;
+			&lt;PlusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+			{m.nav_new_trip()}
+		&lt;/a&gt;
+		&lt;!-- A form, so signing out works with JavaScript off too. --&gt;
+		&lt;form {...signOut}&gt;
+			&lt;button class=&quot;btn btn--ghost btn--sm&quot; type=&quot;submit&quot; title={user.name}&gt;
+				{m.auth_sign_out()}
+			&lt;/button&gt;
+		&lt;/form&gt;
+	{:else}
+		&lt;a class=&quot;btn btn--sm&quot; href={localizeHref('/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+	{/if}
+&lt;/div&gt;</code></pre>
+</figure>
+<p>Signing out is a <code>&lt;form&gt;</code> spread from <code>signOut</code>, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s <code>load</code> runs again and the header renders the signed-out state.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>fields.x.as()</code> writes onto an input and where <code>issues()</code> come from.</li><li>You can explain why the guard is a layout <code>load</code> and why the trip page is outside it.</li><li>You know why sign-out is a form.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="companions-presence-and-settings.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Companions, presence, the join page and settings</span>
+			</a>
+			<a class="pager__link pager__link--next" href="trips-and-a-new-trip.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The trips list and a new trip</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

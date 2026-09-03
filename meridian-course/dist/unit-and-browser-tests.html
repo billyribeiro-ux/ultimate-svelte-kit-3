@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit and browser tests: two Vitest projects, one command — Building Meridian</title>
+<meta name="description" content="Vitest runs the pure logic in Node and the components in a real Chromium, from one config and one command. The maths and the money get example-based tests with the answers worked out by hand; the components get `vitest-browser-svelte`, which mounts them and gives back locators that retry. What each layer is for, and what each is not.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">41 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 91.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html" aria-current="page"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 41</p>
+			<h1>Unit and browser tests: two Vitest projects, one command</h1>
+			<p class="lede">Vitest runs the pure logic in Node and the components in a real Chromium, from one config and one command. The maths and the money get example-based tests with the answers worked out by hand; the components get <code>vitest-browser-svelte</code>, which mounts them and gives back locators that retry. What each layer is for, and what each is not.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know which of the three test layers a given behaviour belongs to, write a browser component test that asserts on roles rather than markup, and run the whole unit suite in under a minute.</p></aside>
+			<p>Every project in this series has had tests; this one has *three kinds*, and the useful thing to learn is the boundary between them. A <strong>unit test</strong> calls a function and checks the return value — no DOM, no server, milliseconds. A <strong>component test</strong> mounts one Svelte component in a real browser and interacts with it the way a person would — clicks, typed text, what is visible — with nothing behind it but props. An <strong>end-to-end test</strong> (chapter 42) drives the whole built application through a real browser against a real database. The first is for logic, the second for behaviour, the third for the seams between everything. A behaviour tested at the wrong layer is either slow and brittle (a fair-split rule checked by clicking through the expenses tab) or falsely reassuring (a drag-and-drop “tested” by calling the handler).</p>
+<h3 id="two-projects">Two projects in one config</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:276-342</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test: {
+	// A test that asserts nothing is a test that cannot fail.
+	expect: { requireAssertions: true },
+	projects: [
+		{
+			/*
+			 * Component tests — a real Chromium, not a DOM emulator.
+			 *
+			 * The map needs WebGL, the drag-and-drop needs real pointer events
+			 * and `getBoundingClientRect`, and the itinerary animates with
+			 * `animate:flip`. jsdom has none of those and would pass every test
+			 * you thought to write while doing nothing.
+			 */
+			extends: './vite.config.ts',
+			/*
+			 * The icons the tested components use, pre-bundled before the first
+			 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
+			 * imports into deep ones *during* transform, after Vite's dependency
+			 * scan — so on a cold cache Vite discovers them mid-run, re-bundles,
+			 * and reloads the test in the middle of itself. Naming them here is
+			 * the fix Vitest asks for in its own warning.
+			 */
+			optimizeDeps: {
+				include: [
+					'phosphor-svelte/lib/BedIcon',
+					'phosphor-svelte/lib/DotsSixVerticalIcon',
+					'phosphor-svelte/lib/ForkKnifeIcon',
+					'phosphor-svelte/lib/LightbulbIcon',
+					'phosphor-svelte/lib/MapPinIcon',
+					'phosphor-svelte/lib/PencilSimpleIcon',
+					'phosphor-svelte/lib/TicketIcon',
+					'phosphor-svelte/lib/TrainIcon',
+					'phosphor-svelte/lib/TrashIcon'
+				]
+			},
+			test: {
+				name: 'client',
+				browser: {
+					enabled: true,
+					provider: playwright(),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
+				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				exclude: ['src/lib/server/**']
+			}
+		},
+		{
+			// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
+			// schemas, the geodata build, the identity helpers.
+			extends: './vite.config.ts',
+			test: {
+				name: 'server',
+				environment: 'node',
+				include: ['src/**/*.{test,spec}.{js,ts}'],
+				exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+
+				/*
+				 * One file at a time: SQLite allows exactly one writer, and two
+				 * spec files seeding the same database meet `SQLITE_BUSY` as a
+				 * dozen unrelated assertions failing in whichever file lost the
+				 * race.
+				 */
+				fileParallelism: false
+			}
+		}
+	]
+}</code></pre>
+</figure>
+<p>Vitest’s <code>projects</code> are separate test environments that share one runner and one command. The <code>server</code> project is plain Node: it picks up every <code>*.spec.ts</code> and <code>*.test.ts</code> that is *not* a <code>.svelte.</code> test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The <code>client</code> project is a real Chromium started by Playwright, and it picks up only the <code>.svelte.test.ts</code> files. Both <code>extends</code> the main config, so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees <code>#lib/…</code> and <code>m.some_message()</code> exactly as the app does.</p>
+<p>Three settings deserve a sentence each. <code>expect.requireAssertions</code> makes a test that asserts nothing a *failing* test — the most common way a test quietly stops testing is an early <code>return</code> or a promise nobody awaited, and this catches both. <code>fileParallelism: false</code> on the server project is for SQLite: it allows one writer, and two spec files seeding the same file at once produce a dozen <code>SQLITE_BUSY</code> failures in whichever file lost the race, none of which are bugs. And the <code>optimizeDeps.include</code> list on the client project is a Vite detail worth knowing: the Phosphor plugin rewrites <code>phosphor-svelte</code> imports into deep ones *during* transform, after Vite’s dependency scan, so on a cold cache Vite discovers them in the middle of a test run, re-bundles, and reloads the page under the test. Naming them up front is the fix Vitest itself suggests in its warning.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a real browser and not jsdom</h4>
+	<p>jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads <code>getBoundingClientRect</code> and listens for pointer events with real coordinates; <code>animate:flip</code> measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the seven component tests in this project in under five, which is a cheap price for tests that mean something.</p>
+</aside>
+<h3 id="logic">The logic: worked examples, not just properties</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.spec.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { balances, settle, shares } from './split.ts';
+
+const even = (...ids: string[]) =&gt; ids.map((userId) =&gt; ({ userId, weight: 1 }));
+
+describe('shares', () =&gt; {
+	it('splits evenly when it can', () =&gt; {
+		expect([...shares(3000, even('a', 'b', 'c'))]).toEqual([
+			['a', 1000],
+			['b', 1000],
+			['c', 1000]
+		]);
+	});
+
+	it('hands the leftover cents out by largest remainder, and always sums to the whole', () =&gt; {
+		const result = shares(1000, even('a', 'b', 'c'));
+		expect([...result.values()].reduce((s, n) =&gt; s + n, 0)).toBe(1000);
+		expect([...result.values()].sort()).toEqual([333, 333, 334]);
+	});
+
+	it('is deterministic about who gets the extra cent', () =&gt; {
+		const first = shares(1000, even('b', 'a', 'c'));
+		const second = shares(1000, even('c', 'b', 'a'));
+		expect(first.get('a')).toBe(334);
+		expect(second.get('a')).toBe(334);
+	});
+
+	it('respects weights', () =&gt; {
+		const result = shares(900, [
+			{ userId: 'a', weight: 2 },
+			{ userId: 'b', weight: 1 }
+		]);
+		expect(result.get('a')).toBe(600);
+		expect(result.get('b')).toBe(300);
+	});
+
+	it('refuses nonsense', () =&gt; {
+		expect(() =&gt; shares(10.5, even('a'))).toThrow(RangeError);
+		expect(() =&gt; shares(100, [])).toThrow(RangeError);
+		expect(() =&gt; shares(100, [{ userId: 'a', weight: 0 }])).toThrow(RangeError);
+	});
+});</code></pre>
+</figure>
+<p>The tests for <code>shares()</code> (chapter 10) are examples with the answers worked out by hand — a thousand cents three ways is 333, 333, 334 — and the two properties the function promises: the shares always sum to the whole, and the extra cent goes to the same person whatever order the participants came in. Property-based testing with a library like fast-check would generate thousands of random cases and is exactly right for a CRDT or a parser; for a function with four rules it is more machinery than the rules. The line: if you can enumerate the interesting inputs on one hand, enumerate them; if you cannot, generate them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.spec.ts<span class="code__lines">:44-87</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('balances and settle', () =&gt; {
+	const trip = [
+		{ amountMinor: 9000, paidBy: 'ana', shares: even('ana', 'ben', 'cal') },
+		{ amountMinor: 3000, paidBy: 'ben', shares: even('ana', 'ben', 'cal') },
+		{ amountMinor: 1200, paidBy: 'cal', shares: even('ben', 'cal') }
+	];
+
+	it('balances sum to zero', () =&gt; {
+		const b = balances(trip);
+		expect([...b.values()].reduce((s, n) =&gt; s + n, 0)).toBe(0);
+		expect(b.get('ana')).toBe(5000);
+		expect(b.get('ben')).toBe(-1600);
+		expect(b.get('cal')).toBe(-3400);
+	});
+
+	it('settles with at most people − 1 transfers', () =&gt; {
+		const transfers = settle(balances(trip));
+		expect(transfers).toEqual([
+			{ from: 'cal', to: 'ana', amountMinor: 3400 },
+			{ from: 'ben', to: 'ana', amountMinor: 1600 }
+		]);
+	});
+
+	it('settles nothing when everybody is square', () =&gt; {
+		expect(settle(new Map([['a', 0]]))).toEqual([]);
+		expect(settle(new Map())).toEqual([]);
+	});
+
+	it('pairs the biggest debtor with the biggest creditor first', () =&gt; {
+		const transfers = settle(
+			new Map([
+				['a', 500],
+				['b', 300],
+				['c', -600],
+				['d', -200]
+			])
+		);
+		expect(transfers).toEqual([
+			{ from: 'c', to: 'a', amountMinor: 500 },
+			{ from: 'c', to: 'b', amountMinor: 100 },
+			{ from: 'd', to: 'b', amountMinor: 200 }
+		]);
+	});
+});</code></pre>
+</figure>
+<p>The settle-up tests pin down the two things a person would notice: the balances sum to zero (the money that was paid is the money that was owed), and the transfers are the greedy pairing of the largest debtor with the largest creditor, which produces at most <code>people − 1</code> payments. The last test is the one that would catch a refactor: it gives a ledger where the greedy choice matters and asserts the exact list, in order, so “equivalent but different” output is a failure until somebody decides the new order is the right one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/geo.spec.ts<span class="code__lines">:19-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const LONDON = { lng: -0.1278, lat: 51.5074 };
+const PARIS = { lng: 2.3522, lat: 48.8566 };
+const NEW_YORK = { lng: -74.006, lat: 40.7128 };
+const TOKYO = { lng: 139.6917, lat: 35.6895 };
+const SAN_FRANCISCO = { lng: -122.4194, lat: 37.7749 };
+
+describe('distance', () =&gt; {
+	it('London to Paris is about 344 km', () =&gt; {
+		expect(distance(LONDON, PARIS) / 1000).toBeCloseTo(343.5, 0);
+	});
+
+	it('is symmetric and zero to itself', () =&gt; {
+		expect(distance(LONDON, PARIS)).toBeCloseTo(distance(PARIS, LONDON), 6);
+		expect(distance(LONDON, LONDON)).toBe(0);
+	});
+
+	it('is accurate for points a metre apart', () =&gt; {
+		const near = destination(LONDON, 90, 1);
+		expect(distance(LONDON, near)).toBeCloseTo(1, 3);
+	});
+
+	it('sums along a path', () =&gt; {
+		expect(pathLength([LONDON, PARIS, LONDON])).toBeCloseTo(2 * distance(LONDON, PARIS), 6);
+		expect(pathLength([])).toBe(0);
+		expect(pathLength([LONDON])).toBe(0);
+	});
+});</code></pre>
+</figure>
+<p>The geodesy tests (chapter 05) use cities whose distances are public knowledge — London to Paris is 343 kilometres, and <code>toBeCloseTo(343.5, 0)</code> asks for that to the nearest whole number — together with the properties that do not need a reference: symmetry, zero to itself, a metre is a metre. Notice the third test creates its expected point *with the library’s own <code>destination()</code>* and then measures back; that is a round-trip test, and it is what makes the pair of functions trustworthy together even though each alone is checked only loosely.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/route.svelte.test.ts<span class="code__lines">:27-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('recomputes after add, move and remove', () =&gt; {
+	const route = new Route([LONDON, ROME]);
+	const direct = route.total;
+
+	route.add(PARIS, 1);
+	flushSync();
+	expect(route.waypoints.map((w) =&gt; w.id)).toEqual(['lon', 'par', 'rom']);
+	expect(route.total).toBeGreaterThan(direct);
+
+	route.move(2, 0);
+	flushSync();
+	expect(route.waypoints.map((w) =&gt; w.id)).toEqual(['rom', 'lon', 'par']);
+	expect(route.legs[0]?.from.id).toBe('rom');
+
+	expect(route.remove('lon')).toBe(true);
+	expect(route.remove('lon')).toBe(false);
+	flushSync();
+	expect(route.legs).toHaveLength(1);
+	expect(route.total).toBeCloseTo(distance(ROME, PARIS), 6);
+});</code></pre>
+</figure>
+<p>A <code>.svelte.test.ts</code> file for a *class*, not a component: <code>Route</code> (chapter 06) is built on runes, and runes exist only in files the Svelte compiler processes. The <code>.svelte.</code> in the name is what asks for that. <code>flushSync()</code> from <code>svelte</code> forces the pending derivations to settle synchronously, so the test can assert on <code>route.total</code> the line after <code>route.add(…)</code> rather than awaiting a tick; without it, a <code>$derived</code> is lazy and would still be correct — but the assertion might read it before the effect that recomputes it had run.</p>
+<h3 id="components">Components: roles, not markup</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/RouteThumb.svelte.test.ts<span class="code__lines">:14-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('RouteThumb', () =&gt; {
+	it('draws a circle per stop and one path through them', async () =&gt; {
+		const screen = await render(RouteThumb, {
+			points: [
+				[-9.14, 38.72],
+				[-8.63, 41.16],
+				[-3.7, 40.42]
+			],
+			label: 'Iberia'
+		});
+		const svg = screen.getByRole('img', { name: 'Iberia' });
+		await expect.element(svg).toBeVisible();
+		expect(svg.element().querySelectorAll('circle')).toHaveLength(3);
+		const d = svg.element().querySelector('path')?.getAttribute('d') ?? '';
+		expect(d.startsWith('M')).toBe(true);
+		expect(d.split(' ')).toHaveLength(3);
+	});
+
+	it('draws no route for a single stop', async () =&gt; {
+		const screen = await render(RouteThumb, { points: [[139.69, 35.69]], label: 'Tokyo' });
+		const svg = screen.getByRole('img', { name: 'Tokyo' });
+		await expect.element(svg).toBeVisible();
+		expect(svg.element().querySelectorAll('circle')).toHaveLength(1);
+		expect(svg.element().querySelector('path')).toBeNull();
+	});
+});</code></pre>
+</figure>
+<p><code>render()</code> from <code>vitest-browser-svelte</code> mounts the component with props and returns a screen whose <code>getByRole</code>, <code>getByText</code> and friends are the same locators Playwright uses. <code>expect.element(locator)</code> *retries* until the assertion holds or a timeout passes, which is the property that makes browser tests stable: a component that renders in the next frame is not a failure. The assertions are on roles and names — <code>img</code> with the accessible name <code>Iberia</code> — because that is the contract a screen reader and a person share. Counting <code>circle</code> elements inside the SVG is a deliberate step down to markup, for a fact that has no role: three stops, three markers.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopCard.svelte.test.ts<span class="code__lines">:13-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const stop: Stop = {
+	id: '00000000-0000-4000-8000-0000000000aa',
+	tripId: '00000000-0000-4000-8000-00000000d001',
+	name: 'Alfama',
+	kind: 'place',
+	lng: -9.1308,
+	lat: 38.7118,
+	date: '2026-05-10',
+	position: 0,
+	notes: 'Go before the coaches.',
+	placeId: null,
+	createdBy: null,
+	createdAt: new Date(0),
+	updatedAt: new Date(0)
+};</code></pre>
+</figure>
+<p>The fixture is a plain object of the database row’s shape, typed as <code>Stop</code> — and the <code>import type</code> is erased at compile time, so a browser test can name a server-only type without pulling the server, the driver or the schema into the bundle. Dates are <code>new Date(0)</code>: a fixed instant, so nothing in the test depends on today.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopCard.svelte.test.ts<span class="code__lines">:30-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('selects on click and shows who is looking', async () =&gt; {
+	const onselect = vi.fn();
+	const screen = await render(StopCard, {
+		stop,
+		number: 1,
+		selected: false,
+		editable: false,
+		lookers: ['Ben'],
+		onselect
+	});
+	const name = screen.getByRole('button', { name: 'Alfama' });
+	await expect.element(name).toHaveAttribute('aria-pressed', 'false');
+	await name.click();
+	expect(onselect).toHaveBeenCalledTimes(1);
+	await expect.element(screen.getByText('Ben')).toBeVisible();
+	await expect.element(screen.getByText('Go before the coaches.')).toBeVisible();
+});</code></pre>
+</figure>
+<p>A callback prop is tested with <code>vi.fn()</code>: a function that records its calls. The component receives it as <code>onselect</code>, the test clicks the button and asserts the spy was called exactly once. There is no event bus and no store to inspect; Svelte 5 components communicate through props that are functions, and a function is the easiest thing in the world to fake. The second test in the file mounts the card twice, as a viewer and as an editor, and counts buttons — the cheapest possible proof that the edit and remove controls exist for one and not the other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/guides/Leg.svelte.test.ts<span class="code__lines">:10-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('Leg', () =&gt; {
+	it('names both places, the distance and the compass direction', async () =&gt; {
+		const screen = await render(Leg, { from: 'lisbon', to: 'porto' });
+		await expect.element(screen.getByText('Lisbon → Porto')).toBeVisible();
+		// About 274 km, north by a whisker east.
+		await expect.element(screen.getByText(/27\d km · N/)).toBeVisible();
+	});
+
+	it('refuses a place that is not in the gazetteer', async () =&gt; {
+		await expect(render(Leg, { from: 'lisbon', to: 'atlantis' })).rejects.toThrow(/atlantis/);
+	});
+});</code></pre>
+</figure>
+<p><code>Leg</code> is the component the Markdown guides embed (chapter 34). Its test does double duty: it proves the arithmetic and the compass point, and — because <code>Leg</code> imports the gazetteer and the geodesy package — it proves that the *workspace package* resolves from the app in a browser build. The second test is a rejection: <code>render()</code> of a component whose script throws returns a promise that rejects, and <code>rejects.toThrow(/atlantis/)</code> pins the message so a future refactor cannot turn a clear error into a blank component.</p>
+<h3 id="running">Running it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:24-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;test:unit&quot;: &quot;vitest&quot;,
+&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+&quot;test:e2e&quot;: &quot;playwright test&quot;,
+&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+&quot;verify:package&quot;: &quot;pnpm --filter @meridian/waypoint run verify&quot;,</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run test:unit -- --run
+
+ ✓ |server| src/lib/domain/split.spec.ts (9 tests)
+ ✓ |server| src/lib/domain/itinerary.spec.ts (6 tests)
+ ✓ |server| src/lib/domain/schemas.spec.ts (5 tests)
+ ✓ |server| src/lib/domain/dates.spec.ts (4 tests)
+ ✓ |server| src/lib/domain/money.spec.ts (4 tests)
+ ✓ |server| src/lib/server/geodata.spec.ts (3 tests)
+ ✓ |client| src/lib/trip/StopCard.svelte.test.ts (2 tests)
+ ✓ |client| src/lib/ui/RouteThumb.svelte.test.ts (2 tests)
+ ✓ |client| src/lib/guides/Leg.svelte.test.ts (2 tests)
+
+ Test Files  9 passed (9)
+      Tests  41 passed (41)</code></pre>
+</figure>
+<p>The library has its own suite — <code>pnpm --filter @meridian/waypoint test</code> — with the geodesy properties, the <code>Route</code> class and the <code>Compass</code> component, and chapter 08 runs it as part of <code>verify:package</code>. Both suites are under a minute, which is the number that decides whether people run them before every push or only when the pipeline complains.</p>
+<aside class="callout callout--note"><p>What is *not* unit-tested, and why: the remote functions. They are thin — a schema, an authorisation check, a query — and every line of them is exercised by the end-to-end suite through the real HTTP path, the real cookie and the real database. A unit test would have to fake <code>getRequestEvent()</code>, the session and Drizzle, and would test the fakes. When the logic inside one grows past a screen, it moves into <code>src/lib/server/*.ts</code> where it can be called directly, which is what <code>listStops()</code> and the invite helpers already are.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which project a new test file lands in from its name alone, and why the server project runs files one at a time.</li><li>You can write a browser test that mounts a component with a <code>vi.fn()</code> prop, clicks a role, and asserts the spy — with no markup selectors.</li><li>You can explain what <code>expect.requireAssertions</code> protects against, and what <code>flushSync</code> is for in a test of a runes class.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="reactivity-utilities.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span>
+			</a>
+			<a class="pager__link pager__link--next" href="end-to-end.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">End to end: the built server, two viewports, two people</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

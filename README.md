@@ -18,9 +18,11 @@ Seven complete projects, each with its own build-along course.
 | [`ostinato-course/`](./ostinato-course) | Its 39-chapter course, for somebody who has finished project 5. Open `ostinato-course/dist/index.html`. |
 | [`abacus/`](./abacus) | **Project 7** — Abacus, a spreadsheet in the browser. A formula language with a Pratt parser and fifty functions, an engine that recalculates only what changed and is property-tested against a from-scratch evaluator, a grid that scrolls a million rows, passkeys instead of passwords, a second person editing beside you over a live query, CSV in a worker, and a container that migrates before it listens — and a lesson page where the same engine is written out of `$derived`. |
 | [`abacus-course/`](./abacus-course) | Its 39-chapter course, for somebody who has finished project 6. Open `abacus-course/dist/index.html`. |
+| [`meridian/`](./meridian) | **Project 8** — Meridian, a collaborative trip planner. A pnpm workspace with a published geodesy library, an itinerary two people edit at once over a live query with presence, a map drawn from bundled world geodata with no tile server, a globe flyover in Threlte, fair expense splits in minor units, a Tiptap notes editor through an attachment, Markdown guides prerendered in three languages, an embeddable custom element, and a survey of the Svelte ecosystem as of September 2026 — every current Svelte 5 and SvelteKit 3 capability, each used for something. |
+| [`meridian-course/`](./meridian-course) | Its 45-chapter course, for somebody who has finished project 7, with an ecosystem part on choosing libraries. Open `meridian-course/dist/index.html`. |
 
 Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All seven pin it in `.nvmrc` and `engines`.
+All eight pin it in `.nvmrc` and `engines`.
 
 ## Quick start
 
@@ -51,6 +53,10 @@ pnpm run db:push && pnpm run db:seed && pnpm run dev
 # Project 7 — the spreadsheet. Open /sheet/local, or sign in with a passkey.
 cd abacus && pnpm install && cp .env.example .env
 pnpm run db:push && pnpm run db:seed && pnpm run dev
+
+# Project 8 — the trip planner. Open /t/seediberia in two windows, as Ana and Ben.
+cd meridian && pnpm install && cp .env.example .env
+pnpm run db:migrate && pnpm run db:seed && pnpm run dev
 ```
 
 Each seed prints what you need to open the thing it built: Halfpast prints the
@@ -59,7 +65,9 @@ prints an owner, a viewer, and a board short link worth opening twice; Sextant
 prints a workspace, a sign-in, an ingest key, and the twenty minutes of its six
 hours of telemetry during which `payments-api` is timing out; Ostinato publishes
 three grooves under `@ostinato` and opens the lobby jam room; Abacus publishes
-one sheet per template at `/s/seedbudget`, `/s/seedloan00` and `/s/seedgrades`.
+one sheet per template at `/s/seedbudget`, `/s/seedloan00` and `/s/seedgrades`;
+Meridian seeds three people (`ana@`, `ben@`, `cal@meridian.test`, password
+`meridian-demo-2026`) and two trips, one private and one visible by link.
 
 ## Reading the courses
 
@@ -71,6 +79,7 @@ open tessera-course/dist/index.html
 open sextant-course/dist/index.html
 open ostinato-course/dist/index.html
 open abacus-course/dist/index.html
+open meridian-course/dist/index.html
 ```
 
 No build step, no server. Each chapter is a real page with prev/next links, so
@@ -101,6 +110,12 @@ The Abacus course uses the same tooling — 287 blocks quoted by line range,
 built pages — and its `verify` and `build` run in CI beside the project's own
 suite, with `git diff --exit-code` on `dist/` so the committed pages are always
 the ones the build produces.
+
+The Meridian course is the same again — 322 blocks quoted by line range, the
+range checker, the page checker, and the CI job — and is the one to read for
+the ecosystem: a part of four chapters on which libraries were chosen, which
+were rejected and why, and the three shapes a library takes when it meets
+Svelte 5 (headless, wrapper, imperative through an attachment).
 
 ## Project 1 — StrikeFlow
 
@@ -385,4 +400,76 @@ magic; the lesson page puts the two side by side and lets you edit either.
 ```bash
 cd abacus
 pnpm run verify   # check, lint, unit + browser, build, e2e
+```
+
+## Project 8 — Meridian
+
+A trip planner for a few friends. One of them starts a trip, the others join
+from a link, and from then on everybody is looking at the same itinerary: a
+stop added on one phone appears on the other without a reload, the chips at
+the top say who is here and which stop they are looking at, and the ledger
+says who owes whom to the cent. It is the project where the *ecosystem* is the
+subject as much as the framework: every library in it was chosen against four
+written questions, and the course keeps the list of the ones that lost.
+
+- **A published library first.** `@meridian/waypoint` is a pnpm workspace
+  package: great-circle distance, bearing, destination and interpolation, a
+  `Route` class written with runes in a `.svelte.ts` file, and two components
+  — built with `@sveltejs/package`, checked with publint and
+  arethetypeswrong, and consumed by the app the way a stranger would consume
+  it. The Markdown guides call it at build time.
+- **A document two people edit at once.** One `query.live` per trip, a room
+  the server publishes to when anything changes, last-write-wins per stop,
+  and presence — heartbeat, selection, arrival and departure — on the same
+  stream. Commands refresh the queries they invalidate in the same response,
+  and `untrack` around a command inside an effect is the chapter that explains
+  the one infinite loop the suite found.
+- **A map with no tile server.** svelte-maplibre over MapLibre GL, with a
+  style built from a bundled TopoJSON of the world served by an endpoint that
+  `read()`s the asset — so `connect-src 'self'` holds, the map works offline
+  and in CI, and nobody learns where you are planning to go. A Threlte globe
+  draws the same route as great-circle arcs and flies along it, unless
+  `prefers-reduced-motion` says not to.
+- **Money that adds up.** Minor units everywhere, largest-remainder splits
+  that always sum to the whole and always give the extra cent to the same
+  person, a greedy settle-up with at most `people − 1` transfers, TanStack
+  Table for the ledger, LayerChart for the two charts, and `Intl` for every
+  number and date in three locales.
+- **Three languages, one URL scheme.** Paraglide 2 with `/de` and `/pt-br`
+  prefixes through `reroute`, a locale in `AsyncLocalStorage` so a remote
+  function speaks the right language without being told, and guides written
+  in mdsvex, prerendered from `entries()` in all three languages with
+  `csr = false` — not one script tag on the page.
+- **The interface, tab by tab.** Bits UI for the dialog, the combobox, the
+  command palette and the date-range picker; svelte-dnd-action with
+  `animate:flip` for the itinerary; Tiptap 3 through `{@attach}` for the notes
+  with an autosave command; a `<meridian-route>` custom element compiled with
+  `dynamicCompileOptions` for the client only and shipped as its own file by a
+  second Vite config; view transitions; an update banner from
+  `version.pollInterval`.
+- **The platform, in one config.** `tracing` with an in-memory OpenTelemetry
+  exporter behind a diagnostics page, a Content Security Policy in `auto` mode
+  with the theme boot script allowed by hash, `frame-ancestors` rewritten per
+  request for the one route that may be framed, `handleError` by `kind`,
+  `handleFetch` with a timeout, `init` that refuses to be healthy without the
+  database, and a redirect target that is sanitised rather than rejected.
+- **Shipped as a container.** A three-stage Dockerfile that installs a
+  workspace with `--frozen-lockfile --ignore-scripts`, bakes the origin in,
+  runs as `node`, migrates with `node --import` before it listens and answers
+  `SIGTERM`; a workflow that verifies the project and the library, builds and
+  *runs* the image, probes the health check, fetches a prerendered guide out
+  of it in two languages, and checks the exit code.
+- 43 unit and browser tests across two Vitest projects, 18 end-to-end
+  scenarios each run on a desktop and a Pixel 7 profile, with two browser
+  contexts on one trip. Writing them found six real bugs — an effect loop, a
+  combobox that never searched, a page that did not refresh after Save, a
+  phone layout that pushed the page wider than the screen, text typed before
+  hydration that hydration threw away, and seeded ids one character short of
+  a UUID that made every command on a seeded row fail silently — each now a
+  comment in the code and a chapter in the course.
+
+```bash
+cd meridian
+pnpm run verify           # check, lint, unit + browser, build, e2e
+pnpm run verify:package   # the library: svelte-package, publint, arethetypeswrong
 ```

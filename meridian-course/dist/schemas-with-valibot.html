@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schemas with valibot, and who may do what — Building Meridian</title>
+<meta name="description" content="Every remote function takes one of these as its first argument, and SvelteKit validates before the function runs. valibot because it tree-shakes; `forward` for cross-field checks; picklists that double as the source of truth for the union types; and the two-line roles module.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 26.666666666666668%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html" aria-current="page"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>Schemas with valibot, and who may do what</h1>
+			<p class="lede">Every remote function takes one of these as its first argument, and SvelteKit validates before the function runs. valibot because it tree-shakes; <code>forward</code> for cross-field checks; picklists that double as the source of truth for the union types; and the two-line roles module.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a schema that validates, transforms and types an input in one place, and put a cross-field rule where the error lands on the right field.</p></aside>
+			<p>A remote function is an HTTP endpoint, whatever it looks like in a component, and anybody can call it with anything. SvelteKit’s answer is that the first argument to <code>query</code>, <code>form</code> and <code>command</code> is a Standard Schema, and the function body never runs on input that failed it. These schemas are the contract, and they live in <code>domain/</code> rather than <code>server/</code> because the browser runs them too — to disable a button before a request is sent.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:1-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SHAPES THAT CROSS THE WIRE
+ * ==============================
+ *
+ * Every remote function takes one of these as its first argument, and
+ * SvelteKit validates the argument against it before the function runs — a
+ * bad request is a `validation` error in `handleError`, never a stack trace
+ * from inside the function. The same schemas run in the browser to disable a
+ * button before the request is sent, which is why they live in `domain/` and
+ * not under `server/`.
+ *
+ * valibot, because it is a set of small functions the bundler can shake:
+ * the browser gets the eight it uses, not a schema runtime.
+ */
+
+import * as v from 'valibot';
+import { isIsoDate } from './dates.ts';
+import { CURRENCIES } from './money.ts';
+import { SLUG } from './ids.ts';
+
+export const IdSchema = v.pipe(v.string(), v.uuid('Expected an id'));
+export const SlugSchema = v.pipe(v.string(), v.regex(SLUG, 'Expected a trip link'));
+
+export const IsoDateSchema = v.pipe(
+	v.string(),
+	v.check(isIsoDate, 'Expected a date like 2026-05-10')
+);
+
+export const LngSchema = v.pipe(v.number(), v.minValue(-180), v.maxValue(180));
+export const LatSchema = v.pipe(v.number(), v.minValue(-90), v.maxValue(90));
+
+const shortText = (max: number) =&gt; v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
+const optionalText = (max: number) =&gt;
+	v.optional(v.pipe(v.string(), v.trim(), v.maxLength(max)), '');
+
+export const CurrencySchema = v.picklist(CURRENCIES, 'Pick a currency');</code></pre>
+</figure>
+<p>valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches <code>SLUG</code>, a date is an ISO string that <code>isIsoDate</code> accepts, a longitude is a number in range. <code>shortText</code> and <code>optionalText</code> are the two shapes of a text field, with <code>trim()</code> built in so <code>&quot;  Lisbon &quot;</code> is stored as <code>&quot;Lisbon&quot;</code> without every form remembering to do it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:38-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
+/* Trips                                                                   */
+/* ---------------------------------------------------------------------- */
+
+export const TripInputSchema = v.pipe(
+	v.object({
+		name: shortText(80),
+		description: optionalText(500),
+		startDate: IsoDateSchema,
+		endDate: IsoDateSchema,
+		currency: CurrencySchema
+	}),
+	v.forward(
+		v.check((trip) =&gt; trip.endDate &gt;= trip.startDate, 'The trip cannot end before it starts'),
+		['endDate']
+	),
+	v.forward(
+		v.check(
+			(trip) =&gt; new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime() &lt; 366 * 864e5,
+			'A trip is at most a year'
+		),
+		['endDate']
+	)
+);
+export type TripInput = v.InferOutput&lt;typeof TripInputSchema&gt;;
+
+export const VisibilitySchema = v.picklist(['private', 'link']);
+export type Visibility = v.InferOutput&lt;typeof VisibilitySchema&gt;;</code></pre>
+</figure>
+<p><code>TripInputSchema</code> has the pattern for a rule that involves two fields. <code>v.check</code> on the object can say “the end is not before the start”, but an error on the *object* would have nowhere to appear in a form. <code>v.forward(..., [&quot;endDate&quot;])</code> moves the issue onto the <code>endDate</code> field, so <code>createTrip.fields.endDate.issues()</code> shows it under the picker. The type on the line after is the other half of the contract: <code>InferOutput</code> gives the *validated* type — trimmed strings, the currency as a union — so the function body and the component agree on exactly what arrives.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:67-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
+/* Stops                                                                   */
+/* ---------------------------------------------------------------------- */
+
+export const STOP_KINDS = ['place', 'lodging', 'food', 'transport', 'activity', 'idea'] as const;
+export const StopKindSchema = v.picklist(STOP_KINDS);
+export type StopKind = v.InferOutput&lt;typeof StopKindSchema&gt;;
+
+export const StopInputSchema = v.object({
+	tripId: IdSchema,
+	name: shortText(120),
+	kind: StopKindSchema,
+	lng: LngSchema,
+	lat: LatSchema,
+	date: v.nullable(IsoDateSchema),
+	notes: optionalText(1000),
+	placeId: v.optional(v.pipe(v.string(), v.maxLength(64)))
+});
+export type StopInput = v.InferOutput&lt;typeof StopInputSchema&gt;;
+
+export const StopPatchSchema = v.object({
+	id: IdSchema,
+	name: v.optional(shortText(120)),
+	kind: v.optional(StopKindSchema),
+	lng: v.optional(LngSchema),
+	lat: v.optional(LatSchema),
+	notes: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(1000)))
+});
+export type StopPatch = v.InferOutput&lt;typeof StopPatchSchema&gt;;
+
+export const PlacementSchema = v.object({
+	id: IdSchema,
+	date: v.nullable(IsoDateSchema),
+	position: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10_000))
+});
+export type Placement = v.InferOutput&lt;typeof PlacementSchema&gt;;
+
+/** A drag ended: this stop, on this day, at this index. */
+export const MoveStopSchema = v.object({
+	tripId: IdSchema,
+	id: IdSchema,
+	date: v.nullable(IsoDateSchema),
+	index: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10_000))
+});
+export type MoveStop = v.InferOutput&lt;typeof MoveStopSchema&gt;;</code></pre>
+</figure>
+<p>Look at <code>STOP_KINDS</code>: an <code>as const</code> array, a <code>picklist</code> built from it, and a type inferred from the picklist. One list drives the validation, the TypeScript union, the <code>&lt;select&gt;</code> options and the icon table in <code>kinds.ts</code>. Add a kind and every one of those follows or fails to compile. <code>PlacementSchema</code> and <code>MoveStopSchema</code> are chapter 11’s <code>place()</code> at the wire: what a drop sends is a day and an index, and what comes back is a list of placements.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:113-150</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
+/* Expenses                                                                */
+/* ---------------------------------------------------------------------- */
+
+export const EXPENSE_CATEGORIES = ['food', 'lodging', 'transport', 'activity', 'other'] as const;
+export const ExpenseCategorySchema = v.picklist(EXPENSE_CATEGORIES);
+export type ExpenseCategory = v.InferOutput&lt;typeof ExpenseCategorySchema&gt;;
+
+export const ExpenseInputSchema = v.object({
+	tripId: IdSchema,
+	title: shortText(120),
+	amountMinor: v.pipe(
+		v.number(),
+		v.integer('Amounts are whole minor units'),
+		v.minValue(1, 'Enter an amount'),
+		v.maxValue(1_000_000_000, 'That is more than a trip costs')
+	),
+	category: ExpenseCategorySchema,
+	date: IsoDateSchema,
+	paidBy: v.string(),
+	participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
+});
+export type ExpenseInput = v.InferOutput&lt;typeof ExpenseInputSchema&gt;;
+
+/* ---------------------------------------------------------------------- */
+/* Notes                                                                   */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * A Tiptap document is a tree of nodes with a `doc` at the root. The tree is
+ * validated by Tiptap's own schema when it is loaded, so this only insists
+ * on the root and on a size: a note is a page, not a book.
+ */
+export const NoteDocSchema = v.pipe(
+	v.object({ type: v.literal('doc'), content: v.optional(v.array(v.unknown())) }),
+	v.check((doc) =&gt; JSON.stringify(doc).length &lt;= 200_000, 'The note is too long')
+);
+export type NoteDoc = v.InferOutput&lt;typeof NoteDocSchema&gt;;</code></pre>
+</figure>
+<p>The messages on the expense schema are the ones a person sees — <code>Enter an amount</code>, <code>Somebody has to share it</code> — because a form field shows the first issue it has. <code>NoteDocSchema</code> is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:152-208</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
+/* Members and invites                                                     */
+/* ---------------------------------------------------------------------- */
+
+export const ROLES = ['owner', 'editor', 'viewer'] as const;
+export const RoleSchema = v.picklist(ROLES);
+export type Role = v.InferOutput&lt;typeof RoleSchema&gt;;
+
+export const InviteInputSchema = v.object({
+	tripId: IdSchema,
+	role: v.picklist(['editor', 'viewer'])
+});
+
+export const PresenceSchema = v.object({
+	tripId: IdSchema,
+	/** The stop under the person's pointer, or nothing. */
+	stopId: v.nullable(IdSchema)
+});
+export type Presence = v.InferOutput&lt;typeof PresenceSchema&gt;;
+
+/* ---------------------------------------------------------------------- */
+/* Identity                                                                */
+/* ---------------------------------------------------------------------- */
+
+export const EmailSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	v.toLowerCase(),
+	v.email('Enter an email address')
+);
+
+export const PasswordSchema = v.pipe(
+	v.string(),
+	v.minLength(12, 'Use at least twelve characters'),
+	v.maxLength(256)
+);
+
+/** What the owner may change after the fact. Every field optional; the same checks when both dates are present. */
+export const TripPatchSchema = v.pipe(
+	v.object({
+		id: IdSchema,
+		name: v.optional(shortText(80)),
+		description: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500))),
+		startDate: v.optional(IsoDateSchema),
+		endDate: v.optional(IsoDateSchema),
+		currency: v.optional(CurrencySchema),
+		visibility: v.optional(VisibilitySchema)
+	}),
+	v.forward(
+		v.check(
+			(patch) =&gt; !patch.startDate || !patch.endDate || patch.endDate &gt;= patch.startDate,
+			'The trip cannot end before it starts'
+		),
+		['endDate']
+	)
+);
+export type TripPatch = v.InferOutput&lt;typeof TripPatchSchema&gt;;</code></pre>
+</figure>
+<p><code>EmailSchema</code> lowercases and trims before it validates, so <code>Ana@Example.com </code> and <code>ana@example.com</code> are one account. <code>PasswordSchema</code> has a minimum and a maximum and no rule about symbols, because length is the one password rule that reliably helps — Better Auth is configured to agree in chapter 15. <code>TripPatchSchema</code> is the update shape: every field optional, and the cross-field check written so it only fires when both dates are present.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/roles.ts<span class="code__lines">:1-12</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { Role } from './schemas.ts';
+
+/** What a person is to a trip: a member's role, or `link` for a stranger with the share link. */
+export type ViewerRole = Role | 'link';
+
+export function canEdit(role: ViewerRole): boolean {
+	return role === 'owner' || role === 'editor';
+}
+
+export function isOwner(role: ViewerRole): boolean {
+	return role === 'owner';
+}</code></pre>
+</figure>
+<p>Twelve lines that the whole interface consults. <code>ViewerRole</code> adds <code>link</code> to the three membership roles — what a stranger with the share link is — and the two predicates are the only two questions a component ever asks. There is no permission matrix, because there are only two capabilities, and a matrix for two rows is a comment.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write a two-field rule with <code>forward</code> and say where its error appears.</li><li>You can trace <code>STOP_KINDS</code> from the array to the type to the select to the icons.</li><li>You know why <code>trim()</code> and <code>toLowerCase()</code> live in the schema and not in the components.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-itinerary-as-data.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The itinerary as data</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-database.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The database: seven tables and Better Auth’s four</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

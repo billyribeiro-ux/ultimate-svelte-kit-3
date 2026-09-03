@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security: the policy, the headers, the redirect and the one framed route — Building Meridian</title>
+<meta name="description" content="What the server puts on every response and why: a Content Security Policy in `auto` mode with a hashed boot script, CSRF with no trusted origins, the headers that are always right, `Vary: Cookie`, a redirect target that is sanitised rather than rejected, a public API whose CORS is safe because its content is, and the single route whose frame policy is loosened per request.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">43 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 95.55555555555556%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html" aria-current="page"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 43</p>
+			<h1>Security: the policy, the headers, the redirect and the one framed route</h1>
+			<p class="lede">What the server puts on every response and why: a Content Security Policy in <code>auto</code> mode with a hashed boot script, CSRF with no trusted origins, the headers that are always right, <code>Vary: Cookie</code>, a redirect target that is sanitised rather than rejected, a public API whose CORS is safe because its content is, and the single route whose frame policy is loosened per request.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the project’s Content Security Policy directive by directive and say what each one blocks, and add a new route or a new third-party resource without weakening the policy for everything else.</p></aside>
+			<p>Security in a web application is mostly a list of things that are true of *every* response, and the place to make them true is the one function every response passes through. In SvelteKit that is <code>handle</code> in <code>hooks.server.ts</code> (chapter 14), and the third handler in its sequence is where this chapter lives. The rest is a policy in <code>vite.config.ts</code> that SvelteKit applies for us, and a handful of decisions at the edges: what may be framed, what may be fetched from another origin, where a sign-in may redirect.</p>
+<h3 id="csp">The Content Security Policy</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:163-209</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * CONTENT SECURITY POLICY
+ * =======================
+ *
+ * `mode: 'auto'`: hashes for prerendered pages, where the whole document
+ * is known at build time, and nonces for dynamically rendered ones,
+ * which stream `resolve(…)` scripts after the header has gone.
+ *
+ * The directives that are specific to a map and a globe:
+ *   `worker-src 'self' blob:`  MapLibre parses tiles in a Web Worker.
+ *                              Its URL is set from a Vite asset import,
+ *                              so `'self'` is enough; `blob:` is for the
+ *                              fallback MapLibre uses when the worker
+ *                              script is on another origin.
+ *   `img-src data: blob:`      MapLibre sprites and the canvas exports.
+ *   `connect-src 'self'`       Deliberately no tile server: the map
+ *                              style is built from a bundled TopoJSON
+ *                              of the world, so the app works offline
+ *                              and in CI with no keys and no leaks.
+ *   `style-src 'unsafe-inline'` — a deliberate trade. Markers and the
+ *                              itinerary position things with `style:`
+ *                              attributes; attributes cannot be hashed
+ *                              and a nonce does not apply to them. The
+ *                              exposure is CSS injection, not script.
+ *   `frame-ancestors 'none'`   everywhere except `/embed/[slug]`, where
+ *                              `hooks.server.ts` replaces it per request.
+ */
+csp: {
+	mode: 'auto',
+	directives: {
+		'default-src': ['self'],
+		// `'self'` plus the hash of the one inline script in `app.html`.
+		'script-src': ['self', themeBootHash()],
+		'style-src': ['self', 'unsafe-inline'],
+		'img-src': ['self', 'data:', 'blob:'],
+		'font-src': ['self', 'data:'],
+		'connect-src': ['self'],
+		'worker-src': ['self', 'blob:'],
+		'form-action': ['self'],
+		'frame-ancestors': ['none'],
+		'object-src': ['none'],
+		'base-uri': ['self']
+	}
+},
+
+// Nobody else may POST here.
+csrf: { trustedOrigins: [] },</code></pre>
+</figure>
+<p>A Content Security Policy is a header that tells the browser which sources of script, style, image, font, connection and frame the page is allowed to use; anything else is blocked and reported to the console. Its purpose is to make cross-site scripting *not work*: an attacker who manages to inject <code>&lt;script&gt;</code> into a page gains nothing if inline scripts are refused. <code>default-src 'self'</code> is the floor — nothing from anywhere but this origin — and every other directive is a narrow, commented exception.</p>
+<p><code>mode: 'auto'</code> is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a <strong>nonce</strong> — a random value generated per request, put on the header and on each allowed <code>&lt;script&gt;</code> — and a <strong>hash</strong> of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams <code>resolve()</code> scripts after the header has gone, so it cannot know all the hashes. <code>auto</code> uses hashes for prerendered pages and nonces for the rest, and the guides (chapter 34) are the reason the project needs both.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html<span class="code__lines">:20-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;script&gt;
+	try {
+		var t = localStorage.getItem('meridian:theme');
+		if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+	} catch (e) {}
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:359-364</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function themeBootHash(): `sha256-${string}` {
+	const html = readFileSync('src/app.html', 'utf8');
+	const script = /&lt;script&gt;([\s\S]*?)&lt;\/script&gt;/.exec(html)?.[1];
+	if (!script) throw new Error('src/app.html: theme boot script not found');
+	return `sha256-${createHash('sha256').update(script).digest('base64')}`;
+}</code></pre>
+</figure>
+<p>The theme boot script — the one that sets the dark class before first paint so a dark theme never flashes light — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time <strong>from the template</strong>, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from <code>app.html</code>, which is why the template must not put a <code>nonce</code> attribute on it: SvelteKit refuses to prerender a template containing <code>%sveltekit.nonce%</code>, and a prerendered page needs this script too.</p>
+<ul><li><code>worker-src 'self' blob:</code> — MapLibre parses vector tiles in a Web Worker. Its URL comes from a Vite asset import, so <code>'self'</code> covers it; <code>blob:</code> is for the fallback MapLibre uses when the worker script is on another origin.</li><li><code>img-src 'self' data: blob:</code> — MapLibre’s sprite sheet and the canvas exports are <code>data:</code> and <code>blob:</code> URLs; the enhanced images are <code>'self'</code>.</li><li><code>connect-src 'self'</code> — deliberately no tile server. The map style is built from a bundled TopoJSON of the world (chapter 27), so the app works offline, in CI, with no keys and no third party learning where people plan to go. Adding a tile provider would mean adding its origin here, and the comment says so, so the change is one line and visible in review.</li><li><code>style-src 'self' 'unsafe-inline'</code> — the trade the comment owns up to. Markers and the itinerary position things with <code>style:</code> attributes, attributes cannot be hashed, and a nonce does not apply to them. The exposure is CSS injection, which can deface but cannot run code; the alternative is a design without a single inline style, which is a large price for a small gain.</li><li><code>frame-ancestors 'none'</code> — nobody may put this app in an iframe, which closes clickjacking. One route needs the opposite, and the next section is about that.</li><li><code>form-action 'self'</code>, <code>base-uri 'self'</code>, <code>object-src 'none'</code> — forms may only submit here, <code>&lt;base&gt;</code> may not be hijacked, plugins do not exist.</li></ul>
+<p><code>csrf: { trustedOrigins: [] }</code> is the last line of the block and the easiest to get wrong. SvelteKit refuses form submissions whose <code>Origin</code> header does not match the app’s own, which is what stops another site from posting to <code>/signin</code> on a person’s behalf. An empty list means *nobody else*; the value to add here is a second origin of your own, never a wildcard.</p>
+<h3 id="headers">The headers, and the one route that may be framed</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:97-148</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
+	const response = await resolve(event, {
+		/*
+		 * Preload the two fonts the first paint needs, by source filename.
+		 *
+		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
+		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * source path, before hashing — so this can name the exact file rather than
+		 * guessing at a hashed URL.
+		 */
+		preload: (input) =&gt; {
+			if (input.type === 'js' || input.type === 'css') return true;
+			if (input.type !== 'font') return false;
+			return PRELOAD_FONTS.some((font) =&gt; input.filename.endsWith(font));
+		}
+	});
+
+	response.headers.set('x-content-type-options', 'nosniff');
+	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	// Geolocation is the one capability this app asks for: &quot;where am I&quot; on the map.
+	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=(self)');
+
+	/*
+	 * THE ONE ROUTE THAT MAY BE FRAMED
+	 * --------------------------------
+	 * `vite.config.ts` says `frame-ancestors 'none'` for the whole app, which
+	 * is right: a trip planner inside somebody else's iframe is a clickjacking
+	 * target. `/embed/&lt;slug&gt;` exists to be framed — it is the read-only route
+	 * summary the custom element loads — so for that route, and only that
+	 * route, the directive is replaced after SvelteKit has built the policy.
+	 */
+	if (event.url.pathname.startsWith('/embed/')) {
+		const policy = response.headers.get('content-security-policy');
+		if (policy) {
+			response.headers.set(
+				'content-security-policy',
+				policy.replace(/frame-ancestors [^;]*/, 'frame-ancestors *')
+			);
+		}
+	}
+
+	/*
+	 * `Vary: Cookie` on the pages, because the header shows the person's name
+	 * and the locale cookie changes the language, and a shared cache must not
+	 * serve one person's page to another.
+	 */
+	if (!event.url.pathname.startsWith('/api/') &amp;&amp; !event.url.pathname.startsWith('/_app/')) {
+		response.headers.append('vary', 'Cookie');
+	}
+
+	return response;
+};</code></pre>
+</figure>
+<p>Three headers are always right and cost nothing: <code>x-content-type-options: nosniff</code> (the browser trusts our content types and does not guess), <code>referrer-policy: strict-origin-when-cross-origin</code> (other sites learn our origin, not our paths — a trip’s slug is not their business), and a <code>permissions-policy</code> that turns off the microphone and the camera and keeps geolocation for this origin only, because “where am I” on the map is the one capability the app asks for. <code>Vary: Cookie</code> on pages is for shared caches: the header shows the person’s name and the locale cookie changes the language, so a cache must never serve one person’s page to another. API responses and the hashed <code>/_app/</code> assets are excluded because they do not depend on the cookie, and a <code>Vary</code> there would only defeat the cache.</p>
+<p>The embed route is the exception that proves the policy was applied thoughtfully. <code>/embed/&lt;slug&gt;</code> exists to be framed — it is the read-only route summary the custom element loads (chapter 36) — and for that path, and only that path, the handler rewrites the <code>frame-ancestors</code> directive <strong>after SvelteKit has built the header</strong>. A regular expression on the header is cruder than a per-route config would be, but SvelteKit’s policy is global, the route is one, and the rewrite is six lines next to a comment that says exactly what it does. The end-to-end suite asserts the result on the public frame and the 404 on the private one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:76-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const handleAuth: Handle = async ({ event, resolve }) =&gt; {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+
+	if (session) {
+		event.locals.session = session.session;
+		event.locals.user = session.user;
+	}
+
+	return svelteKitHandler({ event, resolve, auth, building });
+};</code></pre>
+</figure>
+<p>Identity is read once, here, into <code>locals</code> — so no page has to ask, and no page has to *remember* to ask. <code>svelteKitHandler</code> answers Better Auth’s own <code>/api/auth/*</code> routes and passes everything else on. The ordering in <code>sequence</code> matters: the locale handler runs first so an error page speaks the right language, and the security handler runs last so its headers are on every response including the ones Better Auth wrote.</p>
+<h3 id="edges">Three decisions at the edges</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:27-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const HOME = '/trips';
+
+/**
+ * A redirect target we are willing to follow: one leading slash, and only
+ * one. `//evil.example` starts with a slash and still leaves the site —
+ * a protocol-relative URL — so the second character is checked too.
+ *
+ * Sanitised rather than rejected: the value lives in a hidden field the
+ * person cannot see, so a crafted link would otherwise leave them staring
+ * at &quot;invalid redirect&quot; with no way in. Falling back to `/trips` is safe.
+ */
+const SAFE_REDIRECT = /^\/(?!\/)[^\s]{0,512}$/;
+
+const RedirectSchema = v.optional(
+	v.pipe(
+		v.string(),
+		v.transform((value) =&gt; (SAFE_REDIRECT.test(value) ? value : HOME))
+	),
+	HOME
+);</code></pre>
+</figure>
+<p>An <strong>open redirect</strong> is a sign-in page that will send a person anywhere the <code>redirectTo</code> parameter says — including <code>https://evil.example/signin</code>, styled to look like ours. The guard is a regular expression that allows one leading slash and *only* one: <code>//evil.example</code> is a protocol-relative URL, starts with a slash, and still leaves the site. The choice to <strong>sanitise</strong> rather than reject is deliberate: the value lives in a hidden field the person cannot see, so a crafted link would otherwise leave them staring at “invalid redirect” with no way in. Falling back to <code>/trips</code> is safe and kind.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:21-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const CORS = {
+	'access-control-allow-origin': '*',
+	'access-control-allow-methods': 'GET, OPTIONS'
+};
+
+export const GET: RequestHandler = async ({ params }) =&gt; {
+	const trip = await db.query.trip.findFirst({ where: eq(schema.trip.slug, params.slug) });
+	if (!trip || trip.visibility !== 'link') error(404, 'No such trip.');
+
+	const stops = await listStops(trip.id);
+	return json(
+		{
+			name: trip.name,
+			slug: trip.slug,
+			startDate: trip.startDate,
+			endDate: trip.endDate,
+			stops: stops
+				.filter((stop) =&gt; stop.date !== null)
+				.map((stop) =&gt; ({
+					name: stop.name,
+					kind: stop.kind,
+					date: stop.date,
+					lng: stop.lng,
+					lat: stop.lat
+				}))
+		},
+		{ headers: { ...CORS, 'cache-control': 'public, max-age=60' } }
+	);
+};
+
+export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204, headers: CORS });</code></pre>
+</figure>
+<p>The route API is the one endpoint with <code>access-control-allow-origin: *</code>, and the comment explains why that is safe rather than assumes it: the response holds nothing that was not already public by link. The authorisation is *content-based* — a trip that is not visible by link is a 404 whether or not the caller is signed in — because the custom element runs on somebody else’s page, where our cookies are not sent and must not matter. That is the rule for any CORS-open endpoint: it may return only what an anonymous stranger could already see, and it must decide from the data, not the session.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:157-165</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
+	if (new URL(request.url).origin === event.url.origin) return fetch(request);
+	return fetch(
+		new Request(request, {
+			signal: AbortSignal.timeout(10_000),
+			headers: new Headers([...request.headers, ['user-agent', 'Meridian/1.0']])
+		})
+	);
+};</code></pre>
+</figure>
+<p><code>handleFetch</code> wraps every server-side <code>fetch</code> the app makes. Same-origin requests go through untouched; anything leaving the server gets a ten-second <code>AbortSignal.timeout</code> and a user agent that names the app. The project makes no external requests today — the map is offline — which is exactly when to put the guard in: the first person to add a weather lookup inherits a timeout instead of a server that hangs when the weather service does.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:178-193</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
+	if (kind === 'validation') {
+		const first = issues[0];
+		const path = first?.path
+			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
+			.join('.');
+		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
+		return { message: 'That request did not make sense.' };
+	}
+
+	if (kind !== 'unknown') return;
+
+	const id = crypto.randomUUID();
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+	return { message: 'Something went wrong on our side.', id };
+};</code></pre>
+</figure>
+<p>Error handling is a security surface too. <code>handleError</code> receives a <code>kind</code> in SvelteKit 3 — <code>app</code>, <code>framework</code>, <code>validation</code> or <code>unknown</code> — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed message, so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.</p>
+<aside class="callout callout--warn"><p>The place a policy like this usually breaks is *the next feature*. A new analytics script, a font from a CDN, a tile server, a YouTube embed: each needs a source in exactly one directive, and the temptation is to add <code>'unsafe-inline'</code> or a wildcard because the console error is annoying. The discipline is to read the console error — it names the directive and the blocked URL — add that one origin to that one directive, and write the comment that says why, as every directive above has.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the boot script is allowed by hash and not by nonce, and what would happen if the template had a <code>nonce</code> attribute.</li><li>You can say which directive a new tile server goes in and why <code>connect-src</code> is <code>'self'</code> today.</li><li>You can describe the rule for a CORS-open endpoint and point at the line in the route API that applies it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="end-to-end.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">End to end: the built server, two viewports, two people</span>
+			</a>
+			<a class="pager__link pager__link--next" href="deploying.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Deploying: three stages, one process, a health check and a pipeline that runs the container</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

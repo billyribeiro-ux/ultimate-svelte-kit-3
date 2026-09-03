@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The wrapper pattern, and when to write an attachment instead — Building Meridian</title>
+<meta name="description" content="svelte-maplibre and Threlte are wrappers: components over an imperative library, mapping a scene or a map onto a template. Tiptap and GSAP are attachments: the library wants one element. The line between them, the costs of each, disposal, per-frame work, and the two things wrappers cannot hide — colours and workers.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">39 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 86.66666666666667%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html" aria-current="page"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 39</p>
+			<h1>The wrapper pattern, and when to write an attachment instead</h1>
+			<p class="lede">svelte-maplibre and Threlte are wrappers: components over an imperative library, mapping a scene or a map onto a template. Tiptap and GSAP are attachments: the library wants one element. The line between them, the costs of each, disposal, per-frame work, and the two things wrappers cannot hide — colours and workers.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Decide, for an imperative library, whether to reach for a wrapper or write an attachment, and know what each shape asks of you.</p></aside>
+			<p>An imperative library exposes objects with methods: a <code>Map</code> you add layers to, a <code>Scene</code> you add meshes to, an <code>Editor</code> you send commands to, a <code>Timeline</code> you play. Svelte can meet it two ways. A <strong>wrapper</strong> turns the objects into components so the template builds the object tree; an <strong>attachment</strong> hands the library an element and gets out of the way. The project uses both, deliberately, and the line between them is the shape of the state.</p>
+<h3 id="the-line">The line</h3>
+<ul><li><strong>The library’s objects form a tree that your template already has</strong> — thirty markers for thirty stops, a mesh per stop, a layer per data set — use a wrapper. <code>{#each stops}&lt;Marker&gt;</code> and <code>{#each markers}&lt;T.Mesh&gt;</code> are the whole argument: add a stop and a marker exists; remove one and it is disposed; the mapping is the template.</li><li><strong>The library wants one element and owns everything inside it</strong> — an editor, a tween on a container, a video player, a code editor — write an attachment. Eleven lines, a cleanup, no dependency.</li><li><strong>The library exposes a value that changes over time</strong> — a position watch, a media query, a resize observer — neither: use <code>createSubscriber</code>, which chapter 40 covers.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:101-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;GeoJSON id=&quot;route&quot; data={route}&gt;
+	&lt;LineLayer
+		paint={{
+			'line-color': theme.resolved === 'dark' ? '#5eead4' : '#0f766e',
+			'line-width': 2.5,
+			'line-dasharray': [2, 1.5]
+		}}
+		layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+	/&gt;
+&lt;/GeoJSON&gt;
+
+{#each stops as stop, i (stop.id)}
+	&lt;Marker
+		lngLat={[stop.lng, stop.lat]}
+		draggable={editable}
+		asButton
+		onclick={() =&gt; onselect?.(stop.id)}
+		ondragend={(e) =&gt; onmove?.(stop.id, { lng: e.lngLat[0], lat: e.lngLat[1] })}
+	&gt;
+		&lt;span
+			class=&quot;pin&quot;
+			class:pin--selected={stop.id === selected}
+			data-kind={stop.kind}
+			title={stop.name}
+		&gt;
+			{i + 1}
+		&lt;/span&gt;
+	&lt;/Marker&gt;
+{/each}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:226-242</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each arcs as geometry, index (index)}
+	&lt;T.Line {geometry}&gt;
+		&lt;T.LineBasicMaterial color=&quot;#f2a65a&quot; linewidth={2} /&gt;
+	&lt;/T.Line&gt;
+{/each}
+
+&lt;!-- The stops --&gt;
+{#each markers as { stop, at } (stop.id)}
+	&lt;T.Mesh
+		position={[at.x, at.y, at.z]}
+		scale={stop.id === selected ? 1.8 : 1}
+		onclick={() =&gt; onselect(stop.id)}
+	&gt;
+		&lt;T.SphereGeometry args={[0.011, 16, 16]} /&gt;
+		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#ff6b57'} /&gt;
+	&lt;/T.Mesh&gt;
+{/each}</code></pre>
+</figure>
+<p>Two wrappers, one idea: an <code>{#each}</code> over the domain produces library objects, keyed so a change to one stop touches one object. Both wrappers hand back the underlying instance when you need it — <code>bind:map</code> on the map, <code>bind:ref</code> on the camera — for the one or two imperative calls a page genuinely needs. If you find yourself reaching for the instance on every line, the wrapper is the wrong shape for that part.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:48-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function tiptap(): Attachment&lt;HTMLElement&gt; {
+	return (element) =&gt; {
+		const instance = new Editor({
+			element,
+			extensions: [StarterKit],
+			// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
+			content: (view.document.note ?? EMPTY) as JSONContent,
+			editable,
+			editorProps: { attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() } },
+			onUpdate: () =&gt; schedule(),
+			onTransaction: () =&gt; {
+				transactions += 1;
+			}
+		});
+		editor = instance;
+		return () =&gt; {
+			clearTimeout(timer);
+			instance.destroy();
+			editor = undefined;
+		};
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/reveal.ts<span class="code__lines">:34-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function reveal({
+	y = 18,
+	stagger = 0.07,
+	duration = 0.7
+}: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
+	return (node) =&gt; {
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		const targets = node.children.length &gt; 0 ? Array.from(node.children) : [node];
+		gsap.set(targets, { opacity: 0, y });
+
+		const observer = new IntersectionObserver(
+			(entries) =&gt; {
+				if (!entries.some((entry) =&gt; entry.isIntersecting)) return;
+				gsap.to(targets, {
+					opacity: 1,
+					y: 0,
+					duration,
+					stagger,
+					ease: 'power3.out',
+					overwrite: true
+				});
+				observer.disconnect();
+			},
+			{ rootMargin: '0px 0px -10% 0px' }
+		);
+		observer.observe(node);
+
+		return () =&gt; {
+			observer.disconnect();
+			gsap.killTweensOf(targets);
+		};
+	};
+}</code></pre>
+</figure>
+<p>Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP tweens its children — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README.</p>
+<h3 id="costs">What each shape costs</h3>
+<ul><li><strong>Wrappers add a version to track.</strong> svelte-maplibre pins a MapLibre range and Threlte pins a three.js range, and a wrapper that lags its library is a real risk. Both here are actively maintained and were on the current majors on the day; <code>pnpm why</code> is how you check.</li><li><strong>Wrappers can double-install the library.</strong> <code>maplibre-gl</code> arrived twice — once as our dependency and once through svelte-maplibre — until <code>pnpm dedupe</code>. Two copies of a WebGL library is two copies of a worker and a class identity check that fails at runtime.</li><li><strong>Attachments make disposal your problem, once.</strong> The cleanup destroys the editor, kills the tweens, disconnects the observer. Forget it and every navigation leaks. Wrappers dispose for you — Threlte disposes geometries that <code>T</code> created — but not the ones *you* created, which is why <code>Scene.svelte</code> has a <code>$effect</code> that disposes its own buffers.</li><li><strong>Per-frame work needs the library’s scheduler, not an effect.</strong> <code>useTask</code> in Threlte runs on the render loop and hands you the frame delta; an <code>$effect</code> that wrote to the camera on every state change would fight the loop. The flight variables in the scene are plain <code>let</code>s for the same reason: sixty writes a second to <code>$state</code> that nothing renders is scheduling for nobody.</li></ul>
+<h3 id="cannot-hide">Two things no wrapper can hide</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/style.ts<span class="code__lines">:23-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function worldStyle(
+	scheme: 'light' | 'dark',
+	worldUrl = '/api/world.json'
+): StyleSpecification {
+	const colours =
+		scheme === 'dark'
+			? { water: '#0c1117', land: '#1c232d', border: '#33404f' }
+			: { water: '#dbe7ee', land: '#f6f1e6', border: '#c4baa6' };
+
+	return {
+		version: 8,
+		sources: {
+			world: { type: 'geojson', data: worldUrl }
+		},
+		layers: [
+			{ id: 'water', type: 'background', paint: { 'background-color': colours.water } },
+			{ id: 'land', type: 'fill', source: 'world', paint: { 'fill-color': colours.land } },
+			{
+				id: 'borders',
+				type: 'line',
+				source: 'world',
+				paint: { 'line-color': colours.border, 'line-width': 0.8 }
+			}
+		]
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script module lang=&quot;ts&quot;&gt;
+	/*
+	 * MapLibre parses tiles and geometry in a Web Worker. Vite has to be told
+	 * to emit that worker as a file, which `?worker&amp;url` does; the resulting
+	 * URL is handed to MapLibre once, before the first map is made. A module
+	 * script runs once per module, not once per instance, which is exactly
+	 * the right place.
+	 */
+	import * as maplibregl from 'maplibre-gl';
+	import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&amp;url';
+
+	maplibregl.setWorkerUrl(maplibreWorkerUrl);
+&lt;/script&gt;</code></pre>
+</figure>
+<p>Colours, and workers. A canvas does not read the CSS cascade, so both the map style and the globe’s materials take literal colours and rebuild when the theme flips — the one place the tokens rule is broken, with the reason beside it. And a library that uses a Web Worker needs Vite to emit the worker as a file and the CSP to allow it: <code>?worker&amp;url</code>, <code>setWorkerUrl</code> in a module script, <code>worker-src &quot;self&quot; blob:</code>. A wrapper can document these; it cannot do them for you.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can state the line between wrapper and attachment in one sentence and apply it to a library you have not met.</li><li>You can name the four costs and say which one <code>pnpm dedupe</code> addressed.</li><li>You know which two things live outside any wrapper and where the project handles them.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-headless-pattern.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The headless pattern: Bits UI and TanStack Table</span>
+			</a>
+			<a class="pager__link pager__link--next" href="reactivity-utilities.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

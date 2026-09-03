@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three languages with Paraglide — Building Meridian</title>
+<meta name="description" content="Messages as JSON, compiled into one typed function each; plural rules in the message format; a strategy list that decides the locale; `reroute` and the middleware doing the two halves of `/de/trips`; and a language switcher that is three links.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 44.44444444444444%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html" aria-current="page"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>Three languages with Paraglide</h1>
+			<p class="lede">Messages as JSON, compiled into one typed function each; plural rules in the message format; a strategy list that decides the locale; <code>reroute</code> and the middleware doing the two halves of <code>/de/trips</code>; and a language switcher that is three links.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Internationalise a SvelteKit 3 app so that every string is typed, every URL is localised, and <code>&lt;html lang&gt;</code> is always right — without a dictionary at runtime.</p></aside>
+			<p>Most internationalisation libraries ship a dictionary and a <code>t(&quot;key&quot;)</code> function, and the two failure modes are a key that does not exist and a page that loads every language. Paraglide is a compiler. <code>messages/en.json</code> becomes <code>m.trip_created({ name })</code> — one exported function per message — and the bundler tree-shakes the ones a page does not use, in every language the page might need. A misspelled key is a type error, and there is no dictionary at runtime.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">messages/en.json<span class="code__lines">:1-12</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;$schema&quot;: &quot;https://inlang.com/schema/inlang-message-format&quot;,
+	&quot;app_name&quot;: &quot;Meridian&quot;,
+	&quot;app_tagline&quot;: &quot;Plan a trip together, on a map.&quot;,
+	&quot;auth_sign_in&quot;: &quot;Sign in&quot;,
+	&quot;auth_sign_up&quot;: &quot;Create an account&quot;,
+	&quot;auth_sign_out&quot;: &quot;Sign out&quot;,
+	&quot;auth_email&quot;: &quot;Email&quot;,
+	&quot;auth_password&quot;: &quot;Password&quot;,
+	&quot;auth_name&quot;: &quot;Your name&quot;,
+	&quot;auth_password_hint&quot;: &quot;At least twelve characters. Length is the rule that helps.&quot;,
+	&quot;auth_no_match&quot;: &quot;That email and password do not match an account.&quot;,</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">messages/en.json<span class="code__lines">:45-54</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;trips_days&quot;: [
+	{
+		&quot;declarations&quot;: [&quot;input count&quot;, &quot;local countPlural = count: plural&quot;],
+		&quot;selectors&quot;: [&quot;countPlural&quot;],
+		&quot;match&quot;: {
+			&quot;countPlural=one&quot;: &quot;{count} day&quot;,
+			&quot;countPlural=other&quot;: &quot;{count} days&quot;
+		}
+	}
+],</code></pre>
+</figure>
+<p>The message format is inlang’s, and the plural block is the part worth reading twice. A message can *declare* an input and a local derived from it — here <code>countPlural</code> is <code>count</code> passed through the locale’s plural rules — and *match* on it. English has <code>one</code> and <code>other</code>; German the same; Portuguese the same for these; a language with <code>few</code> and <code>many</code> would add them in its own file, and the compiled function would do the right thing for that locale without the calling code changing. <code>m.trips_days({ count: 8 })</code> is “8 days”, “8 Tage”, “8 dias”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">project.inlang/settings.json<span class="code__lines">:1-12</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;$schema&quot;: &quot;https://inlang.com/schema/project-settings&quot;,
+	&quot;modules&quot;: [
+		&quot;https://cdn.jsdelivr.net/npm/@inlang/plugin-message-format@4/dist/index.js&quot;,
+		&quot;https://cdn.jsdelivr.net/npm/@inlang/plugin-m-function-matcher@2/dist/index.js&quot;
+	],
+	&quot;plugin.inlang.messageFormat&quot;: {
+		&quot;pathPattern&quot;: &quot;./messages/{locale}.json&quot;
+	},
+	&quot;baseLocale&quot;: &quot;en&quot;,
+	&quot;locales&quot;: [&quot;en&quot;, &quot;de&quot;, &quot;pt-br&quot;]
+}</code></pre>
+</figure>
+<p>The project file names the locales and the plugin that reads the JSON; the <code>m-function-matcher</code> plugin is what lets the inlang editor and the IDE extension find <code>m.trips_days</code> in code. <code>pt-br</code> is a lowercase tag on purpose — it becomes a URL prefix, and <code>/pt-br/trips</code> is what a person types.</p>
+<h3 id="compiling">Compiling, twice</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:230-252</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * INTERNATIONALISATION
+ * ====================
+ *
+ * Paraglide compiles `messages/{locale}.json` into one typed function per
+ * message — `m.trip_created({ name })` — which the bundler tree-shakes
+ * like any other function. There is no dictionary shipped at runtime and
+ * no `t('key')` that can misspell a key without the compiler noticing.
+ *
+ * `strategy` is the order in which the locale is worked out. The URL
+ * first (`/de/trips` is German, `/trips` is English, the base locale),
+ * then a cookie the switcher sets, then the browser's `Accept-Language`,
+ * then English. `src/hooks.ts` and `src/hooks.server.ts` do the two halves
+ * of the URL part: `reroute` strips the prefix so `/de/trips` is served by
+ * `src/routes/trips`, and the middleware reads the locale for the request.
+ */
+paraglideVitePlugin({
+	project: './project.inlang',
+	outdir: './src/lib/paraglide',
+	emitTsDeclarations: true,
+	strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+	cookieName: 'meridian_locale'
+}),</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run i18n
+&gt; paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide \
+    --emit-ts-declarations --strategy url cookie preferredLanguage baseLocale
+
+$ ls src/lib/paraglide
+messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  server.d.ts</code></pre>
+</figure>
+<p>The Vite plugin compiles on every change during development and in the build; the CLI in <code>package.json</code> compiles before <code>svelte-check</code> and in <code>prepare</code>, because the type-checker and a fresh clone both need <code>src/lib/paraglide</code> to exist before Vite has run. The <code>strategy</code> list is the same in both places, and it is the order the locale is decided in: the URL first — <code>/de/trips</code> is German, <code>/trips</code> is the base locale — then the cookie the switcher sets, then the browser’s <code>Accept-Language</code>, then English. The generated folder is git-ignored; the JSON is the source of truth.</p>
+<h3 id="two-halves">The two halves of a localised URL</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:23-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { Reroute, Transport } from '@sveltejs/kit/hooks';
+import { CalendarDate, parseDate } from '@internationalized/date';
+import { deLocalizeUrl } from '#lib/paraglide/runtime.js';
+
+export const reroute: Reroute = ({ url }) =&gt; deLocalizeUrl(url).pathname;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:38-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Paraglide's middleware does three things around `resolve`: it decides the
+ * locale from the URL, the cookie or `Accept-Language` (in the order
+ * `vite.config.ts` gave it); it stores that locale in an `AsyncLocalStorage`
+ * so `m.some_message()` anywhere in this request — a remote function, a
+ * `load`, a component — speaks the right language without being told; and
+ * it hands back a request whose URL has had the `/de` prefix removed.
+ *
+ * The middleware also offers a request whose URL has had the `/de` prefix
+ * removed. It is not used: `event.request` is read-only in SvelteKit 3,
+ * and the routing half of the job belongs to `reroute` in `src/hooks.ts`,
+ * which the browser runs too. Two mechanisms for the same rewrite is how a
+ * redirect loop starts, and Paraglide's own docs say so.
+ *
+ * The two placeholders in `app.html` are filled here, once, so every page
+ * says `&lt;html lang=&quot;de&quot;&gt;` without a layout having to know. `replaceAll`,
+ * not `replace`: with a string pattern `replace` swaps the *first* match,
+ * and the first match was the one in the comment above the `&lt;html&gt;` tag —
+ * a bug that shipped a page that looked right and said `lang=&quot;%paraglide.lang%&quot;`.
+ */
+const handleParaglide: Handle = ({ event, resolve }) =&gt;
+	paraglideMiddleware(event.request, ({ locale }) =&gt; {
+		return resolve(event, {
+			transformPageChunk: ({ html }) =&gt;
+				html
+					.replaceAll('%paraglide.lang%', locale)
+					.replaceAll('%paraglide.dir%', getTextDirection(locale))
+		});
+	});</code></pre>
+</figure>
+<p>There is one <code>trips</code> route, not three. <code>reroute</code> — universal, so it runs on the server for the first request and in the browser for every navigation after — tells the router that <code>/de/trips</code> is served by <code>src/routes/trips</code>. The server middleware does the other half: decide the locale for the request, store it in an <code>AsyncLocalStorage</code> so every <code>m.*()</code> call in the request speaks it, and fill <code>%paraglide.lang%</code> in <code>app.html</code>. The middleware *offers* a rewritten request too, and it is not used: <code>event.request</code> is read-only in SvelteKit 3, and two mechanisms for one rewrite is how a redirect loop starts.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html<span class="code__lines">:1-8</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;!doctype html&gt;
+&lt;!--
+	The two placeholders on the html tag are filled per request by the Paraglide
+	middleware in `hooks.server.ts` (`transformPageChunk`), so a German page says
+	`lang=&quot;de&quot;` and a right-to-left locale, if one is ever added, says `dir=&quot;rtl&quot;`
+	— without a component having to know.
+--&gt;
+&lt;html lang=&quot;%paraglide.lang%&quot; dir=&quot;%paraglide.dir%&quot;&gt;</code></pre>
+</figure>
+<h3 id="switching">Switching: three links</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { TranslateIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale, localizeHref, locales, type Locale } from '#lib/paraglide/runtime.js';
+
+	const names: Record&lt;Locale, string&gt; = { en: 'English', de: 'Deutsch', 'pt-br': 'Português' };
+
+	/*
+	 * A prerendered page has no query string — it is one file, served for
+	 * every request — and SvelteKit says so loudly: reading `url.search`
+	 * while prerendering is an error, not an empty string. The guides layout
+	 * passes `keepSearch={false}`; the site header, which is never
+	 * prerendered, keeps `?tab=map` across a language switch.
+	 */
+	interface Props {
+		keepSearch?: boolean;
+	}
+
+	let { keepSearch = true }: Props = $props();
+
+	/*
+	 * Links, not a `&lt;select&gt;` with an `onchange`. A link to `/de/trips` is a
+	 * link: it works before JavaScript loads, it can be opened in a new tab,
+	 * and a crawler finds the German site through it. `data-sveltekit-reload`
+	 * makes it a full navigation, so the server middleware runs again, sets
+	 * the cookie, and writes `lang=&quot;de&quot;` on the document — a client-side
+	 * navigation would swap the messages and leave `&lt;html lang&gt;` wrong.
+	 */
+	const current = $derived(getLocale());
+	const here = $derived(keepSearch ? page.url.pathname + page.url.search : page.url.pathname);
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:34-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;nav class=&quot;locales&quot; aria-label={m.locale_label()}&gt;
+	&lt;TranslateIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+	{#each locales as locale (locale)}
+		&lt;a
+			href={localizeHref(here, { locale })}
+			hreflang={locale}
+			lang={locale}
+			aria-current={locale === current ? 'true' : undefined}
+			data-sveltekit-reload
+		&gt;
+			{names[locale]}
+		&lt;/a&gt;
+	{/each}
+&lt;/nav&gt;</code></pre>
+</figure>
+<p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice.</p>
+<p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch.</p>
+
+<aside class="callout callout--why">
+	<h4>Why Paraglide and not svelte-i18n, or paraglide-sveltekit</h4>
+	<p>svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. <code>@inlang/paraglide-sveltekit</code> was the framework-specific wrapper, and it has been folded into Paraglide 2’s own <code>strategy</code> plus the <code>reroute</code> hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.25, one universal hook, one server handler, and a component of links.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what Paraglide compiles a message into and why that beats a dictionary.</li><li>You can name the two halves of a localised URL and which file does each.</li><li>You know why the switcher is links with <code>data-sveltekit-reload</code>, and what <code>keepSearch</code> protects against.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="invites-and-membership.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Invites and membership</span>
+			</a>
+			<a class="pager__link pager__link--next" href="dates-and-money-in-a-locale.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Dates, money and distances in a locale</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
