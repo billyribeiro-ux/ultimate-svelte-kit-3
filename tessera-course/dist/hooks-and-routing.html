@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The hooks, and a URL that is three things — Building Tessera</title>
+<meta name="description" content="`reroute` on both sides, `params.ts` with Standard Schema matchers, `+page@.svelte`, and a three-letter route segment that broke every board.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 72.72727272727273%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html" aria-current="page"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>The hooks, and a URL that is three things</h1>
+			<p class="lede"><code>reroute</code> on both sides, <code>params.ts</code> with Standard Schema matchers, <code>+page@.svelte</code>, and a three-letter route segment that broke every board.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make <code>/b/x</code>, <code>/fr/boards</code> and <code>/boards</code> all resolve correctly, before the router sees them.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * UNIVERSAL HOOKS
+ * ===============
+ *
+ * `hooks.server.ts` runs on the server. `hooks.client.ts` runs in the browser.
+ * This one runs in **both**, which is exactly what its two exports need: a URL
+ * must resolve to the same route whether the navigation was rendered on the
+ * server or handled by the client router, and a value must be encoded and
+ * decoded by the same pair of functions on either side of the wire.
+ */</code></pre>
+</figure>
+<p><code>hooks.server.ts</code> runs on the server. <code>hooks.client.ts</code> runs in the browser. This one runs in <strong>both</strong> — which is exactly what its two exports need. A URL must resolve to the same route whether the navigation was rendered on the server or handled by the client router, and a value must be encoded and decoded by the same pair of functions on either side of the wire.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Rewrite the URL before the router looks at it.
+ *
+ * Two jobs, and neither could be done by the route tree:
+ *
+ * **Short links.** `/b/&lt;id&gt;` is what gets pasted into chat, and it resolves to
+ * the same page as `/boards/&lt;id&gt;` without a redirect — so the address bar keeps
+ * the short form and there is no extra round trip. A `+page.server.ts` that
+ * threw a `redirect()` would cost both.
+ *
+ * **Unsupported languages.** `[[lang=locale]]` is matched by `params.ts`, so
+ * `/de/boards` matches nothing and 404s. A German speaker whose browser sent them
+ * there deserves the application in English rather than an error page, so
+ * anything that *looks* like a language tag and is not one gets stripped —
+ * except this application's own top-level segments, which is a distinction that
+ * cost an afternoon (see `RESERVED`).
+ *
+ * The function is pure and synchronous. It is allowed to be async, and making it
+ * so would put a network round trip in front of every navigation on both sides —
+ * a tempting place to put a lookup table, and a very expensive one.
+ */
+export const reroute: Reroute = ({ url }) =&gt; {
+	if (url.pathname === '/b' || url.pathname.startsWith('/b/')) {
+		return `/boards${url.pathname.slice(2)}`;
+	}
+
+	const language = LANGUAGE_LIKE.exec(url.pathname);
+	if (
+		language &amp;&amp;
+		!RESERVED.has(language[1]!) &amp;&amp;
+		!(LOCALES as readonly string[]).includes(language[1]!)
+	) {
+		const rest = url.pathname.slice(language[0].length - (language[2] === '/' ? 1 : 0));
+		return rest === '' ? '/' : rest;
+	}
+
+	// `void` — the URL is fine as it is. Returning `url.pathname` would work and
+	// would make every navigation look like a rewrite in the devtools.
+	return;
+};</code></pre>
+</figure>
+<p>Two jobs, neither of which the route tree can do. <strong>Short links</strong>: <code>/b/&lt;id&gt;</code> is what gets pasted into chat, and it resolves to the same page as <code>/boards/&lt;id&gt;</code> without a redirect — so the address bar keeps the short form and there is no extra round trip. <strong>Unsupported languages</strong>: <code>/de/boards</code> matches nothing and would 404, and a German speaker whose browser sent them there deserves the application in English rather than an error page.</p>
+<h3 id="the-api-bug">Three lowercase letters</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Matches a two-or-three letter first segment that looks like a language tag. */
+const LANGUAGE_LIKE = /^\/([a-z]{2,3})(?:-[A-Za-z]{2,4})?(\/|$)/;
+
+/**
+ * First segments that are this application's own, and must never be mistaken for
+ * a language.
+ *
+ * This list exists because of a real bug. The fallback below strips anything
+ * that *looks* like a language tag and is not one — and `api` is three lowercase
+ * letters. Every request to `/api/boards/…/stream` was quietly rewritten to
+ * `/boards/…/stream` and answered 404, so boards loaded, rendered their chrome,
+ * and then sat empty while the browser retried a stream that could never exist.
+ * Nothing logged an error; the reroute was doing exactly what it was told.
+ *
+ * Deriving this from the route manifest would be tidier and is not possible: the
+ * universal hook runs in the browser too, where the manifest is not available.
+ * A short explicit list, next to the code that needs it, is the honest version.
+ */
+const RESERVED = new Set(['api', 'b', 'embed']);</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>This is the best bug in the project, because the code was doing exactly what it was told. <code>api</code> is three lowercase letters, which is what a language tag looks like. Every request to <code>/api/boards/…/stream</code> was quietly rewritten to <code>/boards/…/stream</code> and answered 404 — so boards loaded, rendered their chrome, and then sat empty while the browser retried a stream that could never exist. Nothing logged an error anywhere.</p></aside>
+<p>The tidier fix — derive the list from the route manifest — is not possible: the universal hook runs in the browser too, where the manifest is not available. A short explicit list next to the code that needs it is the honest version.</p>
+<aside class="callout callout--note"><p><code>reroute</code> is allowed to be <code>async</code>. Resist it. Making it so puts a network round trip in front of <strong>every navigation on both sides</strong> — it is a tempting place for a lookup table and a very expensive one. And returning <code>void</code> rather than <code>url.pathname</code> when nothing changes keeps the devtools from showing every navigation as a rewrite.</p></aside>
+<h3 id="params">Matchers are one file now</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/params.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineParams } from '@sveltejs/kit/params';
+import * as v from 'valibot';
+import { LOCALES } from '#lib/i18n/index.ts';
+
+/**
+ * PARAMETER MATCHERS
+ * ==================
+ *
+ * One file, not a folder.
+ *
+ * SvelteKit 2 had `src/params/locale.js`, each matcher its own module exporting
+ * `match(param) { return … }`. SvelteKit 3 replaced that with a single
+ * `src/params.ts` exporting `params` from `defineParams`, and the failure if you
+ * bring the old layout forward is `No matcher found for parameter 'locale'` at
+ * build time — from a directory that looks exactly right.
+ *
+ * The change is worth more than tidiness. A definition here is a **Standard
+ * Schema**, so it can *transform*: `params.lang` reaches a load function typed
+ * as `Locale` rather than `string`, and there is no second validation step for
+ * anybody to forget. A plain predicate still works — `defineParams` accepts a
+ * function too — but only a schema carries the type through.
+ */
+export const params = defineParams({
+	/**
+	 * The optional language segment at the front of every route.
+	 *
+	 * The route is `[[lang=locale]]`, so `/fr/boards` gives `params.lang === 'fr'`
+	 * and `/boards` gives `undefined`. Without the matcher the optional parameter
+	 * would swallow the first segment of every URL — `/boards` would parse as the
+	 * language &quot;boards&quot; and then 404 at the second segment, which is a genuinely
+	 * baffling half-hour.
+	 *
+	 * It also means the *router* enforces the language list, so no page has to
+	 * defend against an unsupported one. `hooks.ts` catches those first and
+	 * rewrites them away, turning a 404 into the application in English.
+	 */
+	locale: v.picklist(LOCALES)
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>SvelteKit 2 had <code>src/params/locale.js</code>, each matcher its own module exporting <code>match(param)</code>. SvelteKit 3 replaced that with a single <code>src/params.ts</code> exporting <code>params</code> from <code>defineParams</code>. Bring the old layout forward and the failure is <code>No matcher found for parameter 'locale'</code> at build time — from a directory that looks exactly right.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>The change is worth more than tidiness</h4>
+	<p>A definition here is a <strong>Standard Schema</strong>, so it can *transform*. <code>params.lang</code> reaches a load function typed as <code>Locale</code> rather than <code>string</code>, and there is no second validation step for anybody to forget. A plain predicate still works — <code>defineParams</code> accepts a function too — but only a schema carries the type through.</p>
+</aside>
+<p>And note the second-order effect: the <strong>router</strong> enforces the language list, so no page has to defend against an unsupported one. Without the matcher, the optional parameter would swallow the first segment of every URL — <code>/boards</code> would parse as the language &quot;boards&quot; and then 404 at the second segment, which is a genuinely baffling half-hour.</p>
+<h3 id="layout-reset">The bare <code>@</code></h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>routes/
+  +layout.svelte                        site chrome: header, footer, nav
+  [[lang=locale]]/
+    +layout.svelte                      language context
+    boards/+page.svelte                 ← inherits both layouts
+    boards/[board]/+page@.svelte        ← inherits NEITHER</code></pre>
+</figure>
+<p><code>+page@.svelte</code> with a bare <code>@</code> resets layout inheritance to the root. The editor is a full-viewport application: it does not want a site header taking sixty pixels off the top of a canvas, and it does not want the footer at all. Its siblings do.</p>
+<p>The alternative — a <code>hideChrome</code> prop threaded through two layouts — works and puts one route’s special case into the code every other route runs. The <code>@</code> is one character in a filename.</p>
+<h3 id="server-hooks">The server side</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SERVER HOOKS
+ * ============
+ *
+ * Four handlers, composed with `sequence`, in an order that matters:
+ *
+ *   1. locale    — needed by everything that renders text, including errors
+ *   2. auth      — populates `locals.user`, and owns `/api/auth/*`
+ *   3. security  — headers, including the two the export worker cannot run without
+ *   4. resolve   — the rest of the app
+ *
+ * Getting (1) after (2) would mean an unauthenticated error page renders in
+ * English for a French visitor, which is a small thing that reads as carelessness.
+ */
+
+import { building } from '$app/env';
+/*
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
+ * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
+ * is not an error, so the file keeps working and every parameter silently loses
+ * its type.
+ */
+import {
+	sequence,
+	type Handle,
+	type HandleServerError,
+	type ServerInit
+} from '@sveltejs/kit/hooks';
+import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { auth } from '#lib/server/auth.ts';
+import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#lib/i18n/index.ts';</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>SvelteKit 3 moved every hook type into <code>@sveltejs/kit/hooks</code>. Importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for each destructured argument — which is <strong>not an error</strong>, so the file keeps working and every parameter silently loses its type. That is worth a grep in any project you migrate.</p></aside>
+<p>The order in that comment is the content of the block. Locale first, because everything that renders text needs it — *including error pages*. Get it after auth and an unauthenticated error page renders in English for a French visitor, which is a small thing that reads as carelessness.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Turn an unexpected throw into something a person can quote back to us.
+ *
+ * The `id` is the only part shown to the user; the rest goes to the log. Sending
+ * a stack trace to the browser tells an attacker the shape of the codebase, and
+ * tells everybody else nothing.
+ */
+export const handleError: HandleServerError = ({ error, event, kind }) =&gt; {
+	/*
+	 * `kind` rather than a status code.
+	 *
+	 * SvelteKit 3 discriminates the three cases that used to be inferred from a
+	 * number: `app` is a deliberate `error(...)` call and already says what it
+	 * means, `framework` is a 404 or a malformed request, and `unknown` is
+	 * something genuinely broken. Only the last is worth a log line and an id —
+	 * writing a correlation id for every 404 buries the one that matters.
+	 */
+	if (kind !== 'unknown') return;
+
+	const id = crypto.randomUUID();
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+
+	// Only the overrides. Anything omitted keeps SvelteKit's default, so there is
+	// no need to restate the status or invent a message for a case we did not
+	// mean to handle.
+	return { message: 'Something went wrong on our side.', id };
+};
+</code></pre>
+</figure>
+<p><code>handleError</code> takes <code>{ error, event, kind }</code> in SvelteKit 3, and <code>kind</code> discriminates the three cases that used to be inferred from a status code. <code>app</code> is a deliberate <code>error(...)</code> call and already says what it means. <code>framework</code> is a 404 or a malformed request. <code>unknown</code> is something genuinely broken — and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>/b/abc</code> and <code>/boards/abc</code> render the same page, and the address bar keeps what was typed.</li><li><code>/de/boards</code> shows the application in English rather than a 404.</li><li>The editor route has no site chrome and its siblings do.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="live-queries-and-forms.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Live queries, and forms that work without JavaScript</span>
+			</a>
+			<a class="pager__link pager__link--next" href="i18n.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Three languages, no library</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

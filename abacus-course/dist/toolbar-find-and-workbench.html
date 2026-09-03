@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The toolbar, find and replace, and the workbench — Building Abacus</title>
+<meta name="description" content="Buttons that call the sheet model, with native popovers for menus and no `Menu` component. A find bar with a resettable index. A workbench that owns the two things that need a file, and clears a file input with a `DataTransfer`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">22 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 56.41025641025641%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html" aria-current="page"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 22</p>
+			<h1>The toolbar, find and replace, and the workbench</h1>
+			<p class="lede">Buttons that call the sheet model, with native popovers for menus and no <code>Menu</code> component. A find bar with a resettable index. A workbench that owns the two things that need a file, and clears a file input with a <code>DataTransfer</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use the Popover API for menus, wire a component tree to a model without prop drilling, and handle a file input correctly.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Toolbar.svelte<span class="code__lines">:21-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE TOOLBAR
+ * ===========
+ *
+ * Buttons that call the sheet model. Every one is a command, so every one
+ * undoes. The format menu is a native popover — `popovertarget` and a
+ * `popover` attribute, no JavaScript, dismissed by a click outside or
+ * Escape by the browser itself — which is the state of the art for a
+ * menu in 2026 and the reason there is no `Menu` component in this
+ * project.
+ *
+ * Import and export are the page's business (one needs a worker, the
+ * other a URL), so they arrive as callbacks; the `extra` snippet is where
+ * a page puts what only it has — publish, share, sign in.
+ */
+let {
+	sheet,
+	readonly = false,
+	onimport,
+	onexport,
+	onfind,
+	extra
+}: {
+	sheet: Sheet;
+	readonly?: boolean;
+	onimport?: () =&gt; void;
+	onexport?: () =&gt; void;
+	onfind?: () =&gt; void;
+	extra?: Snippet;
+} = $props();</code></pre>
+</figure>
+<p>Every button is a command, so every button undoes. The format menu is a native popover — <code>popovertarget</code> and a <code>popover</code> attribute, no JavaScript, dismissed by a click outside or Escape by the browser itself — which is the state of the art for a menu in 2026 and the reason there is no <code>Menu</code> component in this project.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Toolbar.svelte<span class="code__lines">:102-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if !readonly}
+	&lt;div class=&quot;group&quot;&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--sm&quot;
+			popovertarget=&quot;format-menu&quot;
+			aria-label=&quot;Number format&quot;
+		&gt;
+			&lt;ListNumbersIcon size={16} /&gt; Format
+		&lt;/button&gt;
+		&lt;div id=&quot;format-menu&quot; class=&quot;menu&quot; popover=&quot;auto&quot;&gt;
+			{#each formats as { label, format } (label)}
+				&lt;button type=&quot;button&quot; class=&quot;menu__item&quot; onclick={() =&gt; sheet.setFormat(format)}&gt;
+					{label}
+				&lt;/button&gt;
+			{/each}
+		&lt;/div&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--sm btn--icon&quot;
+			aria-label=&quot;Percent format&quot;
+			title=&quot;Percent&quot;
+			onclick={() =&gt; sheet.setFormat({ kind: 'percent', decimals: 1 })}
+		&gt;
+			&lt;PercentIcon size={16} /&gt;
+		&lt;/button&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--sm btn--icon&quot;
+			aria-label=&quot;Currency format&quot;
+			title=&quot;Currency&quot;
+			onclick={() =&gt; sheet.setFormat({ kind: 'currency', currency: 'USD', decimals: 2 })}
+		&gt;
+			&lt;CurrencyDollarIcon size={16} /&gt;
+		&lt;/button&gt;
+	&lt;/div&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Toolbar.svelte<span class="code__lines">:262-326</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;style&gt;
+	.toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.group {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+	}
+
+	.group--end {
+		margin-inline-start: auto;
+	}
+
+	/*
+	 * A native popover: the browser positions nothing, so `position-area`
+	 * anchors the menu under its button where anchor positioning exists, and
+	 * the fallback is a centred sheet — which on a phone is the better menu
+	 * anyway.
+	 */
+	.menu {
+		position: fixed;
+		inset: auto;
+		min-width: 14rem;
+		margin: 0;
+		padding: var(--space-1);
+		border: 1px solid var(--border-strong);
+		border-radius: var(--radius-md);
+		background: var(--surface-raised);
+		color: var(--text);
+		box-shadow: var(--shadow-lg);
+	}
+
+	.menu:popover-open {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.menu::backdrop {
+		background: transparent;
+	}
+
+	.menu__item {
+		padding: var(--space-2) var(--space-3);
+		border: 0;
+		border-radius: var(--radius-sm);
+		background: transparent;
+		text-align: left;
+		font-size: var(--fs-sm);
+		cursor: pointer;
+	}
+
+	.menu__item:hover,
+	.menu__item:focus-visible {
+		background: var(--surface-hover);
+	}
+
+	.menu__item--danger {
+		color: var(--danger);
+	}
+&lt;/style&gt;</code></pre>
+</figure>
+<p>The popover’s CSS is where the trade shows: without anchor positioning the browser positions nothing, so the menu is <code>position: fixed</code> and centred — which on a phone is the better menu anyway. <code>:popover-open</code> is the selector for the open state.</p>
+<h3 id="find">Find and replace</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FindReplace.svelte<span class="code__lines">:6-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	/**
+	 * Find and replace. `find` reads inputs and displayed text; `replace`
+	 * rewrites inputs as one undo step. The matches are a `$derived` of the
+	 * query and the sheet version, so they follow every edit.
+	 */
+	let { sheet, onclose }: { sheet: Sheet; onclose: () =&gt; void } = $props();
+
+	let query = $state('');
+	let replacement = $state('');
+	let matchCase = $state(false);
+	let regex = $state(false);
+	const matches = $derived.by(() =&gt; {
+		void sheet.version;
+		return sheet.find(query, { matchCase, regex });
+	});
+
+	// The match being shown. Assigned by Next and Previous; back to the first
+	// whenever the matches change, because a reassigned `$derived` holds only
+	// until its dependencies do.
+	let index = $derived.by(() =&gt; {
+		void matches;
+		return 0;
+	});
+
+	function go(step: number) {
+		if (matches.length === 0) return;
+		index = (index + step + matches.length) % matches.length;
+		sheet.select(matches[index]!);
+	}
+
+	function replaceAll() {
+		const n = sheet.replace(query, replacement, { matchCase, regex });
+		onclose();
+		return n;
+	}
+
+	const focus = (node: HTMLInputElement) =&gt; {
+		node.focus();
+	};
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FindReplace.svelte<span class="code__lines">:47-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;find&quot; role=&quot;search&quot; aria-label=&quot;Find and replace&quot;&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;visually-hidden&quot;&gt;Find&lt;/span&gt;
+		&lt;input
+			class=&quot;input&quot;
+			placeholder=&quot;Find&quot;
+			bind:value={query}
+			onkeydown={(e) =&gt; {
+				if (e.key === 'Enter') go(e.shiftKey ? -1 : 1);
+				if (e.key === 'Escape') onclose();
+			}}
+			{@attach focus}
+		/&gt;
+	&lt;/label&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;visually-hidden&quot;&gt;Replace with&lt;/span&gt;
+		&lt;input class=&quot;input&quot; placeholder=&quot;Replace with&quot; bind:value={replacement} /&gt;
+	&lt;/label&gt;
+	&lt;label class=&quot;check&quot;&gt;&lt;input type=&quot;checkbox&quot; bind:checked={matchCase} /&gt; Match case&lt;/label&gt;
+	&lt;label class=&quot;check&quot;&gt;&lt;input type=&quot;checkbox&quot; bind:checked={regex} /&gt; Regex&lt;/label&gt;
+	&lt;span class=&quot;hint&quot; role=&quot;status&quot;&gt;
+		{#if query}
+			{matches.length === 0
+				? 'No matches'
+				: `${index + 1} of ${matches.length} · ${toA1(matches[index]!)}`}
+		{/if}
+	&lt;/span&gt;
+	&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={() =&gt; go(1)} disabled={matches.length === 0}
+		&gt;Next&lt;/button
+	&gt;
+	&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={replaceAll} disabled={matches.length === 0}
+		&gt;Replace all&lt;/button
+	&gt;
+	&lt;button
+		type=&quot;button&quot;
+		class=&quot;btn btn--sm btn--icon btn--ghost&quot;
+		aria-label=&quot;Close&quot;
+		onclick={onclose}
+	&gt;
+		&lt;XIcon size={16} /&gt;
+	&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The matches are <code>$derived</code> from the query, the options and <code>sheet.version</code>, so the list updates as the sheet changes underneath it. <code>index</code> is the assignable-derived reset from the previous chapter. The bar is a <code>search</code> landmark, its inputs have visually hidden labels, and the count is a status region.</p>
+<h3 id="workbench">The workbench</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:14-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE WORKBENCH
+ * =============
+ *
+ * Toolbar, formula bar, grid, and the two things that need a file: CSV
+ * import through the worker and CSV export to a download. The stored
+ * sheet page and the local sheet page both render this and differ only
+ * in what they put in the `extra` slot and where the export goes.
+ */
+let {
+	sheet,
+	readonly = false,
+	cursors = [],
+	exportHref,
+	onactivate,
+	extra,
+	status
+}: {
+	sheet: Sheet;
+	readonly?: boolean;
+	cursors?: { client: string; name: string; cell: string | null }[];
+	/** A server URL for the export, or none to build the file in the browser. */
+	exportHref?: string;
+	onactivate?: (cell: Address) =&gt; void;
+	extra?: Snippet;
+	status?: Snippet;
+} = $props();
+
+let fileInput = $state&lt;HTMLInputElement&gt;();
+let files = $state&lt;FileList&gt;();
+let progress = $state&lt;Progress | null&gt;(null);
+let finding = $state(false);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:47-95</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `bind:files` gives a `FileList`; clearing it means assigning the files
+ * of an empty `DataTransfer` — the one way to make one — so the same file
+ * can be chosen twice in a row.
+ */
+async function imported() {
+	const file = files?.[0];
+	if (!file) return;
+	const controller = new AbortController();
+	try {
+		const { rows, delimiter } = await importCsv(file, (p) =&gt; (progress = p), controller.signal);
+		const at = sheet.anchor;
+		const edits: Edit[] = [];
+		rows.forEach((row, r) =&gt;
+			row.forEach((value, c) =&gt; edits.push({ row: at.row + r, col: at.col + c, input: value }))
+		);
+		if (edits.length &gt; 200_000) {
+			toast(
+				'That file is larger than a sheet may be — the first 200,000 cells were imported',
+				'error'
+			);
+			edits.length = 200_000;
+		}
+		sheet.edit(edits, `Import ${file.name}`);
+		toast(
+			`Imported ${rows.length.toLocaleString()} rows (${delimiter === '\t' ? 'tab' : delimiter}-separated)`
+		);
+	} catch (e) {
+		toast((e as Error).message, 'error');
+	} finally {
+		progress = null;
+		files = new DataTransfer().files;
+	}
+}
+
+function exportCsv() {
+	if (exportHref) {
+		location.href = exportHref;
+		return;
+	}
+	downloadText(sheetToCsv(sheet), `${sheet.title || 'sheet'}.csv`);
+}
+
+function keydown(event: KeyboardEvent) {
+	if ((event.metaKey || event.ctrlKey) &amp;&amp; event.key.toLowerCase() === 'f' &amp;&amp; !readonly) {
+		event.preventDefault();
+		finding = true;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the file input is cleared with a DataTransfer</h4>
+	<p><code>bind:files</code> gives a <code>FileList</code>, and a <code>FileList</code> cannot be constructed or emptied. Choose the same file twice in a row and the second choice fires no <code>change</code> event, because the value did not change. The one way to make an empty <code>FileList</code> is to make an empty <code>DataTransfer</code> and read its <code>files</code>; assigning that clears the input, and the same file can be imported again. Two lines that took an afternoon to find, the first time.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:98-138</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:window onkeydown={keydown} /&gt;
+
+&lt;div class=&quot;workbench&quot;&gt;
+	&lt;div class=&quot;workbench__tools no-print&quot;&gt;
+		&lt;Toolbar
+			{sheet}
+			{readonly}
+			onimport={readonly ? undefined : () =&gt; fileInput?.click()}
+			onexport={exportCsv}
+			onfind={readonly ? undefined : () =&gt; (finding = true)}
+			{extra}
+		/&gt;
+		&lt;div class=&quot;workbench__bar&quot;&gt;
+			&lt;FormulaBar {sheet} {readonly} /&gt;
+			{@render status?.()}
+		&lt;/div&gt;
+		{#if progress}
+			&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;
+				Importing… {Math.round((progress.bytes / Math.max(1, progress.total)) * 100)}% ({progress.rows.toLocaleString()}
+				rows)
+			&lt;/p&gt;
+		{/if}
+		{#if finding}
+			&lt;FindReplace {sheet} onclose={() =&gt; (finding = false)} /&gt;
+		{/if}
+	&lt;/div&gt;
+
+	&lt;div class=&quot;workbench__grid&quot;&gt;
+		&lt;Grid {sheet} {readonly} {cursors} {onactivate} /&gt;
+	&lt;/div&gt;
+
+	&lt;input
+		bind:this={fileInput}
+		class=&quot;visually-hidden&quot;
+		type=&quot;file&quot;
+		accept=&quot;.csv,.tsv,text/csv,text/tab-separated-values,text/plain&quot;
+		aria-label=&quot;Import a CSV file&quot;
+		bind:files
+		onchange={imported}
+	/&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The workbench passes the sheet down and snippets up: <code>extra</code> is where a page puts the buttons only it has — publish, share, sign in — and <code>status</code> is where the stored sheet page shows its connection state. No props are drilled through the toolbar for things the toolbar does not understand.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can open a popover from a button with two attributes and no script.</li><li>You can say what <code>find</code> is derived from and why <code>sheet.version</code> is one of the things.</li><li>You can explain what goes wrong when the same file is chosen twice, and the fix.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-cell-editor-and-formula-bar.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The cell editor and the formula bar</span>
+			</a>
+			<a class="pager__link pager__link--next" href="csv-in-a-worker.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">CSV: a streaming parser in a worker, and a streamed export</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

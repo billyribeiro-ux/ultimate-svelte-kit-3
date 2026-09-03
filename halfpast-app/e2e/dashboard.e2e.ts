@@ -289,6 +289,47 @@ test.describe('what an owner can reach', () => {
 		await expect(card.getByText(/multiple of 5 minutes/i)).toBeVisible();
 	});
 
+	test('a form reset returns the time zone to the studio\u2019s, not the first in the list', async ({
+		page
+	}) => {
+		await page.goto(`${MANAGE}/settings`);
+
+		const select = page.locator('select[name*="timeZone"]');
+		await expect(select).not.toHaveValue('');
+		const saved = await select.inputValue();
+
+		/*
+		 * A reset does not restore what is *selected*; it restores what the DOM
+		 * says is the **default** — `option.defaultSelected`, which is the
+		 * `selected` *attribute*. A control whose value was set as a property and
+		 * never as that attribute drops to the first option, silently, with the
+		 * form still looking filled in. For a studio in Tokyo, `Africa/Abidjan`.
+		 *
+		 * This select says its default with `defaultValue`, added to `<select>` in
+		 * Svelte 5.57. The `selected={zone === settings.timeZone}` it replaced
+		 * passed this test too — Svelte compiles that to the attribute — so this is
+		 * a guard on the guarantee rather than a regression test for the rewrite.
+		 * It has teeth because the reset target here is not the first option, which
+		 * is the case that actually goes wrong.
+		 *
+		 * `form.reset()` because that is what a remote form does for you after a
+		 * successful submission.
+		 */
+		await select.evaluate((element) => {
+			(element as HTMLSelectElement).form?.reset();
+		});
+
+		await expect(select).toHaveValue(saved);
+
+		// And the mechanism, so a failure says which half broke.
+		const defaults = await select.evaluate((element) =>
+			[...(element as HTMLSelectElement).options]
+				.filter((option) => option.defaultSelected)
+				.map((option) => option.value)
+		);
+		expect(defaults).toEqual([saved]);
+	});
+
 	test('rejects a time zone the server does not recognise', async ({ page }) => {
 		await page.goto(`${MANAGE}/settings`);
 

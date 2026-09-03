@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit and browser tests — Building Abacus</title>
+<meta name="description" content="Two Vitest projects: pure logic in Node, and the `$state` classes in a real Chromium. What each layer’s tests look like, and the one test that caught the bug the course is built around.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">36 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 92.3076923076923%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html" aria-current="page"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 36</p>
+			<h1>Unit and browser tests</h1>
+			<p class="lede">Two Vitest projects: pure logic in Node, and the <code>$state</code> classes in a real Chromium. What each layer’s tests look like, and the one test that caught the bug the course is built around.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know which test runs where and why, and write a test for a runes class without rendering a component.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:213-258</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test: {
+	// A test that asserts nothing is a test that cannot fail.
+	expect: { requireAssertions: true },
+	projects: [
+		{
+			/*
+			 * Component and grid tests — a real Chromium, not a DOM emulator.
+			 *
+			 * The grid virtualises on measured sizes, the clipboard is the
+			 * clipboard, and `ResizeObserver` fires. jsdom has none of those and
+			 * would pass every test you thought to write while doing nothing.
+			 */
+			extends: './vite.config.ts',
+			test: {
+				name: 'client',
+				browser: {
+					enabled: true,
+					provider: playwright(),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
+				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				exclude: ['src/lib/server/**']
+			}
+		},
+		{
+			// Pure logic — plain Node, no browser, fast. The formula language,
+			// the engine, the locale layer, the CSV parser and the identity code
+			// live here, and these are the tests that run on every save.
+			extends: './vite.config.ts',
+			test: {
+				name: 'server',
+				environment: 'node',
+				include: ['src/**/*.{test,spec}.{js,ts}'],
+				exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+
+				/*
+				 * One file at a time: SQLite allows exactly one writer, and two
+				 * spec files seeding the same database meet `SQLITE_BUSY` as a
+				 * dozen unrelated assertions failing in whichever file lost the
+				 * race.
+				 */
+				fileParallelism: false
+			}
+		}
+	]
+}</code></pre>
+</figure>
+<p>The <code>server</code> project is the fast loop: the formula language, the engine, the locale layer, the CSV parser, the identity code — pure TypeScript, deterministic, milliseconds. The <code>client</code> project is a real browser, because the sheet model uses runes and <code>flushSync</code>, and because a <code>.svelte.test.ts</code> file is the way to test a <code>$state</code> class without a component.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/formula.spec.ts<span class="code__lines">:10-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The language, tested without a sheet. A `Map` stands in for the grid, the
+ * clock is fixed at a known instant, and RAND always returns the same number,
+ * so every test here is deterministic and runs in a millisecond.
+ */
+
+function context(cells: Record&lt;string, Scalar&gt; = {}): Context {
+	const map = new Map&lt;number, Scalar&gt;();
+	for (const [a1, value] of Object.entries(cells)) {
+		const m = /^([A-Z]+)(\d+)$/.exec(a1)!;
+		let col = 0;
+		for (const ch of m[1]!) col = col * 26 + (ch.charCodeAt(0) - 64);
+		map.set(key(Number(m[2]) - 1, col - 1), value);
+	}
+	return {
+		cell: (row, col) =&gt; map.get(key(row, col)) ?? null,
+		now: () =&gt; new Date(Date.UTC(2026, 8, 2, 12, 30)),
+		random: () =&gt; 0.25,
+		locale: 'en-US'
+	};
+}
+
+const run = (source: string, cells?: Record&lt;string, Scalar&gt;) =&gt;
+	evaluate(parse(source), context(cells));</code></pre>
+</figure>
+<p>The language is tested with a <code>Map</code> standing in for the grid, the clock fixed and <code>RAND</code> returning a constant. Every test is a formula and an expected value, which is the most readable kind of test there is.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/formula.spec.ts<span class="code__lines">:139-168</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('coerces the way spreadsheets do', () =&gt; {
+	expect(run('&quot;3&quot; + 1')).toBe(4);
+	expect(run('TRUE + 1')).toBe(2);
+	expect(run('&quot;3%&quot; * 100')).toBe(3);
+	expect(run('&quot;x&quot; + 1')).toBeInstanceOf(ErrorValue);
+	expect((run('&quot;x&quot; + 1') as ErrorValue).code).toBe('#VALUE!');
+	expect(run('1 = &quot;1&quot;')).toBe(false); // numbers sort before text
+	expect(run('&quot;B&quot; &gt; &quot;a&quot;')).toBe(true); // case-insensitive
+	expect(run('2 &lt; &quot;a&quot;')).toBe(true);
+});
+
+it('propagates errors and names the operator faults', () =&gt; {
+	expect((run('1 / 0') as ErrorValue).code).toBe('#DIV/0!');
+	expect((run('NOPE(1)') as ErrorValue).code).toBe('#NAME?');
+	expect((run('SUM()') as ErrorValue).code).toBe('#VALUE!');
+	expect((run('#N/A') as ErrorValue).code).toBe('#N/A');
+	expect((run('1 + #REF!') as ErrorValue).code).toBe('#REF!');
+	expect((run('SUM(A1:A2)', { A1: 1, A2: new ErrorValue('#DIV/0!') }) as ErrorValue).code).toBe(
+		'#DIV/0!'
+	);
+});
+
+it('evaluates IF lazily and IFERROR protectively', () =&gt; {
+	expect(run('IF(TRUE, 1, 1/0)')).toBe(1);
+	expect(run('IF(FALSE, 1/0, 2)')).toBe(2);
+	expect(run('IF(0, 1)')).toBe(false);
+	expect(run('IFERROR(1/0, &quot;safe&quot;)')).toBe('safe');
+	expect(run('IFERROR(5, &quot;safe&quot;)')).toBe(5);
+	expect(run('ISERROR(1/0)')).toBe(true);
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.test.ts<span class="code__lines">:9-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The sheet model is `$state` in a class, tested without a component: the
+ * file is `.svelte.test.ts`, so runes compile in it and `SvelteMap` works.
+ */
+
+const fresh = () =&gt; new Sheet({ now: () =&gt; new Date(Date.UTC(2026, 8, 2)) });
+
+describe('editing and undo', () =&gt; {
+	it('edits, undoes and redoes with commands', () =&gt; {
+		const sheet = fresh();
+		sheet.setCell(0, 0, '5');
+		sheet.setCell(0, 1, '=A1*2');
+		expect(sheet.value(0, 1)).toBe(10);
+		expect(sheet.canUndo).toBe(true);
+
+		sheet.undo();
+		expect(sheet.input(0, 1)).toBe('');
+		expect(sheet.canRedo).toBe(true);
+		sheet.redo();
+		expect(sheet.value(0, 1)).toBe(10);
+
+		sheet.undo();
+		sheet.undo();
+		expect(sheet.engine.size).toBe(0);
+		expect(sheet.canUndo).toBe(false);
+	});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.test.ts<span class="code__lines">:58-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('bumps the version once per command and marks the sheet dirty', () =&gt; {
+	const sheet = fresh();
+	const before = sheet.version;
+	sheet.edit(
+		[
+			{ row: 0, col: 0, input: '1' },
+			{ row: 0, col: 1, input: '2' }
+		],
+		'Two cells'
+	);
+	flushSync();
+	expect(sheet.version).toBe(before + 1);
+	expect(sheet.dirty).toBe(true);
+});</code></pre>
+</figure>
+<p><code>flushSync</code> runs Svelte’s pending work now, so a test can assert on <code>$state</code> after an edit without rendering anything. The browser tests are what found the deletion-undo snapshot (ch. 16) and the <code>dirty</code> flag being set after a load.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.test.ts<span class="code__lines">:122-155</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the fill handle', () =&gt; {
+	it('continues a series, counts text up, translates formulas, repeats the rest', () =&gt; {
+		const sheet = fresh();
+		sheet.setCell(0, 0, '1');
+		sheet.setCell(1, 0, '3');
+		sheet.fill(
+			rect({ row: 0, col: 0 }, { row: 1, col: 0 }),
+			rect({ row: 0, col: 0 }, { row: 4, col: 0 })
+		);
+		expect([2, 3, 4].map((r) =&gt; sheet.value(r, 0))).toEqual([5, 7, 9]);
+
+		sheet.setCell(0, 1, 'Item 1');
+		sheet.fill(
+			rect({ row: 0, col: 1 }, { row: 0, col: 1 }),
+			rect({ row: 0, col: 1 }, { row: 2, col: 1 })
+		);
+		expect(sheet.value(2, 1)).toBe('Item 3');
+
+		sheet.setCell(0, 2, '=A1*10');
+		sheet.fill(
+			rect({ row: 0, col: 2 }, { row: 0, col: 2 }),
+			rect({ row: 0, col: 2 }, { row: 2, col: 2 })
+		);
+		expect(sheet.input(2, 2)).toBe('=A3*10');
+		expect(sheet.value(2, 2)).toBe(50);
+
+		sheet.setCell(0, 3, 'x');
+		sheet.fill(
+			rect({ row: 0, col: 3 }, { row: 0, col: 3 }),
+			rect({ row: 0, col: 3 }, { row: 1, col: 3 })
+		);
+		expect(sheet.value(1, 3)).toBe('x');
+	});
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.spec.ts<span class="code__lines">:68-106</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('what a typed value means', () =&gt; {
+	it('numbers, booleans, text and quoted text', () =&gt; {
+		expect(parseInput('12', 'en-US')).toEqual({ value: 12 });
+		expect(parseInput('true', 'en-US')).toEqual({ value: true });
+		expect(parseInput('hello', 'en-US')).toEqual({ value: 'hello' });
+		expect(parseInput(&quot;'0123&quot;, 'en-US')).toEqual({ value: '0123', format: { kind: 'text' } });
+		expect(parseInput('', 'en-US')).toEqual({ value: null });
+	});
+
+	it('implies a format when the text says so', () =&gt; {
+		expect(parseInput('12%', 'en-US')).toEqual({
+			value: 0.12,
+			format: { kind: 'percent', decimals: 0 }
+		});
+		expect(parseInput('12,5%', 'de-DE')).toEqual({
+			value: 0.125,
+			format: { kind: 'percent', decimals: 0 }
+		});
+		expect(parseInput('$1,200', 'en-US')).toEqual({
+			value: 1200,
+			format: { kind: 'currency', currency: 'USD', decimals: 2 }
+		});
+		expect(parseInput('1.200 €', 'de-DE')).toEqual({
+			value: 1200,
+			format: { kind: 'currency', currency: 'EUR', decimals: 2 }
+		});
+		expect(parseInput('2026-09-02', 'en-US')).toEqual({
+			value: 46267,
+			format: { kind: 'date', style: 'short' }
+		});
+	});
+
+	it('shows a date back the way the locale writes it', () =&gt; {
+		const serial = parseInput('2026-09-02', 'en-US').value as number;
+		expect(formatScalar(serial, { kind: 'date', style: 'short' }, 'en-US')).toBe('9/2/26');
+		expect(formatScalar(serial, { kind: 'date', style: 'short' }, 'en-GB')).toBe('02/09/2026');
+		expect(formatScalar(serial, { kind: 'date', style: 'iso' }, 'de-DE')).toBe('2026-09-02');
+	});
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run test:unit -- --run
+ ✓ [server] src/lib/formula/formula.spec.ts (20 tests)
+ ✓ [server] src/lib/engine/engine.spec.ts (20 tests)
+ ✓ [server] src/lib/engine/engine.property.spec.ts (4 tests)
+ ✓ [server] src/lib/sheet/locale.spec.ts, document.spec.ts, templates.spec.ts
+ ✓ [server] src/lib/csv/parse.spec.ts, src/lib/grid/axis.spec.ts
+ ✓ [server] src/lib/server/identity.spec.ts, src/routes/api/published/+server.test.ts
+ ✓ [client] src/lib/sheet/sheet.svelte.test.ts (13 tests)  chromium</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the sheet model’s tests run in a browser and the engine’s do not.</li><li>You can explain what <code>flushSync</code> does in a test.</li><li>You can write a test for <code>parseInput</code> in a locale you have never used, without knowing its separators.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="published-and-embed.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Published sheets, the embed, the API and the health check</span>
+			</a>
+			<a class="pager__link pager__link--next" href="end-to-end.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">End to end: two profiles, real passkeys, two browsers on one sheet</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

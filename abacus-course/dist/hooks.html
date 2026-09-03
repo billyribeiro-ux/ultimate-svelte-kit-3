@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hooks: identity, headers, one framed route, errors by kind — Building Abacus</title>
+<meta name="description" content="`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones, `init`, and the `transport` that carries an `ErrorValue` across the wire.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">29 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 74.35897435897436%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html" aria-current="page"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 29</p>
+			<h1>Hooks: identity, headers, one framed route, errors by kind</h1>
+			<p class="lede"><code>sequence</code> of two handles, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route <code>frame-ancestors</code> swap, <code>handleFetch</code>, <code>handleError</code> that tells validation failures from real ones, <code>init</code>, and the <code>transport</code> that carries an <code>ErrorValue</code> across the wire.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read every hook in the project and say what each is for — and what the September 2026 releases changed in them.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SERVER HOOKS
+ * ============
+ *
+ * Handlers composed with `sequence`, in an order that matters:
+ *
+ *   1. identity — reads the session cookie into `locals.user`
+ *   2. security — headers, which fonts to preload, and the one route that may
+ *      be framed
+ *
+ * plus `handleFetch`, `handleError` and `init`. The universal hooks —
+ * `transport` and `reroute` — live in `src/hooks.ts` because the browser
+ * needs them too.
+ */
+
+import { building } from '$app/env';
+import { SESSION_SECRET } from '$app/env/private';
+/*
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
+ * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
+ * is not an error, so the file keeps working and every parameter silently loses
+ * its type.
+ */
+import {
+	sequence,
+	type Handle,
+	type HandleFetch,
+	type HandleServerError,
+	type ServerInit
+} from '@sveltejs/kit/hooks';
+import { COOKIE, verify } from '#lib/server/identity.ts';
+
+const handleIdentity: Handle = async ({ event, resolve }) =&gt; {
+	const user = await verify(event.cookies.get(COOKIE), SESSION_SECRET);
+	if (user) event.locals.user = user;
+	return resolve(event);
+};</code></pre>
+</figure>
+<p>The types come from <code>@sveltejs/kit/hooks</code>. Importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for every destructured argument — not an error, so the file keeps working and every parameter silently loses its type. The comment is there because it happened.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:39-102</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The latin subsets, and only those. Inter ships several; the `unicode-range`
+ * on each `@font-face` means the browser fetches only what a page needs, and
+ * for this interface that is latin.
+ */
+const PRELOAD_FONTS = [
+	'@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
+	'@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'
+];
+
+const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
+	const response = await resolve(event, {
+		/*
+		 * Preload the two fonts the first paint needs, by source filename.
+		 *
+		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
+		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * source path, before hashing — so this can name the exact file rather than
+		 * guessing at a hashed URL.
+		 */
+		preload: (input) =&gt; {
+			if (input.type === 'js' || input.type === 'css') return true;
+			if (input.type !== 'font') return false;
+			return PRELOAD_FONTS.some((font) =&gt; input.filename.endsWith(font));
+		}
+	});
+
+	response.headers.set('x-content-type-options', 'nosniff');
+	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');
+
+	/*
+	 * THE ONE ROUTE THAT MAY BE FRAMED
+	 * --------------------------------
+	 * `vite.config.ts` says `frame-ancestors 'none'` for the whole app, which
+	 * is right: a spreadsheet inside somebody else's iframe is a clickjacking
+	 * target. `/embed/&lt;id&gt;` exists to be framed — it is a read-only view of a
+	 * published sheet for other people's pages — so for that route, and only
+	 * that route, the directive is replaced after SvelteKit has built the
+	 * policy. The config is the rule; the hook is the exception, stated once.
+	 */
+	if (event.url.pathname.startsWith('/embed/')) {
+		const policy = response.headers.get('content-security-policy');
+		if (policy) {
+			response.headers.set(
+				'content-security-policy',
+				policy.replace(/frame-ancestors [^;]*/, 'frame-ancestors *')
+			);
+		}
+	}
+
+	/*
+	 * `Vary: Cookie` on the pages, because the header shows the person's name
+	 * and a shared cache must not serve one person's page to another. The API
+	 * and the remote functions set their own cache headers.
+	 */
+	if (!event.url.pathname.startsWith('/api/') &amp;&amp; !event.url.pathname.startsWith('/_app/')) {
+		response.headers.append('vary', 'Cookie');
+	}
+
+	return response;
+};
+
+export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></pre>
+</figure>
+<p>Three things in the security handle. The <code>preload</code> filter preloads the two font files the first paint needs, by source filename — since 3.0.0-next.24 a <code>font</code> input carries its <code>filename</code>, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says <code>frame-ancestors 'none'</code> for the whole app, and for <code>/embed/</code> the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:104-119</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * `handleFetch` sees every `fetch` made with the event's `fetch`. A same-origin
+ * call is left to SvelteKit, which answers it in-process; anything else gets a
+ * ten second timeout and a `User-Agent` that says who is calling. There is
+ * no &quot;anything else&quot; today, and the point of writing the branch is that
+ * &quot;today&quot; is a word that stops being true.
+ */
+export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
+	if (new URL(request.url).origin === event.url.origin) return fetch(request);
+	return fetch(
+		new Request(request, {
+			signal: AbortSignal.timeout(10_000),
+			headers: new Headers([...request.headers, ['user-agent', 'Abacus/1.0']])
+		})
+	);
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:121-147</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every error the server catches, in one place, told apart by `kind`.
+ *
+ *   `app`         a deliberate `error(404, …)` — already says what it means
+ *   `framework`   SvelteKit's own: a 404 for a missing route, a bad request
+ *   `validation`  a remote function argument that failed its schema
+ *   `unknown`     something genuinely broken — the only one worth an id
+ *
+ * Returning nothing keeps SvelteKit's defaults — the status and the safe
+ * message — which is right for `app` and `framework` errors.
+ */
+export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
+	if (kind === 'validation') {
+		const first = issues[0];
+		const path = first?.path
+			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
+			.join('.');
+		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
+		return { message: 'That request did not make sense.' };
+	}
+
+	if (kind !== 'unknown') return;
+
+	const id = crypto.randomUUID();
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+	return { message: 'Something went wrong on our side.', id };
+};</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why handleError looks at kind</h4>
+	<p>SvelteKit 3 tells <code>handleError</code> what kind of error it is holding: <code>app</code> for a deliberate <code>error(404, …)</code>, <code>framework</code> for its own, <code>validation</code> for a remote function argument that failed its schema, <code>unknown</code> for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. Before <code>kind</code>, every one of those was an <code>unknown</code> with a stack trace.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:149-158</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Runs once, before the first request. Reaching the database here turns &quot;the
+ * deploy is broken&quot; into a process that never claims to be healthy — which is
+ * what a load balancer needs in order to keep the old version serving.
+ */
+export const init: ServerInit = async () =&gt; {
+	if (building) return;
+	const { client } = await import('#lib/server/db/index.ts');
+	await client.execute('select 1');
+};</code></pre>
+</figure>
+<p><code>init</code> runs once, before the first request, and reaches the database. A deploy with a broken database becomes a process that never claims to be healthy — which is what a load balancer needs in order to keep the old version serving.</p>
+<h3 id="universal">The universal hooks</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:1-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * UNIVERSAL HOOKS
+ * ===============
+ *
+ * `src/hooks.ts` runs on **both** the server and the client. One hook lives
+ * here, because the browser has to agree with the server about it: what an
+ * `ErrorValue` looks like on the wire.
+ *
+ * SvelteKit serialises what crosses the boundary — `load` results, remote
+ * function arguments and results — with devalue, which knows about `Map`,
+ * `Set`, `Date` and typed arrays, and nothing about a class called
+ * `ErrorValue`. A transporter teaches it: `encode` returns a plain value for
+ * an instance (and something falsy for anything else, which is how devalue
+ * asks &quot;is this yours?&quot;), `decode` builds the instance back. A published
+ * sheet's values arrive with real errors in them — `instanceof ErrorValue`
+ * works, `.code` works — instead of `{ code: '#DIV/0!' }` objects that every
+ * consumer would have to remember to rehydrate.
+ */
+
+import type { Transport } from '@sveltejs/kit/hooks';
+import { ErrorValue, type ErrorCode } from '#lib/formula/values.ts';
+
+export const transport: Transport = {
+	ErrorValue: {
+		encode: (value) =&gt; value instanceof ErrorValue &amp;&amp; [value.code, value.message],
+		decode: ([code, message]: [ErrorCode, string]) =&gt; new ErrorValue(code, message)
+	}
+};</code></pre>
+</figure>
+<p>SvelteKit serialises what crosses the boundary with devalue, which knows about <code>Map</code>, <code>Set</code> and <code>Date</code> and nothing about a class called <code>ErrorValue</code>. A transporter teaches it: <code>encode</code> returns a plain value for an instance (and something falsy for anything else, which is how devalue asks “is this yours?”), <code>decode</code> builds the instance back. A published sheet’s values arrive with real errors in them — <code>instanceof</code> works — rather than objects every consumer would have to rehydrate.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * CLIENT HOOKS
+ * ============
+ *
+ * `handleError` here catches what goes wrong *in the browser* during a
+ * navigation or a render: a `load` that threw on the client, a component
+ * that threw while hydrating. The server's `handleError` never sees these.
+ *
+ * It logs, and it hands the error page a message and a reference. A real
+ * deployment would send the reference and the stack to an error tracker
+ * here; this one keeps the shape so that adding it is one line.
+ */
+
+import type { HandleClientError } from '@sveltejs/kit/hooks';
+
+export const handleError: HandleClientError = ({ error, event }) =&gt; {
+	const id = crypto.randomUUID();
+	console.error(`[${id}] at ${event.url.pathname}`, error);
+	return { message: 'Something went wrong in this tab.', id };
+};</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what goes wrong if the hook types are imported from <code>@sveltejs/kit</code>.</li><li>You can explain how <code>/embed/</code> gets a different <code>frame-ancestors</code> from everything else.</li><li>You can list the four <code>kind</code>s and what each one gets from <code>handleError</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="live-collaboration.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Live collaboration: a live query, a mailbox, and numbered operations</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-shell.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The shell: layouts, tokens, toasts</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

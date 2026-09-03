@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokens, and why every one carries a position — Building Sextant</title>
+<meta name="description" content="The vocabulary of SQF, and the single decision — a span on every token — that makes every error message in the language point at a column.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 10.869565217391305%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html" aria-current="page"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>Tokens, and why every one carries a position</h1>
+			<p class="lede">The vocabulary of SQF, and the single decision — a span on every token — that makes every error message in the language point at a column.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Define the token type and understand why positions are decided in the smallest file, before anything is built on it.</p></aside>
+			<p>A lexer turns characters into tokens. Before writing one, we decide what a token *is*, and there is exactly one decision in that definition that cannot be taken back later.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/token.ts<span class="code__lines">:1-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TOKENS
+ * ======
+ *
+ * The vocabulary of SQF, and the one design decision that runs through the whole
+ * front end: **every token carries its position in the source text.**
+ *
+ * That costs two numbers per token and it is what makes every error message in
+ * this language point at a column rather than saying &quot;syntax error&quot;. A parser
+ * that throws away positions can never get them back, and retrofitting them
+ * means touching every node, every constructor and every test — which is why
+ * this is decided here, in the smallest file, before anything is built on it.
+ *
+ * A `Span` is a half-open range `[start, end)` into the original string, which
+ * is what a text editor wants for a squiggly underline and what `String#slice`
+ * wants for quoting the offending text back.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why this is not a detail you can add later</h4>
+	<p>A parser that throws away positions can never get them back. Retrofitting them means touching every node type, every constructor, every test and every error site — which is why the decision is made in the smallest file in the project, before there is anything to retrofit.</p>
+</aside>
+<p>A <code>Span</code> is a half-open range into the original string. Half-open because that is what <code>String#slice</code> wants for quoting the offending text back, and what a text editor wants for drawing an underline.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/token.ts<span class="code__lines">:19-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A half-open range into the query text. */
+export interface Span {
+	readonly start: number;
+	readonly end: number;
+}
+
+export const SPAN_NONE: Span = { start: 0, end: 0 };
+
+/** The union of two spans, plus everything between them. */
+export function joinSpans(a: Span, b: Span): Span {
+	return { start: Math.min(a.start, b.start), end: Math.max(a.end, b.end) };
+}</code></pre>
+</figure>
+<h3 id="keywords-are-kinds">Keywords are their own kinds</h3>
+<p>The alternative is one <code>ident</code> kind plus a lookup wherever it matters. That works and it means the parser asks &quot;is this string <code>where</code>?&quot; in nine places, and the checker asks again.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/token.ts<span class="code__lines">:32-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Token kinds.
+ *
+ * Keywords are their own kinds rather than identifiers-with-a-lookup, so the
+ * parser switches on a kind and the checker never has to ask &quot;is this string
+ * `where`?&quot;. The cost is that a keyword cannot be used as a column name, which
+ * is a language design decision worth making explicitly: SQF column names come
+ * from telemetry that people control, and `where` as a label name would be
+ * hostile to read even if it parsed.
+ */</code></pre>
+</figure>
+<p>The cost is real and worth stating: a keyword cannot be used as a column name. That is a language-design decision rather than an accident — SQF column names come from telemetry that people control, and a label called <code>where</code> would be hostile to read even if it parsed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/token.ts<span class="code__lines">:100-113</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Token {
+	readonly kind: TokenKind;
+	/** The exact source text, unprocessed. Escapes in a string are resolved in `value`. */
+	readonly text: string;
+	/**
+	 * The decoded value, for the three kinds that have one.
+	 *
+	 * A `duration` decodes to milliseconds here rather than in the parser, so that
+	 * `5m` and `300s` are indistinguishable by the time anything downstream sees
+	 * them — and so the unit table lives in exactly one place.
+	 */
+	readonly value?: string | number;
+	readonly span: Span;
+}</code></pre>
+</figure>
+<h3 id="the-two-equals">The two kinds of equals</h3>
+<p>Both <code>=</code> and <code>==</code> exist, which is a famous source of bugs in C-like languages. The mitigation here is structural rather than stylistic:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/token.ts<span class="code__lines">:65-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Assignment, in `summarize p95 = …`. Never comparison.
+ *
+ * Having both `=` and `==` in a language is a well-known source of bugs, and
+ * the mitigation here is that they are not interchangeable *anywhere*: `=` is
+ * only legal in an alias position and `==` is only legal in an expression, so
+ * writing the wrong one is always a parse error with a specific message
+ * rather than a query that runs and means something else.
+ */
+| '='
+| '=='
+| '!='</code></pre>
+</figure>
+<p>Because they are never interchangeable *anywhere*, writing the wrong one is always a parse error with a specific message, rather than a query that runs and quietly means something else. We will see the guard that produces that message in chapter 8, and the mistake that made it fire in the wrong place.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You have a <code>Token</code> type with a <code>Span</code> on it.</li><li>You can explain why positions cannot be added to a parser later.</li><li>You can say why keywords are token kinds rather than identifiers plus a lookup.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-environment.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The environment, declared once</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-lexer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The lexer</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

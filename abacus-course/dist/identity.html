@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identity: a signed cookie — Building Abacus</title>
+<meta name="description" content="“This browser is user X”, signed with HMAC so it cannot be changed, verified on every request by the `handle` hook, and read by remote functions through `getRequestEvent`. Pure functions over strings, tested without a request.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 64.1025641025641%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html" aria-current="page"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>Identity: a signed cookie</h1>
+			<p class="lede">“This browser is user X”, signed with HMAC so it cannot be changed, verified on every request by the <code>handle</code> hook, and read by remote functions through <code>getRequestEvent</code>. Pure functions over strings, tested without a request.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Sign and verify a session token with <code>crypto.subtle</code>, and know why every failure is one <code>null</code>.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/identity.ts<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHO IS THIS BROWSER
+ * ===================
+ *
+ * A signed cookie says &quot;this browser is user X&quot;. It is set after a passkey
+ * ceremony succeeds (`passkeys.ts`) and read on every request by the
+ * `handle` hook. Signed, not encrypted: its contents — an id and a name —
+ * are not secret; nobody can *change* them, because the HMAC would no longer
+ * match. `crypto.subtle` is in Node and in every browser, so this is four
+ * lines rather than a dependency.
+ *
+ * Pure functions over strings, so the tests need no request.
+ */
+
+import * as v from 'valibot';
+
+export interface User {
+	id: string;
+	name: string;
+}
+
+export const COOKIE = 'abacus_session';
+
+/** Three to forty characters; what a person is called, not a login. */
+export const NameSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	v.minLength(2, 'Two characters at least'),
+	v.maxLength(40, 'Forty characters at most')
+);
+
+const UserSchema = v.object({
+	id: v.pipe(v.string(), v.regex(/^[a-z0-9]{6,32}$/)),
+	name: NameSchema,
+	/** Issued-at, so a session can be retired by age without a database lookup. */
+	iat: v.pipe(v.number(), v.integer())
+});</code></pre>
+</figure>
+<p>Signed, not encrypted: the contents — an id and a name — are not secret; nobody can *change* them, because the HMAC would no longer match. <code>iat</code> is issued-at, so a session can be retired by age without a database lookup.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/identity.ts<span class="code__lines">:39-75</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const encoder = new TextEncoder();
+
+async function key(secret: string): Promise&lt;CryptoKey&gt; {
+	return crypto.subtle.importKey(
+		'raw',
+		encoder.encode(secret),
+		{ name: 'HMAC', hash: 'SHA-256' },
+		false,
+		['sign', 'verify']
+	);
+}
+
+export function base64url(bytes: Uint8Array): string {
+	let binary = '';
+	for (const b of bytes) binary += String.fromCharCode(b);
+	return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+}
+
+export function fromBase64url(text: string): Uint8Array&lt;ArrayBuffer&gt; {
+	const padded = text
+		.replaceAll('-', '+')
+		.replaceAll('_', '/')
+		.padEnd(Math.ceil(text.length / 4) * 4, '=');
+	return Uint8Array.from(atob(padded), (c) =&gt; c.charCodeAt(0));
+}
+
+/** `payload.signature`, both base64url. */
+export async function sign(user: User, secret: string, now = Date.now()): Promise&lt;string&gt; {
+	const payload = base64url(
+		encoder.encode(JSON.stringify({ id: user.id, name: user.name, iat: Math.floor(now / 1000) }))
+	);
+	const signature = await crypto.subtle.sign('HMAC', await key(secret), encoder.encode(payload));
+	return `${payload}.${base64url(new Uint8Array(signature))}`;
+}
+
+/** A session lives thirty days; after that the passkey is asked again. */
+export const SESSION_SECONDS = 60 * 60 * 24 * 30;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/identity.ts<span class="code__lines">:77-119</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The user a token names, or `null` for anything wrong with it — a missing
+ * dot, a bad signature, a payload that is not a user, a session too old. One
+ * `null` for every failure, because a caller that distinguishes &quot;tampered&quot;
+ * from &quot;expired&quot; is a caller that will one day treat one of them as trusted.
+ */
+export async function verify(
+	token: string | undefined,
+	secret: string,
+	now = Date.now()
+): Promise&lt;User | null&gt; {
+	if (!token) return null;
+	const dot = token.indexOf('.');
+	if (dot === -1) return null;
+
+	const payload = token.slice(0, dot);
+	const signature = token.slice(dot + 1);
+
+	let ok: boolean;
+	try {
+		ok = await crypto.subtle.verify(
+			'HMAC',
+			await key(secret),
+			fromBase64url(signature),
+			encoder.encode(payload)
+		);
+	} catch {
+		return null;
+	}
+	if (!ok) return null;
+
+	try {
+		const parsed = v.safeParse(
+			UserSchema,
+			JSON.parse(new TextDecoder().decode(fromBase64url(payload)))
+		);
+		if (!parsed.success) return null;
+		if (parsed.output.iat + SESSION_SECONDS &lt; Math.floor(now / 1000)) return null;
+		return { id: parsed.output.id, name: parsed.output.name };
+	} catch {
+		return null;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why verify returns one null for every failure</h4>
+	<p>A missing dot, a bad signature, a payload that is not a user, a session too old — all <code>null</code>. A caller that could distinguish “tampered” from “expired” is a caller that will one day treat one of them as trusted. The tests in <code>identity.spec.ts</code> forge a payload with the real signature, sign with another secret, and age a token past thirty days, and expect <code>null</code> each time.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/identity.spec.ts<span class="code__lines">:7-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the session cookie', () =&gt; {
+	it('round-trips', async () =&gt; {
+		expect(await verify(await sign(user, SECRET), SECRET)).toEqual(user);
+	});
+
+	it('refuses an edited payload, another secret, and garbage', async () =&gt; {
+		const token = await sign(user, SECRET);
+		const [, signature] = token.split('.');
+		const forged = btoa(JSON.stringify({ ...user, name: 'Eve', iat: 1 }))
+			.replaceAll('+', '-')
+			.replaceAll('/', '_')
+			.replace(/=+$/, '');
+		expect(await verify(`${forged}.${signature}`, SECRET)).toBeNull();
+		expect(await verify(token, 'another-secret-that-is-also-thirty-two-chars')).toBeNull();
+		expect(await verify(undefined, SECRET)).toBeNull();
+		expect(await verify('no-dot', SECRET)).toBeNull();
+		expect(await verify('a.b', SECRET)).toBeNull();
+	});
+
+	it('expires without a database', async () =&gt; {
+		const issued = Date.UTC(2026, 0, 1);
+		const token = await sign(user, SECRET, issued);
+		expect(await verify(token, SECRET, issued + (SESSION_SECONDS - 1) * 1000)).toEqual(user);
+		expect(await verify(token, SECRET, issued + (SESSION_SECONDS + 1) * 1000)).toBeNull();
+	});
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/session.ts<span class="code__lines">:1-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE CURRENT PERSON
+ * ==================
+ *
+ * Helpers around the cookie in `identity.ts`, for remote functions to call.
+ * `getRequestEvent()` is what makes them possible: a remote function has no
+ * `event` argument, but it runs inside a request, and this reaches it.
+ */
+
+import { error } from '@sveltejs/kit';
+import { getRequestEvent } from '$app/server';
+import { SESSION_SECRET } from '$app/env/private';
+import { COOKIE, SESSION_SECONDS, sign, type User } from './identity.ts';
+
+/** Whoever this request is, or `null`. Read once per request by the `handle` hook. */
+export function currentUser(): User | null {
+	return getRequestEvent().locals.user ?? null;
+}
+
+/** Whoever this request is, or a 401 that the caller does not have to write. */
+export function requireUser(): User {
+	const user = currentUser();
+	if (!user) error(401, 'Sign in with a passkey first');
+	return user;
+}
+
+/**
+ * Thirty days, `httpOnly` so a script on the page cannot read it,
+ * `sameSite: 'lax'` so a link from elsewhere still arrives signed in, and
+ * `secure` whenever the app is served over HTTPS — which `event.url.protocol`
+ * knows and a constant would have to guess.
+ */
+export async function startSession(user: User): Promise&lt;void&gt; {
+	const event = getRequestEvent();
+	event.cookies.set(COOKIE, await sign(user, SESSION_SECRET), {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'lax',
+		secure: event.url.protocol === 'https:',
+		maxAge: SESSION_SECONDS
+	});
+	event.locals.user = user;
+}
+
+export function endSession(): void {
+	const event = getRequestEvent();
+	event.cookies.delete(COOKIE, { path: '/' });
+	delete event.locals.user;
+}</code></pre>
+</figure>
+<p>A remote function has no <code>event</code> argument, but it runs inside a request, and <code>getRequestEvent()</code> reaches it. <code>requireUser</code> is the 401 that no caller has to write. The cookie is <code>httpOnly</code>, <code>sameSite: 'lax'</code> so a link from elsewhere still arrives signed in, and <code>secure</code> whenever the app is served over HTTPS — which <code>event.url.protocol</code> knows and a constant would have to guess.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what is in the cookie and what stops a person editing it.</li><li>You can explain how <code>currentUser()</code> works without an <code>event</code> parameter.</li><li>You can say why <code>secure</code> is computed rather than hard-coded.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-schema.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The schema, and migrations instead of push</span>
+			</a>
+			<a class="pager__link pager__link--next" href="passkeys.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Passkeys: signing in without a password</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

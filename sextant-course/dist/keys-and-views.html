@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings: keys you can never read back — Building Sextant</title>
+<meta name="description" content="A key shown once, revoke rather than delete, and a saved view that stores the range as it was written.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">43 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 93.47826086956522%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html" aria-current="page"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 43</p>
+			<h1>Settings: keys you can never read back</h1>
+			<p class="lede">A key shown once, revoke rather than delete, and a saved view that stores the range as it was written.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the settings that only matter after something has gone wrong.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/settings.remote.ts<span class="code__lines">:19-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The keys, with no keys in them.
+ *
+ * Only the prefix is stored in clear, so this list can show `sxt_a1b2c3d4…` next
+ * to &quot;created 3 weeks ago, last used 4 minutes ago&quot; without any row being a live
+ * credential. A settings page that could re-display a key would mean the key is
+ * recoverable from the database, which is the property that makes a leaked
+ * backup a leaked fleet.
+ */
+export const keys = query(v.object({ tenant: tenantSlug }), async ({ tenant }) =&gt; {
+	const { user } = requireUser();
+	// `admin`: knowing which integrations exist is itself worth restricting, and a
+	// viewer has no reason to.
+	const access = await requireTenant(user.id, tenant, 'admin');
+
+	const rows = await db
+		.select({
+			id: apiKey.id,
+			name: apiKey.name,
+			prefix: apiKey.prefix,
+			scopes: apiKey.scopes,
+			createdAt: apiKey.createdAt,
+			lastUsedAt: apiKey.lastUsedAt,
+			revokedAt: apiKey.revokedAt
+		})
+		.from(apiKey)
+		.where(eq(apiKey.tenantId, access.tenantId))
+		.orderBy(apiKey.createdAt);
+
+	return rows;
+});</code></pre>
+</figure>
+<p>Only the prefix is stored in clear, so the list can show <code>sxt_a1b2c3d4…</code> next to &quot;created three weeks ago, last used four minutes ago&quot; without any row being a live credential.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/settings.remote.ts<span class="code__lines">:51-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Mint a key.
+ *
+ * The clear value is returned **once**, from this call, and never stored. That
+ * is not a convenience decision: a system that can show you a key again is a
+ * system where the key is at rest somewhere readable, and every subsequent
+ * control is decoration.
+ */
+export const createKey = form(
+	v.object({
+		tenant: tenantSlug,
+		name: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give the key a name.'), v.maxLength(80)),
+		scopes: v.optional(v.string(), 'ingest')
+	}),
+	async ({ tenant, name, scopes }) =&gt; {
+		const { user } = requireUser();
+		const access = await requireTenant(user.id, tenant, 'admin');
+
+		const clear = newKey();
+
+		await db.insert(apiKey).values({
+			id: crypto.randomUUID(),
+			tenantId: access.tenantId,
+			name,
+			prefix: prefixOf(clear),
+			hash: await hashKey(clear),
+			scopes: scopes === 'read' ? 'read' : 'ingest'
+		});
+
+		await keys({ tenant }).refresh();
+
+		// The one and only time this value exists outside the caller's memory.
+		return { key: clear, name };
+	}
+);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A system that can show you a key again is one where the key is readable at rest</h4>
+	<p>Which makes a database backup a fleet compromise. Returning the clear value once, from the call that mints it, is not a usability compromise — it is the property that makes every other control meaningful.</p>
+</aside>
+<h3 id="revoke">Revoke, not delete</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/settings.remote.ts<span class="code__lines">:87-109</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Revoke, not delete.
+ *
+ * The row stays, with `revokedAt` set. Deleting it would remove the record that
+ * a key existed at all — which is precisely the record somebody wants during an
+ * incident review, when the question is &quot;what was this thing and who made it&quot;.
+ */
+export const revokeKey = form(
+	v.object({ tenant: tenantSlug, id: v.string() }),
+	async ({ tenant, id }) =&gt; {
+		const { user } = requireUser();
+		const access = await requireTenant(user.id, tenant, 'admin');
+
+		await db
+			.update(apiKey)
+			.set({ revokedAt: new Date() })
+			.where(and(eq(apiKey.id, id), eq(apiKey.tenantId, access.tenantId)));
+
+		await keys({ tenant }).refresh();
+
+		return { revoked: true };
+	}
+);</code></pre>
+</figure>
+<p>Deleting the row removes the record that a key existed at all — which is precisely the record somebody wants during an incident review, when the question is &quot;what was this thing and who made it&quot;.</p>
+<h3 id="saved-views">A range stored as it was written</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/settings.remote.ts<span class="code__lines">:131-177</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		/*
+		 * The range as it was *written*, not as it resolved.
+		 *
+		 * A saved view of &quot;the last six hours&quot; must mean the last six hours when it
+		 * is opened, not the six hours that happened to be current when it was
+		 * saved. Storing two timestamps would make every saved view a historical
+		 * snapshot, which is a different and much less useful feature.
+		 */
+		range: v.pipe(v.string(), v.maxLength(64))
+	}),
+	async ({ tenant, name, query: text, range }) =&gt; {
+		const { user } = requireUser();
+		const access = await requireTenant(user.id, tenant, 'member');
+
+		await db.insert(view).values({
+			id: crypto.randomUUID(),
+			tenantId: access.tenantId,
+			name,
+			query: text,
+			range,
+			authorId: user.id
+		});
+
+		await views({ tenant }).refresh();
+
+		return { saved: true };
+	}
+);
+
+export const deleteView = form(
+	v.object({ tenant: tenantSlug, id: v.string() }),
+	async ({ tenant, id }) =&gt; {
+		const { user } = requireUser();
+		const access = await requireTenant(user.id, tenant, 'member');
+
+		await db.delete(view).where(and(eq(view.id, id), eq(view.tenantId, access.tenantId)));
+		await views({ tenant }).refresh();
+
+		return { deleted: true };
+	}
+);
+
+function requireUser() {
+	const event = getRequestEvent();
+	if (!event.locals.user) error(401, 'Sign in to continue.');
+	return { user: event.locals.user };
+}</code></pre>
+</figure>
+<p>A saved view of &quot;the last six hours&quot; must mean the last six hours when it is opened, not the six hours that happened to be current when it was saved. Storing two timestamps would make every saved view a historical snapshot — a different and much less useful feature.</p>
+<aside class="callout callout--note"><p>The same distinction appears in the range picker: a relative range is *live* and says so, and &quot;pin&quot; is the deliberate act that freezes it into two timestamps. A link to &quot;the last hour&quot; means something different tomorrow, and the interface has to make that visible rather than surprising.</p></aside>
+<h3 id="roles">And the role each action needs</h3>
+<p>Reading the key list is <code>admin</code>, because knowing which integrations exist is itself worth restricting. Creating an alert rule is <code>member</code>, because a read-only viewer must not be able to page the whole team at three in the morning. Deleting one is <code>admin</code>, because it removes a safety net silently and the person who notices is whoever was relying on it during an incident.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/alerts.remote.ts<span class="code__lines">:176-189</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const toggleRule = command(
+	v.object({ tenant: tenantSlug, id: v.string(), enabled: v.boolean() }),
+	async ({ tenant, id, enabled }) =&gt; {
+		const { user } = requireUser();
+		const access = await requireTenant(user.id, tenant, 'member');
+
+		await db
+			.update(alertRule)
+			.set({ enabled })
+			.where(and(eq(alertRule.id, id), eq(alertRule.tenantId, access.tenantId)));
+
+		await rules({ tenant }).refresh();
+	}
+);</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A key is displayed once and never again.</li><li>A revoked key still appears, marked, with who made it and when.</li><li>A saved view of &quot;the last hour&quot; means the last hour tomorrow.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-transactional-outbox.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Alerts end to end: the transactional outbox</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-seed.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The seed, and why the data tells a story</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

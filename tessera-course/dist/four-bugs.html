@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four bugs in one file — Building Tessera</title>
+<meta name="description" content="A stranded flush, a bad slice, a watermark from the wrong place, and an echo filter — all the same mistake, seen four times.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 54.54545454545454%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html" aria-current="page"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>Four bugs in one file</h1>
+			<p class="lede">A stranded flush, a bad slice, a watermark from the wrong place, and an echo filter — all the same mistake, seen four times.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Recognise the shape well enough to avoid the fifth one.</p></aside>
+			<p>Everything in the last chapter works. Getting there took four bugs, and they are worth a chapter of their own because they are the same bug four times: <strong>an optimisation that assumed something the system does not guarantee.</strong></p>
+<p>Each one was found by an end-to-end test with two browser contexts, not by reading. That is the honest lesson: none of these are visible in a diff.</p>
+<h3 id="one">One: the stranded flush</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/client.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Skipped because one is already in flight.
+ *
+ * Nothing is scheduled here on purpose — the running flush reschedules
+ * itself in its `finally` if anything is left. The first version of this
+ * returned and *also* did not reschedule, which silently stranded the tail
+ * of every fast burst: type five characters, the flush for the first four
+ * is in flight when the fifth arrives, its timer fires, this returns, and
+ * the fifth operation sits in `#buffer` for the rest of the session.
+ *
+ * The symptom was a label that read `Alph` on every other replica and
+ * `Alpha` on the one that typed it, surviving a reload, because the
+ * operation never reached the server at all. A randomised end-to-end test
+ * found it about one run in three.
+ */
+if (this.#flushing || this.#stopped || this.readOnly) return;</code></pre>
+</figure>
+<p>The assumption: *if a flush is already running, the timer that fired can just return — the running one will pick up whatever arrived.* It will not, unless it is told to.</p>
+<p>Type five characters quickly. The flush for the first four is in flight when the fifth arrives. Its timer fires, <code>#flushing</code> is true, this returns and schedules nothing. The running flush finishes and — in the first version — also scheduled nothing, because it had already sent everything *it* knew about. The fifth operation sits in <code>#buffer</code> for the rest of the session.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>Replica A (typed it):  Alpha
+Replica B:             Alph
+after a reload of A:   Alph        ← the operation never left the tab
+
+found: about one run in three, by a randomised end-to-end test</code></pre>
+</figure>
+<p>The fix is in the <code>finally</code>, and the comment on it is the general principle: <strong>one place responsible for &quot;the queue is not empty, come back&quot;, and no path that forgets.</strong></p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/client.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	} finally {
+		this.#flushing = false;
+
+		/*
+		 * Always look again.
+		 *
+		 * Two things can be waiting by now: operations made while this request was
+		 * in flight (in `#buffer`), and the remainder of a batch larger than
+		 * `BATCH_LIMIT` (already in the outbox). Rescheduling here rather than at
+		 * each of those sites means there is exactly one place responsible for
+		 * &quot;the queue is not empty, come back&quot;, and no path that forgets.
+		 */
+		if (this.#buffer.length &gt; 0 || this.queued &gt; 0) this.#scheduleFlush();
+	}
+}</code></pre>
+</figure>
+<h3 id="two">Two: the broadcast slice</h3>
+<p>Server-side, from chapter 19. The assumption: *when a re-sent batch is partly duplicated, the duplicates are a prefix, so the new ones are the last N.*</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Before — plausible, and wrong.
+const fresh = ops.slice(ops.length - inserted.length);
+
+// After — cannot be wrong.
+const accepted = new Set(inserted.map((row) =&gt; row.stamp));
+const fresh = ops.filter((candidate) =&gt; accepted.has(candidate.stamp));</code></pre>
+</figure>
+<p>A client can legitimately resend a batch whose middle was already accepted. When it does, the broadcast drops a genuinely new operation and echoes one everybody already had — and the receiving replicas differ from the log until their next reconnect.</p>
+<h3 id="three">Three: the watermark from the push response</h3>
+<p>The assumption: *the server just told me the board’s sequence, so that is where my cursor should be.*</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sync/client.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The push response carries a watermark, and it is deliberately ignored.
+ *
+ * That number is the *board's* head, which includes operations from
+ * everybody else that this replica has not received yet. Advancing the
+ * cursor to it — which the first version did — means the next stream
+ * connection asks for everything &quot;since&quot; a point past operations that were
+ * never applied, and they are gone: the board is missing shapes, the
+ * locally saved snapshot records the inflated watermark alongside the
+ * incomplete content, and a reload makes it permanent.
+ *
+ * The cursor advances in exactly one place: `#receive`, from the watermark
+ * that arrives *with* a batch of operations, once those operations have
+ * been applied. That is the same rule `crdt/version.ts` states for version
+ * vectors, and this is the second time ignoring it has cost an afternoon.
+ */
+this.queued = Math.max(0, waiting.length - batch.length);
+this.refusal = null;
+this.#settle();</code></pre>
+</figure>
+<p>That number is the *board’s* head, which includes operations from everybody else that this replica has not received yet. Advance to it and the next stream connection asks for everything since a point past operations that were never applied — and they are gone. The board is missing shapes, the local snapshot records the inflated watermark alongside the incomplete content, and a reload makes it permanent.</p>
+<aside class="callout callout--warn"><p>This is chapter 07’s bug again, in a different file. A cursor may only advance past what has actually been applied. It cost an afternoon the first time and an afternoon the second time, which is a reasonable argument for writing the rule down where the next person will read it — which is what the comment on <code>PushResult.watermark</code> now does.</p></aside>
+<h3 id="four">Four: the echo filter</h3>
+<p>The assumption: *re-applying my own operations when the server echoes them back is wasted work, so filter them out.*</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Before.
+const incoming = event.ops
+	.map(parseOperation)
+	.filter((operation) =&gt; !operation.stamp.endsWith(this.actor));
+
+// After.
+this.document.applyAll(incoming);</code></pre>
+</figure>
+<p>It *is* wasted work, by a rounding error. And the filter is wrong for a reason that takes a reload to notice.</p>
+<p>An actor id lives in <code>sessionStorage</code>, so it survives a refresh. After one, the catch-up replays this tab’s <strong>entire history</strong> — and every one of those operations still ends with this actor, so every one was discarded. The board came back empty, the cursor advanced to the board’s head anyway, and the next local snapshot wrote that emptiness down against a current watermark.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ node trestore.mjs
+local snapshot: {&quot;watermark&quot;:190,&quot;nodeEntries&quot;:0,&quot;edgeEntries&quot;:0}
+server says present: [&quot;Before&quot;]
+
+an empty snapshot carrying a current watermark — permanent, and only
+for the tab that had done the work</code></pre>
+</figure>
+<p>That two-line diagnostic is what pinned it. Everything else — the board rendering, the sync badge, the server’s own view — looked fine; only the *pair* of those two numbers was impossible.</p>
+<h3 id="the-shape">The shape</h3>
+<ul><li><strong>Skip work that is already in flight</strong> — assumed somebody else would come back for the rest.</li><li><strong>Take the last N</strong> — assumed an ordering the protocol never promised.</li><li><strong>Trust the number in the response</strong> — assumed it meant what this replica needed it to mean.</li><li><strong>Filter out my own echo</strong> — assumed &quot;mine&quot; and &quot;already applied&quot; were the same set.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>What they have in common, and the rule that falls out</h4>
+	<p>Every one is an optimisation, every one is locally reasonable, and every one converts a *guarantee* into an *assumption*. In a system whose entire premise is &quot;the network may do anything&quot;, that trade is almost never worth making — because the thing you bought is nanoseconds, and the thing you sold is the property that makes the design work. The rule this codebase now follows: <strong>before removing work, say out loud what would have to be true for the removal to be safe, and then check whether anything actually guarantees it.</strong> Three of these four would have died at that sentence.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the assumption behind each of the four bugs.</li><li>You can explain why all four survived code review and died in an end-to-end test.</li><li>You have a sentence you say before deleting work from a hot path.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-sync-engine.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The sync engine</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-camera.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The camera</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

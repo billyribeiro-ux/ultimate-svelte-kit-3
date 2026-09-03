@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writes: command and form — Building Ostinato</title>
+<meta name="description" content="Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from inside `enhance`, and a per-card delete form with `remove.for(id)`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 61.53846153846154%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html" aria-current="page"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>Writes: command and form</h1>
+			<p class="lede">Commands with single-flight refreshes, a publish form that works with JavaScript off, <code>invalid(issue.handle(...))</code> for a 409 under the right field, two submit buttons, a redirect from inside <code>enhance</code>, and a per-card delete form with <code>remove.for(id)</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Choose between <code>command</code> and <code>form</code>, refresh exactly the queries a write changed in the same response, and turn a server error into a field message.</p></aside>
+			<p>Two kinds of write. A <code>command</code> is a function the browser calls from JavaScript — a play was heard, a heart was pressed. A <code>form</code> is a <code>&lt;form&gt;</code>: it posts, it works with JavaScript off, and with <code>enhance</code> it is taken over without a reload. Publishing is a form because it is the one write that should survive a broken script.</p>
+<h3 id="commands">Commands, and what they refresh</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:81-99</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A play was heard. Fire-and-forget from the player, and the interesting part
+ * is on the client: `recordPlay(id).updates(getCounts(id).withOverride(...))`
+ * bumps the number on screen immediately and asks the server to send the real
+ * one back in the same response. `requested` is how the server honours that:
+ * it refreshes exactly the query instances the client named, up to a limit.
+ */
+export const recordPlay = command(v.string(), async (id) =&gt; {
+	await store.countPlay(id);
+	await requested(getCounts, 8).refreshAll();
+});
+
+export const lovePattern = command(v.string(), async (id) =&gt; {
+	const likes = await store.love(id);
+	// Server-driven refresh: this handler knows exactly which query changed.
+	void getPattern(id).refresh();
+	await requested(getCounts, 8).refreshAll();
+	return likes;
+});</code></pre>
+</figure>
+<p><code>requested(getCounts, 8).refreshAll()</code> is the server half of an optimistic update. The browser called <code>recordPlay(id).updates(getCounts(id).withOverride(...))</code> — bump the number on screen now, and *name* the query it wants refreshed. <code>requested</code> refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number.</p>
+<aside class="callout callout--note"><p><code>void getPattern(id).refresh()</code> is the other kind of refresh: server-driven. This handler *knows* <code>getPattern(id)</code> changed, so it says so, and any browser with that query open gets the new value in the response — whether or not it asked. The two compose: the client names what it is showing, the server names what it changed.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:173-194</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function deletePattern(id: string, artistId: string): Promise&lt;boolean&gt; {
+	const result = await db
+		.delete(schema.patterns)
+		.where(and(eq(schema.patterns.id, id), eq(schema.patterns.artistId, artistId)));
+	return result.rowsAffected &gt; 0;
+}
+
+export async function countPlay(id: string): Promise&lt;void&gt; {
+	await db
+		.update(schema.patterns)
+		.set({ plays: sql`${schema.patterns.plays} + 1` })
+		.where(eq(schema.patterns.id, id));
+}
+
+export async function love(id: string): Promise&lt;number&gt; {
+	const [row] = await db
+		.update(schema.patterns)
+		.set({ likes: sql`${schema.patterns.likes} + 1` })
+		.where(eq(schema.patterns.id, id))
+		.returning({ likes: schema.patterns.likes });
+	return row?.likes ?? 0;
+}</code></pre>
+</figure>
+<h3 id="the-form">The publish form</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:101-161</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PUBLISH FORM
+ * ================
+ *
+ * A form, not a command, because publishing is the one write that should
+ * work with JavaScript off — somebody pasting a link into a text field and
+ * pressing a button is the oldest interaction on the web, and it degrades to
+ * exactly that.
+ *
+ * The pattern travels as one hidden field of JSON, named `_pattern`. The
+ * underscore is SvelteKit's convention for a value that must not be echoed
+ * back into the page after a failed non-JS submission — designed for
+ * passwords, and just as useful for two kilobytes the studio already holds.
+ *
+ * Two submit buttons share the form: `action` says which was pressed.
+ */
+export const publish = form(
+	v.object({
+		handle: HandleSchema,
+		title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Give it a title'), v.maxLength(60)),
+		_pattern: v.pipe(v.string(), v.minLength(2)),
+		remixOf: v.optional(v.string()),
+		action: v.picklist(['stay', 'open'])
+	}),
+	async ({ handle, title, _pattern, remixOf, action }, issue) =&gt; {
+		let dto;
+		try {
+			dto = v.parse(PatternDtoSchema, JSON.parse(_pattern));
+		} catch {
+			// A form-level issue: not about any one field, shown by `allIssues()`.
+			invalid('That pattern could not be read. Reload the studio and try again.');
+		}
+
+		let artist;
+		try {
+			artist = await claimHandle(handle);
+		} catch (e) {
+			/*
+			 * `claimHandle` says &quot;taken&quot; with a 409. On a form that is not an
+			 * error page, it is a message under the handle field — which is what
+			 * `invalid(issue.handle(...))` produces, and why it exists.
+			 */
+			if (isHttpError(e) &amp;&amp; e.status === 409) invalid(issue.handle(e.body.message));
+			throw e;
+		}
+
+		const pattern = fromDto({ ...dto, title });
+		const published = await store.publishPattern(artist, pattern, remixOf ?? null);
+
+		// Single-flight: the lists that just changed come back with this response.
+		void getMine().refresh();
+		await requested(getPatterns, 3).refreshAll();
+
+		if (action === 'open') redirect(303, `/p/${published.id}`);
+
+		return {
+			id: published.id,
+			url: vanityPath({ handle: artist.handle, slug: published.slug })
+		};
+	}
+);</code></pre>
+</figure>
+<p>The schema *is* the form: <code>publish.fields.handle</code> and the rest in the studio (ch. 20) are typed from it. The pattern travels as one hidden field of JSON named <code>_pattern</code>. The underscore is SvelteKit’s convention for a value that must not be echoed back into the page after a failed non-JS submission — designed for passwords, and just as useful for two kilobytes the studio already holds.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>invalid(issue.handle(...))</code></h4>
+	<p><code>claimHandle</code> says “taken” with a 409, which on a page would be an error page. On a form it should be a message under the handle field. <code>issue.handle(message)</code> builds that issue, and <code>invalid(...)</code> throws it so that the form re-renders with the message in <code>publish.fields.handle.issues()</code> — and, with JavaScript off, with the other fields still filled in. A plain <code>invalid(&quot;...&quot;)</code> with no field is a form-level issue, shown by <code>allIssues()</code>; the unreadable-pattern case uses that, because no field a person typed is at fault.</p>
+</aside>
+<p>Two submit buttons share the form and <code>action</code> says which was pressed. <code>redirect(303, …)</code> from inside the handler is honoured by an enhanced submission since SvelteKit 3.0.0-next.17 — the browser navigates to the new pattern’s page, with the vanity address computed for the other button’s result.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:123-171</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Publish, with a slug that is unique for this artist: `boom-bap`, then
+ * `boom-bap-2`, and so on. Two publishes of the same title in quick succession
+ * could race past the check and meet the unique index; the loop retries once
+ * with the next number rather than surfacing that as a 500.
+ */
+export async function publishPattern(
+	artist: Artist,
+	pattern: Pattern,
+	remixOf: string | null
+): Promise&lt;Published&gt; {
+	const base = slugify(pattern.title);
+
+	for (let attempt = 0; attempt &lt; 5; attempt += 1) {
+		const existing = await db
+			.select({ slug: schema.patterns.slug })
+			.from(schema.patterns)
+			.where(
+				and(
+					eq(schema.patterns.artistId, artist.id),
+					sql`${schema.patterns.slug} like ${base + '%'}`
+				)
+			);
+		const taken = new Set(existing.map((row) =&gt; row.slug));
+
+		let slug = base;
+		for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
+
+		const id = patternId();
+		try {
+			await db.insert(schema.patterns).values({
+				id,
+				artistId: artist.id,
+				slug,
+				title: pattern.title,
+				bpm: pattern.bpm,
+				data: JSON.stringify(toDto(pattern)),
+				remixOf
+			});
+		} catch (e) {
+			if (attempt === 4) throw e;
+			continue;
+		}
+
+		return (await getPattern(id))!;
+	}
+
+	throw new Error('unreachable');
+}</code></pre>
+</figure>
+<p>The slug loop: <code>boom-bap</code>, then <code>boom-bap-2</code>. Two publishes of the same title in quick succession could both pass the check and meet the unique index (ch. 21); the <code>catch</code> retries with the next number rather than surfacing a 500 for something that is not the person’s fault.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:163-174</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Deleting is a form too, and one that is rendered once per card with
+ * `remove.for(id)`, so each card's pending state is its own.
+ */
+export const remove = form(v.object({ id: v.string() }), async ({ id }) =&gt; {
+	const artist = requireArtist();
+	const deleted = await store.deletePattern(id, artist.id);
+	if (!deleted) error(404, 'Not yours, or not there');
+
+	void getMine().refresh();
+	await requested(getPatterns, 3).refreshAll();
+});</code></pre>
+</figure>
+<p>Deleting is a form too, rendered once per card as <code>{...remove.for(id)}</code> in the gallery (ch. 30), so each card has its own pending state. <code>requireArtist()</code> is the authorisation, and the store’s <code>WHERE id = ? AND artist_id = ?</code> is the check that a person deletes only their own.</p>
+<h3 id="the-handle-forms">Choosing and forgetting a handle</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/artist.remote.ts<span class="code__lines">:16-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const whoAmI = query(() =&gt; currentArtist());
+
+export const becomeArtist = form(
+	v.object({
+		handle: HandleSchema,
+		/** The jam room this was submitted from, if any. */
+		room: v.optional(v.string())
+	}),
+	async ({ handle, room }, issue) =&gt; {
+		try {
+			await claimHandle(handle);
+		} catch (e) {
+			if (isHttpError(e) &amp;&amp; e.status === 409) invalid(issue.handle(e.body.message));
+			throw e;
+		}
+
+		void whoAmI().refresh();
+
+		/*
+		 * The room's live stream read the cookie when it opened, so it still
+		 * thinks this browser is &quot;someone&quot;. `reconnect()` schedules a fresh
+		 * stream — carried back in this same response, no extra round trip —
+		 * and the new one reads the new cookie. The documented case for this is
+		 * exactly a mutation that changes a cookie a live query depends on.
+		 */
+		if (room) watchRoom(room).reconnect();
+	}
+);
+
+export const forget = form(async () =&gt; {
+	forgetArtist();
+	void whoAmI().refresh();
+});</code></pre>
+</figure>
+<p>Both set a cookie, so both are forms. <code>becomeArtist</code> refreshes <code>whoAmI()</code> — the query the header reads — so the name appears at the top of the page without a reload. And when the form was submitted from a jam room, it calls <code>watchRoom(room).reconnect()</code>: the room’s live stream read the cookie when it opened and still thinks this browser is “someone”; <code>reconnect</code> ends that stream and starts a fresh one, carried back in the same response, and the new one reads the new cookie. The documented case for <code>reconnect</code> is exactly a mutation that changes something a live query depends on.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why publishing is a form and loving is a command.</li><li>You can explain the difference between <code>requested(...).refreshAll()</code> and <code>getPattern(id).refresh()</code>.</li><li>You can turn a thrown HTTP error into a message under a specific field.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="reads.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Reads: query, batch and prerender</span>
+			</a>
+			<a class="pager__link pager__link--next" href="live-jam.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A live query: the jam room</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

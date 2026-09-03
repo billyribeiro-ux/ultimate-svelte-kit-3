@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The URL is the state — Building Sextant</title>
+<meta name="description" content="`SvelteURLSearchParams`, one debounced `replaceState`, and the two markers that a single field could not be.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 76.08695652173914%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html" aria-current="page"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>The URL is the state</h1>
+			<p class="lede"><code>SvelteURLSearchParams</code>, one debounced <code>replaceState</code>, and the two markers that a single field could not be.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Put the query, the range and the view in the address bar without a navigation per keystroke.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE URL IS THE STATE
+ * ====================
+ *
+ * A query, a time range and a selected tab. Three pieces of state, and the whole
+ * design of this file is the decision to keep them in the address bar rather
+ * than in a component.
+ *
+ * WHY THAT IS WORTH THE TROUBLE
+ * -----------------------------
+ * Because of what people do with an observability tool. They find something and
+ * paste it into a chat. If the state lives in a component, the link they paste
+ * opens an empty page and the next message is &quot;what did you search for?&quot; — which
+ * is the entire product failing at the only moment it mattered.
+ *
+ * The address bar also gives three more things for free, each of which is real
+ * work to build otherwise: the back button undoes a change to the query, a
+ * reload does not lose it, and the server can render the first result rather
+ * than shipping an empty shell that fetches after hydration.
+ *
+ * WHY `SvelteURLSearchParams`
+ * ---------------------------
+ * The obvious implementation is `goto('?q=' + …)` on every keystroke. That puts
+ * a navigation in the typing path — a hundred history entries for a sentence,
+ * and a re-run of every `load` on the route — so the real shape is: **edit a
+ * local reactive params object, and sync it to the address bar when it settles.**
+ *
+ * `SvelteURLSearchParams` is exactly that object. It is a `URLSearchParams` whose
+ * reads are tracked and whose writes are reactive, so `params.get('q')` inside a
+ * `$derived` re-runs when anything sets `q` — including a browser back button,
+ * once the sync below feeds navigation back in. A plain `URLSearchParams` in
+ * `$state` would need replacing wholesale on every edit to be reactive at all,
+ * and `.set()` on it would silently do nothing.
+ */</code></pre>
+</figure>
+<p>The argument is not tidiness. People find something in an observability tool and paste it into a chat, and state that lives in a component turns that link into an empty page — which is the entire product failing at the only moment it mattered.</p>
+<p>The address bar also gives three things for free, each of which is real work otherwise: the back button undoes a change to the query, a reload does not lose it, and the server can render the first result rather than shipping an empty shell that fetches after hydration.</p>
+<h3 id="why-not-goto">Why not <code>goto</code> on every keystroke</h3>
+<p>Because it is a navigation: a hundred history entries for a sentence, and a re-run of every <code>load</code> on the route. The shape that works is to edit a local reactive params object and sync it to the address bar when the edits settle — which is exactly what <code>SvelteURLSearchParams</code> is for.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:44-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	readonly range: string;
+	readonly view: View;
+}
+
+export const VIEWS = ['table', 'chart'] as const;
+export type View = (typeof VIEWS)[number];
+
+/**
+ * How long to wait before writing to the address bar.
+ *
+ * Long enough that typing a query produces one history entry rather than forty,
+ * short enough that copying the URL a moment after typing gets the current
+ * query. 400ms is roughly the gap between words.
+ *
+ * This is the one debounce in the application, and it is here rather than around
+ * the parser because *this* is the expensive side effect: `history.replaceState`
+ * on every keystroke is what makes a browser's address bar stutter.
+ */
+const SETTLE = 400;
+
+/** The three keys this workspace owns. Anything else in the URL is left alone. */
+const KEYS = ['q', 'range', 'view'] as const;
+
+/** `?a=b` and `a=b` are the same search string. Comparing them raw is a bug. */
+function normalise(search: string): string {</code></pre>
+</figure>
+<aside class="callout callout--note"><p>A plain <code>URLSearchParams</code> in <code>$state</code> would need replacing wholesale on every edit to be reactive at all, and <code>.set()</code> on it would silently do nothing. This is the case the reactive built-ins exist for, and the mirror image of the virtualizer’s plain <code>Map</code> in chapter 28.</p></aside>
+<h3 id="the-bug">One marker cannot answer two questions</h3>
+<p>The first version had a single <code>#synced</code> field. It was wrong in a way no unit test would have found, and the end-to-end suite found it in one test.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>type a query, press Run immediately   → the URL never changes. ever.
+type a query, wait, press Run         → the URL updates fine.
+
+cause:  `adopt()` ended with `#synced = params.toString()`.
+        The adopt effect also *read* the params, so every keystroke
+        re-ran it, saw a URL it had not written, and recorded the
+        current params as &quot;already synced&quot;.
+        `flush()` then compared equal and did nothing — and so did
+        the debounced write, forever after.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:75-97</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TWO MARKERS, NOT ONE, AND THIS IS THE WHOLE CORRECTNESS ARGUMENT.
+ *
+ * `#urlSeen` is the last address-bar value this instance has *read*.
+ * `#written` is the last value it has *put there*.
+ *
+ * The first version of this class had one field for both, and it was wrong in
+ * a way that no unit test would have found. `adopt` ended with
+ * `#synced = params.toString()` — so every time the params changed, the adopt
+ * effect re-ran, saw a URL it had not written, and quietly recorded the
+ * *current params* as &quot;already synced&quot;. `flush` then compared equal and did
+ * nothing, and the debounced write did nothing, and the query in the address
+ * bar never changed again.
+ *
+ * The end-to-end test that types a query and presses Run immediately is what
+ * found it: with a pause between the two it worked, because the debounce had
+ * already fired. That is the shape of the bug this separation removes — one
+ * marker cannot answer both &quot;has the URL changed under me&quot; and &quot;have my edits
+ * been written out&quot;.
+ */
+#urlSeen = '';
+#written = '';
+#timer = 0;</code></pre>
+</figure>
+<p>Two fields: what the address bar last *said*, and what we last *wrote*. And the params are read inside <code>untrack</code>, so the adopt effect depends only on the URL — without which every keystroke re-runs it and the two would be conflated again by a different route.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a unit test would not have found it</h4>
+	<p>Because both halves work in isolation. Typing updates the params; flushing writes them. The bug lives in the *interaction* between an effect that reads and an effect that writes, which only exists once both are mounted in a real page — and only shows up if you press Run inside the debounce window.</p>
+</aside>
+<h3 id="canonicalising">And a consequence worth naming</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:132-174</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">get search(): string {
+	return this.params.toString();
+}
+
+/**
+ * Adopt a search string that came from somewhere else.
+ *
+ * The somewhere else is a back button, a forward button, or a link from
+ * another page. Without this the address bar changes and the interface does
+ * not, which is the single most common bug in a URL-driven application and the
+ * reason &quot;the back button does nothing&quot; is such a familiar complaint.
+ *
+ * The params are read and written inside `untrack`, so the effect that calls
+ * this depends **only** on the URL. Without it, every keystroke re-runs the
+ * adopt effect — which is how the two markers above got conflated in the first
+ * place, and would be a loop even with them separated.
+ */
+adopt(search: string): void {
+	const incoming = normalise(search);
+	if (incoming === this.#urlSeen) return;
+	this.#urlSeen = incoming;
+
+	untrack(() =&gt; {
+		// A plain `URLSearchParams`: parsed here, read three times, discarded. The
+		// reactive version would be a signal nothing ever writes to.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const values = new URLSearchParams(incoming);
+		for (const key of KEYS) {
+			const value = values.get(key);
+			if (value !== null &amp;&amp; this.params.get(key) !== value) this.params.set(key, value);
+		}
+	});
+
+	/*
+	 * The address bar now says exactly `incoming`.
+	 *
+	 * Not `params.toString()` — the two differ whenever the URL omits a key this
+	 * workspace holds, which is the ordinary case for a hand-written link like
+	 * `?q=from+logs`. Recording the params here would mark those defaults as
+	 * already written, and they would never reach the URL.
+	 */
+	this.#written = incoming;
+}</code></pre>
+</figure>
+<p>Arriving on <code>?q=from+logs</code> with no <code>range</code> rewrites the URL to include it, once, shortly after load. That is deliberate: the address bar is the state, so it should say all of it — and a link copied a moment later then carries the whole view rather than the half somebody happened to type.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Typing a query updates the address bar once, not once per character.</li><li>The back button restores the previous query.</li><li>Pressing Run immediately after typing produces a correct URL.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="canvas-charts.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Canvas charts, and a worker that earns its keep</span>
+			</a>
+			<a class="pager__link pager__link--next" href="shallow-routing.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Shallow routing, and a drawer the back button closes</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

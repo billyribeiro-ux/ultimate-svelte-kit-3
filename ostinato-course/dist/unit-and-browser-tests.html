@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit tests, and tests in a real browser — Building Ostinato</title>
+<meta name="description" content="Two Vitest projects: pure logic in Node, `$state` and audio in Chromium. Round-trips for the codec, headers read back with a `DataView`, a forged cookie, a route partition, and a `Session` tested with `flushSync` and no component.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">37 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 94.87179487179486%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html" aria-current="page"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 37</p>
+			<h1>Unit tests, and tests in a real browser</h1>
+			<p class="lede">Two Vitest projects: pure logic in Node, <code>$state</code> and audio in Chromium. Round-trips for the codec, headers read back with a <code>DataView</code>, a forged cookie, a route partition, and a <code>Session</code> tested with <code>flushSync</code> and no component.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know which tests belong in Node and which need a browser, and test a <code>$state</code> class directly.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:249-299</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test: {
+	// A test that asserts nothing is a test that cannot fail.
+	expect: { requireAssertions: true },
+	projects: [
+		{
+			/*
+			 * Component and engine tests — a real Chromium, not a DOM emulator.
+			 *
+			 * Non-negotiable for an audio application: jsdom has no
+			 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
+			 * scheduler, the knobs and the waveform would all pass every test you
+			 * thought to write while doing nothing at all.
+			 */
+			extends: './vite.config.ts',
+			test: {
+				name: 'client',
+				browser: {
+					enabled: true,
+					provider: playwright({
+						// Web Audio starts suspended without a user gesture. The tests
+						// are not a person, so the flag says so.
+						launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] }
+					}),
+					instances: [{ browser: 'chromium', headless: true }]
+				},
+				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				exclude: ['src/lib/server/**']
+			}
+		},
+		{
+			// Pure logic — plain Node, no browser, fast. The pattern model, the
+			// codec, the identity cookie and the adapter's route partition live
+			// here, and these are the tests that run on every save.
+			extends: './vite.config.ts',
+			test: {
+				name: 'server',
+				environment: 'node',
+				include: ['src/**/*.{test,spec}.{js,ts}', 'adapters/**/*.{test,spec}.js'],
+				exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+
+				/*
+				 * One file at a time: SQLite allows exactly one writer, and two
+				 * spec files seeding the same database meet `SQLITE_BUSY` as a
+				 * dozen unrelated assertions failing in whichever file lost the
+				 * race.
+				 */
+				fileParallelism: false
+			}
+		}
+	]
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a real browser and not jsdom</h4>
+	<p>jsdom has no <code>AudioContext</code>, no <code>OfflineAudioContext</code> and no layout. The scheduler, the knobs and the waveform would pass every test you thought to write while doing nothing at all. The <code>client</code> project runs in a real headless Chromium through Playwright, with the autoplay flag set because a test is not a person and cannot click first. The <code>server</code> project is plain Node, fast, and runs one file at a time because SQLite allows one writer.</p>
+</aside>
+<h3 id="pure-parts">The pure parts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/music/note.spec.ts<span class="code__lines">:26-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('transposes immutably and clamps at the ends of the range', () =&gt; {
+	const c4 = new Note(60);
+	const g4 = c4.transpose(7);
+
+	expect(g4.name).toBe('G4');
+	expect(c4.midi).toBe(60);
+	expect(new Note(HIGHEST).transpose(5).midi).toBe(HIGHEST);
+	expect(new Note(LOWEST).transpose(-5).midi).toBe(LOWEST);
+	// Returning `this` when nothing changes keeps `$state` from seeing a change.
+	const top = new Note(HIGHEST);
+	expect(top.transpose(5)).toBe(top);
+});</code></pre>
+</figure>
+<p>The last assertion is the one that matters to Svelte: <code>transpose</code> returns <code>this</code> when nothing changes, so <code>$state</code> sees no change and the session pushes no empty undo entry (ch. 14). A test that reads like a rule about the model is a test that stays.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.spec.ts<span class="code__lines">:8-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A codec has one job — `decode(encode(x))` is `x` — and one way to fail that
+ * nobody notices until a link from last month opens as silence. Every preset
+ * goes through here, and so does a pattern built to hit every edge at once.
+ */
+
+describe('round trips', () =&gt; {
+	it.each(Object.entries(PRESETS))('%s survives the URL', (_, build) =&gt; {
+		const original = build();
+		const restored = decodePattern(encodePattern(original));
+
+		expect(restored.title).toBe(original.title);
+		expect(restored.bpm).toBe(original.bpm);
+		expect(restored.swing).toBeCloseTo(original.swing, 2);
+		expect(restored.tracks).toHaveLength(original.tracks.length);
+
+		for (const [i, track] of original.tracks.entries()) {
+			const back = restored.tracks[i]!;
+			expect(back.kind).toBe(track.kind);
+			expect(back.name).toBe(track.name);
+			expect(back.gain).toBeCloseTo(track.gain, 2);
+			expect(back.pan).toBeCloseTo(track.pan, 2);
+			expect(back.steps.map((s) =&gt; s.velocity)).toEqual(track.steps.map((s) =&gt; s.velocity));
+			if (MELODIC.has(track.kind)) {
+				expect(back.steps.map((s) =&gt; s.note.midi)).toEqual(track.steps.map((s) =&gt; s.note.midi));
+			}
+		}
+	});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/pattern/codec.spec.ts<span class="code__lines">:102-125</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('damaged links', () =&gt; {
+	it('rejects an unknown version rather than guessing', () =&gt; {
+		expect(() =&gt; decodePattern('AgAA')).toThrow(/format/);
+	});
+
+	it('rejects data that ends early', () =&gt; {
+		// Cut on a four-character boundary so the base64 itself is intact and the
+		// failure is the one this test is about: valid bytes, not enough of them.
+		const good = encodePattern(emptyPattern());
+		const half = good.slice(0, Math.floor(good.length / 8) * 4);
+		expect(() =&gt; decodePattern(half)).toThrow(/ended early/);
+	});
+
+	it('rejects text that is not base64 at all', () =&gt; {
+		expect(() =&gt; decodePattern('not a link!')).toThrow();
+	});
+
+	it('rejects an instrument it has never heard of', () =&gt; {
+		// version 1, bpm 120, swing 0, empty title, one track of kind 200
+		const bytes = Uint8Array.from([1, 120, 0, 0, 1, 200]);
+		const text = btoa(String.fromCharCode(...bytes)).replace(/=+$/, '');
+		expect(() =&gt; decodePattern(text)).toThrow(/instrument/);
+	});
+});</code></pre>
+</figure>
+<p>A codec has one job — <code>decode(encode(x))</code> is <code>x</code> — and one way to fail that nobody notices until a link from last month opens as silence. Every preset goes through, and so does a pattern built to hit every edge at once. The damaged-link tests cut a real encoding on a four-character boundary so that the base64 is intact and the failure is the one under test: valid bytes, not enough of them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/wav.spec.ts<span class="code__lines">:10-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function header(bytes: Uint8Array) {
+	const view = new DataView(bytes.buffer);
+	const text = (offset: number, length: number) =&gt;
+		String.fromCharCode(...bytes.subarray(offset, offset + length));
+	return {
+		riff: text(0, 4),
+		wave: text(8, 4),
+		format: view.getUint16(20, true),
+		channels: view.getUint16(22, true),
+		sampleRate: view.getUint32(24, true),
+		bitsPerSample: view.getUint16(34, true),
+		dataBytes: view.getUint32(40, true)
+	};
+}</code></pre>
+</figure>
+<p>A WAV header is forty-four bytes of numbers that every player checks and nobody can read by eye. The test reads them back with the same <code>DataView</code> a decoder would, which is the only assertion about a binary format worth making.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/identity.spec.ts<span class="code__lines">:19-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('refuses a payload that was edited', async () =&gt; {
+	const token = await sign(artist, SECRET);
+	const [, signature] = token.split('.');
+	const forged = btoa(JSON.stringify({ ...artist, handle: 'someoneelse' }))
+		.replaceAll('+', '-')
+		.replaceAll('/', '_')
+		.replace(/=+$/, '');
+
+	expect(await verify(`${forged}.${signature}`, SECRET)).toBeNull();
+});
+
+it('refuses a token signed with a different secret', async () =&gt; {
+	const token = await sign(artist, 'another-secret-that-is-also-thirty-two-chars');
+	expect(await verify(token, SECRET)).toBeNull();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/vanity.spec.ts<span class="code__lines">:20-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('slugify', () =&gt; {
+	it('turns a title into a URL segment', () =&gt; {
+		expect(slugify('Four on the floor')).toBe('four-on-the-floor');
+		expect(slugify('  Boom  Bap!! ')).toBe('boom-bap');
+		expect(slugify('Café groove — take 2')).toBe('cafe-groove-take-2');
+	});
+
+	it('never returns something a URL cannot hold', () =&gt; {
+		expect(slugify('🎛️🎛️')).toBe('untitled');
+		expect(slugify('')).toBe('untitled');
+		expect(slugify('a'.repeat(100))).toHaveLength(60);
+		expect(parseVanity(`/@someone/${slugify('x'.repeat(70) + ' y')}`)).not.toBeNull();
+	});
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/partition.spec.js<span class="code__lines">:41-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('pick', () =&gt; {
+	const split = partition(routes);
+	const patterns = {
+		pages: split.pages.map((r) =&gt; r.pattern),
+		api: split.api.map((r) =&gt; r.pattern)
+	};
+
+	it('routes documents, data requests and route resolution to the same function', () =&gt; {
+		expect(pick('/p/abc', patterns)).toBe('pages');
+		expect(pick('/p/abc/__data.json', patterns)).toBe('pages');
+		expect(pick('/p/abc/__route.js', patterns)).toBe('pages');
+		expect(pick('/studio', patterns)).toBe('pages');
+	});
+
+	it('routes /api and remote functions to the api function', () =&gt; {
+		expect(pick('/api/patterns', patterns)).toBe('api');
+		expect(pick('/_app/remote/abc123/getPattern', patterns)).toBe('api');
+	});
+
+	it('sends everything else to the catch-all', () =&gt; {
+		expect(pick('/@someone/a-groove', patterns)).toBe('router');
+		expect(pick('/_app/env.js', patterns)).toBe('router');
+		expect(pick('/no-such-page', patterns)).toBe('router');
+	});
+
+	it('strips only the internal suffixes', () =&gt; {
+		expect(stripInternal('/__data.json')).toBe('/');
+		expect(stripInternal('/p/x/__data.json')).toBe('/p/x');
+		expect(stripInternal('/data.json')).toBe('/data.json');
+	});
+});</code></pre>
+</figure>
+<p>The adapter’s partition is tested with the same shapes SvelteKit hands an adapter in <code>builder.routes</code> — an <code>id</code> and a <code>pattern</code> — so the doubles are honest. <code>pick</code> is what the runtime calls per request, and the cases are the ones that were wrong at some point: a data request, a remote call, a vanity address.</p>
+<h3 id="state-without-a-component"><code>$state</code> without a component</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.test.ts<span class="code__lines">:7-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The session is `$state` in a class, tested without a component. Two things
+ * make that possible: the file is `.svelte.test.ts`, so runes compile in it,
+ * and `flushSync` forces the effects that would otherwise wait for the next
+ * microtask.
+ */
+
+const load = () =&gt; {
+	const session = new Session();
+	session.load(PRESETS['boom-bap']!());
+	return session;
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.test.ts<span class="code__lines">:35-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('paints a fixed velocity with the other brushes, and skips no-ops', () =&gt; {
+	const session = load();
+	const track = session.pattern.tracks[0]!;
+
+	session.brush = 'soft';
+	session.paint(track.id, 1);
+	expect(track.steps[1]!.velocity).toBe(64);
+	expect(session.canUndo).toBe(true);
+
+	session.undo();
+	session.paint(track.id, 1);
+	session.paint(track.id, 1); // same brush, same value: not a change
+	session.undo();
+	// Undo replaces the whole pattern, so read it fresh: the `track` above is
+	// the object from before the first undo, and it is no longer the pattern.
+	expect(session.pattern.tracks[0]!.steps[1]!.velocity).toBe(0);
+	expect(session.canUndo).toBe(false);
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The comment inside the second test is a lesson about deep state: <code>undo</code> replaces the whole pattern, so a <code>track</code> variable captured before it points at an object that is no longer the pattern. Read through <code>session.pattern</code> after an undo, always.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.test.ts<span class="code__lines">:137-162</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('autosave', () =&gt; {
+	it('persists after every change through a root effect', () =&gt; {
+		const written: string[] = [];
+		const fake = {
+			getItem: () =&gt; null,
+			setItem: (_key: string, value: string) =&gt; written.push(value)
+		};
+		Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true });
+
+		const session = load();
+		const stop = session.autosave();
+		flushSync();
+		// The initial state is not saved — see `autosave()` for why.
+		expect(written).toHaveLength(0);
+
+		session.paint(session.pattern.tracks[0]!.id, 1);
+		flushSync();
+		expect(written).toHaveLength(1);
+		expect(JSON.parse(written[0]!).p).toBe(session.encoded);
+
+		stop();
+		session.paint(session.pattern.tracks[0]!.id, 2);
+		flushSync();
+		expect(written).toHaveLength(1);
+	});
+});</code></pre>
+</figure>
+<p>The autosave test is the one that needs the browser project: it creates a root effect and drives it with <code>flushSync</code>, which forces the effects that would otherwise wait for the next microtask. It also pins the <code>first</code>-run skip from chapter 14 — the initial state is not saved — with a fake <code>localStorage</code> that records what was written.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which project a new test file lands in from its name alone.</li><li>You can write a test for a <code>$state</code> class and say when <code>flushSync</code> is needed.</li><li>You can explain what the codec round-trip test would miss that the edge-case test catches.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-security-posture.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The security posture</span>
+			</a>
+			<a class="pager__link pager__link--next" href="end-to-end-and-what-it-found.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">End to end, and what it found</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

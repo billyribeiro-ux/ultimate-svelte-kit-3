@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The fields on a shape — Building Tessera</title>
+<meta name="description" content="Twenty-two lines of actual code, one rule of thumb for when to use them, and a return value that turns out to matter.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 22.727272727272727%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html" aria-current="page"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>The fields on a shape</h1>
+			<p class="lede">Twenty-two lines of actual code, one rule of thumb for when to use them, and a return value that turns out to matter.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Merge single-valued fields deterministically, and know precisely when this is the wrong tool.</p></aside>
+			<p>x, y, width, height, fill, stroke, z-order. Single values where the only sensible resolution of &quot;we both set this&quot; is &quot;the later one&quot;. This is the simplest CRDT there is, and it carries most of a diagram.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/register.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * LAST-WRITE-WINS REGISTERS
+ * =========================
+ *
+ * The simplest useful CRDT, and the one that carries most of a diagram: a node's
+ * x, y, width, height, fill, stroke and z-order are all single values where the
+ * only sensible resolution of &quot;we both set this&quot; is &quot;the later one&quot;.
+ *
+ * &quot;Later&quot; means `clock.ts`'s total order, not wall-clock time, so it is decided
+ * identically on every replica and never ends in a tie — the actor id inside the
+ * stamp is the final tiebreak.
+ *
+ * WHERE LWW IS THE WRONG TOOL
+ * ---------------------------
+ * LWW *discards* the losing write. That is correct for a position (two people
+ * dragging one box: somebody's drag has to lose) and wrong for a set of members
+ * (two people adding different collaborators: neither should lose). It is also
+ * wrong for text, where the intuitive result is both edits, interleaved — which
+ * is what `rga.ts` exists for.
+ *
+ * The rule of thumb this codebase follows: **use LWW when a human would accept
+ * &quot;somebody else got there first&quot; as an explanation.** Nobody accepts that
+ * explanation for a deleted paragraph.
+ */
+
+import { type Stamp, compare } from './clock.ts';
+
+/** A value with the stamp of the write that produced it. */
+export interface Lww&lt;T&gt; {
+	readonly value: T;
+	readonly stamp: Stamp;
+}
+
+export function register&lt;T&gt;(value: T, stamp: Stamp): Lww&lt;T&gt; {
+	return { value, stamp };
+}
+
+/**
+ * Merge two registers. Commutative, associative and idempotent — the three laws
+ * that make a CRDT a CRDT, and the three properties `crdt.spec.ts` checks by
+ * brute force rather than by trusting this comment.
+ *
+ * Returns one of the two inputs rather than a fresh object, so merging a value
+ * that has not changed is free and reference equality keeps working as a cheap
+ * &quot;did this change?&quot; test for the reactive layer.
+ */
+export function mergeRegister&lt;T&gt;(a: Lww&lt;T&gt;, b: Lww&lt;T&gt;): Lww&lt;T&gt; {
+	return compare(a.stamp, b.stamp) &gt;= 0 ? a : b;
+}</code></pre>
+</figure>
+<p>&quot;Later&quot; means the total order from chapter 06, not wall-clock time. So it is decided identically on every replica, and it never ties — the actor id inside the stamp is the final tiebreak.</p>
+
+<aside class="callout callout--why">
+	<h4>The rule of thumb, which is the actual content of this chapter</h4>
+	<p><strong>Use last-write-wins when a human would accept &quot;somebody else got there first&quot; as an explanation.</strong> Two people dragging one box: somebody’s drag has to lose, and nobody is upset. Two people adding different collaborators to a workspace: &quot;somebody else got there first&quot; is not an explanation, it is a bug report. A deleted paragraph: absolutely not. The rule takes four seconds to apply and prevents the most common CRDT design mistake there is, which is reaching for LWW because it is the one you already understand.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/register.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Apply a write, keeping the register unchanged if the write is stale.
+ *
+ * Returns `undefined` when nothing changed, which the document uses to skip the
+ * reactive invalidation entirely. Redelivery during a reconnect is common enough
+ * that &quot;this operation is old news&quot; is a hot path, not an edge case.
+ */
+export function write&lt;T&gt;(current: Lww&lt;T&gt; | undefined, value: T, stamp: Stamp): Lww&lt;T&gt; | undefined {
+	if (current !== undefined &amp;&amp; compare(stamp, current.stamp) &lt;= 0) return undefined;
+	return { value, stamp };
+}</code></pre>
+</figure>
+<p>Two small decisions in these twenty lines are worth pulling out, because both are about the layer above.</p>
+<ul><li><strong><code>mergeRegister</code> returns one of its inputs</strong>, never a fresh object. Merging an unchanged value is free, and reference equality keeps working as a cheap &quot;did this change?&quot; test for the reactive layer in chapter 15.</li><li><strong><code>write</code> returns <code>undefined</code> when nothing changed.</strong> The document uses that to skip reactive invalidation entirely. Redelivery during a reconnect is common enough that &quot;this operation is old news&quot; is a hot path rather than an edge case — and a <code>$state</code> write that sets the same value still schedules work.</li></ul>
+<h3 id="per-field">Per field, not per shape</h3>
+<p>One more decision, and it lives in the layer above but belongs in this chapter because it is the point of registers.</p>
+<p>A shape could be one register holding <code>{ x, y, fill, … }</code>. It is not. Every field is its own register with its own stamp. Ada changes the fill while Mo drags the box: with one register per shape, one of them loses an edit they had no conflict with. With one register per field, both survive, because they were never competing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// A move writes two fields, so it is two register writes with one stamp.
+// A recolour writes one. They do not interact.
+{ kind: 'node.set', node: 'n1', stamp, fields: { x: 240, y: 120 } }
+{ kind: 'node.set', node: 'n1', stamp, fields: { fill: 'jade' } }</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The cost is a stamp per field — twenty-six bytes — instead of a stamp per shape. For a board with a thousand shapes and eight fields each, that is about two hundred kilobytes of stamps. Worth it, and it is the sort of trade to make explicitly rather than discover.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can state the rule of thumb for when last-write-wins is appropriate.</li><li>You can explain why fields get individual registers rather than one per shape.</li><li>You can say what <code>write</code> returning <code>undefined</code> is for.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="observed-remove-sets.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Which shapes exist</span>
+			</a>
+			<a class="pager__link pager__link--next" href="collaborative-text.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Two people typing in one label</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

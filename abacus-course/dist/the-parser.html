@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The parser: a Pratt parser in a hundred lines — Building Abacus</title>
+<meta name="description" content="Binding powers instead of a grammar. Each operator has a number; an expression is a prefix followed by every operator that binds tighter than the one we are inside. The precedence table is the readable part.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">07 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 17.94871794871795%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html" aria-current="page"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 07</p>
+			<h1>The parser: a Pratt parser in a hundred lines</h1>
+			<p class="lede">Binding powers instead of a grammar. Each operator has a number; an expression is a prefix followed by every operator that binds tighter than the one we are inside. The precedence table is the readable part.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand Pratt parsing well enough to add an operator, and know the one place the table is a decision rather than mathematics.</p></aside>
+			<h3 id="the-tree">The tree it builds</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/ast.ts<span class="code__lines">:1-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SHAPE OF A FORMULA
+ * ======================
+ *
+ * `=SUM(A1:B2) * 1.1` becomes a tree: a `binary` node whose left side is a
+ * `call` and whose right side is a `number`. The parser builds it, the
+ * evaluator walks it, the dependency graph reads the references out of it,
+ * and the formula bar colours the source by the `span` on each node.
+ *
+ * Every node carries its `span` — where in the source it came from — because
+ * the second-best thing a formula can do is be right, and the best thing it
+ * can do when it is wrong is say *where*.
+ */
+
+export interface Span {
+	start: number;
+	end: number;
+}
+
+/**
+ * A reference to one cell. `absRow` and `absCol` record the dollar signs:
+ * `$A$1` stays put when the formula is copied, `A1` moves with it.
+ */
+export interface CellRef {
+	row: number;
+	col: number;
+	absRow: boolean;
+	absCol: boolean;
+}
+
+export interface RangeRef {
+	start: CellRef;
+	end: CellRef;
+}
+
+export type BinaryOp = '+' | '-' | '*' | '/' | '^' | '&amp;' | '=' | '&lt;&gt;' | '&lt;' | '&gt;' | '&lt;=' | '&gt;=';
+
+export type Node =
+	| { type: 'number'; value: number; span: Span }
+	| { type: 'string'; value: string; span: Span }
+	| { type: 'boolean'; value: boolean; span: Span }
+	| { type: 'error'; code: string; span: Span }
+	| { type: 'ref'; ref: CellRef; span: Span }
+	| { type: 'range'; range: RangeRef; span: Span }
+	| { type: 'unary'; op: '-' | '+' | '%'; operand: Node; span: Span }
+	| { type: 'binary'; op: BinaryOp; left: Node; right: Node; span: Span }
+	| { type: 'call'; name: string; args: Node[]; span: Span };</code></pre>
+</figure>
+<p>Every node carries its <code>span</code>. The second-best thing a formula can do is be right; the best thing it can do when it is wrong is say *where*. The engine reads references out of this tree to build its graph, the evaluator walks it, and the formula bar colours the source by span.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/ast.ts<span class="code__lines">:55-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Every reference in a formula, in source order. */
+export function references(node: Node, out: Reference[] = []): Reference[] {
+	switch (node.type) {
+		case 'ref':
+			out.push({ ref: node.ref, span: node.span });
+			break;
+		case 'range':
+			out.push({ ref: node.range, span: node.span });
+			break;
+		case 'unary':
+			references(node.operand, out);
+			break;
+		case 'binary':
+			references(node.left, out);
+			references(node.right, out);
+			break;
+		case 'call':
+			for (const arg of node.args) references(arg, out);
+			break;
+		case 'number':
+		case 'string':
+		case 'boolean':
+		case 'error':
+			break;
+		default:
+			node satisfies never;
+	}
+	return out;
+}</code></pre>
+</figure>
+<p><code>references</code> is the function the dependency graph is built from. Note <code>node satisfies never</code> in the default branch: if somebody adds a node type and forgets this function, the compiler says so.</p>
+<h3 id="binding-power">Binding power</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:1-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PARSER
+ * ==========
+ *
+ * A Pratt parser: each operator has a *binding power*, and an expression is
+ * parsed by taking a prefix — a number, a reference, a parenthesised group, a
+ * function call, a unary minus — and then, while the next operator binds
+ * tighter than the one we are inside, folding it in. Twenty lines of
+ * mechanism carry the whole precedence table, and the table is the part a
+ * person can read.
+ *
+ * THE TABLE, FROM LOOSEST TO TIGHTEST
+ * -----------------------------------
+ *   =  &lt;&gt;  &lt;  &gt;  &lt;=  &gt;=     comparison
+ *   &amp;                       text join
+ *   +  -                    addition
+ *   *  /                    multiplication
+ *   ^                       power (right-associative: 2^3^2 is 2^9)
+ *   -x  +x                  unary sign
+ *   x%                      percent
+ *   A1:B2                   range
+ *
+ * One thing in it is a decision rather than mathematics: unary minus binds
+ * *tighter* than `^`, so `-2^2` is 4. That is what every spreadsheet does,
+ * and a formula language that disagreed with the sheet it lives in would be
+ * wrong in the way that matters — a person pasting `=-2^2` from somewhere
+ * else expects the answer they got there.
+ */
+
+import type { BinaryOp, CellRef, Node, Span } from './ast.ts';
+import { FormulaSyntaxError, tokenize, type Token } from './lexer.ts';
+
+/** Left binding power of each infix operator. Higher binds tighter. */
+const INFIX: Record&lt;string, number&gt; = {
+	'=': 10,
+	'&lt;&gt;': 10,
+	'&lt;': 10,
+	'&gt;': 10,
+	'&lt;=': 10,
+	'&gt;=': 10,
+	'&amp;': 20,
+	'+': 30,
+	'-': 30,
+	'*': 40,
+	'/': 40,
+	'^': 60
+};
+
+const UNARY_BP = 70;
+const PERCENT_BP = 80;</code></pre>
+</figure>
+<p>Read the table before the code. Comparison binds loosest, then <code>&amp;</code>, then <code>+ -</code>, then <code>* /</code>, then <code>^</code>, then unary sign, then percent. One line in it is a *decision*: unary minus binds tighter than <code>^</code>, so <code>-2^2</code> is 4. Mathematics says −4; every spreadsheet says 4; a formula language that disagreed with the sheet it lives in would be wrong in the way that matters, because a person pasting <code>=-2^2</code> from somewhere else expects the answer they got there.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:52-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function parse(source: string): Node {
+	const tokens = tokenize(source);
+	let index = 0;
+
+	const peek = (): Token =&gt; tokens[index]!;
+	const next = (): Token =&gt; tokens[index++]!;
+
+	function expect(type: Token['type'], what: string): Token {
+		const token = next();
+		if (token.type !== type) {
+			throw new FormulaSyntaxError(
+				token.type === 'eof' ? `Expected ${what} but the formula ended` : `Expected ${what}`,
+				token.start
+			);
+		}
+		return token;
+	}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:70-103</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function expression(minBp: number): Node {
+	let left = prefix();
+
+	for (;;) {
+		const token = peek();
+
+		// Postfix percent binds tighter than anything but a range.
+		if (token.type === 'op' &amp;&amp; token.text === '%') {
+			if (PERCENT_BP &lt; minBp) break;
+			next();
+			left = { type: 'unary', op: '%', operand: left, span: span(left.span.start, token.end) };
+			continue;
+		}
+
+		if (token.type !== 'op') break;
+		const lbp = INFIX[token.text];
+		if (lbp === undefined || lbp &lt; minBp) break;
+
+		next();
+		// `^` is right-associative: parse its right side with the *same* power,
+		// so `2^3^2` groups as `2^(3^2)`. Everything else is left-associative.
+		const rbp = token.text === '^' ? lbp : lbp + 1;
+		const right = expression(rbp);
+		left = {
+			type: 'binary',
+			op: token.text as BinaryOp,
+			left,
+			right,
+			span: span(left.span.start, right.span.end)
+		};
+	}
+
+	return left;
+}</code></pre>
+</figure>
+<p>This is the whole algorithm. Parse a prefix. Then loop: look at the next operator; if it binds *less* tightly than <code>minBp</code>, stop and hand back what we have; otherwise consume it and parse its right side. The right side is parsed with <code>lbp + 1</code> so that <code>1 - 2 - 3</code> groups as <code>(1 - 2) - 3</code> — and with the *same* power for <code>^</code>, so <code>2^3^2</code> groups as <code>2^(3^2)</code>. That one-character difference is the entire theory of associativity.</p>
+
+<aside class="callout callout--why">
+	<h4>Why Pratt and not a grammar</h4>
+	<p>A recursive-descent parser for this language needs a function per precedence level: <code>comparison</code> calls <code>concatenation</code> calls <code>addition</code> calls <code>multiplication</code> calls <code>power</code> calls <code>unary</code> calls <code>primary</code>. Seven functions that differ only in which operators they check. Pratt collapses them into one loop and a table. Adding an operator is adding a row; changing a precedence is changing a number. For a language a person types into a cell, that is the right trade.</p>
+</aside>
+<h3 id="prefix">Prefixes, references, calls</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:105-159</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function prefix(): Node {
+	const token = next();
+
+	switch (token.type) {
+		case 'number':
+			return { type: 'number', value: Number(token.text), span: span(token.start, token.end) };
+
+		case 'string':
+			return {
+				type: 'string',
+				value: token.text.slice(1, -1).replaceAll('&quot;&quot;', '&quot;'),
+				span: token
+			};
+
+		case 'boolean':
+			return {
+				type: 'boolean',
+				value: token.text.toUpperCase() === 'TRUE',
+				span: span(token.start, token.end)
+			};
+
+		case 'error':
+			return { type: 'error', code: token.text, span: span(token.start, token.end) };
+
+		case 'ref':
+			return reference(token);
+
+		case 'name':
+			return call(token);
+
+		case 'lparen': {
+			const inner = expression(0);
+			const close = expect('rparen', '&quot;)&quot;');
+			return { ...inner, span: span(token.start, close.end) };
+		}
+
+		case 'op':
+			if (token.text === '-' || token.text === '+') {
+				const operand = expression(UNARY_BP);
+				return {
+					type: 'unary',
+					op: token.text,
+					operand,
+					span: span(token.start, operand.span.end)
+				};
+			}
+			throw new FormulaSyntaxError(`Unexpected &quot;${token.text}&quot;`, token.start);
+
+		case 'eof':
+			throw new FormulaSyntaxError('The formula ended early', token.start);
+
+		default:
+			throw new FormulaSyntaxError(`Unexpected &quot;${token.text}&quot;`, token.start);
+	}
+}</code></pre>
+</figure>
+<p>A parenthesised group is parsed with <code>minBp</code> zero — everything is allowed inside — and its span is widened to include the parens, so a highlight covers <code>(A1+A2)</code> rather than <code>A1+A2</code>. Unary minus parses its operand at <code>UNARY_BP</code>, which is why <code>-A1^2</code> is <code>(-A1)^2</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:161-206</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** `A1`, or `A1:B2` when a colon follows. */
+function reference(token: Token): Node {
+	const start = cellRef(token);
+	if (peek().type !== 'colon')
+		return { type: 'ref', ref: start, span: span(token.start, token.end) };
+
+	next();
+	const endToken = expect('ref', 'a cell reference after &quot;:&quot;');
+	const end = cellRef(endToken);
+	return {
+		type: 'range',
+		range: {
+			start: { ...start, row: Math.min(start.row, end.row), col: Math.min(start.col, end.col) },
+			end: { ...end, row: Math.max(start.row, end.row), col: Math.max(start.col, end.col) }
+		},
+		span: span(token.start, endToken.end)
+	};
+}
+
+function call(token: Token): Node {
+	if (peek().type !== 'lparen') {
+		throw new FormulaSyntaxError(
+			`Unknown name &quot;${token.text}&quot; — did you mean a function? Add &quot;()&quot;`,
+			token.start
+		);
+	}
+	next();
+	const args: Node[] = [];
+	if (peek().type !== 'rparen') {
+		for (;;) {
+			args.push(expression(0));
+			if (peek().type === 'comma') {
+				next();
+				continue;
+			}
+			break;
+		}
+	}
+	const close = expect('rparen', '&quot;)&quot; to close the function');
+	return {
+		type: 'call',
+		name: token.text.toUpperCase(),
+		args,
+		span: span(token.start, close.end)
+	};
+}</code></pre>
+</figure>
+<p>A range is two references with a colon between, normalised so <code>B2:A1</code> is the same rectangle as <code>A1:B2</code>. A name that is not followed by <code>(</code> is an error with a suggestion in it — “did you mean a function? Add ()” — because the most common cause is somebody typing <code>SUM A1:A3</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/parser.ts<span class="code__lines">:208-233</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	const root = expression(0);
+	const trailing = peek();
+	if (trailing.type !== 'eof') {
+		throw new FormulaSyntaxError(`Unexpected &quot;${trailing.text}&quot;`, trailing.start);
+	}
+	return root;
+}
+
+/** `$B$3` → `{ row: 2, col: 1, absRow: true, absCol: true }`. */
+export function cellRef(token: Token): CellRef {
+	const match = /^(\$?)([A-Za-z]{1,3})(\$?)(\d{1,7})$/.exec(token.text);
+	if (!match) throw new FormulaSyntaxError('Not a cell reference', token.start);
+	const [, dollarCol, letters, dollarRow, digits] = match;
+	let col = 0;
+	for (const ch of letters!.toUpperCase()) col = col * 26 + (ch.charCodeAt(0) - 64);
+	col -= 1;
+	const row = Number(digits) - 1;
+	if (col &gt;= 16_384 || row &gt;= 1_048_576) {
+		throw new FormulaSyntaxError(`${token.text} is outside the sheet`, token.start);
+	}
+	return { row, col, absRow: dollarRow === '$', absCol: dollarCol === '$' };
+}
+
+function span(start: number, end: number): Span {
+	return { start, end };
+}</code></pre>
+</figure>
+<p><code>cellRef</code> is where the dollar signs are read (ch. 04 promised this), and where a reference outside the sheet — <code>A1048577</code> — is refused at parse time rather than at evaluation.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can trace <code>expression(0)</code> on <code>1 + 2 * 3</code> and say which call parses the <code>*</code>.</li><li>You can say what changes if <code>^</code> used <code>lbp + 1</code> like the others.</li><li>You can add a <code>MOD</code> operator <code>%%</code> at multiplication precedence by editing one table and one type.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-lexer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The lexer: characters into tokens</span>
+			</a>
+			<a class="pager__link pager__link--next" href="evaluation-and-functions.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Evaluation and the function library</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

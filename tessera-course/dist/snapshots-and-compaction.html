@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapshots, and what may never be forgotten — Building Tessera</title>
+<meta name="description" content="Writing a document out deterministically, the clock bug that only appeared after a refresh, and the tombstones that can never be collected.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">16 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 36.36363636363637%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html" aria-current="page"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 16</p>
+			<h1>Snapshots, and what may never be forgotten</h1>
+			<p class="lede">Writing a document out deterministically, the clock bug that only appeared after a refresh, and the tombstones that can never be collected.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Open a board without replaying its whole history, and know exactly which history is safe to drop.</p></aside>
+			<p>A board is defined by its operations, and a busy board accumulates a great many: one per keystroke, two per frame of a drag. Replaying a year of that to open a document is not a plan.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/snapshot.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SNAPSHOTS AND COMPACTION
+ * ========================
+ *
+ * A board is defined by its operations, and a busy board accumulates a great
+ * many of them: one per keystroke, two per frame of a drag. Replaying a year of
+ * that to open a document is not a plan.
+ *
+ * A snapshot is the document's state written out directly, plus the version
+ * vector saying which operations it already accounts for. Opening a board then
+ * means &quot;load the snapshot, replay only what came after it&quot;, and the log behind
+ * it can be discarded.
+ *
+ * WHAT COMPACTION MAY AND MAY NOT THROW AWAY
+ * ------------------------------------------
+ * Deleted **nodes and edges** can go, once every replica has seen the deletion:
+ * membership is computed from add- and remove-stamps, so once both sides are
+ * gone the element cannot come back and nothing can refer to it.
+ *
+ * Deleted **characters** stay, and this is the interesting one. It is perfectly
+ * legal to type after a character somebody else has deleted — you had not seen
+ * the deletion when you started typing — so a tombstone is still a valid anchor
+ * for an operation that has not been created yet. There is no version vector
+ * that makes it safe to drop; safety would need to know what nobody will do in
+ * the future.
+ *
+ * So Tessera does not compact label tombstones. The cost is bounded by how much
+ * has ever been typed into labels, which for a diagram is kilobytes. The
+ * alternative — a quiescence protocol where every replica agrees to stop editing
+ * so tombstones can be collected — buys a rounding error and introduces a
+ * distributed handshake that can fail. This is the right trade, and it is a
+ * trade rather than an oversight.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The tombstones that can never be collected</h4>
+	<p>Deleted <strong>nodes</strong> can go once every replica has seen the deletion: membership is computed from add- and remove-stamps, so with both gone the element cannot come back and nothing can refer to it. Deleted <strong>characters</strong> cannot. It is perfectly legal to type after a character somebody else has deleted — you had not seen the deletion when you started — so a tombstone is still a valid anchor for an operation *that has not been created yet*. There is no version vector that makes dropping it safe, because safety would require knowing what nobody will do in the future. So Tessera does not compact label tombstones, and that is a trade rather than an oversight: the cost is bounded by how much has ever been typed into labels, which for a diagram is kilobytes.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/snapshot.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface BoardSnapshot {
+	/**
+	 * The format version.
+	 *
+	 * Present from the first release, checked on every load, and the reason a
+	 * future change to the document model is a migration rather than a support
+	 * ticket that says &quot;my board is blank&quot;. A snapshot outlives the code that
+	 * wrote it — it sits in a browser's IndexedDB across upgrades.
+	 */
+	readonly format: 1;
+	/** Which operations this snapshot already includes. */
+	readonly seen: EncodedVersion;
+	readonly nodes: OrSetJson;
+	readonly edges: OrSetJson;
+	readonly nodeFields: Record&lt;string, Record&lt;string, EncodedRegister&gt;&gt;;
+	readonly edgeFields: Record&lt;string, Record&lt;string, EncodedRegister&gt;&gt;;
+	readonly labels: Record&lt;string, RgaSnapshot&gt;;</code></pre>
+</figure>
+<p><code>format: 1</code>, present from the first release and checked on every load. A snapshot outlives the code that wrote it — it sits in a browser’s IndexedDB across upgrades — so this is the difference between a future model change being a migration and it being a support ticket that says &quot;my board is blank&quot;.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/snapshot.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The envelope, validated. The *contents* are not re-validated field by field.
+ *
+ * Every value in here entered the system through `parseOperation`, which checked
+ * it against the same rules the editor enforces, and a snapshot can hold tens of
+ * thousands of registers. Re-running those schemas on load would cost real time
+ * at exactly the moment a person is waiting to see their board.
+ *
+ * The line is drawn where trust changes hands: operations arrive from clients
+ * and are checked; snapshots are written by this code from already-checked
+ * operations, and only the shape is confirmed.
+ */
+export const BoardSnapshotSchema = v.object({</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The line is drawn where trust changes hands. Operations arrive from clients and are checked field by field. Snapshots are written by this code *from already-checked operations*, so only the envelope’s shape is confirmed. Re-running every schema on a snapshot with tens of thousands of registers would cost real time at exactly the moment a person is waiting to see their board.</p></aside>
+<h3 id="deterministic">Deterministic output</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Write the whole document out.
+ *
+ * Deterministic: two replicas holding the same state produce byte-identical
+ * snapshots. That is what makes `expect(a.toSnapshot()).toEqual(b.toSnapshot())`
+ * a meaningful convergence assertion, and what lets the server hash a snapshot
+ * to notice that a client is out of step.
+ */
+toSnapshot(): BoardSnapshot {
+	const nodeFields: Record&lt;string, Record&lt;string, EncodedRegister&gt;&gt; = {};
+	for (const [id, fields] of this.#nodeFields) {
+		nodeFields[id] = Object.fromEntries(
+			[...fields].map(([field, register]) =&gt; [field, [register.value, register.stamp]] as const)
+		);
+	}
+
+	const edgeFields: Record&lt;string, Record&lt;string, EncodedRegister&gt;&gt; = {};
+	for (const [id, fields] of this.#edgeFields) {
+		edgeFields[id] = Object.fromEntries(
+			[...fields].map(([field, register]) =&gt; [field, [register.value, register.stamp]] as const)
+		);
+	}
+
+	const labels: BoardSnapshot['labels'] = {};
+	for (const [id, text] of this.#labels) labels[id] = text.toJSON();
+
+	return {
+		format: 1,
+		seen: versionToJSON(this.#version),
+		nodes: this.#nodes.toJSON(),
+		edges: this.#edges.toJSON(),
+		nodeFields,
+		edgeFields,
+		labels
+	};
+}</code></pre>
+</figure>
+<p>Two replicas holding the same state produce <strong>byte-identical</strong> snapshots — which is what makes <code>expect(a.toSnapshot()).toEqual(b.toSnapshot())</code> a meaningful convergence assertion, and what lets the server hash a snapshot to notice a client is out of step. The sorting inside <code>OrSet#toJSON</code> from chapter 09 is what pays for that here.</p>
+<h3 id="restore">Loading one back, and a bug that needed a refresh to see</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Build a document from a snapshot.
+ *
+ * A factory rather than a `load()` method, because loading into a document
+ * that already holds state is a merge, and a merge of two snapshots is not
+ * something this class should quietly pretend to do. Replay the operations if
+ * you want a merge; that is what they are for.
+ */
+static fromSnapshot(
+	actor: ActorId,
+	snapshot: BoardSnapshot = emptySnapshot(),
+	now: () =&gt; number = Date.now
+): BoardDocument {
+	const document = new BoardDocument(actor, now);
+</code></pre>
+</figure>
+<p>A <strong>factory</strong>, not a <code>load()</code> method. Loading into a document that already holds state is a merge, and a merge of two snapshots is not something this class should quietly pretend to do. Replay the operations if you want a merge; that is what they are for.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Drag the clock past everything in the snapshot before issuing a single new
+ * stamp.
+ *
+ * Without this, a reload resets the clock to the wall time and this replica
+ * happily reissues stamps it already used — two different characters with
+ * one identity, which the RGA resolves by keeping the first and silently
+ * discarding the second. The symptom is &quot;sometimes my typing does not
+ * appear, but only just after a refresh&quot;, which is a genuinely horrible
+ * thing to debug.
+ */
+for (const stamp of Object.values(snapshot.seen)) {
+	document.#clock.observe(stamp as Stamp);
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>This is the sort of bug worth remembering the *shape* of. Without those two lines, a reload resets the clock to the current wall time, and the replica happily reissues stamps it has already used. Two different characters end up with one identity, which the RGA resolves by keeping the first and silently discarding the second. The symptom is &quot;sometimes my typing does not appear, but only just after a refresh&quot; — intermittent, unreproducible on demand, and nowhere near the code at fault.</p></aside>
+<h3 id="compact">Compaction, with its safety argument attached</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Forget history that no replica can still contradict.
+ *
+ * `stable` must be a version vector that **every** replica is known to
+ * dominate — in practice, what the server computes from the cursors its
+ * clients have acknowledged, minus a retention window. Pass a vector that is
+ * ahead of some straggler and their pending operations refer to add-stamps
+ * that no longer exist, which brings deleted elements back.
+ *
+ * Label tombstones are deliberately left alone; see the note at the top of
+ * `snapshot.ts`.
+ *
+ * @returns how many pieces of history were dropped.
+ */
+compact(stable: VersionVector): number {
+	let dropped = this.#nodes.compact(stable) + this.#edges.compact(stable);
+
+	for (const id of [...this.#nodeFields.keys()]) {
+		if (this.#nodes.history(id).added.size &gt; 0) continue;
+		this.#nodeFields.delete(id);
+		this.#labels.delete(id);
+		dropped += 1;
+	}
+
+	for (const id of [...this.#edgeFields.keys()]) {
+		if (this.#edges.history(id).added.size &gt; 0) continue;
+		this.#edgeFields.delete(id);
+		this.#labels.delete(id);
+		dropped += 1;
+	}
+
+	return dropped;
+}</code></pre>
+</figure>
+<p>The doc comment is the safety argument, and it is deliberately in the imperative: <code>stable</code> <strong>must</strong> be a vector every replica is known to dominate. In practice that is what the server computes from acknowledged client cursors, minus a retention window. There is no way for the type system to enforce it, so it is written down where somebody about to call it will read it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Two replicas in the same state produce identical snapshot bytes.</li><li>You can say which tombstones are collectable and which are not, and why.</li><li>You can explain why a restored document must observe every stamp in its own snapshot.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="reconciliation.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Keeping the projection honest</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-log.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A database that stores operations</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

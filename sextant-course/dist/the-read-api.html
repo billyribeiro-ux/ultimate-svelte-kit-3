@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The read API, and the HTTP method almost nobody uses — Building Sextant</title>
+<meta name="description" content="Where a remote function is the wrong tool, why `QUERY` rather than `GET` or `POST`, and why `POST` is accepted anyway.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">40 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 86.95652173913044%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html" aria-current="page"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 40</p>
+			<h1>The read API, and the HTTP method almost nobody uses</h1>
+			<p class="lede">Where a remote function is the wrong tool, why <code>QUERY</code> rather than <code>GET</code> or <code>POST</code>, and why <code>POST</code> is accepted anyway.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Expose a read to callers that are not this application, without lying to caches about what it does.</p></aside>
+			<p>The previous chapter’s rule for choosing between the four kinds of remote function has a case it does not cover, and it is not a rare one: <strong>the caller is not a browser running this application.</strong> A scheduled report, a Grafana panel, another service’s health check, somebody’s shell script. A remote function’s entire value is that a component imports it and the types run end to end, and none of that reaches a Go binary reading a YAML file. Those callers get an HTTP endpoint and an API key, the same way the collector does.</p>
+<p>There is a second reason this route had to exist, and it is the more embarrassing one. The <code>read</code> scope has been in the schema since chapter 25, and until this route nothing accepted it — a key could hold a permission that no handler would honour. That is not a small gap: it is a permission that exists only in the mind of whoever ticked the box.</p>
+<h3 id="why-query"><code>GET</code> cannot, and <code>POST</code> lies</h3>
+<p>Running a query is a <strong>read</strong>: safe, idempotent, no side effects. <code>GET</code> says exactly that and cannot carry a body, so the SQF text has to travel in the URL — where three separate things go wrong.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22…
+
+  1. length    SQF is bounded at 4,000 characters here. URLs are bounded at
+               about 2,000 by intermediaries that never announce it — so a long
+               query fails somewhere inside somebody's network with a 414.
+  2. logs      every proxy, load balancer and CDN on the path writes the full
+               URL to an access log. That user id is now in three log files
+               that were never meant to hold it.
+  3. escaping  a query is quotes, pipes, brackets and spaces. Percent-encoding
+               all of it is the step every client gets wrong once.</code></pre>
+</figure>
+<p><code>POST</code> fixes all three and then lies about the semantics. It tells every cache and every retry policy that this request *changes something*: nothing may cache it, and a well-behaved client library will refuse to retry it on a timeout — which for a read is the one case where retrying is obviously safe.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:208-211</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * A read, and cacheable in principle — but never by a shared cache.
+ *
+ * The response depends entirely on which key asked, and the key is in a</code></pre>
+</figure>
+<p><code>QUERY</code> — which SvelteKit 3 added to <code>+server</code> handlers in <code>3.0.0-next.24</code> — is the method that means &quot;a read, with a body&quot;. Safe and idempotent like <code>GET</code>, a body like <code>POST</code>. Exporting it is the same one-line shape as exporting <code>GET</code>, because it is just another method handler; what is new is that the router recognises the name.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>POST</code> is accepted as well</h4>
+	<p><code>QUERY</code> is new, and a great deal of software between a script and this server will refuse a method it has never heard of: old proxies, corporate egress filters, HTTP client libraries that validate the method against a hard-coded list. The alias costs one line and is the difference between an API somebody can use today and one they file a ticket about. The response names the method it was answered with, so a client can tell which path it actually got.</p>
+</aside>
+<h3 id="the-body">The body, in the vocabulary the interface already uses</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:57-77</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The body.
+ *
+ * `range` takes the same expressions the interface uses — `-6h`, or
+ * `from..to` in epoch milliseconds — so a link copied out of the address bar
+ * pastes straight into a script. Sharing the vocabulary is most of what makes an
+ * API feel like the same product.
+ */
+/**
+ * `_`-prefixed, so it can be tested from the file next door.
+ *
+ * SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP
+ * methods plus `prerender`, `config` and a few others — with one deliberate
+ * escape hatch: `if (key[0] === '_' … ) continue`. The underscore is the
+ * convention for &quot;this is not a route contract, it is an implementation detail
+ * somebody needs to reach&quot;.
+ *
+ * What it is reached *by* is the new part. `+server.test.ts` sitting beside this
+ * file used to be a build error: every `+`-prefixed file in `src/routes` was a
+ * route, so a test named after the thing it tests became a route that exported
+ * `describe`. SvelteKit 3.0.0-next.19 excludes `+` files containing `.test.`,</code></pre>
+</figure>
+<p><code>range</code> takes the same expressions the address bar does — <code>-6h</code>, or <code>from..to</code> in epoch milliseconds — so a link somebody copied out of the interface pastes straight into a script. Sharing the vocabulary is most of what makes an API feel like the same product rather than a second one bolted on.</p>
+<p>The default <code>maxRows</code> is lower than the interface’s ceiling on purpose. A machine asking for twenty thousand rows on a schedule is nearly always a query that wanted a <code>summarize</code>, and the honest way to find that out is a truncation flag in the first response rather than a slow endpoint nobody looks at.</p>
+<h3 id="the-scope">The scope, finally load-bearing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:93-103</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">});
+
+/** One implementation; two methods point at it. See the note above. */
+async function handle(request: Request, method: 'QUERY' | 'POST'): Promise&lt;Response&gt; {
+	const access = await authenticateKey(request.headers.get('authorization'));
+
+	if (!access) {
+		return json(
+			{ message: 'Provide a valid API key in the Authorization header.' },
+			{
+				status: 401,</code></pre>
+</figure>
+<p>The two scopes exist because they belong to different machines. A collector writes and must never be able to read another team’s logs; a reporting job is the exact reverse. A key that could do both would make a compromised collector a data breach rather than a nuisance — and a collector’s key lives in a config file on every host, which is the worst place a read credential could be.</p>
+<p>The refusal is a <strong>403, not a 401</strong>. The credential is real; the scope is not. Answering 401 would tell the caller to go and fetch a better token, which it cannot do.</p>
+<h3 id="one-language">The same parser and the same checker</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:126-146</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}
+
+const parsed = v.safeParse(_RequestSchema, body);
+if (!parsed.success) {
+	return json(
+		{
+			message: 'The request body is not valid.',
+			issues: parsed.issues.map((issue) =&gt; ({
+				path: issue.path?.map((segment) =&gt; String(segment.key)).join('.') ?? '',
+				message: issue.message
+			}))
+		},
+		{ status: 400 }
+	);
+}
+
+/*
+ * The same parser and the same checker the editor uses.
+ *
+ * Not a second, laxer path for machines. A query that the interface refuses
+ * must be refused here too, or the two disagree about what the language is —</code></pre>
+</figure>
+<p>Not a second, laxer path for machines. A query the interface refuses must be refused here too, or the two disagree about what the language *is* — and the API becomes the place people go to run the thing the product told them was wrong. The span comes back with the message so a client can underline exactly what the editor would.</p>
+<h3 id="the-response">What the response has to say out loud</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:173-205</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		{ status: 400 }
+	);
+}
+
+const window = resolve(parsed.output.range);
+
+const result = await run(query.query, {
+	tenantId: access.tenantId,
+	from: window.from,
+	to: window.to,
+	maxRows: parsed.output.maxRows,
+	// adapter-node aborts this when the caller disconnects, so a query whose
+	// client has gone away stops before it finishes for nobody.
+	signal: request.signal
+});
+
+return json(
+	{
+		columns: result.columns,
+		rows: result.rows,
+		/*
+		 * Truncation, said in the payload rather than implied by the row count.
+		 *
+		 * A machine cannot look at a banner. A script that pages by asking for a
+		 * thousand rows and getting a thousand has no way to tell &quot;that is all of
+		 * them&quot; from &quot;that is the first page&quot; unless the response says so.
+		 */
+		truncated: result.truncated,
+		scanned: result.scanned,
+		pushed: result.pushed,
+		range: { from: window.from, to: window.to, expression: window.expression },
+		method
+	},</code></pre>
+</figure>
+<p><code>truncated</code> is in the payload rather than implied by the row count, because a machine cannot look at a banner. A script that pages by asking for a thousand rows and receiving a thousand has no way to distinguish &quot;that is all of them&quot; from &quot;that is the first page&quot; unless the response says so. <code>pushed</code> is the same courtesy about speed: it names which stages reached SQL, so a caller can tell a fast query from a slow one without timing it.</p>
+<aside class="callout callout--warn"><p><code>Cache-Control: private, no-store</code> <strong>and</strong> <code>Vary: Authorization</code>. The response depends entirely on which key asked, and the key is in a header rather than the URL — so a shared cache keyed on the URL alone would serve one tenant’s rows to another. In a product whose whole content is other people’s logs, that is the worst caching bug available.</p></aside>
+<h3 id="the-config-that-did-nothing">The CSRF exemption that did nothing</h3>
+<p>Both this route and the ingest route used to end with <code>export const config = { csrf: { checkOrigin: false } }</code> and a confident paragraph about exempting machines from the cross-site check. It had no effect whatsoever, and the tests passed either way — which is exactly why it survived so long.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>node_modules/@sveltejs/kit/src/runtime/server/csrf.js
+
+  const mutating_form_methods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+  export function is_csrf_forbidden({ request, request_origin, self_origin, trusted_origins }) {
+      return (
+          (!request.headers.get('content-type') || is_form_content_type(request)) &amp;&amp;
+          mutating_form_methods.has(request.method) &amp;&amp;
+          request_origin !== self_origin &amp;&amp;
+          (!request_origin || !trusted_origins.includes(request_origin))
+      );
+  }</code></pre>
+</figure>
+<p>Three things fall out of those nine lines. <strong><code>export const config</code> is adapter configuration</strong> — runtime, region, that sort of thing — and an unrecognised key is ignored in silence. <strong>The check runs before route resolution</strong>, in <code>respond.js</code>, against app-level settings; a route cannot opt out of a decision made before it has been found. And <strong><code>checkOrigin</code> is gone in SvelteKit 3</strong> — the replacement is <code>csrf.trustedOrigins</code>, which takes origins and is app-wide.</p>
+<p>The exemption was also unnecessary, which is the part worth remembering. The check only fires for content types a cross-site HTML form can actually produce. A collector sends JSON, so it was never in the checked set — and <code>QUERY</code> is not even a mutating form method, so it is not in the set at all.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ curl -X POST -H 'origin: https://evil.example' \\
+       -H 'content-type: application/json' -d '{}' …/api/v1/ingest
+HTTP/1.1 401 Unauthorized          ← reached the handler
+
+$ curl -X POST -H 'origin: https://evil.example' -d 'a=1' …/api/v1/ingest
+HTTP/1.1 403 Forbidden             ← a form submission, still refused
+
+$ curl -X PUT  -H 'content-type: application/json' -d '{}' …/api/v1/query
+HTTP/1.1 405 Method Not Allowed
+allow: POST, QUERY                 ← QUERY is a real method handler</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>So what does keep a browser out?</h4>
+	<p>The <code>Authorization</code> header. No cross-site form can set one, and a cross-origin <code>fetch</code> that sets one needs a preflight — which this app answers with a 405 and no <code>Access-Control-Allow-Origin</code>. The requests a browser can be tricked into making are exactly the ones these endpoints refuse; the ones they accept are the ones a browser cannot make. That was always the real argument, and the config export was standing in front of it taking the credit.</p>
+</aside>
+<aside class="callout callout--warn"><p>A <code>POST</code> with <strong>no</strong> content type at all *is* in the checked set. A collector that omits the header gets a 403 about cross-site form submissions, which will make no sense to whoever is reading its log.</p></aside>
+<h3 id="proving-it">Testing it as a machine, not as a browser</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/query-api.e2e.ts<span class="code__lines">:3-12</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE READ API
+ * ============
+ *
+ * Driven with `request` rather than a browser, because the caller is a machine:
+ * a header, a JSON body, and no cookie. `storageState` is cleared so the request
+ * context cannot accidentally authenticate as the signed-in person — which would
+ * test the session path and prove nothing about the key path.
+ */
+test.use({ storageState: { cookies: [], origins: [] } });</code></pre>
+</figure>
+<p>Clearing <code>storageState</code> is the whole point of the setup. Playwright’s <code>request</code> fixture otherwise inherits the signed-in session, and the tests below would pass by authenticating as a person — proving nothing about the key path they claim to cover.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/query-api.e2e.ts<span class="code__lines">:116-139</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('an ingest key may not read', async ({ request, browser }) =&gt; {
+	const context = await browser.newContext({ storageState: 'e2e/.auth/state.json' });
+	const page = await context.newPage();
+
+	await page.goto('/demo/settings');
+	await page.getByLabel('Name').fill(`ingest key ${Date.now()}`);
+	await page.getByLabel('Scope').selectOption('ingest');
+	await page.getByRole('button', { name: 'Create key' }).click();
+
+	const revealed = page.getByRole('alert').getByText(/^sxt_/);
+	await expect(revealed).toBeVisible();
+	const ingestKey = (await revealed.textContent())?.trim() ?? '';
+	await context.close();
+
+	const response = await request.fetch('/api/v1/query', {
+		method: 'QUERY',
+		headers: { authorization: `Bearer ${ingestKey}` },
+		data: { q: 'from logs | take 1' }
+	});
+
+	// 403, not 401: the credential is real and the scope is not. Answering 401
+	// would tell a collector to go and fetch a better token, which it cannot.
+	expect(response.status()).toBe(403);
+});</code></pre>
+</figure>
+<p>The key is minted through the settings form in a real browser, because that is the only place a key exists in clear — the database stores a hash, by design. It costs one page load and keeps the test honest: it uses a key a person could actually have created.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li><code>curl -X QUERY</code> with a <code>read</code> key returns rows; the same call with an ingest key returns 403.</li><li>A query the editor rejects is rejected here with the same message and span.</li><li><code>maxRows: 5</code> on a bigger result comes back with <code>truncated: true</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="remote-functions.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Remote functions: query, batch, form and command</span>
+			</a>
+			<a class="pager__link pager__link--next" href="hooks.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Hooks: auth, security, `handleFetch`, `handleError` and `init`</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

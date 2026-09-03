@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pointers, wheels and one strange standard — Building Tessera</title>
+<meta name="description" content="Attachments rather than actions, pointer capture, `deltaMode`, and the blur listener that stops the canvas freezing.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 59.09090909090909%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html" aria-current="page"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>Pointers, wheels and one strange standard</h1>
+			<p class="lede">Attachments rather than actions, pointer capture, <code>deltaMode</code>, and the blur listener that stops the canvas freezing.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Handle mouse, trackpad, touch and keyboard on one surface, and re-attach nothing sixty times a second.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/gestures.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * GESTURES
+ * ========
+ *
+ * Pointer, wheel and keyboard handling for the canvas, as **attachments**.
+ *
+ * `{@attach}` rather than `use:`. An action's `{ update, destroy }` return is
+ * marked legacy in the Svelte 5 documentation, and attachments fix the thing
+ * that made actions awkward here: an action runs once and has to be told when
+ * its arguments change, while an attachment is an effect and simply re-runs.
+ *
+ * The subtlety that matters for this file is the opposite one — most of these
+ * must *not* re-run. Re-attaching a wheel listener sixty times a second because
+ * the camera moved would be a disaster, so anything that changes often is read
+ * through a getter inside a nested `$effect`, which is the documented pattern
+ * for controlling when an attachment re-runs.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4><code>{@attach}</code> rather than <code>use:</code></h4>
+	<p>An action’s <code>{ update, destroy }</code> return is marked legacy in the Svelte 5 documentation, and attachments fix the thing that made actions awkward: an action runs once and has to be *told* when its arguments change, while an attachment is an effect and simply re-runs. The subtlety in this file is the opposite one — most of these must <strong>not</strong> re-run. Re-attaching a wheel listener because the camera moved would be a disaster, so anything that changes often is read through a getter inside a nested <code>$effect</code>.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/gestures.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Keep the camera's idea of the viewport in step with the element's real size.
+ *
+ * A `ResizeObserver`, not a `resize` listener on `window`. The board's element
+ * changes size when a side panel opens, when the on-screen keyboard appears, and
+ * when the window is resized — and only the last of those fires a window event.
+ */
+export function viewportSize(camera: Camera): Attachment&lt;HTMLElement&gt; {
+	return (element) =&gt; {
+		const observer = new ResizeObserver(([entry]) =&gt; {
+			if (!entry) return;
+			const box = entry.contentRect;
+			camera.size = { w: box.width, h: box.height };
+		});
+
+		observer.observe(element);
+
+		// Measure once immediately. The observer fires asynchronously, and the first
+		// frame otherwise renders with a zero-sized viewport — which makes `fit()`
+		// divide by zero and every node disappear.
+		const box = element.getBoundingClientRect();
+		camera.size = { w: box.width, h: box.height };
+
+		return () =&gt; observer.disconnect();
+	};
+}</code></pre>
+</figure>
+<p>A <code>ResizeObserver</code>, not a <code>resize</code> listener on <code>window</code>. The board’s element changes size when a side panel opens, when the on-screen keyboard appears, and when the window is resized — and only the last of those fires a window event.</p>
+<p>The immediate measurement afterwards is not redundant. The observer fires asynchronously, so the first frame otherwise renders with a zero-sized viewport — which is the <code>fit()</code> divide-by-zero from the last chapter, arriving from a different direction.</p>
+<h3 id="the-wheel">The wheel, and two things nobody tells you</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/gestures.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const onWheel = (event: WheelEvent) =&gt; {
+	if (!options.enabled()) return;
+
+	/*
+	 * `ctrlKey` on a wheel event means a trackpad pinch, on every platform and
+	 * in every browser. It is a genuine standard hiding behind a strange name,
+	 * and it is the only way to tell a pinch from a scroll.
+	 */
+	if (event.ctrlKey || event.metaKey) {
+		event.preventDefault();
+		camera.zoomAt(pointOf(event, element), Math.exp(-event.deltaY * ZOOM_SENSITIVITY));
+		return;
+	}
+
+	event.preventDefault();
+
+	/*
+	 * `deltaMode` is not always pixels.
+	 *
+	 * A mouse wheel on Firefox reports `DOM_DELTA_LINE`, where `deltaY` is
+	 * about 3 — so treating it as pixels makes the board barely move, and the
+	 * bug only appears on one browser with one kind of input device.
+	 */
+	const scale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
+	camera.panBy(-event.deltaX * scale, -event.deltaY * scale);</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>ctrlKey</code> on a wheel event means <strong>a trackpad pinch</strong>, on every platform and in every browser, whether or not a control key is anywhere near the machine. It is a genuine de-facto standard hiding behind a strange name, and it is the only way to tell a pinch from a scroll.</p></aside>
+<aside class="callout callout--warn"><p><code>deltaMode</code> is not always pixels. A mouse wheel on Firefox reports <code>DOM_DELTA_LINE</code>, where <code>deltaY</code> is about 3 — so treating it as pixels makes the board barely move. The bug appears on one browser with one kind of input device, which is exactly the sort of thing that survives to production.</p></aside>
+<h3 id="capture">Pointer capture</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/gestures.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">};
+
+const onPointerDown = (event: PointerEvent) =&gt; {
+	if (event.pointerType === 'touch') {
+		touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		if (touches.size === 2) pinchDistance = spread(touches);
+		return;
+	}
+
+	// Middle button, or space held — the two conventions people arrive with.
+	const wantsPan = event.button === 1 || (event.button === 0 &amp;&amp; spaceHeld);
+	if (!wantsPan || !options.enabled()) return;
+
+	event.preventDefault();
+	panning = true;
+	last = { x: event.clientX, y: event.clientY };
+
+	/*
+	 * Capture the pointer.
+	 *
+	 * Without it, a fast pan that leaves the element stops dead and the board
+	 * is left mid-gesture with no pointerup ever arriving. With it, every
+	 * subsequent event for this pointer is delivered here until release.
+	 */
+	element.setPointerCapture(event.pointerId);
+};</code></pre>
+</figure>
+<p>Without capture, a fast pan that leaves the element stops dead and the board is left mid-gesture with no <code>pointerup</code> ever arriving. With it, every subsequent event for that pointer is delivered here until release.</p>
+<aside class="callout callout--warn"><p>Pointer capture has a consequence that bites later, in chapter 31: it redirects the *compatibility mouse events* too, so an <code>ondblclick</code> handler on a captured child element never fires. Tessera’s rename-on-double-click had to move up to the canvas because of it. Worth knowing now rather than discovering at 11pm.</p></aside>
+<h3 id="the-frozen-canvas">The listener that stops the canvas freezing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/canvas/gestures.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const onKeyDown = (event: KeyboardEvent) =&gt; {
+	if (event.code !== 'Space') return;
+	// Not while typing a label — space is a space.
+	if (isTyping(event.target)) return;
+	spaceHeld = true;
+	element.dataset.grabbing = 'true';
+};
+
+const onKeyUp = (event: KeyboardEvent) =&gt; {
+	if (event.code !== 'Space') return;
+	spaceHeld = false;
+	delete element.dataset.grabbing;
+};
+
+/*
+ * A blur listener as well as keyup.
+ *
+ * Alt-tabbing away with space held never delivers the keyup, so the board
+ * comes back stuck in pan mode and clicking selects nothing. It looks like
+ * the canvas has frozen.
+ */
+const onBlur = () =&gt; {
+	spaceHeld = false;
+	panning = false;
+	delete element.dataset.grabbing;
+};
+
+// `passive: false` — these handlers call `preventDefault`, and a passive
+// listener that does so is ignored with only a console warning.
+element.addEventListener('wheel', onWheel, { passive: false });
+element.addEventListener('pointerdown', onPointerDown);
+element.addEventListener('pointermove', onPointerMove);
+element.addEventListener('pointerup', onPointerUp);
+element.addEventListener('pointercancel', onPointerUp);
+addEventListener('keydown', onKeyDown);
+addEventListener('keyup', onKeyUp);
+addEventListener('blur', onBlur);</code></pre>
+</figure>
+<p>Alt-tabbing away with space held never delivers the <code>keyup</code>, so the board comes back stuck in pan mode and clicking selects nothing. It looks like the canvas has frozen, and it is three lines to prevent. <strong>Any state driven by a held key needs a <code>blur</code> listener</strong>; there is no exception to this and it is always found the hard way.</p>
+<p>And <code>{ passive: false }</code> on the wheel listener, because these handlers call <code>preventDefault</code> and a passive listener that does so is ignored with only a console warning — which is to say, a scroll you cannot prevent and no error to search for.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A trackpad pinch zooms and a two-finger scroll pans.</li><li>A pan that leaves the window still ends when the button is released.</li><li>Alt-tabbing mid-gesture leaves the canvas usable.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-camera.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The camera</span>
+			</a>
+			<a class="pager__link pager__link--next" href="geometry.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Geometry that is only numbers</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

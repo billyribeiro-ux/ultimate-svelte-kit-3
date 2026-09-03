@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guides: Markdown, prerendered, no JavaScript — Building Meridian</title>
+<meta name="description" content="Four `.svx` files with validated frontmatter and a Svelte component inside the prose; `import.meta.glob` to find them; `prerender = true` and `csr = false` on the routes; `entries` for the dynamic one; a chrome that does not know who you are; and the two prerendering errors that shaped the root layout.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">34 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 75.55555555555556%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html" aria-current="page"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 34</p>
+			<h1>Guides: Markdown, prerendered, no JavaScript</h1>
+			<p class="lede">Four <code>.svx</code> files with validated frontmatter and a Svelte component inside the prose; <code>import.meta.glob</code> to find them; <code>prerender = true</code> and <code>csr = false</code> on the routes; <code>entries</code> for the dynamic one; a chrome that does not know who you are; and the two prerendering errors that shaped the root layout.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Ship a static content section inside a dynamic app — compiled at build time, served as files in three languages, with zero client JavaScript — and know what prerendering forbids.</p></aside>
+			<p>The guides are the static site inside the app: four short travel reads, written in Markdown, rendered once at build time in each language, and shipped without a byte of JavaScript. Every constraint in this chapter comes from that last clause.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/content/guides/lisbon-in-three-days.svx<span class="code__lines">:1-15</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">---
+title: Lisbon in three days
+summary: Seven hills, one river, a tram that is older than your grandparents, and an afternoon that should be spent in Sintra. A first visit, paced for walking.
+place: lisbon
+minutes: 4
+published: '2026-07-18'
+---
+
+&lt;script&gt;
+	import Leg from '#lib/guides/Leg.svelte';
+&lt;/script&gt;
+
+Lisbon is a city you climb. Every neighbourhood sits on its own hill, every hill has a viewpoint at the top — a *miradouro* — and the honest way to plan a day is to pick a hill and stay on it until the light changes. Three days is enough for three hills and one escape.
+
+## Day one — Alfama and the castle</code></pre>
+</figure>
+<p>A <code>.svx</code> file is Markdown with frontmatter and — because mdsvex compiles it to a Svelte component — any Svelte in the middle of it. The <code>&lt;script&gt;</code> imports a component and the prose uses it: <code>&lt;Leg from=&quot;lisbon&quot; to=&quot;sintra&quot; /&gt;</code> renders the distance and compass direction between two gazetteer places, computed by the geodesy library at build time, so the reader receives a sentence.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/guides/Leg.svelte<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { bearing, compassPoint, distance, formatDistance } from '@meridian/waypoint/geo';
+	import gazetteer from '#lib/data/places.json' with { type: 'json' };
+	import { getLocale } from '#lib/paraglide/runtime.js';
+
+	/**
+	 * A COMPONENT INSIDE MARKDOWN
+	 * ===========================
+	 *
+	 * `&lt;Leg from=&quot;lisbon&quot; to=&quot;sintra&quot; /&gt;` in a guide renders the distance and
+	 * the compass direction between two gazetteer places, computed by the
+	 * geodesy library. The guides are prerendered, so the arithmetic runs once
+	 * at build time and the reader receives a sentence.
+	 */
+	interface Props {
+		from: string;
+		to: string;
+	}
+
+	let { from, to }: Props = $props();
+
+	const place = (id: string) =&gt; {
+		const found = gazetteer.find((p) =&gt; p.id === id);
+		if (!found) throw new Error(`Leg: unknown place &quot;${id}&quot;`);
+		return found;
+	};
+
+	const a = $derived(place(from));
+	const b = $derived(place(to));
+	const length = $derived(formatDistance(distance(a, b), getLocale()));
+	const direction = $derived(compassPoint(bearing(a, b)));
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/guides/index.ts<span class="code__lines">:1-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE GUIDES
+ * ==========
+ *
+ * Every `.svx` file in `src/content/guides` is a guide. mdsvex compiles each
+ * one into a Svelte component (the Markdown becomes markup, the frontmatter
+ * becomes a `metadata` export), and `import.meta.glob` — a Vite feature —
+ * imports the whole folder at build time, so adding a guide is adding a
+ * file. No registry to update, no list to forget.
+ *
+ * The frontmatter is *validated*, with the same valibot the forms use. A typo
+ * in `published:` is a build error here rather than an `Invalid Date` on a
+ * page that shipped.
+ */
+
+import type { Component } from 'svelte';
+import * as v from 'valibot';
+import gazetteer from '#lib/data/places.json' with { type: 'json' };
+
+const GuideMetaSchema = v.object({
+	title: v.pipe(v.string(), v.nonEmpty()),
+	summary: v.pipe(v.string(), v.nonEmpty()),
+	/** A gazetteer id, when the guide is about one place. */
+	place: v.optional(v.string()),
+	minutes: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	published: v.pipe(v.string(), v.isoDate())
+});
+
+export type GuideMeta = v.InferOutput&lt;typeof GuideMetaSchema&gt;;
+
+export interface Guide extends GuideMeta {
+	readonly slug: string;
+	/** Where the guide is about, when it is about somewhere. */
+	readonly placeName: string | null;
+	readonly country: string | null;
+	readonly component: Component;
+}
+
+/*
+ * `eager: true` imports every module now rather than returning a function
+ * that imports it later. Eager is right here: the list page needs every
+ * guide's title, and the whole folder is a handful of files.
+ */
+const modules = import.meta.glob&lt;{ default: Component; metadata: unknown }&gt;(
+	'/src/content/guides/*.svx',
+	{ eager: true }
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/guides/index.ts<span class="code__lines">:49-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const guides: readonly Guide[] = Object.entries(modules)
+	.map(([path, module]) =&gt; {
+		const slug =
+			path
+				.split('/')
+				.pop()
+				?.replace(/\.svx$/, '') ?? path;
+		const meta = v.parse(GuideMetaSchema, module.metadata, {
+			message: `Guide ${slug}: invalid frontmatter`
+		});
+		const place = meta.place ? gazetteer.find((p) =&gt; p.id === meta.place) : undefined;
+		if (meta.place &amp;&amp; !place) throw new Error(`Guide ${slug}: unknown place &quot;${meta.place}&quot;`);
+		return {
+			...meta,
+			slug,
+			placeName: place?.name ?? null,
+			country: place?.country ?? null,
+			component: module.default
+		};
+	})
+	.sort((a, b) =&gt; (a.published &lt; b.published ? 1 : -1));
+
+export function guideBySlug(slug: string): Guide | undefined {
+	return guides.find((guide) =&gt; guide.slug === slug);
+}
+
+/** The guide for a place, if one was written. The explore page links to it. */
+export function guideForPlace(placeId: string): Guide | undefined {
+	return guides.find((guide) =&gt; guide.place === placeId);
+}</code></pre>
+</figure>
+<p><code>import.meta.glob</code> is Vite’s: it imports every file matching the pattern, eagerly here because the list page needs every title and the folder is a handful of files. The frontmatter mdsvex exports as <code>metadata</code> is <strong>validated</strong> with valibot — a typo in <code>published:</code> is a build error, not an <code>Invalid Date</code> on a page that shipped — and a guide about a place the gazetteer does not know fails the build too.</p>
+<h3 id="the-routes">The routes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guides/+page.ts<span class="code__lines">:1-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * PRERENDERED, AND NO JAVASCRIPT
+ * ==============================
+ *
+ * `prerender = true`: this page is rendered once, at build time, to a file
+ * that any static host — or the adapter-node server — sends as-is.
+ *
+ * `csr = false`: no client-side JavaScript is shipped for it. Not &quot;deferred&quot;,
+ * not &quot;hydrated later&quot; — none. A list of links needs none, and a page that
+ * ships nothing cannot be slow to become interactive.
+ *
+ * Both are page options: exported from `+page.ts` so SvelteKit reads them
+ * before rendering anything.
+ */
+export const prerender = true;
+export const csr = false;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guides/[guide]/+page.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
+import type { EntryGenerator, PageLoad } from './$types';
+import { guideBySlug, guides } from '#lib/guides/index.ts';
+
+export const prerender = true;
+export const csr = false;
+
+/*
+ * WHICH PAGES EXIST
+ * =================
+ *
+ * A dynamic route can only be prerendered if SvelteKit knows the values of
+ * its parameters. The crawler finds most of them by following links from
+ * pages it has already rendered; `entries` says them out loud, so a guide
+ * that nothing links to is still built.
+ */
+export const entries: EntryGenerator = () =&gt; guides.map((guide) =&gt; ({ guide: guide.slug }));
+
+export const load: PageLoad = ({ params }) =&gt; {
+	const guide = guideBySlug(params.guide);
+	if (!guide) error(404, 'There is no guide by that name.');
+	return { guide };
+};</code></pre>
+</figure>
+<p>Two page options do the work. <code>prerender = true</code> renders the page once at build time to a file. <code>csr = false</code> ships no client JavaScript for it — not deferred, none. A dynamic route can only be prerendered if SvelteKit knows its parameter values; the crawler finds most by following links, and <code>entries</code> says them out loud so a guide nothing links to is still built. The <code>load</code> is universal and runs at build time; the 404 for an unknown slug is what a request for a page that was not built gets from the server, because prerendered routes are not in the runtime manifest at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guides/+page.svelte<span class="code__lines">:1-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { formatDate } from '#lib/domain/dates.ts';
+	import { guides } from '#lib/guides/index.ts';
+
+	const locale = getLocale();
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{m.guides_title()} — {m.app_name()}&lt;/title&gt;
+	&lt;meta name=&quot;description&quot; content={m.guides_lede()} /&gt;
+&lt;/svelte:head&gt;
+
+&lt;section class=&quot;container guides stack stack--lg&quot;&gt;
+	&lt;header class=&quot;stack stack--sm&quot;&gt;
+		&lt;h1&gt;{m.guides_title()}&lt;/h1&gt;
+		&lt;p class=&quot;lede&quot;&gt;{m.guides_lede()}&lt;/p&gt;
+	&lt;/header&gt;
+
+	&lt;ul class=&quot;list&quot; role=&quot;list&quot;&gt;
+		{#each guides as guide (guide.slug)}
+			&lt;li class=&quot;card card--pad stack stack--sm&quot;&gt;
+				&lt;!--
+					`resolve` from `$app/paths` takes a route id and its parameters and
+					gives back a pathname — type-checked against the routes that exist,
+					so renaming the folder is a compile error here rather than a 404.
+				--&gt;
+				&lt;h2 class=&quot;title&quot;&gt;
+					&lt;a href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}&gt;
+						{guide.title}
+					&lt;/a&gt;
+				&lt;/h2&gt;
+				&lt;p class=&quot;muted&quot;&gt;{guide.summary}&lt;/p&gt;
+				&lt;p class=&quot;cluster meta&quot;&gt;
+					{#if guide.placeName}&lt;span class=&quot;chip&quot;&gt;{guide.placeName}&lt;/span&gt;{/if}
+					&lt;span&gt;{m.guides_read_minutes({ minutes: guide.minutes })}&lt;/span&gt;
+					&lt;span&gt;·&lt;/span&gt;
+					&lt;time datetime={guide.published}&gt;{formatDate(guide.published, locale, 'long')}&lt;/time&gt;
+				&lt;/p&gt;
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+
+	&lt;p class=&quot;hint&quot;&gt;{m.guides_static_note()}&lt;/p&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { formatDate } from '#lib/domain/dates.ts';
+
+	let { data } = $props();
+
+	const locale = getLocale();
+	/*
+	 * The guide is a component — mdsvex compiled the Markdown into one — and
+	 * `load` handed it over. Rendering a component held in a variable is
+	 * `&lt;Guide /&gt;`, the same as any other.
+	 */
+	const Guide = $derived(data.guide.component);
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{data.guide.title} — {m.guides_title()}&lt;/title&gt;
+	&lt;meta name=&quot;description&quot; content={data.guide.summary} /&gt;
+&lt;/svelte:head&gt;
+
+&lt;article class=&quot;container guide&quot;&gt;
+	&lt;header class=&quot;guide__header stack stack--sm&quot;&gt;
+		&lt;p&gt;&lt;a href={localizeHref('/guides')}&gt;← {m.guides_all()}&lt;/a&gt;&lt;/p&gt;
+		&lt;h1&gt;{data.guide.title}&lt;/h1&gt;
+		&lt;p class=&quot;lede&quot;&gt;{data.guide.summary}&lt;/p&gt;
+		&lt;p class=&quot;cluster meta&quot;&gt;
+			{#if data.guide.placeName}&lt;span class=&quot;chip&quot;&gt;{data.guide.placeName}&lt;/span&gt;{/if}
+			&lt;span&gt;{m.guides_read_minutes({ minutes: data.guide.minutes })}&lt;/span&gt;
+			&lt;span&gt;·&lt;/span&gt;
+			&lt;span&gt;
+				{m.guides_published({ date: formatDate(data.guide.published, locale, 'long') })}
+			&lt;/span&gt;
+		&lt;/p&gt;
+	&lt;/header&gt;
+
+	&lt;div class=&quot;prose&quot;&gt;
+		&lt;Guide /&gt;
+	&lt;/div&gt;
+&lt;/article&gt;</code></pre>
+</figure>
+<p>The guide is a component — mdsvex compiled the Markdown into one — and <code>load</code> handed it over; rendering a component held in a variable is <code>&lt;Guide /&gt;</code>, the same as any other. The dates are formatted in the page’s locale, which is decided per prerendered file: the crawler follows the language links, <code>reroute</code> maps <code>/de/guides</code> to the same route, the middleware sets German, and the output has a <code>de/guides.html</code> beside <code>guides.html</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guides/+layout.svelte<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { CompassRoseIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import Footer from '#lib/ui/Footer.svelte';
+	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
+
+	/*
+	 * A CHROME THAT DOES NOT KNOW YOU
+	 * ===============================
+	 *
+	 * These pages are prerendered and served with no JavaScript, so nothing
+	 * here can depend on who is looking. There is no &quot;signed in as&quot;, no theme
+	 * button (the theme still applies: the boot script in `app.html` reads
+	 * the stored choice before the first paint), and the language links are
+	 * plain links. It is a small, honest header for a small, static site
+	 * inside the app.
+	 */
+	let { children } = $props();
+&lt;/script&gt;
+
+&lt;a class=&quot;skip&quot; href=&quot;#main&quot;&gt;{m.nav_skip()}&lt;/a&gt;
+
+&lt;header class=&quot;guides-header&quot;&gt;
+	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
+		&lt;a class=&quot;brand&quot; href={localizeHref('/')}&gt;
+			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
+			{m.app_name()}
+		&lt;/a&gt;
+		&lt;nav class=&quot;cluster&quot; aria-label={m.nav_menu()}&gt;
+			&lt;a href={localizeHref('/guides')} aria-current=&quot;page&quot;&gt;{m.nav_guides()}&lt;/a&gt;
+			&lt;a href={localizeHref('/explore')}&gt;{m.nav_explore()}&lt;/a&gt;
+			&lt;a href={localizeHref('/trips')}&gt;{m.nav_trips()}&lt;/a&gt;
+			&lt;LocaleSwitcher keepSearch={false} /&gt;
+		&lt;/nav&gt;
+	&lt;/div&gt;
+&lt;/header&gt;
+
+&lt;main id=&quot;main&quot; class=&quot;main&quot;&gt;
+	{@render children()}
+&lt;/main&gt;
+
+&lt;Footer /&gt;</code></pre>
+</figure>
+<p>A chrome that does not know you. These pages cannot depend on who is looking, so there is no “signed in as”, no theme button — the boot script still applies the stored theme — and the language links are plain links with <code>keepSearch={false}</code>. It is a small, honest header for a small, static site.</p>
+<h3 id="what-prerendering-forbids">Two errors that shaped the app</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run build
+…
+Error: Cannot use prerendering if page template contains %sveltekit.nonce%
+   → app.html: the boot script is allowed by its HASH instead (vite.config.ts)
+
+$ pnpm run build
+…
+Error: Cannot access url.search on a page with prerendering enabled
+   → LocaleSwitcher: keepSearch={false} on prerendered pages</code></pre>
+</figure>
+<p>Both errors are SvelteKit refusing to bake something request-specific into a file. A nonce is per request; a query string is per request; a signed-in person is per request — which is the third one, and the one SvelteKit cannot detect, because a layout <code>load</code> that reads <code>locals.user</code> returns <code>null</code> at build time without complaint. That is why chapter 23’s root layout has no <code>load</code>: the guides sit under it, and a <code>load</code> there would have shipped every guide page with “nobody is signed in” in its data.</p>
+
+<aside class="callout callout--why">
+	<h4>Why mdsvex and not a Markdown library at runtime</h4>
+	<p>Because the Markdown never changes between deploys, so parsing it per request is work for nothing, and because a runtime parser cannot put a Svelte component in the middle of a paragraph. mdsvex compiles once, the component in the prose is a real component, and <code>csr = false</code> means the reader’s browser downloads HTML and CSS and that is all. The alternative for content that *does* change between deploys is a CMS and a <code>query</code>; this project has no such content, and the survey in chapter 37 says which library it would reach for if it did.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>prerender</code> and <code>csr</code> each do and why both are on these routes.</li><li>You can explain how the German guides get built and what <code>entries</code> adds to the crawler.</li><li>You can name the three per-request things a prerendered page cannot have, and which one SvelteKit cannot detect.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="trips-and-a-new-trip.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The trips list and a new trip</span>
+			</a>
+			<a class="pager__link pager__link--next" href="explore-and-diagnostics.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Explore, and diagnostics</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Packaging a Svelte library, and proving it — Building Meridian</title>
+<meta name="description" content="`svelte-package` 3 reads its configuration from Vite, `exports` draws the line between the framework-free entry and the Svelte one, `.js` imports name the files that will exist, and publint plus arethetypeswrong check the tarball the way a consumer would.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 17.77777777777778%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html" aria-current="page"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>Packaging a Svelte library, and proving it</h1>
+			<p class="lede"><code>svelte-package</code> 3 reads its configuration from Vite, <code>exports</code> draws the line between the framework-free entry and the Svelte one, <code>.js</code> imports name the files that will exist, and publint plus arethetypeswrong check the tarball the way a consumer would.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Package a Svelte 5 library with two entry points and types that resolve, and run the two checks that catch what <code>tsc</code> cannot.</p></aside>
+			<p>A package is a contract with strangers, and most of the ways to break it are silent: an <code>exports</code> map that forgets the <code>types</code> condition, a <code>.svelte</code> import that Node cannot resolve from a <code>.d.ts</code>, a <code>sideEffects</code> flag that lets the bundler drop your CSS. None of those is a type error in your own repository. So the library has its own verify script, and the app is its first consumer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/package.json<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;name&quot;: &quot;@meridian/waypoint&quot;,
+	&quot;version&quot;: &quot;0.1.0&quot;,
+	&quot;description&quot;: &quot;Geodesy for trip planners: distances, bearings, great-circle routes, a reactive Route class, and two small Svelte components.&quot;,
+	&quot;license&quot;: &quot;MIT&quot;,
+	&quot;type&quot;: &quot;module&quot;,
+	&quot;svelte&quot;: &quot;./dist/index.js&quot;,
+	&quot;types&quot;: &quot;./dist/index.d.ts&quot;,
+	&quot;sideEffects&quot;: [
+		&quot;**/*.css&quot;
+	],
+	&quot;files&quot;: [
+		&quot;dist&quot;,
+		&quot;!dist/**/*.test.*&quot;,
+		&quot;!dist/**/*.spec.*&quot;
+	],
+	&quot;exports&quot;: {
+		&quot;.&quot;: {
+			&quot;types&quot;: &quot;./dist/index.d.ts&quot;,
+			&quot;svelte&quot;: &quot;./dist/index.js&quot;,
+			&quot;default&quot;: &quot;./dist/index.js&quot;
+		},
+		&quot;./geo&quot;: {
+			&quot;types&quot;: &quot;./dist/geo/index.d.ts&quot;,
+			&quot;default&quot;: &quot;./dist/geo/index.js&quot;
+		}
+	},</code></pre>
+</figure>
+<p>The <code>exports</code> map is the whole public surface. The root entry has a <code>svelte</code> condition, which bundlers that understand Svelte prefer, and a <code>default</code>; <code>./geo</code> has no <code>svelte</code> condition because there is nothing Svelte in it, and a consumer with no Svelte resolves it fine. <code>types</code> comes first in each, because Node’s conditions are matched in order and TypeScript reads <code>types</code> before anything else. <code>sideEffects</code> names the CSS so tree-shaking keeps it; <code>files</code> ships <code>dist</code> and nothing else, and drops the tests that <code>svelte-package</code> would otherwise copy.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/package.json<span class="code__lines">:28-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;peerDependencies&quot;: {
+	&quot;svelte&quot;: &quot;^5.0.0&quot;
+},
+&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;vite dev&quot;,
+	&quot;prepare&quot;: &quot;svelte-kit sync || echo ''&quot;,
+	&quot;package&quot;: &quot;svelte-kit sync &amp;&amp; svelte-package&quot;,
+	&quot;package:check&quot;: &quot;publint &amp;&amp; attw --pack . --profile esm-only --entrypoints ./geo &amp;&amp; attw --pack . --profile esm-only --entrypoints . --ignore-rules internal-resolution-error&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json&quot;,
+	&quot;test&quot;: &quot;vitest --run&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run test &amp;&amp; npm run package &amp;&amp; npm run package:check&quot;
+},</code></pre>
+</figure>
+<p><code>svelte</code> is a peer dependency — a library must use the consumer’s copy, never bring its own. The <code>package</code> script runs <code>svelte-kit sync</code> first because <code>svelte-package</code> needs the generated ambient types to build declarations. <code>package:check</code> is two tools and three commands, and each one caught something during development: publint found the missing <code>types</code> condition; arethetypeswrong found that the root entry’s <code>.d.ts</code> imports <code>.svelte</code> files, which Node 16’s resolver would refuse — real, and unfixable while a <code>.d.ts</code> re-exports a component, so the rule is ignored for the root entry only and enforced for <code>./geo</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/vite.config.ts<span class="code__lines">:1-54</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+/*
+ * A LIBRARY'S CONFIG, IN SVELTEKIT 3
+ * ==================================
+ *
+ * `svelte-package` used to read `svelte.config.js` for the preprocessors and
+ * the aliases it needed. SvelteKit 3 has no such file, so `@sveltejs/package`
+ * 3 asks Vite instead: it calls `resolveConfig()` on this file, finds the
+ * `sveltekit()` plugin, and reads its options back. That is why a package with
+ * no `src/routes` to speak of still has a `vite.config.ts` with the SvelteKit
+ * plugin in it — the plugin *is* the configuration.
+ *
+ * There is no adapter, because nothing here is ever deployed. `src/routes` is
+ * a sandbox page for trying the components while developing them.
+ */
+export default defineConfig({
+	plugins: [
+		sveltekit({
+			compilerOptions: { runes: true }
+		})
+	],
+
+	test: {
+		expect: { requireAssertions: true },
+		projects: [
+			{
+				// The components and the reactive `Route` class, in a real browser.
+				extends: './vite.config.ts',
+				test: {
+					name: 'client',
+					browser: {
+						enabled: true,
+						provider: playwright(),
+						instances: [{ browser: 'chromium', headless: true }]
+					},
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
+			},
+			{
+				// The geodesy: pure functions, plain Node.
+				extends: './vite.config.ts',
+				test: {
+					name: 'server',
+					environment: 'node',
+					include: ['src/**/*.{test,spec}.{js,ts}'],
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
+			}
+		]
+	}
+});</code></pre>
+</figure>
+<p>This is the config SvelteKit 3 asks a *library* to have. <code>@sveltejs/package</code> 3 no longer reads <code>svelte.config.js</code> — there is none — it calls Vite’s <code>resolveConfig()</code> on this file and reads the <code>sveltekit()</code> plugin’s options back. So a package with no real routes still has the plugin, with <code>runes: true</code> because everything here is written in runes. The two Vitest projects mirror the app’s: components and the <code>Route</code> class in a browser, the geodesy in Node.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/tsconfig.json<span class="code__lines">:1-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;sourceMap&quot;: true,
+		&quot;strict&quot;: true,
+		&quot;noUncheckedIndexedAccess&quot;: true,
+		&quot;noImplicitOverride&quot;: true,
+		&quot;noFallthroughCasesInSwitch&quot;: true,
+		&quot;noImplicitReturns&quot;: true,
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true,
+
+		/*
+		 * `declarationMap` lets an editor jump from a consumer's &quot;Go to
+		 * Definition&quot; into the real `.ts` or `.svelte` source rather than the
+		 * generated `.d.ts` — provided the source is published beside `dist`,
+		 * which `files` in package.json takes care of.
+		 */
+		&quot;declaration&quot;: true,
+		&quot;declarationMap&quot;: true
+	},
+	&quot;include&quot;: [&quot;src/**/*.ts&quot;, &quot;src/**/*.js&quot;, &quot;src/**/*.svelte&quot;, &quot;*.config.ts&quot;],
+	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;dist&quot;, &quot;.svelte-kit&quot;]
+}</code></pre>
+</figure>
+<p><code>declaration</code> and <code>declarationMap</code> together let a consumer’s editor “Go to Definition” land in the real <code>.ts</code> or <code>.svelte</code> source rather than a generated <code>.d.ts</code>, because the map points back at the source and <code>files</code> ships it beside <code>dist</code>. The rest is the strictest TypeScript there is, and <code>noUncheckedIndexedAccess</code> is the one that changes how you write loops — chapter 06 showed the <code>!</code> it forces you to justify.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/index.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * @meridian/waypoint
+ * ==================
+ *
+ * The public surface of the package. Everything a consumer may import is
+ * named here; anything not named here is not part of the package, however
+ * useful it looks in `src/lib`.
+ *
+ * Two entry points: this one, which includes the Svelte components and the
+ * reactive `Route` and therefore needs Svelte; and `@meridian/waypoint/geo`,
+ * which is plain functions for anybody. `package.json` `exports` draws the
+ * line — the root has a `svelte` condition, `./geo` does not.
+ *
+ * Relative imports end in `.js` even though the files are `.ts`. That is
+ * Node's ESM resolution and TypeScript's choice to follow it: the published
+ * files *are* `.js`, and an import that names the source extension would break
+ * the moment it is compiled.
+ */
+
+export * from './geo/index.js';
+export { Route, type Leg, type Waypoint } from './route.svelte.js';
+export { default as Sparkline } from './Sparkline.svelte';
+export { default as Compass } from './Compass.svelte';</code></pre>
+</figure>
+<p>The entry point re-exports with <code>.js</code> extensions on files that are <code>.ts</code> on disk. That is not a mistake; it is Node’s ESM resolution and TypeScript’s decision to follow it. The published files *are* <code>.js</code>, an import that named <code>.ts</code> would break the moment the library was compiled, and TypeScript resolves <code>./geo/index.js</code> to <code>./geo/index.ts</code> while type-checking so you get the best of both.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run verify:package
+&gt; @meridian/waypoint@0.1.0 verify
+&gt; npm run check &amp;&amp; npm run test &amp;&amp; npm run package &amp;&amp; npm run package:check
+
+svelte-check found 0 errors and 0 warnings
+ Test Files  3 passed (3)      # geo in Node; Route, Compass, Sparkline in Chromium
+      Tests  32 passed (32)
+svelte-package ... dist/ written
+publint: All good!
+attw --entrypoints ./geo ... 🟢 No problems found
+attw --entrypoints .     ... 🟢 (internal-resolution-error ignored for .svelte re-exports)</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the app consumes the library as a package and not by path</h4>
+	<p>Because a path import bypasses every one of these checks. <code>import { distance } from &quot;../../packages/waypoint/src/lib/geo&quot;</code> would work today and tell you nothing about whether the package works for anybody else. <code>workspace:*</code> makes the app resolve <code>@meridian/waypoint</code> through <code>exports</code>, through <code>dist</code>, through the declarations — the same path a stranger takes — on every <code>pnpm run build</code>. When chapter 27 imports <code>arc</code> for the map and chapter 34 imports <code>formatDistance</code> inside a Markdown guide, both are proving the package.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write an <code>exports</code> map with a framework-free entry and a Svelte entry and say why <code>types</code> comes first.</li><li>You know why <code>svelte</code> is a peer dependency and why the library’s <code>vite.config.ts</code> has the SvelteKit plugin in it.</li><li>You can say what publint and arethetypeswrong each catch that <code>tsc</code> does not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="two-components-for-any-app.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Two components for any app</span>
+			</a>
+			<a class="pager__link pager__link--next" href="ids-dates-and-money.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Ids, dates and money</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

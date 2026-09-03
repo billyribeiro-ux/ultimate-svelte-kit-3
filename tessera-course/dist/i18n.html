@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three languages, no library — Building Tessera</title>
+<meta name="description" content="A catalogue is an object, a message is a value or a function, and the one keyword that would collapse the whole scheme.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">33 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 75%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html" aria-current="page"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 33</p>
+			<h1>Three languages, no library</h1>
+			<p class="lede">A catalogue is an object, a message is a value or a function, and the one keyword that would collapse the whole scheme.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Type-check every message and every argument, and express a language that has no plurals.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TRANSLATION
+ * ===========
+ *
+ * No library, no message compiler, no ICU parser. A catalogue is an object, a
+ * message is a value or a function, and `t` is the catalogue for the current
+ * language.
+ *
+ * That is not minimalism for its own sake — it buys three things a runtime
+ * interpolator cannot:
+ *
+ *   - `t.board.nodes(3)` is checked. Passing a string, or forgetting the
+ *     argument, is a build error rather than `{count}` on somebody's screen.
+ *   - Renaming a key is a rename, across every catalogue, with the compiler
+ *     listing what is left.
+ *   - Plurals are expressed in the language's own terms. Japanese has none, and
+ *     its catalogue simply does not branch — which no `one{}/other{}` scheme can
+ *     represent without lying.
+ *
+ * The cost is that translators edit TypeScript. For an application with three
+ * languages maintained by the team that writes the code, that is the right
+ * trade. It stops being right the moment translation is outsourced, and at that
+ * point these files export to JSON and the accessors stay identical.
+ */</code></pre>
+</figure>
+<p>No message compiler, no ICU parser, no runtime interpolator. That is not minimalism for its own sake — it buys three things a runtime interpolator cannot, and the third is the one people underestimate.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/messages/en.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The source language.
+ *
+ * Its type *is* the contract: every other catalogue is checked against it with
+ * `satisfies`, so a key added here and forgotten in French is a build error
+ * rather than the word `board.untitled` appearing in somebody's interface.
+ *
+ * Values are functions where they take arguments. That is deliberate — the
+ * alternative is `&quot;{count} selected&quot;` and a runtime interpolator, which cannot
+ * be type-checked, cannot express Japanese having no plural, and turns a missing
+ * argument into a literal `{count}` on screen.
+ *
+ * Note the absence of `as const`. It is tempting, and it makes the whole scheme
+ * collapse: with it, `Messages` says `boards: 'Boards'` — the *literal* — and
+ * `satisfies Messages` then demands that the French catalogue also say
+ * `'Boards'`. Every translated line becomes a type error. Without it the strings
+ * widen to `string`, the function signatures are kept, and the shape is what is
+ * checked. Which is what we wanted to check.
+ */
+export const en = {
+	app: {
+		name: 'Tessera',
+		tagline: 'Diagrams that stay in step'
+	},
+
+	nav: {
+		boards: 'Boards',
+		signIn: 'Sign in',
+		signOut: 'Sign out',
+		language: 'Language'
+	},
+
+	board: {
+		untitled: 'Untitled board',
+		create: 'New board',
+		open: 'Open',
+		empty: 'Nothing here yet. Press N to add your first box.',
+		nodes: (count: number) =&gt; (count === 1 ? '1 shape' : `${count} shapes`),
+		lastEdited: (when: string) =&gt; `Edited ${when}`
+	},</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The absence of <code>as const</code> is the most important line in that comment. With it, <code>Messages</code> says <code>boards: 'Boards'</code> — the <strong>literal</strong> — and <code>satisfies Messages</code> then demands that the French catalogue also say <code>'Boards'</code>. Every translated line becomes a type error. Without it the strings widen to <code>string</code>, the function signatures are kept, and the *shape* is what is checked. Which is what we wanted to check.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Plurals in the language’s own terms</h4>
+	<p><code>nodes: (count) =&gt; count === 1 ? '1 shape' : </code>${count} shapes`<code> is not a workaround for a missing plural system. Japanese has no plural forms, and its catalogue simply does not branch — which no </code>one{}/other{}` scheme can represent without lying, because it forces you to write the same string twice and pretend they are different cases. A function is the general form; ICU is a special case of it that happens to be data.</p>
+</aside>
+<p>And the honest limit is stated too: <strong>the cost is that translators edit TypeScript.</strong> For three languages maintained by the team that writes the code, that is the right trade. It stops being right the moment translation is outsourced, and at that point these files export to JSON and the accessors stay identical.</p>
+<h3 id="the-three-languages">Why these three</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/locales.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The languages Tessera ships.
+ *
+ * Three, chosen to cover the three shapes that break a naive interface: English
+ * as the source, French because its words are reliably longer than the English
+ * ones and burst any layout that was measured against them, and Japanese because
+ * it has no spaces to wrap at and no plural forms at all.
+ *
+ * A fourth would be a data change. That is the test of an i18n layer: adding a
+ * language should touch one folder.
+ */
+export const LOCALES = ['en', 'fr', 'ja'] as const;
+
+export type Locale = (typeof LOCALES)[number];
+
+export const DEFAULT_LOCALE: Locale = 'en';
+
+export function isLocale(value: string | undefined): value is Locale {
+	return value !== undefined &amp;&amp; (LOCALES as readonly string[]).includes(value);
+}
+
+/** The `lang` and `dir` attributes for `&lt;html&gt;`. */
+export const HTML_LANG: Record&lt;Locale, string&gt; = { en: 'en-GB', fr: 'fr-FR', ja: 'ja-JP' };
+
+/** What each language calls itself. Never translated — a language picker in a
+ * language you cannot read is useless. */
+export const ENDONYM: Record&lt;Locale, string&gt; = { en: 'English', fr: 'Français', ja: '日本語' };</code></pre>
+</figure>
+<p>Chosen to cover the three shapes that break a naive interface: English as the source, French because its words are reliably longer and burst any layout measured against English, and Japanese because it has no spaces to wrap at and no plural forms at all. A fourth would be a data change — and *that* is the test of an i18n layer.</p>
+<aside class="callout callout--note"><p><code>ENDONYM</code> is never translated. A language picker in a language you cannot read is useless — somebody looking for Japanese is looking for 日本語, not for the word &quot;Japanese&quot; written in French.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/locales.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Pick the best supported language from an `Accept-Language` header.
+ *
+ * Quality values are honoured, and a bare tag matches a regional one, so
+ * `fr-CA` finds `fr`. Anything unrecognised falls through to the default rather
+ * than erroring: a visitor with an exotic locale should get the app in English,
+ * not a 406.
+ */
+export function negotiate(header: string | null): Locale {
+	if (!header) return DEFAULT_LOCALE;
+
+	const ranked = header
+		.split(',')
+		.map((part) =&gt; {
+			const [tag = '', ...parameters] = part.trim().split(';');
+			const quality = parameters
+				.map((parameter) =&gt; parameter.trim())
+				.find((parameter) =&gt; parameter.startsWith('q='));
+			return { tag: tag.toLowerCase(), quality: quality ? Number(quality.slice(2)) : 1 };
+		})
+		.filter((entry) =&gt; entry.tag.length &gt; 0 &amp;&amp; Number.isFinite(entry.quality))
+		.sort((a, b) =&gt; b.quality - a.quality);
+
+	for (const { tag } of ranked) {
+		const base = tag.split('-')[0];
+		if (isLocale(base)) return base;
+	}
+
+	return DEFAULT_LOCALE;
+}</code></pre>
+</figure>
+<p>Quality values honoured, a bare tag matching a regional one so <code>fr-CA</code> finds <code>fr</code>, and anything unrecognised falling through to the default rather than erroring. A visitor with an exotic locale should get the app in English, not a 406.</p>
+<h3 id="context"><code>createContext</code>, and the third function it returns</h3>
+<p><code>t</code> was a prop. It was declared on eight components and written out at seventeen call sites, and every one of them said the same thing: *whatever my parent has*. A prop that is only ever forwarded is not a prop — it is a global with extra steps and a rename that touches eight files.</p>
+<p>Svelte 5.57 added <code>createContext</code>, and it is not sugar for <code>getContext</code>. <code>getContext('messages')</code> is a string key and an <code>any</code>: two components can disagree about what is under it, a typo is a runtime <code>undefined</code>, and the type has to be re-asserted at every call. <code>createContext</code> hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/context.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { createContext } from 'svelte';
+import { en, type Messages } from './messages/en.ts';
+
+const [read, provide, has] = createContext&lt;() =&gt; Messages&gt;();
+
+/**
+ * Provide the catalogue to everything below. Called once, in `Workspace.svelte`.
+ *
+ * Takes a getter rather than a value — see the note above. Must run during
+ * component initialisation, the same rule as `setContext`, because it *is*
+ * `setContext` with the key and the type already decided.
+ */
+export function setMessages(catalogue: () =&gt; Messages): void {
+	provide(catalogue);
+}
+
+/**
+ * The catalogue getter, for a component that is only ever inside the workspace.
+ * Throws during initialisation if no ancestor provided one, which is the point.
+ *
+ *     const catalogue = requireMessages();
+ *     const t = $derived(catalogue());
+ */
+export const requireMessages = read;
+
+/**
+ * The catalogue getter, or the default one.
+ *
+ * The fallback is not laziness. Two trees render translated strings: the
+ * application, which always provides, and the embedded custom element, which
+ * cannot. Throwing is correct for the first and wrong for the second, and
+ * `has()` is what tells them apart — at initialisation, before anything has a
+ * chance to throw.
+ *
+ * `en` directly rather than `messages(DEFAULT_LOCALE)`: importing the barrel
+ * would pull French and Japanese into the embed bundle, and the embed's whole
+ * argument for existing is that it is small.
+ */
+export function useMessages(): () =&gt; Messages {
+	return has() ? read() : () =&gt; en;
+}
+
+/** Whether an ancestor provided a catalogue. Exported so tests can assert it. */
+export const hasMessages = has;</code></pre>
+</figure>
+<p>Three functions, and the third is the new one. <code>read()</code> returns the value <strong>or throws</strong> when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent <code>undefined</code> surfaces as <code>Cannot read properties of undefined</code> three frames later in a component that is not the problem. <code>provide(value)</code> sets it. <code>has()</code> answers *without* throwing, which is the only way to ask whether you are inside a provider at all.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the context value is a function</h4>
+	<p>Context is set once, at initialisation, and never again — but the catalogue is <code>$derived(messages(data.locale))</code>, and SvelteKit <strong>reuses</strong> a component across navigations that match the same route. Going from <code>/boards/abc</code> to <code>/fr/boards/abc</code> updates the prop in place on the component that is already mounted. Storing the catalogue would pin English forever; storing <code>() =&gt; t</code> stores something that genuinely never changes, and consumers wrap the call in <code>$derived</code>. <code>svelte-check</code> says so out loud if you get it wrong — &quot;This reference only captures the initial value of <code>t</code>&quot; — and it was right.</p>
+</aside>
+<h3 id="has">Where <code>has</code> earns its place</h3>
+<p>The embeddable viewer. <code>TesseraBoard.svelte</code> is a custom element: its own Svelte root, mounted by a page we do not control, with no ancestor of ours above it. It had three English literals in its markup — a loading line, a failure line and an <code>aria-label</code> — sitting outside the catalogue entirely, which is how a string stays untranslated for two years without anybody filing it.</p>
+<p>The strict accessor cannot be used there: it throws during initialisation, and a custom element whose setup throws never defines itself at all. <code>useMessages()</code> asks <code>has()</code> first and falls back to the English catalogue — imported directly rather than through the barrel, because pulling French and Japanese into the embed bundle would undo the reason the embed exists.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # swap useMessages() for requireMessages() in the custom element
+$ pnpm exec playwright test e2e/features.e2e.ts -g &quot;catalogue with no provider&quot;
+
+  Error: expect(locator).toHaveAttribute(expected) failed
+  Error: element(s) not found          ← it never mounted at all
+
+  1 failed</code></pre>
+</figure>
+<aside class="callout callout--note"><p>That is the whole argument for <code>has</code> in one command. Without it the element does not render a fallback — it does not render.</p></aside>
+<h3 id="formatters">The <code>Intl</code> cache</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/i18n/index.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Read, or build and remember.
+ *
+ * Svelte 5.57 added exactly this to `SvelteMap`, as `getOrInsertComputed`, and
+ * these two caches are *not* SvelteMaps on purpose: a formatter cache is not
+ * state anything should re-render for, and reading one inside a `$derived` must
+ * not make that derived depend on which languages have been formatted so far.
+ * So the shape is borrowed and the reactivity is not.
+ *
+ * It replaces a `get(…) ?? new …` followed by an unconditional `set`, which put
+ * a write on the hot path of every timestamp on the page to re-store a value
+ * that was already there. Nobody would have noticed; that is rather the point of
+ * having a name for the pattern.
+ */
+function cached&lt;K, V&gt;(store: Map&lt;K, V&gt;, key: K, build: () =&gt; V): V {
+	const existing = store.get(key);
+	if (existing !== undefined) return existing;
+
+	const built = build();
+	store.set(key, built);
+	return built;
+}
+
+const relative = new Map&lt;Locale, Intl.RelativeTimeFormat&gt;();
+const dates = new Map&lt;Locale, Intl.DateTimeFormat&gt;();
+
+const UNITS: [limit: number, divisor: number, unit: Intl.RelativeTimeFormatUnit][] = [
+	[60_000, 1_000, 'second'],
+	[3_600_000, 60_000, 'minute'],
+	[86_400_000, 3_600_000, 'hour'],
+	[604_800_000, 86_400_000, 'day']
+];
+
+/**
+ * &quot;3 minutes ago&quot;, in the viewer's language.
+ *
+ * Anything older than a week becomes an absolute date. &quot;47 weeks ago&quot; is a
+ * number people have to convert; &quot;12 October&quot; is one they can read.
+ */
+export function ago(locale: Locale, when: Date, now: Date = new Date()): string {
+	const elapsed = when.getTime() - now.getTime();
+	const magnitude = Math.abs(elapsed);
+
+	for (const [limit, divisor, unit] of UNITS) {
+		if (magnitude &lt; limit) {
+			return cached(
+				relative,
+				locale,
+				() =&gt; new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+			).format(Math.round(elapsed / divisor), unit);
+		}
+	}
+
+	return cached(
+		dates,
+		locale,
+		() =&gt; new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' })
+	).format(when);
+}</code></pre>
+</figure>
+<p><code>Intl.DateTimeFormat</code> is expensive to construct and cheap to reuse, and a board list rebuilding one per row per render is a measurable cost on a slow phone. The cache is keyed by locale and never invalidated, because the set of locales is fixed at build time.</p>
+
+<aside class="callout callout--why">
+	<h4><code>getOrInsertComputed</code>, borrowed rather than called</h4>
+	<p>Svelte 5.57 added exactly this shape to <code>SvelteMap</code>: <code>getOrInsertComputed(key, build)</code> reads, or builds and remembers. These two caches are deliberately <strong>not</strong> <code>SvelteMap</code>s, so <code>cached</code> is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a <code>$derived</code> must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a <code>get(…) ?? new …</code> followed by an *unconditional* <code>set</code>, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.</p>
+</aside>
+<p>And the cut-off is a product decision worth copying: anything older than a week becomes an absolute date, because &quot;47 weeks ago&quot; is a number people have to convert and &quot;12 October&quot; is one they can read.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A key added to English and forgotten in French fails the build.</li><li>Passing a string where a message wants a number fails the build.</li><li>Adding a fourth language touches one folder.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hooks-and-routing.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The hooks, and a URL that is three things</span>
+			</a>
+			<a class="pager__link pager__link--next" href="presence.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Seeing each other</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Two themes, one set of names. Every colour is a semantic token —
+ * `--surface-raised`, not `--slate-800` — because a component that asks for
+ * slate-800 has decided what the theme is, and the second theme then needs a
+ * second component.
+ *
+ * The palette scales sit above the semantic layer and are referenced only in
+ * this file. If a component stylesheet mentions `--slate-500`, that is a bug.
+ *
+ * DARK IS THE DEFAULT, AND FOR A REASON
+ * -------------------------------------
+ * Not fashion. This is a tool people open at 3am, next to a terminal, on a
+ * screen that is the only light in the room — and it is a tool where the
+ * *content* is dense monochrome text with occasional colour that has to mean
+ * something. A light theme exists and is a deliberate choice rather than a
+ * fallback, because some people read better on it and some rooms are bright.
+ *
+ * SIGNAL COLOUR IS RATIONED
+ * -------------------------
+ * There are exactly four status colours and they are used for status only.
+ * Everything else — panels, borders, headings, the chrome — is neutral. In an
+ * interface whose job is to make an anomaly obvious, every decorative use of
+ * red spends some of the attention that red is supposed to buy.
+ */
+
+:root {
+	color-scheme: dark;
+
+	/* ---- Palette ------------------------------------------------------ */
+
+	/* Neutrals, very slightly blue, tuned so adjacent steps stay distinct on a
+	   cheap laptop panel rather than only on a calibrated monitor. */
+	--slate-1000: #06070a;
+	--slate-950: #0a0c11;
+	--slate-900: #0e1117;
+	--slate-850: #12161e;
+	--slate-800: #171c26;
+	--slate-750: #1d232f;
+	--slate-700: #262d3b;
+	--slate-600: #37405292;
+	--slate-500: #5b6577;
+	--slate-400: #808a9c;
+	--slate-300: #a6afbe;
+	--slate-200: #cbd2dd;
+	--slate-100: #e5e9ef;
+	--slate-050: #f2f4f8;
+
+	--paper-000: #ffffff;
+	--paper-050: #fbfbfc;
+	--paper-100: #f4f5f7;
+	--paper-200: #e8eaee;
+
+	/* Brand: a cool teal that reads as instrument rather than as marketing, and
+	   survives both grounds without adjustment. */
+	--beam-300: #7fe3d4;
+	--beam-400: #46cdb9;
+	--beam-500: #1fb39d;
+	--beam-600: #159180;
+	--beam-700: #106f63;
+
+	/*
+	 * The four status hues.
+	 *
+	 * Chosen to be distinguishable with the two most common forms of colour
+	 * blindness — which for red/green means the difference between "error" and
+	 * "ok" is carried by *lightness* as well as hue, and by an icon in every
+	 * place the colour appears. A dashboard where the only difference between
+	 * fine and broken is red versus green is unusable for eight percent of men.
+	 */
+	--danger-400: #ff8080;
+	--danger-500: #f2555a;
+	--danger-600: #cf3238;
+	--warn-400: #f5c26b;
+	--warn-500: #e0a03a;
+	--warn-600: #b87d1c;
+	--ok-400: #6ddb9f;
+	--ok-500: #35b877;
+	--ok-600: #1f9159;
+	--info-400: #8fb8ff;
+	--info-500: #5b91f5;
+	--info-600: #3a6fd0;
+
+	/* ---- Semantic: surfaces ------------------------------------------- */
+
+	--bg: var(--slate-1000);
+	--surface: var(--slate-950);
+	--surface-raised: var(--slate-900);
+	--surface-sunken: var(--slate-1000);
+	/* The one hover that appears on thousands of table rows: barely there on
+	   purpose, because a strong hover on a dense table is a strobe. */
+	--surface-hover: var(--slate-850);
+	--surface-active: var(--slate-800);
+
+	--border: var(--slate-800);
+	--border-strong: var(--slate-700);
+	--border-focus: var(--beam-500);
+
+	/* ---- Semantic: text ------------------------------------------------ */
+
+	--text: var(--slate-100);
+	--text-muted: var(--slate-400);
+	--text-faint: var(--slate-500);
+	--text-inverse: var(--slate-950);
+
+	--accent: var(--beam-400);
+	--accent-strong: var(--beam-300);
+	--on-accent: var(--slate-1000);
+
+	--danger: var(--danger-400);
+	--warn: var(--warn-400);
+	--ok: var(--ok-400);
+	--info: var(--info-400);
+
+	/* Backgrounds for the same four, at an opacity that tints without shouting. */
+	--danger-bg: color-mix(in oklab, var(--danger-500) 16%, transparent);
+	--warn-bg: color-mix(in oklab, var(--warn-500) 16%, transparent);
+	--ok-bg: color-mix(in oklab, var(--ok-500) 16%, transparent);
+	--info-bg: color-mix(in oklab, var(--info-500) 16%, transparent);
+
+	/* ---- Log levels ----------------------------------------------------- */
+
+	/*
+	 * Five levels, and only two of them are coloured.
+	 *
+	 * `debug` and `info` are the overwhelming majority of lines, and colouring
+	 * them means a screen that is entirely coloured — at which point the colour on
+	 * the `error` rows carries no information. Neutral for the common case is what
+	 * makes the uncommon case visible.
+	 */
+	--level-debug: var(--text-faint);
+	--level-info: var(--text-muted);
+	--level-warn: var(--warn);
+	--level-error: var(--danger);
+	--level-fatal: var(--danger-500);
+
+	/* ---- Type ----------------------------------------------------------- */
+
+	--font-sans:
+		'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	/*
+	 * Monospace carries the data, not just code.
+	 *
+	 * A column of durations in a proportional face cannot be scanned downwards,
+	 * because `1` and `8` are different widths and the decimal points do not line
+	 * up. `tabular-nums` fixes that for one family; a mono face fixes it for every
+	 * number in the product, including the ones drawn into a canvas where that CSS
+	 * property does not reach.
+	 */
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+	--fs-xs: 0.6875rem;
+	--fs-sm: 0.8125rem;
+	--fs-md: 0.9375rem;
+	--fs-lg: 1.125rem;
+	--fs-xl: 1.5rem;
+	--fs-2xl: 2rem;
+
+	--weight-normal: 400;
+	--weight-medium: 500;
+	--weight-semibold: 600;
+
+	/*
+	 * A tight line height for data, a comfortable one for prose.
+	 *
+	 * 1.45 on a log table is roughly 21px a row, which puts about forty lines on a
+	 * laptop screen. Going to 1.6 for "readability" costs eight lines, and eight
+	 * lines is often the difference between seeing the error and its cause on one
+	 * screen.
+	 */
+	--leading-data: 1.45;
+	--leading-prose: 1.6;
+
+	/* ---- Space ---------------------------------------------------------- */
+
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-8: 3rem;
+
+	--radius-sm: 3px;
+	--radius-md: 6px;
+	--radius-lg: 10px;
+	--radius-full: 999px;
+
+	/* ---- Depth ---------------------------------------------------------- */
+
+	/*
+	 * Shadows are nearly black rather than tinted, because on a very dark ground a
+	 * tinted shadow reads as a coloured glow — which competes with the status
+	 * colours for attention.
+	 */
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+	--shadow-md: 0 4px 12px rgb(0 0 0 / 0.45);
+	--shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
+
+	--z-sticky: 10;
+	--z-drawer: 40;
+	--z-toast: 60;
+
+	/* ---- Motion ---------------------------------------------------------- */
+
+	/*
+	 * Fast and short. This is an instrument: motion exists to show *where a thing
+	 * came from* — a drawer sliding in from the right it can be dismissed towards —
+	 * and never to be noticed. Anything over 200ms in a tool people use for eight
+	 * hours becomes a wait.
+	 */
+	--ease: cubic-bezier(0.2, 0, 0.1, 1);
+	--fast: 120ms;
+	--medium: 180ms;
+}
+
+/*
+ * The light theme.
+ *
+ * `[data-theme]` on the root, set before first paint by the inline script in
+ * `app.html`, with `prefers-color-scheme` as the default. Doing it with a class
+ * toggled after hydration produces a flash of the wrong theme on every load,
+ * which on a dark-default app is a flash of white at 3am.
+ */
+:root[data-theme='light'] {
+	color-scheme: light;
+
+	--bg: var(--paper-100);
+	--surface: var(--paper-050);
+	--surface-raised: var(--paper-000);
+	--surface-sunken: var(--paper-200);
+	--surface-hover: var(--paper-100);
+	--surface-active: var(--paper-200);
+
+	--border: #dcdfe6;
+	--border-strong: #c3c8d2;
+
+	--text: #171c26;
+	--text-muted: #5b6577;
+	--text-faint: #808a9c;
+	--text-inverse: var(--paper-000);
+
+	--accent: var(--beam-600);
+	--accent-strong: var(--beam-700);
+	--on-accent: var(--paper-000);
+
+	/* The darker steps: on a light ground the 400s do not have enough contrast
+	   against white to meet AA at small sizes, and status text is small. */
+	--danger: var(--danger-600);
+	--warn: var(--warn-600);
+	--ok: var(--ok-600);
+	--info: var(--info-600);
+
+	--level-warn: var(--warn-600);
+	--level-error: var(--danger-600);
+	--level-fatal: var(--danger-600);
+
+	--shadow-sm: 0 1px 2px rgb(15 23 42 / 0.08);
+	--shadow-md: 0 4px 12px rgb(15 23 42 / 0.1);
+	--shadow-lg: 0 12px 32px rgb(15 23 42 / 0.12);
+}

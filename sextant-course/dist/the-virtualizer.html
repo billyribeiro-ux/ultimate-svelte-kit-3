@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A virtualizer for variable-height rows, and `flushSync` — Building Sextant</title>
+<meta name="description" content="Why `rows.slice(start, end)` fails on log lines, measuring after render, and the one place in this project that genuinely needs a synchronous flush.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 60.86956521739131%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html" aria-current="page"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>A virtualizer for variable-height rows, and `flushSync`</h1>
+			<p class="lede">Why <code>rows.slice(start, end)</code> fails on log lines, measuring after render, and the one place in this project that genuinely needs a synchronous flush.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Render a hundred thousand rows at sixty frames a second, with a scrollbar that does not lie.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Virtualizer.svelte.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A VIRTUALIZER FOR VARIABLE-HEIGHT ROWS
+ * ======================================
+ *
+ * Render the rows that are on screen and none of the rest.
+ *
+ * WHY THIS IS NOT `rows.slice(start, end)`
+ * ----------------------------------------
+ * With fixed-height rows it very nearly is: the index at a scroll offset is a
+ * division, and the total height is a multiplication. Log lines are not fixed
+ * height — a stack trace is twelve lines and a heartbeat is one — and every
+ * simplification that assumes otherwise fails on exactly the rows people care
+ * about, because the long rows are the interesting ones.
+ *
+ * So heights are **measured after render and remembered**, and un-measured rows
+ * use an estimate. That produces three problems, and this file is the three
+ * solutions:
+ *
+ *   1. The total height is wrong until everything has been measured, so the
+ *      scrollbar changes size as you scroll. Fixed by averaging the measured
+ *      rows rather than using a constant estimate, so the guess improves.
+ *
+ *   2. Measuring changes layout, and reading layout after changing it in the
+ *      same frame gives the *old* numbers. This is what `flushSync` is for.
+ *
+ *   3. Rows arriving at the top — which is what a live tail does — shift
+ *      everything down, and the browser keeps the scroll *offset* rather than
+ *      the scroll *position*, so the view jumps. Fixed by anchoring.
+ *
+ * The third is the one that makes a tail unusable if you get it wrong, and it is
+ * the one no virtualizer library handles by default.
+ */</code></pre>
+</figure>
+<p>With fixed-height rows a virtualizer very nearly *is* <code>rows.slice(start, end)</code>: the index at a scroll offset is a division and the total height is a multiplication. Log lines are not fixed height — a stack trace is twelve lines and a heartbeat is one — and every simplification that assumes otherwise fails on exactly the rows people care about, because the long rows are the interesting ones.</p>
+<h3 id="the-map">A plain Map, on purpose</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Virtualizer.svelte.ts<span class="code__lines">:75-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Measured heights by index.
+ *
+ * `$state.raw` holding a plain `Map`, replaced wholesale on each measurement
+ * pass rather than mutated. A `SvelteMap` would make every `set` a reactive
+ * write, and a measurement pass sets thirty of them in a loop — thirty
+ * invalidations for one visual change, in the hot path of scrolling.
+ *
+ * `svelte/prefer-svelte-reactivity` flags exactly this and is right nearly
+ * every time: a plain `Map` in `$state` is usually somebody expecting `.set()`
+ * to be reactive, and it silently is not. Here the non-reactivity is the point,
+ * the `Map` is never mutated after it is stored, and the reactive write is the
+ * assignment to `#heights`. The rule is suppressed at each of the three sites
+ * rather than for the file, so a fourth `Map` added later still gets checked.
+ */
+// eslint-disable-next-line svelte/prefer-svelte-reactivity -- see above
+#heights = $state.raw(new Map&lt;number, number&gt;());</code></pre>
+</figure>
+<p>This is the one place in the project that argues *against* <code>SvelteMap</code>, and the argument is about write frequency. A measurement pass sets thirty heights in a loop — thirty reactive invalidations for one visual change, in the hot path of scrolling. Replacing the map wholesale is one invalidation.</p>
+<aside class="callout callout--note"><p>The linter objects, and it is right to: a plain <code>Map</code> in <code>$state</code> is usually somebody expecting <code>.set()</code> to be reactive and quietly finding it is not. The suppression carries the reasoning, and it is per-site rather than per-file so a fourth map added later is still checked.</p></aside>
+<h3 id="offsets">Cumulative offsets, and an honest complexity note</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Virtualizer.svelte.ts<span class="code__lines">:99-128</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}
+
+/** The best current guess for an unmeasured row. */
+get #guess(): number {
+	const measured = this.#heights.size;
+	return measured === 0 ? this.#estimate : this.#measuredTotal / measured;
+}
+
+/**
+ * Cumulative offsets, recomputed when heights or count change.
+ *
+ * O(n) in the row count, which for ten thousand rows is a few hundred
+ * microseconds and runs only when a measurement actually changed something. A
+ * prefix-sum tree would make it O(log n) and is the right answer at a million
+ * rows; at ten thousand it is a data structure to maintain in exchange for
+ * nothing measurable.
+ */
+readonly #offsets = $derived.by(() =&gt; {
+	const guess = this.#guess;
+	const offsets = new Float64Array(this.count + 1);
+
+	for (let i = 0; i &lt; this.count; i += 1) {
+		offsets[i + 1] = offsets[i]! + (this.#heights.get(i) ?? guess);
+	}
+
+	return offsets;
+});
+
+/** The full scrollable height. */
+get total(): number {</code></pre>
+</figure>
+<p>O(n) in the row count, recomputed only when a measurement actually changed something. A prefix-sum tree makes it O(log n) and is the right answer at a million rows; at ten thousand it is a data structure to maintain in exchange for nothing measurable. Saying which side of that line you are on is more useful than picking the clever one.</p>
+<h3 id="flushsync">The anchor, and why <code>flushSync</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Virtualizer.svelte.ts<span class="code__lines">:192-226</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}
+
+/**
+ * Keep the row under a given offset in the same place while rows are inserted
+ * above it.
+ *
+ * THE PROBLEM THIS SOLVES
+ * -----------------------
+ * A live tail inserts at the top. The browser preserves `scrollTop`, which is
+ * a distance from the top of the *content* — so when the content grows above
+ * you, the row you were reading moves down and the view appears to jump.
+ *
+ * Nothing about that is a bug in the browser: preserving the offset is the
+ * only thing it can do without knowing what you were looking at. Anchoring is
+ * the application saying what it was looking at.
+ *
+ * `flushSync` is essential and is the whole reason this is a method rather
+ * than an effect. The new offsets have to be *computed* before the scroll
+ * position is set, and Svelte batches state changes into a microtask — so
+ * without it, the read happens against the old layout and the correction is
+ * one frame stale, which looks exactly like the jump it was meant to prevent.
+ */
+anchor(inserted: number, element: HTMLElement): void {
+	if (inserted &lt;= 0 || this.offset &lt;= 0) return;
+
+	const before = this.total;
+
+	// Force the derived offsets to recompute with the new count *now*, rather
+	// than at the end of the current microtask.
+	flushSync();
+
+	const grew = this.total - before;
+	if (grew === 0) return;
+
+	element.scrollTop = this.offset + grew;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The one place a synchronous flush is not a smell</h4>
+	<p>A live tail inserts at the top. The browser preserves <code>scrollTop</code>, which is a distance from the top of the *content* — so when content grows above you, the row you were reading moves down. Correcting it means computing the new offsets and *then* setting the scroll position, in that order, in the same frame. Svelte batches state changes into a microtask, so without <code>flushSync()</code> the read happens against the old layout and the correction is one frame stale — which looks exactly like the jump it was meant to prevent.</p>
+</aside>
+<p>Note that this is a *method*, not an effect. That is not incidental: an effect runs after the batch, which is precisely too late.</p>
+<h3 id="scrollto">And <code>tick</code>, which is the other one</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Virtualizer.svelte.ts<span class="code__lines">:228-250</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	}
+
+	/**
+	 * Scroll a row into view.
+	 *
+	 * `await tick()` first, because the row may not be rendered yet: scrolling to
+	 * a row that is currently virtualized away means scrolling to an offset the
+	 * component has not laid out, and the browser clamps to the current content
+	 * height. One tick is enough because the offsets are derived, not measured.
+	 */
+	async scrollTo(index: number, element: HTMLElement): Promise&lt;void&gt; {
+		await tick();
+
+		const offsets = this.#offsets;
+		const top = offsets[Math.max(0, Math.min(index, this.count - 1))] ?? 0;
+
+		// Centre it rather than putting it at the top edge: a row flush against the
+		// top of a scroll container has no context above it, and context above is
+		// most of why somebody is looking at a log line.
+		element.scrollTop = Math.max(0, top - this.viewport / 3);
+		this.offset = element.scrollTop;
+	}
+}</code></pre>
+</figure>
+<p><code>await tick()</code> rather than <code>flushSync()</code>, because nothing here reads layout immediately afterwards — one tick is enough, and it is cheaper. Knowing which of the two you need is knowing whether a layout read follows.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A hundred thousand rows scroll smoothly with about thirty in the DOM.</li><li>Rows arriving at the top do not move the row you are reading.</li><li>You can say why the anchor is a method rather than an effect.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="design-tokens.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Design tokens for a tool used at three in the morning</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-results-table.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The results table</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

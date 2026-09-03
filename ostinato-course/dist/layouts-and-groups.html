@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two layouts and a group — Building Ostinato</title>
+<meta name="description" content="A root layout with view transitions and a progress bar; an `(app)` group layout with the header, `$state.eager` for the current link, the new-version banner, and the artist’s name from a remote query; plus the small pieces every page uses.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">27 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 69.23076923076923%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html" aria-current="page"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 27</p>
+			<h1>Two layouts and a group</h1>
+			<p class="lede">A root layout with view transitions and a progress bar; an <code>(app)</code> group layout with the header, <code>$state.eager</code> for the current link, the new-version banner, and the artist’s name from a remote query; plus the small pieces every page uses.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know what a layout group is and why the embed demo escapes it; use <code>onNavigate</code> for a view transition that never holds a navigation hostage; and reach for <code>$state.eager</code> when async Svelte holds a value back that should not wait.</p></aside>
+			<p>The root layout is deliberately almost empty: the stylesheet, the view transitions, a progress bar. The header lives one level down, in <code>(app)/+layout.svelte</code>. The parentheses make <code>(app)</code> a *layout group* — a folder that adds a layout without adding a segment to the URL — and the one page that must have no header, the embed demo that pretends to be somebody else’s site, resets to the root with a <code>+page@.svelte</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:19-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * VIEW TRANSITIONS
+ * ================
+ *
+ * `onNavigate` returns a promise SvelteKit awaits before completing the
+ * navigation, so wrapping it in `startViewTransition` gives the browser both
+ * states of the page and lets it cross-fade between them. The default
+ * cross-fade, the default duration, and nothing else: an instrument is used
+ * for hours, and a transition that is *noticeable* is annoying by lunchtime.
+ *
+ * Two guards. Browsers without the API simply navigate, which is the right
+ * fallback and needs no polyfill. Somebody who asked for reduced motion has
+ * asked for this too — `prefersReducedMotion` is that media query as a
+ * reactive value — and honouring it here means the transition is never
+ * started, which avoids the flash that `animation: none` on a running one
+ * produces.
+ */
+onNavigate((navigation) =&gt; {
+	if (!document.startViewTransition) return;
+	if (prefersReducedMotion.current) return;
+	if (document.visibilityState !== 'visible') return;
+
+	return new Promise((resolve) =&gt; {
+		/*
+		 * A transition must never hold a navigation hostage. The navigation is
+		 * released the moment the update callback runs, or when the transition
+		 * reports it cannot start, or after a third of a second — whichever
+		 * comes first. The transition is decoration; the navigation is the
+		 * product. (While chasing a flaky back navigation this guard was the
+		 * first suspect and turned out to be innocent — the cause was
+		 * `forkPreloads`, see `vite.config.ts` — but a guard that costs nothing
+		 * and rules out a whole class of hang is worth keeping.)
+		 */
+		const fallback = setTimeout(resolve, 300);
+		let transition: ViewTransition;
+		try {
+			transition = document.startViewTransition(async () =&gt; {
+				clearTimeout(fallback);
+				resolve();
+				await navigation.complete;
+			});
+		} catch {
+			clearTimeout(fallback);
+			resolve();
+			return;
+		}
+		transition.ready.catch(() =&gt; {
+			clearTimeout(fallback);
+			resolve();
+		});
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the transition has a timeout</h4>
+	<p><code>onNavigate</code> returns a promise SvelteKit waits for before completing the navigation. Wrapping it in <code>startViewTransition</code> hands the browser both states of the page and lets it cross-fade. But a transition must never hold a navigation hostage: the promise resolves when the update callback runs, or when the transition reports it cannot start, or after three hundred milliseconds — whichever is first. While chasing a flaky back navigation this guard was the first suspect and was innocent (the cause was <code>forkPreloads</code>, ch. 38); it stayed because it rules out a whole class of hang for nothing.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:79-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`navigating` from `$app/state` is `null` between navigations and an object
+	— with `from`, `to` and `type` — during one. A two-pixel bar is all the
+	feedback a navigation needs, and it is there for the ones that wait on a
+	remote query.
+--&gt;
+{#if navigating.to}
+	&lt;div class=&quot;progress&quot; role=&quot;progressbar&quot; aria-label=&quot;Loading {navigating.to.url.pathname}&quot;&gt;&lt;/div&gt;
+{/if}
+
+{@render children()}</code></pre>
+</figure>
+<h3 id="the-app-layout">The app layout</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:8-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE APP LAYOUT
+ * ==============
+ *
+ * Everything inside the `(app)` group gets this header. The parentheses
+ * make it a *layout group*: a folder that adds a layout without adding a
+ * segment to the URL, so `/studio` is still `/studio`. The one page that
+ * escapes it is `embed/demo/+page@.svelte`, whose `@` says &quot;render me in
+ * the root layout instead&quot;.
+ */
+
+let { children } = $props();
+
+const links = [
+	{ href: '/studio', label: 'Studio' },
+	{ href: '/gallery', label: 'Gallery' },
+	{ href: '/jam/lobby', label: 'Jam' },
+	{ href: '/embed', label: 'Embed' }
+] as const;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:28-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE CURRENT PATH, EAGERLY
+ * =========================
+ *
+ * With async Svelte, a navigation's state changes are held back until the
+ * new page's `await`s resolve, so that the interface never shows half of an
+ * update. That is right for content and wrong for the thing somebody just
+ * clicked: a nav link that stays un-highlighted for the four hundred
+ * milliseconds a remote query takes feels broken. `$state.eager` reads the
+ * *incoming* value immediately, for this one attribute, and nothing else.
+ */
+const pathname = $derived(page.url.pathname);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:79-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;nav aria-label=&quot;Primary&quot;&gt;
+	&lt;ul class=&quot;nav&quot;&gt;
+		{#each links as link (link.href)}
+			&lt;li&gt;
+				&lt;a
+					href={link.href}
+					class={[
+						'nav__link',
+						{ 'nav__link--current': $state.eager(pathname).startsWith(link.href) }
+					]}
+					aria-current={$state.eager(pathname).startsWith(link.href) ? 'page' : undefined}
+				&gt;
+					{link.label}
+				&lt;/a&gt;
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+&lt;/nav&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>$state.eager</code></h4>
+	<p>With async Svelte, a navigation’s state changes are held back until the new page’s <code>await</code>s resolve, so the interface never shows half an update. That is right for content and wrong for the thing somebody just clicked: a nav link that stays un-highlighted for the four hundred milliseconds a remote query takes feels broken. <code>$state.eager(pathname)</code> reads the *incoming* value immediately — for this one attribute and nothing else. The rest of the page still waits.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:41-56</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A NEW VERSION WAS DEPLOYED
+ * ==========================
+ *
+ * `version.pollInterval` in `vite.config.ts` makes SvelteKit check for a new
+ * build every minute and set `updated.current` when it finds one. Client-side
+ * navigation would then ask for JavaScript files that no longer exist, so
+ * the next navigation becomes a full page load instead. The banner below
+ * gives the person the choice to do that now; this makes sure it happens
+ * anyway.
+ */
+beforeNavigate(({ willUnload, to }) =&gt; {
+	if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) {
+		location.href = to.url.href;
+	}
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:64-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
+
+{#if updated.current}
+	&lt;div class=&quot;updated&quot; role=&quot;status&quot; transition:fly={{ y: -16, duration: 240 }}&gt;
+		&lt;span&gt;A new version of Ostinato is ready.&lt;/span&gt;
+		&lt;a class=&quot;btn btn--sm btn--primary&quot; href={page.url.href} data-sveltekit-reload&gt;Reload&lt;/a&gt;
+	&lt;/div&gt;
+{/if}</code></pre>
+</figure>
+<p><code>version.pollInterval</code> in the config makes SvelteKit check for a new build every minute and set <code>updated.current</code> when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so <code>beforeNavigate</code> turns the next navigation into a full page load. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. <code>data-sveltekit-reload</code> on the link is what makes it a real reload rather than a client-side navigation.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:98-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;topbar__end&quot;&gt;
+	&lt;!--
+		Who this browser is, as a remote query rather than layout data. The
+		forms that change the answer — choosing a handle, forgetting it — call
+		`whoAmI().refresh()` in their handlers, and the new value comes back in
+		the same response as the submission. A layout `load` would have needed
+		a second round trip to notice.
+	--&gt;
+	&lt;svelte:boundary&gt;
+		{const me = $derived(await whoAmI())}
+		{#if me}
+			&lt;a class=&quot;chip chip--on&quot; href=&quot;/gallery#yours&quot;&gt;@{me.handle}&lt;/a&gt;
+		{:else}
+			&lt;span class=&quot;chip&quot; title=&quot;Choose a handle when you publish&quot;&gt;not signed in&lt;/span&gt;
+		{/if}
+		{#snippet pending()}
+			&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
+		{/snippet}
+	&lt;/svelte:boundary&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>Who this browser is comes from <code>whoAmI()</code>, a remote query, rather than from layout data. The forms that change the answer call <code>whoAmI().refresh()</code> in their handlers (ch. 24), and the new value arrives in the same response as the submission. A layout <code>load</code> would have needed a second round trip to notice — and in an earlier version of this project, it did, and the header showed the old name until the next navigation.</p>
+<h3 id="small-pieces">The small pieces</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Section.svelte<span class="code__lines">:4-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A titled section whose heading level is a prop.
+ *
+ * `&lt;svelte:element this={...}&gt;` renders whichever tag the string names, so
+ * the same component is an `h2` on the landing page and an `h3` inside a
+ * panel — and the document outline stays honest, which is what a screen
+ * reader navigates by.
+ */
+let {
+	level = 2,
+	title,
+	eyebrow,
+	children
+}: { level?: 2 | 3 | 4; title: string; eyebrow?: string; children: Snippet } = $props();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Section.svelte<span class="code__lines">:20-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;section&quot;&gt;
+	&lt;header class=&quot;section__head&quot;&gt;
+		{#if eyebrow}&lt;p class=&quot;section__eyebrow&quot;&gt;{eyebrow}&lt;/p&gt;{/if}
+		&lt;svelte:element this={`h${level}`} class=&quot;section__title&quot;&gt;{title}&lt;/svelte:element&gt;
+	&lt;/header&gt;
+	{@render children()}
+&lt;/section&gt;</code></pre>
+</figure>
+<p><code>&lt;svelte:element this={...}&gt;</code> renders whichever tag the string names, so one component is an <code>h2</code> on the landing page and an <code>h3</code> inside a panel, and the document outline — what a screen reader navigates by — stays honest.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Logo.svelte<span class="code__lines">:14-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	let { size = 28 }: { size?: number } = $props();
+
+	const duration = $derived(prefersReducedMotion.current ? 0 : 900);
+&lt;/script&gt;
+
+&lt;svg width={size} height={size} viewBox=&quot;0 0 32 32&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot;&gt;
+	&lt;path
+		in:draw={{ duration }}
+		d=&quot;M3 20 C6 20 6 12 9 12 S12 20 15 20 S18 12 21 12 S24 20 27 20 S30 12 30 12&quot;
+		stroke=&quot;var(--accent)&quot;
+		stroke-width=&quot;2.5&quot;
+		stroke-linecap=&quot;round&quot;
+		stroke-linejoin=&quot;round&quot;
+	/&gt;
+	&lt;circle cx=&quot;9&quot; cy=&quot;24&quot; r=&quot;1.6&quot; fill=&quot;var(--accent)&quot; /&gt;
+	&lt;circle cx=&quot;21&quot; cy=&quot;24&quot; r=&quot;1.6&quot; fill=&quot;var(--accent)&quot; /&gt;
+&lt;/svg&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/toast/toast.ts<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TOASTS, IMPERATIVELY
+ * ====================
+ *
+ * `toast('Saved')` from anywhere — an event handler, a form's `enhance`
+ * callback, a catch block — with no `&lt;Toasts /&gt;` host to remember to render.
+ *
+ * `mount` creates a component instance at a target, `unmount` removes it, and
+ * `{ outro: true }` lets its `transition:fly` play on the way out. The same
+ * two functions SvelteKit itself uses to start the app, used here for the one
+ * component that genuinely does not belong to any page.
+ */
+
+import { mount, unmount } from 'svelte';
+import Toast from './Toast.svelte';
+
+let current: ReturnType&lt;typeof mount&gt; | null = null;
+let timer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+
+export function toast(message: string, tone: 'info' | 'error' = 'info'): void {
+	if (typeof document === 'undefined') return;
+
+	// One at a time. A second toast replaces the first rather than stacking;
+	// two overlapping status messages are one too many to read.
+	if (current) void unmount(current, { outro: false });
+	if (timer) clearTimeout(timer);
+
+	current = mount(Toast, { target: document.body, props: { message, tone } });
+
+	timer = setTimeout(() =&gt; {
+		if (current) void unmount(current, { outro: true });
+		current = null;
+	}, 2800);
+}</code></pre>
+</figure>
+<p><code>toast(&quot;Saved&quot;)</code> from anywhere — an event handler, a <code>catch</code> block — with no <code>&lt;Toasts /&gt;</code> host to remember. <code>mount</code> creates a component at a target, <code>unmount</code> removes it, and <code>{ outro: true }</code> lets its <code>transition:fly</code> play on the way out. These are the same two functions SvelteKit itself uses to start the app.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+error.svelte<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+
+	/**
+	 * The error page for anything a route throws — a `404` from `error(404)`,
+	 * or a genuine failure that `handleError` turned into a message and an id.
+	 *
+	 * With SvelteKit 3 this is a real `&lt;svelte:boundary&gt;` around the page below
+	 * it, on the server as well as the client: a component that throws while
+	 * rendering lands here rather than taking the whole response down.
+	 */
+	const title = $derived(
+		page.status === 404
+			? 'Nothing here'
+			: page.status &gt;= 500
+				? 'Something broke'
+				: 'That did not work'
+	);
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{page.status} — Ostinato&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;section class=&quot;error page&quot;&gt;
+	&lt;p class=&quot;error__status mono&quot;&gt;{page.status}&lt;/p&gt;
+	&lt;h1&gt;{title}&lt;/h1&gt;
+	&lt;p class=&quot;error__message&quot;&gt;{page.error?.message}&lt;/p&gt;
+	{#if page.error?.id}
+		&lt;p class=&quot;hint&quot;&gt;Reference &lt;code&gt;{page.error.id}&lt;/code&gt; if you report this.&lt;/p&gt;
+	{/if}
+	&lt;p&gt;&lt;a class=&quot;btn&quot; href=&quot;/studio&quot;&gt;Back to the studio&lt;/a&gt;&lt;/p&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+<aside class="callout callout--note"><p>With SvelteKit 3 the error page is a real <code>&lt;svelte:boundary&gt;</code> around the page below it, on the server as well as the client: a component that throws while rendering lands here rather than taking the whole response down. <code>page.error.id</code> is the correlation id <code>handleError</code> adds for unknown errors (ch. 26) — and <code>src/error.html</code> is the page for when even this cannot render.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>(app)</code> does to the URL, and what <code>+page@.svelte</code> does to the layout chain.</li><li>You can explain when <code>$state.eager</code> is the right tool and when it would be wrong.</li><li>You can trace what happens on the first navigation after a deploy.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="hooks.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Hooks: around every request</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-landing-page.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The landing page is a file</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

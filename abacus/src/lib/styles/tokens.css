@@ -1,0 +1,151 @@
+/*
+ * DESIGN TOKENS
+ * =============
+ *
+ * Every colour, size and duration the interface uses, as a custom property, in
+ * one place. Components never write a hex value; they write `var(--accent)`,
+ * and the accent can change here without a search-and-replace.
+ *
+ * LIGHT FIRST, DARK BY `light-dark()`
+ * -----------------------------------
+ * A spreadsheet is a sheet of paper, so the light theme is the design and the
+ * dark theme is a translation of it — the opposite of project 6, and for the
+ * same reason: design the one people will live in. `color-scheme: light dark`
+ * tells the browser both are supported, and every colour token is a
+ * `light-dark(light, dark)` pair the browser picks from by system setting.
+ *
+ * FORCED COLOURS
+ * --------------
+ * Windows High Contrast replaces every colour with a system one. The grid
+ * still needs its lines and its selection to be visible, so the rules that
+ * matter are restated in `@media (forced-colors: active)` using the system
+ * keywords (`CanvasText`, `Highlight`) that survive the replacement.
+ */
+
+:root {
+	color-scheme: light dark;
+
+	/* ---- Surfaces ---------------------------------------------------- */
+	--bg: light-dark(#f7f7f5, #111214);
+	--surface: light-dark(#ffffff, #18191c);
+	--surface-raised: light-dark(#ffffff, #1e2024);
+	--surface-hover: light-dark(#f0f0ed, #25272c);
+	--surface-active: light-dark(#e6e7e3, #2e3037);
+	--border: light-dark(#e2e2de, #2a2c31);
+	--border-strong: light-dark(#c4c5c0, #3f424a);
+
+	/* ---- The grid ---------------------------------------------------- */
+	--grid-line: light-dark(#e2e2de, #2a2c31);
+	--grid-head: light-dark(#f3f3f1, #1c1d21);
+	--grid-head-text: light-dark(#5c5f66, #9a9ea8);
+	--grid-cell: light-dark(#ffffff, #141518);
+	--grid-cell-alt: light-dark(#fbfbfa, #17181b);
+	--selection: light-dark(rgb(36 87 214 / 0.12), rgb(122 167 255 / 0.18));
+	--selection-border: light-dark(#2457d6, #7aa7ff);
+	--remote-flash: light-dark(#fff2c2, #4a3d12);
+
+	/* ---- Text -------------------------------------------------------- */
+	--text: light-dark(#1a1b1e, #ecedef);
+	--text-muted: light-dark(#5c5f66, #a3a7b0);
+	--text-faint: light-dark(#8b8e95, #6b6f78);
+
+	/* ---- Accent: ledger blue ----------------------------------------- */
+	--accent: light-dark(#2457d6, #7aa7ff);
+	--accent-strong: light-dark(#1a44ad, #9dbcff);
+	--accent-soft: light-dark(#e6edfd, #1d2a4a);
+	--on-accent: light-dark(#ffffff, #0b1330);
+
+	/* ---- Status ------------------------------------------------------ */
+	--ok: light-dark(#1f8a5b, #5fd39a);
+	--warn: light-dark(#b8860b, #f0b90b);
+	--danger: light-dark(#c62f2f, #ff7b7b);
+	--danger-soft: light-dark(#fde8e8, #3d1d1d);
+
+	/*
+	 * ---- Reference colours ------------------------------------------
+	 * A formula's references are coloured in the formula bar and on the grid,
+	 * first reference first colour, so a person can see which range is which.
+	 * Hues, so that `oklch()` can make a fill and a border from the same number.
+	 */
+	--ref-hue-0: 250;
+	--ref-hue-1: 20;
+	--ref-hue-2: 150;
+	--ref-hue-3: 300;
+	--ref-hue-4: 60;
+	--ref-hue-5: 200;
+
+	/* ---- Type -------------------------------------------------------- */
+	--font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+	--fs-xs: 0.75rem;
+	--fs-sm: 0.875rem;
+	--fs-md: 1rem;
+	--fs-lg: 1.25rem;
+	--fs-xl: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+	--fs-2xl: clamp(2.25rem, 1.4rem + 4vw, 4rem);
+
+	--weight-regular: 400;
+	--weight-medium: 500;
+	--weight-semibold: 600;
+	--weight-bold: 700;
+
+	--leading-tight: 1.15;
+	--leading-normal: 1.5;
+
+	/* ---- Space ------------------------------------------------------- */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+	--space-7: 3rem;
+	--space-8: 4rem;
+
+	/* ---- Shape ------------------------------------------------------- */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 14px;
+	--radius-pill: 999px;
+
+	--shadow-sm: 0 1px 2px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.4));
+	--shadow-lg:
+		0 12px 32px light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.6)),
+		0 2px 6px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.4));
+
+	/* ---- Motion ------------------------------------------------------ */
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--dur-fast: 120ms;
+	--dur-base: 200ms;
+	--dur-slow: 360ms;
+
+	/* ---- Layers ------------------------------------------------------ */
+	--z-sticky: 10;
+	--z-sheet: 20;
+	--z-dialog: 30;
+	--z-toast: 40;
+
+	/* ---- Layout ------------------------------------------------------ */
+	--measure: 68ch;
+	--page-max: 80rem;
+	--gutter: var(--space-4);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--topbar: 3.25rem;
+}
+
+@media (min-width: 40rem) {
+	:root {
+		--gutter: var(--space-6);
+	}
+}
+
+@media (forced-colors: active) {
+	:root {
+		--grid-line: CanvasText;
+		--selection: Highlight;
+		--selection-border: Highlight;
+		--accent: LinkText;
+	}
+}

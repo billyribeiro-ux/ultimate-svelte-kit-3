@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard, pointer, clipboard — Building Abacus</title>
+<meta name="description" content="Arrows, Tab and Enter, typing to replace, F2 to edit, Ctrl+arrow to the edge of the data, Ctrl+A, undo and redo — then pointer drags for selection, references, the fill handle and column resizing, and copy, cut and paste through the clipboard events.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">20 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 51.28205128205128%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html" aria-current="page"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 20</p>
+			<h1>Keyboard, pointer, clipboard</h1>
+			<p class="lede">Arrows, Tab and Enter, typing to replace, F2 to edit, Ctrl+arrow to the edge of the data, Ctrl+A, undo and redo — then pointer drags for selection, references, the fill handle and column resizing, and copy, cut and paste through the clipboard events.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Implement a spreadsheet’s input model on one element with one keydown handler and one pointer state machine, and put two formats on the clipboard at once.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:228-250</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function keydown(event: KeyboardEvent) {
+	if (sheet.editing) return; // the editor handles its own keys
+	const shift = event.shiftKey;
+	const mod = event.metaKey || event.ctrlKey;
+
+	const jump = (dRow: number, dCol: number) =&gt; {
+		event.preventDefault();
+		if (mod) {
+			// Ctrl+arrow: to the edge of the data, like every spreadsheet.
+			const from = shift ? sheet.focus : sheet.anchor;
+			const extent = sheet.engine.extent();
+			const target = {
+				row: dRow === 0 ? from.row : dRow &lt; 0 ? 0 : Math.max(from.row, extent?.row ?? 0),
+				col: dCol === 0 ? from.col : dCol &lt; 0 ? 0 : Math.max(from.col, extent?.col ?? 0)
+			};
+			if (shift) sheet.focus = target;
+			else sheet.select(target);
+		} else {
+			sheet.move(dRow, dCol, shift);
+		}
+	};
+
+	switch (event.key) {</code></pre>
+</figure>
+<p>One handler on the grid element. <code>jump</code> is the arrow-key primitive: with Ctrl, to the edge of the data; with Shift, extend the selection instead of moving it. Every spreadsheet key a person expects is a case in the switch, and the last branch is the one that makes it feel like a spreadsheet: any printable character starts editing with that character, replacing the cell.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:251-323</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">		case 'ArrowDown':
+			return jump(1, 0);
+		case 'ArrowUp':
+			return jump(-1, 0);
+		case 'ArrowRight':
+			return jump(0, 1);
+		case 'ArrowLeft':
+			return jump(0, -1);
+		case 'Tab':
+			event.preventDefault();
+			return sheet.move(0, shift ? -1 : 1);
+		case 'Enter':
+			event.preventDefault();
+			if (readonly) return sheet.move(shift ? -1 : 1, 0);
+			return startEditing();
+		case 'F2':
+			event.preventDefault();
+			return startEditing();
+		case 'Home':
+			event.preventDefault();
+			return mod
+				? sheet.select({ row: 0, col: 0 })
+				: sheet.select({ row: sheet.anchor.row, col: 0 });
+		case 'End': {
+			event.preventDefault();
+			const extent = sheet.engine.extent();
+			return mod
+				? sheet.select({ row: extent?.row ?? 0, col: extent?.col ?? 0 })
+				: sheet.select({ row: sheet.anchor.row, col: extent?.col ?? 0 });
+		}
+		case 'PageDown':
+			return jump(Math.max(1, Math.floor(height / DEFAULT_ROW_HEIGHT) - 2), 0);
+		case 'PageUp':
+			return jump(-Math.max(1, Math.floor(height / DEFAULT_ROW_HEIGHT) - 2), 0);
+		case 'Delete':
+		case 'Backspace':
+			event.preventDefault();
+			if (!readonly) sheet.clear();
+			return;
+		case 'Escape':
+			return sheet.select(sheet.anchor);
+		case 'a':
+		case 'A':
+			if (mod) {
+				event.preventDefault();
+				const extent = sheet.engine.extent();
+				sheet.select({ row: 0, col: 0 }, { row: extent?.row ?? 0, col: extent?.col ?? 0 });
+			}
+			return;
+		case 'z':
+		case 'Z':
+			if (mod) {
+				event.preventDefault();
+				if (readonly) return;
+				if (shift) sheet.redo();
+				else sheet.undo();
+			}
+			return;
+		case 'y':
+		case 'Y':
+			if (mod) {
+				event.preventDefault();
+				if (!readonly) sheet.redo();
+			}
+			return;
+	}
+
+	// Any printable character starts editing with that character, replacing the cell.
+	if (!mod &amp;&amp; event.key.length === 1 &amp;&amp; !readonly) {
+		event.preventDefault();
+		startEditing(event.key);
+	}
+}</code></pre>
+</figure>
+<p>Note the first line of the handler: while the in-cell editor is open, the grid does nothing — the editor handles its own keys and stops propagation (ch. 21). Two components on one keyboard is a coordination problem, and “the editor wins while it exists” is the whole of the coordination.</p>
+<h3 id="clipboard">The clipboard</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:329-362</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const MIME = 'application/x-abacus-cells+json';
+
+function oncopy(event: ClipboardEvent) {
+	if (sheet.editing || !event.clipboardData) return;
+	event.preventDefault();
+	const payload = sheet.copy();
+	event.clipboardData.setData('text/plain', payload.text);
+	event.clipboardData.setData(MIME, JSON.stringify(payload));
+}
+
+function oncut(event: ClipboardEvent) {
+	if (readonly) return oncopy(event);
+	if (sheet.editing || !event.clipboardData) return;
+	event.preventDefault();
+	const payload = sheet.cut();
+	event.clipboardData.setData('text/plain', payload.text);
+	event.clipboardData.setData(MIME, JSON.stringify(payload));
+}
+
+function onpaste(event: ClipboardEvent) {
+	if (readonly || sheet.editing || !event.clipboardData) return;
+	event.preventDefault();
+	const own = event.clipboardData.getData(MIME);
+	if (own) {
+		try {
+			sheet.paste(JSON.parse(own));
+			return;
+		} catch {
+			// fall through to text
+		}
+	}
+	const text = event.clipboardData.getData('text/plain');
+	if (text) sheet.pasteText(text);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why two MIME types</h4>
+	<p>A copy puts tab-separated text on the clipboard *and* the same cells as JSON under a private MIME type. Paste into another application and it reads the text. Paste back into Abacus and it finds its own JSON first: formulas travel as formulas and are translated by the distance they moved, and formats come with them. If the JSON is missing — the text came from somewhere else — the text path parses it as tab- or comma-separated with the CSV parser of chapter 23. This is what every spreadsheet does; the browser tests in <code>sheet.svelte.test.ts</code> check both paths.</p>
+</aside>
+<h3 id="pointer">The pointer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:369-387</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The cell under a pointer. The scroll offsets are read from the element,
+ * not from the `scrollTop`/`scrollLeft` state: `scroll` events arrive a
+ * frame after the scroll, and a pointer can land in that frame — the phone
+ * profile of the end-to-end suite did exactly that, and typed into B2.
+ * For hit-testing, the DOM is the truth.
+ */
+function cellAt(clientX: number, clientY: number): Address | null {
+	if (!viewport) return null;
+	const box = viewport.getBoundingClientRect();
+	const x = clientX - box.left - HEADER_WIDTH;
+	const y = clientY - box.top - HEADER_HEIGHT;
+	if (x &lt; 0 || y &lt; 0) return null;
+	const col = x &lt; frozenWidth ? colAxis.indexAt(x) : colAxis.indexAt(x + viewport.scrollLeft);
+	const row = y &lt; frozenHeight ? rowAxis.indexAt(y) : rowAxis.indexAt(y + viewport.scrollTop);
+	return { row: Math.min(row, rowCount - 1), col: Math.min(col, colCount - 1) };
+}
+
+type Drag =</code></pre>
+</figure>
+<p><code>cellAt</code> turns a client coordinate into a cell: subtract the headers, add the scroll — except inside a frozen pane, where the screen position *is* the canvas position. <code>Drag</code> is a discriminated union of the four things a drag can be doing, and <code>drag</code> is <code>$state</code> so the class list can show a fill target while the pointer moves.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:388-462</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	| { kind: 'select'; from: Address }
+	| { kind: 'reference'; from: Address }
+	| { kind: 'fill'; source: Rect; target: Rect }
+	| { kind: 'resize'; col: number; startX: number; startWidth: number; width: number };
+
+let drag = $state&lt;Drag | null&gt;(null);
+
+function pointerdown(event: PointerEvent) {
+	if (event.button !== 0) return;
+	const target = event.target as HTMLElement;
+
+	const handle = target.closest&lt;HTMLElement&gt;('[data-resize]');
+	if (handle) {
+		event.preventDefault();
+		const col = Number(handle.dataset.resize);
+		drag = {
+			kind: 'resize',
+			col,
+			startX: event.clientX,
+			startWidth: colAxis.size(col),
+			width: colAxis.size(col)
+		};
+		viewport?.setPointerCapture(event.pointerId);
+		return;
+	}
+
+	if (target.closest('[data-fill]')) {
+		event.preventDefault();
+		drag = { kind: 'fill', source: selection, target: selection };
+		viewport?.setPointerCapture(event.pointerId);
+		return;
+	}
+
+	const colHead = target.closest&lt;HTMLElement&gt;('[data-colhead]');
+	if (colHead) {
+		event.preventDefault();
+		const col = Number(colHead.dataset.colhead);
+		commitIfEditing();
+		sheet.select({ row: 0, col }, { row: rowCount - 1, col });
+		grid?.focus();
+		return;
+	}
+	const rowHead = target.closest&lt;HTMLElement&gt;('[data-rowhead]');
+	if (rowHead) {
+		event.preventDefault();
+		const row = Number(rowHead.dataset.rowhead);
+		commitIfEditing();
+		sheet.select({ row, col: 0 }, { row, col: colCount - 1 });
+		grid?.focus();
+		return;
+	}
+
+	if (target.closest('input')) return; // the editor keeps the click
+
+	const cell = cellAt(event.clientX, event.clientY);
+	if (!cell) return;
+
+	if (sheet.editing?.text.startsWith('=')) {
+		// Mid-formula: a click on a cell inserts a reference rather than moving.
+		if (insertReference(rect(cell, cell))) {
+			event.preventDefault();
+			drag = { kind: 'reference', from: cell };
+			viewport?.setPointerCapture(event.pointerId);
+			return;
+		}
+	}
+
+	event.preventDefault();
+	commitIfEditing();
+	if (event.shiftKey) sheet.focus = cell;
+	else sheet.select(cell);
+	drag = { kind: 'select', from: cell };
+	viewport?.setPointerCapture(event.pointerId);
+	grid?.focus();
+}</code></pre>
+</figure>
+<p>Pointer-down dispatches on what was hit, from most specific to least: a resize handle, the fill handle, a column header, a row header, an input, a cell. <code>setPointerCapture</code> is what keeps the drag alive when the pointer leaves the viewport — without it, dragging a selection past the edge would drop it. And the one spreadsheet gesture people never notice until it is missing: click a cell *while typing a formula* and its address is inserted at the caret instead of the selection moving.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:461-530</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	grid?.focus();
+}
+
+function commitIfEditing() {
+	if (sheet.editing) commit('stay');
+}
+
+function pointermove(event: PointerEvent) {
+	if (!drag) return;
+	const cell = cellAt(event.clientX, event.clientY);
+	switch (drag.kind) {
+		case 'select':
+			if (cell) sheet.focus = cell;
+			break;
+		case 'reference':
+			if (cell) insertReference(rect(drag.from, cell));
+			break;
+		case 'fill': {
+			if (!cell) break;
+			const s = drag.source;
+			// Extend along whichever axis the pointer has left the source on.
+			const dRow =
+				cell.row &lt; s.top ? cell.row - s.top : cell.row &gt; s.bottom ? cell.row - s.bottom : 0;
+			const dCol =
+				cell.col &lt; s.left ? cell.col - s.left : cell.col &gt; s.right ? cell.col - s.right : 0;
+			const vertical = Math.abs(dRow) &gt;= Math.abs(dCol);
+			drag.target = vertical
+				? {
+						top: Math.min(s.top, cell.row),
+						bottom: Math.max(s.bottom, cell.row),
+						left: s.left,
+						right: s.right
+					}
+				: {
+						top: s.top,
+						bottom: s.bottom,
+						left: Math.min(s.left, cell.col),
+						right: Math.max(s.right, cell.col)
+					};
+			break;
+		}
+		case 'resize':
+			drag.width = Math.max(24, drag.startWidth + event.clientX - drag.startX);
+			break;
+	}
+}
+
+function pointerup() {
+	if (!drag) return;
+	if (drag.kind === 'fill' &amp;&amp; !readonly) {
+		const { source, target } = drag;
+		if (
+			target.top !== source.top ||
+			target.bottom !== source.bottom ||
+			target.left !== source.left ||
+			target.right !== source.right
+		) {
+			sheet.fill(source, target);
+		}
+	}
+	if (drag.kind === 'resize' &amp;&amp; !readonly) sheet.resizeColumn(drag.col, drag.width);
+	drag = null;
+}
+
+function dblclick(event: MouseEvent) {
+	if (readonly) return;
+	if ((event.target as HTMLElement).closest('[data-resize]')) return;
+	const cell = cellAt(event.clientX, event.clientY);
+	if (!cell) return;
+	sheet.select(cell);</code></pre>
+</figure>
+<p>Move updates the drag; up commits it. A fill drag decides its direction by which way the pointer went furthest and extends the source rectangle that way. A resize drag holds the new width in the drag state until the pointer is released, so the column follows the pointer live and the sheet is written once.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>event.key.length === 1</code> is for and what would happen without the <code>!mod</code> check.</li><li>You can explain why <code>setPointerCapture</code> is called on the viewport, not on the cell.</li><li>You can trace a copy from Abacus and a paste into Abacus, and say which MIME type wins.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-grid.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The grid: a thousand cells out of a million</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-cell-editor-and-formula-bar.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The cell editor and the formula bar</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

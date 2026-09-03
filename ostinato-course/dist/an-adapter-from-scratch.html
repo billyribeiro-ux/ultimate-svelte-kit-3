@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An adapter, from scratch — Building Ostinato</title>
+<meta name="description" content="What an adapter is: `writeClient`, `writePrerendered`, `generateManifest` per function, a runtime bundled with rolldown, `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">34 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 87.17948717948718%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html" aria-current="page"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 34</p>
+			<h1>An adapter, from scratch</h1>
+			<p class="lede">What an adapter is: <code>writeClient</code>, <code>writePrerendered</code>, <code>generateManifest</code> per function, a runtime bundled with rolldown, <code>builder.instrument</code>, an <code>emulate()</code> for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and <code>applyReroute</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a whole adapter and know which five steps every adapter takes; understand the manifest-per-function split; and see how SvelteKit 3’s <code>applyReroute</code> hands a request between functions.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:1-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ADAPTER-OSTINATO
+ * ================
+ *
+ * A SvelteKit adapter, written for this project so that the course can show
+ * what one *is*: the thing that takes SvelteKit's build output and turns it
+ * into a program for a particular place. This one targets a plain Node
+ * process, like `@sveltejs/adapter-node`, and is smaller than it in every way
+ * that does not matter and one that does: it deploys the app as two functions
+ * and a catch-all, and joins them with `applyReroute`.
+ *
+ * WHAT AN ADAPTER DOES, IN ORDER
+ * ------------------------------
+ *   1. clears its output directory;
+ *   2. writes the client assets, the prerendered pages and the server code
+ *      with `builder.writeClient`, `writePrerendered` and `writeServer` (the
+ *      last one implicitly, through `getServerDirectory()`);
+ *   3. generates one manifest per function with `builder.generateManifest`;
+ *   4. bundles its own runtime — `files/` — together with the server, so a
+ *      deployment needs only the production dependencies;
+ *   5. wires `instrumentation.server.js` in front of the entrypoint, so tracing
+ *      is set up before any application code runs.
+ *
+ * Everything after step 2 is about *this* adapter. Everything up to it is
+ * every adapter.
+ */</code></pre>
+</figure>
+<p>An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Everything up to step 2 in that list is *every* adapter; everything after it is this one. It targets a plain Node process, like <code>adapter-node</code>, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:47-74</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * @param {Options} [options]
+ * @returns {import('@sveltejs/kit').Adapter}
+ */
+export default function ostinato({ out = 'build', precompress = true } = {}) {
+	const startedAt = Date.now();
+
+	return {
+		name: 'adapter-ostinato',
+
+		async adapt(builder) {
+			const tmp = builder.getBuildDirectory('adapter-ostinato');
+
+			rmSync(out, { force: true, recursive: true });
+			rmSync(tmp, { force: true, recursive: true });
+			mkdirSync(tmp, { recursive: true });
+
+			builder.log.minor('Copying assets');
+			builder.writeClient(`${out}/client${builder.config.paths.base}`);
+			builder.writePrerendered(`${out}/prerendered${builder.config.paths.base}`);
+
+			if (precompress) {
+				builder.log.minor('Compressing assets');
+				await Promise.all([
+					builder.compress(`${out}/client`),
+					builder.compress(`${out}/prerendered`)
+				]);
+			}</code></pre>
+</figure>
+<h3 id="the-split">The split, and a manifest per function</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHICH FUNCTION OWNS WHICH ROUTE
+ * ===============================
+ *
+ * The adapter deploys the app as two functions and a catch-all:
+ *
+ *   `pages`   every page and layout that is not prerendered
+ *   `api`     everything under `/api`, plus remote function calls
+ *   `router`  nothing at all — a SvelteKit server with an empty route table,
+ *             whose only job is to run the `reroute` hook and say where the
+ *             request should have gone
+ *
+ * The split is the point, not the performance. A single function would be
+ * simpler and, for this app, faster. But a single function never *needs*
+ * `applyReroute`, and the reason SvelteKit 3 added it is precisely that
+ * platforms split apps across functions — so an adapter that shows how the
+ * hand-off works has to split something. `/api` is the natural seam: it is the
+ * part somebody would scale, cache and rate-limit differently.
+ *
+ * Pure functions, so they can be tested without a build.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:23-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * @typedef {{ id: string; pattern: RegExp; prerender: import('@sveltejs/kit').PrerenderOption }} RouteLike
+ */
+
+/** @param {RouteLike} route */
+export function isApi(route) {
+	return route.id === '/api' || route.id.startsWith('/api/');
+}
+
+/**
+ * Split the route table. Fully prerendered routes go to neither function —
+ * they are files, and the runtime serves them as files — which mirrors what
+ * `builder.generateManifest()` does by default when no subset is given.
+ *
+ * @template {RouteLike} R
+ * @param {R[]} routes
+ */
+export function partition(routes) {
+	const dynamic = routes.filter((route) =&gt; route.prerender !== true);
+
+	return {
+		pages: dynamic.filter((route) =&gt; !isApi(route)),
+		api: dynamic.filter(isApi),
+		prerendered: routes.filter((route) =&gt; route.prerender === true)
+	};
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why split at all</h4>
+	<p>A single function would be simpler and, for this app, faster. But a single function never *needs* <code>applyReroute</code>, and the reason SvelteKit 3 added it is precisely that platforms split apps across functions. An adapter that shows how the hand-off works has to split something, and <code>/api</code> is the natural seam: the part somebody would scale, cache and rate-limit differently. Fully prerendered routes go to neither — they are files.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:76-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * THE SPLIT
+ * ---------
+ * `builder.routes` is every route with its pattern and its prerender
+ * setting. `partition` decides which function owns which, and each
+ * function gets a manifest that knows *only* its own routes.
+ *
+ * The third manifest has no routes at all. A `Server` built from it can
+ * still run the hooks — and when `reroute` changes the path of a request
+ * it received, SvelteKit sets an `x-sveltekit-rerouted-url` header on the
+ * response, which is what `applyReroute` reads in `files/handler.js`.
+ */
+const split = partition(builder.routes);
+builder.log.info(
+	`pages: ${split.pages.length} routes · api: ${split.api.length} routes · ` +
+		`${split.prerendered.length} prerendered`
+);
+
+const server = builder.getServerDirectory();
+const manifest = (/** @type {typeof split.pages} */ routes) =&gt;
+	`export const manifest = ${builder.generateManifest({ relativePath: './', routes })};`;
+
+writeFileSync(`${server}/manifest-pages.js`, manifest(split.pages));
+writeFileSync(`${server}/manifest-api.js`, manifest(split.api));
+writeFileSync(`${server}/manifest-router.js`, manifest([]));
+
+/*
+ * What the runtime needs to know that only the build knows: the origin
+ * baked in for CSRF, which paths are prerendered files, and the route
+ * patterns each function answers to — as regex sources, because a RegExp
+ * does not survive `JSON.stringify` and a string does.
+ */
+writeFileSync(
+	`${server}/entries.js`,
+	[
+		`export const origin = ${JSON.stringify(builder.config.paths.origin || null)};`,
+		`export const base = ${JSON.stringify(builder.config.paths.base)};`,
+		`export const appDir = ${JSON.stringify(builder.config.appDir)};`,
+		`export const prerendered = new Set(${JSON.stringify(builder.prerendered.paths)});`,
+		`export const patterns = ${JSON.stringify({
+			pages: split.pages.map((route) =&gt; route.pattern.source),
+			api: split.api.map((route) =&gt; route.pattern.source)
+		})};`,
+		`export const precompress = ${JSON.stringify(precompress)};`
+	].join('\n')
+);</code></pre>
+</figure>
+<p><code>builder.generateManifest({ routes })</code> produces a manifest that knows *only* those routes. Three are written: pages, api, and one with no routes at all. A <code>Server</code> built from the empty manifest can still run the hooks — and when <code>reroute</code> changes the path of a request it received, SvelteKit sets an <code>x-sveltekit-rerouted-url</code> header on the response. That header is set only when the manifest has zero routes, which is why the catch-all is route-less rather than a copy of pages. <code>entries.js</code> carries what the runtime needs that only the build knows: the origin baked in for CSRF, the prerendered paths, the route patterns as regex sources.</p>
+<h3 id="bundling">Bundling the runtime</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:123-189</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">builder.log.minor('Building server');
+
+// Copy the runtime beside the server output, then bundle the two together
+// so that shared modules exist once.
+const entries = `${tmp}/entries`.replace(/\\/g, '/');
+builder.copy(files, entries);
+
+/** @type {Record&lt;string, string&gt;} */
+const input = {
+	index: `${entries}/index.js`,
+	handler: `${entries}/handler.js`
+};
+
+if (builder.hasServerInstrumentationFile()) {
+	input['instrumentation.server'] = `${server}/instrumentation.server.js`;
+}
+
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+
+const bundle = await rolldown({
+	input,
+	external: [
+		// Production dependencies stay external; they are installed on the
+		// target. Everything else — including this adapter's own `sirv` — is
+		// bundled in, which is what lets `build/` run with `pnpm install --prod`.
+		...Object.keys(pkg.dependencies || {}).map(
+			(d) =&gt; new RegExp(`^${escapeRegex(d)}(\\/.*)?$`)
+		),
+		// The SvelteKit runtime and `instrumentation.server.js` must share one
+		// copy of the OpenTelemetry API, or the spans go to two different worlds.
+		/^@opentelemetry\/api(\/.*)?$/
+	],
+	platform: 'node',
+	resolve: { conditionNames: ['node'] },
+	plugins: [
+		{
+			// The runtime imports these by name; they exist only after the build.
+			name: 'adapter-ostinato:resolve-app',
+			resolveId(id) {
+				if (id === 'SERVER') return `${server}/index.js`;
+				if (id === 'MANIFEST_PAGES') return `${server}/manifest-pages.js`;
+				if (id === 'MANIFEST_API') return `${server}/manifest-api.js`;
+				if (id === 'MANIFEST_ROUTER') return `${server}/manifest-router.js`;
+				if (id === 'ENTRIES') return `${server}/entries.js`;
+				// The runtime shares `pick` with the build step; it lives beside
+				// this file, not beside the copied runtime.
+				if (id === 'PARTITION') return partition_path;
+				return null;
+			}
+		}
+	]
+});
+
+await bundle.write({
+	dir: out,
+	format: 'esm',
+	sourcemap: true,
+	/*
+	 * `dir.js` must land at the top of `build/`, on its own, because it
+	 * computes the build directory from its *own* location. Bundled into a
+	 * chunk under `server/chunks/` it would report that folder instead, and
+	 * every static file would 404.
+	 */
+	codeSplitting: { groups: [{ name: 'dir', test: `${entries}/dir.js` }] },
+	chunkFileNames: (chunk) =&gt;
+		chunk.name === 'dir' ? '[name].js' : 'server/chunks/[name]-[hash].js'
+});</code></pre>
+</figure>
+<p>The runtime in <code>files/</code> imports <code>SERVER</code>, <code>MANIFEST_PAGES</code> and friends by name — modules that exist only after the build. A rolldown plugin resolves each to the generated file. Production dependencies stay external and everything else is bundled in, so <code>build/</code> runs with <code>pnpm install --prod</code>. One thing must not be bundled twice: the OpenTelemetry API, or the SvelteKit runtime and the instrumentation file would report spans to two different worlds.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:191-203</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * `builder.instrument` renames `index.js` to `start.js` and writes a new
+ * `index.js` that imports the instrumentation file and *then* dynamically
+ * imports `start.js`. That order is the whole feature: an OpenTelemetry
+ * SDK has to be registered before the modules it patches are loaded.
+ */
+if (builder.hasServerInstrumentationFile()) {
+	builder.instrument({
+		entrypoint: `${out}/index.js`,
+		instrumentation: `${out}/instrumentation.server.js`,
+		module: { exports: ['server', 'host', 'port'] }
+	});
+}</code></pre>
+</figure>
+<p><code>builder.instrument</code> renames <code>index.js</code> to <code>start.js</code> and writes a new <code>index.js</code> that imports the instrumentation file and *then* dynamically imports <code>start.js</code>. That order is the whole feature (ch. 32).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:206-253</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * During `vite dev`, `vite build` and `vite preview` there is no adapter
+ * runtime, so `event.platform` would be `undefined` and every read of it
+ * would need a guard. The emulator fills it in with the same shape the
+ * runtime produces, marked so a page can say which it is looking at.
+ */
+emulate() {
+	return {
+		platform: () =&gt; ({ adapter: 'adapter-ostinato (emulated)', entry: 'pages', startedAt })
+	};
+},
+
+supports: {
+	// `read()` from `$app/server` works: the runtime streams files from `client/`.
+	read: () =&gt; true,
+	// `instrumentation.server.js` is loaded before the app — see `builder.instrument` above.
+	instrumentation: () =&gt; true
+},
+
+/*
+ * ADAPTER-PROVIDED VITE PLUGINS (SvelteKit 3.0.0-next.18)
+ * -------------------------------------------------------
+ * An adapter can contribute Vite plugins, placed before (`pre`) or after
+ * (`post`) SvelteKit's own. This one provides a virtual module so that the
+ * app can say which adapter built it without hard-coding the name — the
+ * diagnostics page imports it. `pre`, because a module that other modules
+ * import has to be resolvable before SvelteKit's plugins start asking.
+ */
+vite: {
+	plugins: {
+		pre: [
+			{
+				name: 'adapter-ostinato:virtual-module',
+				resolveId(id) {
+					return id === 'virtual:adapter' ? '\0virtual:adapter' : null;
+				},
+				load(id) {
+					if (id !== '\0virtual:adapter') return null;
+					return [
+						`export const name = 'adapter-ostinato';`,
+						`export const entries = ['pages', 'api', 'router'];`,
+						`export const precompress = ${JSON.stringify(precompress)};`
+					].join('\n');
+				}
+			}
+		]
+	}
+}</code></pre>
+</figure>
+<p>Three more things an adapter can declare. <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code> and <code>vite preview</code>, with the same shape the runtime produces, so nothing has to guard against <code>undefined</code>. <code>supports</code> says what the runtime can do — <code>read()</code> from <code>$app/server</code>, instrumentation. And since SvelteKit 3.0.0-next.18 an adapter can contribute Vite plugins, <code>pre</code> or <code>post</code>: this one provides <code>virtual:adapter</code>, which the diagnostics page imports.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.d.ts<span class="code__lines">:41-54</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">interface Platform {
+	/**
+	 * What the adapter knows that the framework does not.
+	 *
+	 * `adapters/ostinato` fills this in from its runtime, and `emulate()` in
+	 * the same file fills it in during `vite dev` and `vite preview`, so code
+	 * reading `event.platform` sees the same shape everywhere.
+	 */
+	adapter: string;
+	/** Which of the adapter's functions answered — the two real ones, or the catch-all. */
+	entry: 'pages' | 'api' | 'router';
+	/** When the process started, as a unix timestamp in milliseconds. */
+	startedAt: number;
+}</code></pre>
+</figure>
+<h3 id="the-runtime">The runtime: four steps per request</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:1-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE REQUEST HANDLER
+ * ===================
+ *
+ * Every request goes through the same four steps:
+ *
+ *   1. a static file? — `client/` (with a year-long cache for the hashed
+ *      `_app/immutable` files) and `prerendered/`
+ *   2. otherwise, which function? — `pick` matches the path against the route
+ *      patterns each function owns
+ *   3. that function's `Server.respond`
+ *   4. if that function was the catch-all and the `reroute` hook moved the
+ *      request, `applyReroute` hands it to the function that owns the new path
+ *
+ * Step 4 is the only part that is not in every Node adapter, and it is the part
+ * this adapter exists for.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:19-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import process from 'node:process';
+import sirv from 'sirv';
+import { createReadableStream, getRequest, setResponse } from '@sveltejs/kit/node';
+import { applyReroute } from '@sveltejs/kit/adapter';
+import { Server } from 'SERVER';
+import { manifest as pagesManifest } from 'MANIFEST_PAGES';
+import { manifest as apiManifest } from 'MANIFEST_API';
+import { manifest as routerManifest } from 'MANIFEST_ROUTER';
+import { appDir, base, origin, patterns, precompress, prerendered } from 'ENTRIES';
+import { dir } from './dir.js';
+import { pick } from 'PARTITION';
+
+const startedAt = Date.now();
+
+/*
+ * Three servers from three manifests. Each is the whole SvelteKit runtime with
+ * a different idea of which routes exist; the code behind the routes is shared,
+ * because the bundle has one copy of it.
+ */
+const servers = {
+	pages: new Server(pagesManifest),
+	api: new Server(apiManifest),
+	router: new Server(routerManifest)
+};
+
+const compiled = {
+	pages: patterns.pages.map((source) =&gt; new RegExp(source)),
+	api: patterns.api.map((source) =&gt; new RegExp(source))
+};
+
+/*
+ * `init` runs the app's `init` hook and hands the server its environment and
+ * a `read` implementation, which is what makes `read()` from `$app/server`
+ * work: it streams a file out of `client/`.
+ */
+const ready = Promise.all(
+	Object.values(servers).map((server) =&gt;
+		server.init({
+			env: process.env,
+			read: (file) =&gt; createReadableStream(`${dir}/client/${file}`)
+		})
+	)
+);</code></pre>
+</figure>
+<p>Three <code>Server</code>s from three manifests — the whole SvelteKit runtime each, with a different idea of which routes exist; the code behind the routes is shared, because the bundle has one copy. <code>server.init</code> runs the app’s <code>init</code> hook and hands each server its environment and a <code>read</code> implementation that streams files from <code>client/</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:62-81</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Which function should answer a request.
+ *
+ * Remote function calls live under `/_app/remote/` and belong to `api`, on the
+ * grounds that they are data, not documents. Everything that matches no route
+ * at all — a vanity URL the `reroute` hook understands, `/_app/env.js`, a
+ * genuine 404 — goes to the catch-all.
+ *
+ * @param {string} pathname
+ * @param {{ pages: RegExp[]; api: RegExp[] }} patterns
+ * @returns {'pages' | 'api' | 'router'}
+ */
+export function pick(pathname, patterns) {
+	const path = stripInternal(pathname);
+
+	if (path.startsWith('/_app/remote/')) return 'api';
+	if (patterns.api.some((pattern) =&gt; pattern.test(path))) return 'api';
+	if (patterns.pages.some((pattern) =&gt; pattern.test(path))) return 'pages';
+	return 'router';
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:126-163</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The origin SvelteKit compares against for CSRF: baked in at build time when
+ * `PUBLIC_ORIGIN` was set, else `ORIGIN` from the environment, else guessed
+ * from the request — which is the guess that goes wrong behind a proxy, and
+ * why the first two options exist.
+ *
+ * @param {import('node:http').IncomingMessage} req
+ */
+function originFor(req) {
+	if (origin) return origin;
+	if (process.env.ORIGIN) return process.env.ORIGIN;
+
+	const protocol = req.headers['x-forwarded-proto'] ?? 'http';
+	const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
+	return `${protocol}://${host}`;
+}
+
+/**
+ * @param {'pages' | 'api' | 'router'} entry
+ * @param {Request} request
+ * @param {import('node:http').IncomingMessage} req
+ */
+function respond(entry, request, req) {
+	return servers[entry].respond(request, {
+		getClientAddress: () =&gt; {
+			const forwarded = req.headers['x-forwarded-for'];
+			if (typeof forwarded === 'string') return forwarded.split(',')[0]?.trim() ?? '';
+			return req.socket.remoteAddress ?? '';
+		},
+		// `event.platform` in the app. `emulate()` in `../index.js` produces the
+		// same shape during development, so nothing has to guard against `undefined`.
+		platform: {
+			adapter: 'adapter-ostinato',
+			entry: entry === 'router' ? 'pages' : entry,
+			startedAt
+		}
+	});
+}</code></pre>
+</figure>
+<p><code>originFor</code> is the origin SvelteKit compares against for CSRF: baked in at build time, else <code>ORIGIN</code> from the environment, else guessed from the headers — the guess that goes wrong behind a proxy, and why the first two exist. <code>respond</code> passes <code>platform</code>, which becomes <code>event.platform</code> in the app: the adapter’s name, which function answered, when the process started.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:165-211</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res
+ */
+async function sveltekit(req, res) {
+	await ready;
+
+	/** @type {Request} */
+	let request;
+	try {
+		request = await getRequest({ request: req, base: originFor(req), bodySizeLimit: 512 * 1024 });
+	} catch {
+		res.statusCode = 400;
+		res.end('Bad Request');
+		return;
+	}
+
+	const entry = pick(new URL(request.url).pathname, compiled);
+	let response = await respond(entry, request, req);
+
+	if (entry === 'router') {
+		/*
+		 * THE HAND-OFF
+		 * ------------
+		 * The catch-all has no routes. If its `reroute` hook produced a different
+		 * path, the response carries `x-sveltekit-rerouted-url` and `applyReroute`
+		 * calls `next` with that URL; otherwise it returns the response untouched
+		 * — a 404 from `src/error.html`, or `/_app/env.js`, which every server can
+		 * answer.
+		 *
+		 * The rerouted request is a *new* request to the owning function, so
+		 * `event.url` there is the rerouted URL. That is the same trade every
+		 * multi-function platform makes, and it is why the `reroute` hook is
+		 * documented as not changing `event.url`: within one function it does not;
+		 * across two, the second never saw the original.
+		 */
+		response = await applyReroute(response, (url) =&gt; {
+			const target = pick(url.pathname, compiled);
+			if (target === 'router') return new Response('Not Found', { status: 404 });
+			return respond(target, new Request(url, request), req);
+		});
+	}
+
+	// Which function answered, for the diagnostics page and the end-to-end suite.
+	response.headers.set('x-ostinato-entry', entry);
+	setResponse(res, response);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>applyReroute</code></h4>
+	<p>The catch-all has no routes. If its <code>reroute</code> hook produced a different path, the response carries <code>x-sveltekit-rerouted-url</code>, and <code>applyReroute(response, next)</code> calls <code>next</code> with that URL; otherwise it returns the response untouched — a 404, or <code>/_app/env.js</code>, which every server can answer. The rerouted request is a *new* request to the owning function, so <code>event.url</code> there is the rerouted URL. That is the same trade every multi-function platform makes, and it is why the <code>reroute</code> hook is documented as not changing <code>event.url</code>: within one function it does not; across two, the second never saw the original.</p>
+</aside>
+<aside class="callout callout--warn"><p>Two things bit while building this, both about the catch-all having no routes. SvelteKit’s in-process same-origin <code>fetch</code> in a route-less server falls through to a *real* <code>fetch</code>, so <code>PUBLIC_ORIGIN</code> must match the port the server is actually on — the end-to-end config sets both. And <code>handleFetch</code> has to use <code>globalThis.fetch</code> when <code>event.platform.entry</code> is <code>router</code> (ch. 26), or the resolver call answers itself with a 404.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:217-231</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res
+ */
+export function handler(req, res) {
+	serveClient(req, res, () =&gt; {
+		prerenderedPage(req, res, () =&gt; {
+			sveltekit(req, res).catch((error) =&gt; {
+				console.error(error);
+				if (!res.headersSent) res.statusCode = 500;
+				res.end('Internal Server Error');
+			});
+		});
+	});
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/index.js<span class="code__lines">:13-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import http from 'node:http';
+import process from 'node:process';
+import { handler } from './handler.js';
+
+export const host = process.env.HOST ?? '0.0.0.0';
+export const port = Number(process.env.PORT ?? 3000);
+
+export const server = http.createServer(handler);
+
+server.listen(port, host, () =&gt; {
+	console.log(`adapter-ostinato listening on http://${host}:${port}`);
+});
+
+/*
+ * On SIGTERM — which is what a platform sends before it kills a process — stop
+ * accepting connections and let the in-flight ones finish. `closeIdleConnections`
+ * matters: keep-alive sockets with nothing on them would otherwise hold the
+ * process open until the platform's timeout, which is the slow, ugly kind of
+ * shutdown that looks like a hang.
+ */
+function shutdown() {
+	server.closeIdleConnections();
+	server.close(() =&gt; process.exit(0));
+	setTimeout(() =&gt; server.closeAllConnections(), 10_000).unref();
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);</code></pre>
+</figure>
+<p>The process is one HTTP server and a shutdown that finishes the requests it has. <code>closeIdleConnections</code> matters: keep-alive sockets with nothing on them would otherwise hold the process open until the platform’s timeout, which is the slow, ugly kind of shutdown that looks like a hang.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can list the five things every adapter does and the two that only this one does.</li><li>You can say why the third manifest has no routes and what would break if it had one.</li><li>You can trace <code>/@ostinato/four-on-the-floor</code> from the socket to the <code>pages</code> function.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-custom-element-built-twice.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A custom element, built twice</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-service-worker.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The service worker</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

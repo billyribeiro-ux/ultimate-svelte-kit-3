@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comments — Building Tessera</title>
+<meta name="description" content="The feature that deliberately does not use the CRDT, and the form instance per thread that stops one failure from decorating every thread.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">36 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 81.81818181818183%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html" aria-current="page"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 36</p>
+			<h1>Comments</h1>
+			<p class="lede">The feature that deliberately does not use the CRDT, and the form instance per thread that stops one failure from decorating every thread.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know when a collaborative feature should be rows in a table instead.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/comments.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * COMMENTS
+ * ========
+ *
+ * Threads anchored to a shape, in their own table rather than in the CRDT.
+ *
+ * A comment is an event with an author and a time, not a value two people edit
+ * into a merged state — &quot;we both replied at once&quot; wants both replies, which is
+ * two rows and not a register. Keeping them out of the document also means a
+ * `commenter` can be given comment rights without being handed the ability to
+ * write to the board at all.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>When not to reach for the CRDT you just built</h4>
+	<p>A comment is an <strong>event</strong> with an author and a time, not a value two people edit into a merged state. &quot;We both replied at once&quot; wants both replies — which is two rows, not a register with a winner. Building it on the document would mean inventing an append-only list inside a structure designed for mergeable values, to get behaviour a table gives you for nothing. Keeping comments out also means a <code>commenter</code> can be given comment rights without being handed write access to the board at all, which is the entire reason that role exists.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/comments.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Every thread on a board, oldest first, with its replies. */
+export const threads = query(boardId, async (id): Promise&lt;Thread[]&gt; =&gt; {
+	const who = requireUser();
+	await requireAccess(id, who.id, 'viewer').catch(rethrow);
+
+	const rows = await db
+		.select({
+			id: comment.id,
+			anchor: comment.anchor,
+			parentId: comment.parentId,
+			body: comment.body,
+			createdAt: comment.createdAt,
+			resolvedAt: comment.resolvedAt,
+			author: user.name
+		})
+		.from(comment)
+		.innerJoin(user, eq(user.id, comment.authorId))
+		.where(eq(comment.boardId, id))
+		.orderBy(asc(comment.createdAt))
+		.limit(500);
+
+	/*
+	 * One query, assembled in memory.
+	 *
+	 * The alternative is a query for roots and one for each root's replies, which
+	 * on a board with forty threads is forty-one round trips to answer a question
+	 * the database could answer once. Threads are one level deep by design, so the
+	 * assembly is a single pass.
+	 */
+	const roots = new Map&lt;string, Thread&gt;();
+
+	for (const row of rows) {
+		if (row.parentId === null) {
+			roots.set(row.id, { ...row, replies: [] });
+		}
+	}
+
+	for (const row of rows) {
+		if (row.parentId === null) continue;
+		roots.get(row.parentId)?.replies.push({
+			id: row.id,
+			author: row.author,
+			body: row.body,
+			createdAt: row.createdAt
+		});
+	}
+
+	return [...roots.values()];
+});</code></pre>
+</figure>
+<p>One query, assembled in memory. The alternative is a query for roots and one per root’s replies, which on a board with forty threads is forty-one round trips to answer a question the database could answer once. Threads are one level deep by design, so the assembly is a single pass.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/comments.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Start a thread, or reply to one.
+ *
+ * A `form()` so that it works without JavaScript, and so the reply boxes can be
+ * created with `postComment.for(threadId)` — one form instance per thread, each
+ * with its own pending state and its own validation issues, from one definition.
+ */
+export const postComment = form(
+	v.object({
+		boardId,
+		body,
+		anchor: v.optional(v.string()),
+		parentId: v.optional(v.string())
+	}),
+	async ({ boardId: id, body: text, anchor, parentId }) =&gt; {
+		const who = requireUser();
+
+		// `commenter` is enough. That is the whole point of the role.
+		await requireAccess(id, who.id, 'commenter').catch(rethrow);
+
+		await db.insert(comment).values({
+			id: crypto.randomUUID(),
+			boardId: id,
+			anchor: anchor || null,
+			parentId: parentId || null,
+			authorId: who.id,
+			body: text
+		});
+
+		await threads(id).refresh();
+	}</code></pre>
+</figure>
+<p>A <code>form()</code> rather than a <code>command()</code>, for the reason from chapter 32 — it works without JavaScript — and for a second reason specific to this shape: <code>postComment.for(threadId)</code> gives every reply box its own instance from one definition.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `$derived`, not a plain `const`.
+ *
+ * `threads(boardId)` called once captures whichever board was open when this
+ * component mounted. Deriving it means navigating to another board re-runs the
+ * query — and, less obviously, it is what makes the compiler stop warning that
+ * the reference only captures the initial value, which is a warning worth
+ * listening to rather than silencing.
+ */
+const list = $derived(threads(boardId));
+const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolvedAt === null));</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>$derived</code>, not a plain <code>const</code>. <code>threads(boardId)</code> called once captures whichever board was open when the component mounted. Deriving it means navigating to another board re-runs the query — and, less obviously, it is what makes the compiler stop warning that the reference only captures the initial value, which is a warning worth listening to rather than silencing.</p></aside>
+<h3 id="per-thread">One definition, independent state</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each open as thread (thread.id)}
+	{@const reply = postComment.for(thread.id)}
+	&lt;article class=&quot;thread&quot;&gt;
+		&lt;header class=&quot;thread__head&quot;&gt;
+			&lt;strong&gt;{thread.author}&lt;/strong&gt;
+			{#if thread.anchor}&lt;span class=&quot;thread__anchor&quot;&gt;on a shape&lt;/span&gt;{/if}
+		&lt;/header&gt;
+		&lt;p class=&quot;thread__body&quot;&gt;{thread.body}&lt;/p&gt;
+
+		{#each thread.replies as item (item.id)}
+			&lt;p class=&quot;thread__reply&quot;&gt;&lt;strong&gt;{item.author}&lt;/strong&gt; {item.body}&lt;/p&gt;
+		{/each}
+
+		&lt;!--
+			`postComment.for(thread.id)` — one form instance per thread, from one
+			definition. Each keeps its own pending state and its own validation
+			issues, so a failed reply in one thread does not put an error message
+			under every other one. Spreading the bare `postComment` into a loop
+			gives every thread the same instance and exactly that bug.
+		--&gt;
+		&lt;form {...reply} class=&quot;thread__reply-form&quot;&gt;
+			&lt;input {...reply.fields.boardId.as('hidden', boardId)} /&gt;
+			&lt;input {...reply.fields.parentId.as('hidden', thread.id)} /&gt;
+			&lt;label class=&quot;visually-hidden&quot; for=&quot;reply-{thread.id}&quot;&gt;Reply&lt;/label&gt;
+			&lt;input id=&quot;reply-{thread.id}&quot; {...reply.fields.body.as('text')} placeholder=&quot;Reply…&quot; /&gt;
+			&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
+		&lt;/form&gt;
+
+		&lt;Button
+			size=&quot;sm&quot;
+			variant=&quot;ghost&quot;
+			onclick={() =&gt; resolveThread({ boardId, id: thread.id, resolved: true })}
+		&gt;
+			{t.comments.resolve}
+		&lt;/Button&gt;</code></pre>
+</figure>
+<p>Spread the bare <code>postComment</code> into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. <code>.for(id)</code> is the fix and it is four characters.</p>
+<aside class="callout callout--note"><p>Note <code>resolveThread</code>’s <code>where</code> clause: <code>and(eq(comment.id, id), isNull(comment.parentId))</code>. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A colleague’s comment appears without a refresh.</li><li>A failed reply shows its error under one thread only.</li><li>A <code>commenter</code> can comment and cannot move a box.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="collaborative-text-in-place.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Typing into a shape somebody else is typing into</span>
+			</a>
+			<a class="pager__link pager__link--next" href="version-history.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Version history, where restore is an edit</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

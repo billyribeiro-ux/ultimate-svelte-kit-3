@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live collaboration: a live query, a mailbox, and numbered operations — Building Abacus</title>
+<meta name="description" content="`watchSheet` is a `query.live`: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 71.7948717948718%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html" aria-current="page"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>Live collaboration: a live query, a mailbox, and numbered operations</h1>
+			<p class="lede"><code>watchSheet</code> is a <code>query.live</code>: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build real-time collaboration on a live query with a broadcaster, a coalescing mailbox, and a clean exit when a browser goes away.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:1-22</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A SHEET, LIVE
+ * =============
+ *
+ * `watchSheet` is a `query.live`: an async generator that yields every time
+ * something happens on the sheet — an operation from another tab, a cursor
+ * moving, somebody joining. SvelteKit streams each value to every browser
+ * with the query open and stops iterating when the last one leaves, which
+ * runs the `finally` and leaves the room.
+ *
+ * Operations go the other way through `send`, a command that applies them
+ * to the stored document, numbers them, and broadcasts them. The sending
+ * tab receives its own operations back with its `client` id and ignores
+ * them; every other tab applies them without an undo entry.
+ */
+
+import * as v from 'valibot';
+import { command, getRequestEvent, query } from '$app/server';
+import { OpSchema } from '#lib/sheet/ops.ts';
+import { broadcast, join, moveCursor, presentIn, type LiveMessage } from '#lib/server/live.ts';
+import { applySheetOps, opsSince, requireSheet } from '#lib/server/sheets.ts';
+import { currentUser, requireUser } from '#lib/server/session.ts';</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:1-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * LIVE SHEETS
+ * ===========
+ *
+ * A sheet somebody has open is a *room*: every browser on it holds a live
+ * query, every operation is broadcast to the others, and who is where is
+ * part of what is broadcast. The database row is the truth (`sheets.ts`
+ * applies every operation to it before anybody hears about it); this module
+ * is only how everybody hears.
+ *
+ * ONE PROCESS, AND SAID SO
+ * ------------------------
+ * Subscribers live in a `Map` in this module, so two instances of the server
+ * would each know only their own listeners. The fix is a shared channel — a
+ * Postgres `NOTIFY`, a Redis stream — and it is the first thing to reach for
+ * when this runs on more than one machine.
+ */
+
+import type { Op } from '#lib/sheet/ops.ts';
+
+export interface Presence {
+	/** One per tab, so the same person in two tabs is two cursors. */
+	client: string;
+	userId: string;
+	name: string;
+	/** `B3`, or `null` between selections. */
+	cell: string | null;
+}
+
+export interface LiveMessage {
+	/** The sheet version after these operations. */
+	version: number;
+	ops: Op[];
+	/** Which tab sent them, so that tab can ignore its own echo. */
+	client: string | null;
+	present: Presence[];
+}
+
+type Listener = (message: LiveMessage) =&gt; void;
+
+const rooms = new Map&lt;string, Map&lt;Listener, Presence&gt;&gt;();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:43-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function presentIn(sheetId: string): Presence[] {
+	return [...(rooms.get(sheetId)?.values() ?? [])];
+}
+
+export function join(sheetId: string, presence: Presence, listener: Listener): () =&gt; void {
+	let room = rooms.get(sheetId);
+	if (!room) {
+		room = new Map();
+		rooms.set(sheetId, room);
+	}
+	room.set(listener, presence);
+	announce(sheetId);
+	return () =&gt; {
+		room.delete(listener);
+		if (room.size === 0) rooms.delete(sheetId);
+		announce(sheetId);
+	};
+}
+
+export function broadcast(sheetId: string, message: Omit&lt;LiveMessage, 'present'&gt;): void {
+	const room = rooms.get(sheetId);
+	if (!room) return;
+	const present = [...room.values()];
+	for (const listener of room.keys()) listener({ ...message, present });
+}
+
+/** A cursor moved: update that tab's presence and tell the room. */
+export function moveCursor(
+	sheetId: string,
+	client: string,
+	cell: string | null,
+	version: number
+): void {
+	const room = rooms.get(sheetId);
+	if (!room) return;
+	for (const presence of room.values()) if (presence.client === client) presence.cell = cell;
+	broadcast(sheetId, { version, ops: [], client: null });
+}
+
+function announce(sheetId: string): void {
+	broadcast(sheetId, { version: -1, ops: [], client: null });
+}
+
+export function openConnections(): number {
+	let n = 0;
+	for (const room of rooms.values()) n += room.size;
+	return n;
+}</code></pre>
+</figure>
+<p>The broadcaster is a <code>Map</code> of rooms, each a <code>Map</code> from listener to presence. <code>join</code> returns a leave function; <code>broadcast</code> sends a message to every listener with the current presence attached; a cursor move updates one presence and broadcasts an empty operation set. In-process, which is right for one server and would need a shared channel for two — the header says so.</p>
+<h3 id="the-mailbox">The mailbox</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:24-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A mailbox that holds one value. Live streams are not event logs: if the
+ * sheet changes three times while a slow browser is still receiving the
+ * first, it should get all three *operations*, but in one message. So a push
+ * while nobody is waiting is merged into what is there, and a `next()` while
+ * nothing is there waits.
+ */
+class Mailbox {
+	#pending: LiveMessage | null = null;
+	#waiting: ((message: LiveMessage | null) =&gt; void) | null = null;
+	#closed = false;
+
+	push(message: LiveMessage): void {
+		if (this.#closed) return;
+		if (this.#waiting) {
+			const resolve = this.#waiting;
+			this.#waiting = null;
+			resolve(message);
+			return;
+		}
+		this.#pending = this.#pending
+			? {
+					version: Math.max(this.#pending.version, message.version),
+					ops: [...this.#pending.ops, ...message.ops],
+					client: message.ops.length &gt; 0 ? message.client : this.#pending.client,
+					present: message.present
+				}
+			: message;
+	}
+
+	/** The next message, or `null` once the mailbox is closed. */
+	next(): Promise&lt;LiveMessage | null&gt; {
+		if (this.#pending) {
+			const message = this.#pending;
+			this.#pending = null;
+			return Promise.resolve(message);
+		}
+		if (this.#closed) return Promise.resolve(null);
+		return new Promise((resolve) =&gt; {
+			this.#waiting = resolve;
+		});
+	}
+
+	/**
+	 * Wake whoever is waiting with nothing. An async generator suspended on an
+	 * `await` cannot be interrupted from outside — `return()` queues behind the
+	 * pending promise — so a browser that closed its tab would keep its seat in
+	 * the room until the next message happened to arrive. Closing the mailbox
+	 * resolves the wait now, the loop ends, and `finally` leaves the room.
+	 */
+	close(): void {
+		this.#closed = true;
+		if (this.#waiting) {
+			const resolve = this.#waiting;
+			this.#waiting = null;
+			resolve(null);
+		}
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the mailbox coalesces, and why it can be closed</h4>
+	<p>Live streams are not event logs. If the sheet changes three times while a slow browser is still receiving the first message, it should get all three *operations*, in one message — so a push while nobody is waiting is merged into what is there. And <code>close()</code> exists because an async generator suspended on an <code>await</code> cannot be interrupted from outside: <code>return()</code> queues behind the pending promise, so a browser that closed its tab would keep its seat in the room until the next message happened to arrive. The end-to-end test that asserts Bob’s chip disappears when Bob leaves is the test that found this.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:84-126</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const WatchSchema = v.object({
+	id: v.string(),
+	/** One id per tab, so a tab can recognise its own operations coming back. */
+	client: v.pipe(v.string(), v.minLength(4), v.maxLength(40)),
+	/** The version this tab already has; operations after it are replayed first. */
+	since: v.pipe(v.number(), v.integer(), v.minValue(0))
+});
+
+export const watchSheet = query.live(WatchSchema, async function* ({ id, client, since }) {
+	const user = requireUser();
+	const sheet = await requireSheet(id, user);
+
+	const mailbox = new Mailbox();
+	const leave = join(id, { client, userId: user.id, name: user.name, cell: null }, (m) =&gt;
+		mailbox.push(m)
+	);
+
+	// The request's signal fires when the browser goes away — a closed tab, a
+	// navigation, a lost connection. That is the moment to give up the seat.
+	// (`getRequestEvent` reaches the event from anywhere on the server; the
+	// adapter wires the socket's close to this signal.)
+	const { signal } = getRequestEvent().request;
+	signal.addEventListener('abort', () =&gt; mailbox.close(), { once: true });
+
+	try {
+		// Catch up first: whatever happened between the page load and now.
+		const missed = await opsSince(id, since);
+		yield {
+			version: sheet.version,
+			ops: missed.flatMap((m) =&gt; m.ops),
+			client: null,
+			present: presentIn(id)
+		} satisfies LiveMessage;
+
+		while (true) {
+			const message = await mailbox.next();
+			if (message === null) break;
+			yield message;
+		}
+	} finally {
+		leave();
+	}
+});</code></pre>
+</figure>
+<p>The generator: require a person, join the room, and wire the request’s abort signal to the mailbox — the adapter fires it when the socket closes. Then catch up (every operation since the version the tab has), and loop on the mailbox until it is closed. The <code>finally</code> leaves the room, and it now runs promptly.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:125-147</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	}
+});
+
+export const send = command(
+	v.object({
+		id: v.string(),
+		client: v.string(),
+		ops: v.pipe(v.array(OpSchema), v.minLength(1), v.maxLength(100))
+	}),
+	async ({ id, client, ops }) =&gt; {
+		const { version } = await applySheetOps(id, requireUser(), ops);
+		broadcast(id, { version, ops, client });
+		return { version };
+	}
+);
+
+export const setCursor = command(
+	v.object({ id: v.string(), client: v.string(), cell: v.nullable(v.string()) }),
+	async ({ id, client, cell }) =&gt; {
+		const sheet = await requireSheet(id, currentUser());
+		moveCursor(id, client, cell, sheet.version);
+	}
+);</code></pre>
+</figure>
+<p><code>send</code> applies a batch of operations to the stored document in a transaction with the op log, gets back the new version, and broadcasts the batch with the sender’s client id. The sender receives its own batch and ignores it; everyone else applies it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:172-217</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Apply operations from a browser: the collaboration path. The document is
+ * updated in the same transaction as the op log, the version goes up by one,
+ * and the new version is what the live query announces.
+ */
+export async function applySheetOps(
+	id: string,
+	user: User,
+	ops: Op[]
+): Promise&lt;{ version: number; cellCount: number }&gt; {
+	const row = await requireSheetRow(id, user);
+	const next = applyOps(parseDocument(row.doc), ops);
+	if (next.cells.length &gt; CELL_LIMIT)
+		error(413, `A sheet may hold at most ${CELL_LIMIT.toLocaleString()} cells`);
+	const version = row.version + 1;
+
+	await db.transaction(async (tx) =&gt; {
+		await tx
+			.update(schema.sheets)
+			.set({
+				doc: JSON.stringify(next),
+				title: next.title,
+				version,
+				cellCount: next.cells.length,
+				updatedAt: Date.now()
+			})
+			.where(eq(schema.sheets.id, id));
+		await tx
+			.insert(schema.ops)
+			.values({ sheetId: id, version, userId: user.id, payload: JSON.stringify(ops) });
+	});
+
+	return { version, cellCount: next.cells.length };
+}
+
+/** The operations after a version, oldest first, for a browser catching up. */
+export async function opsSince(
+	id: string,
+	version: number
+): Promise&lt;{ version: number; ops: Op[] }[]&gt; {
+	const rows = await db.query.ops.findMany({
+		where: and(eq(schema.ops.sheetId, id), gt(schema.ops.version, version)),
+		orderBy: [schema.ops.version]
+	});
+	return rows.map((r) =&gt; ({ version: r.version, ops: JSON.parse(r.payload) as Op[] }));
+}</code></pre>
+</figure>
+<h3 id="the-browser">The browser’s side</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:1-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A SHEET, SHARED
+ * ===============
+ *
+ * The glue between a `Sheet` in this tab and the same sheet on the server
+ * and in every other tab. Local commands become operations, batched for a
+ * hundred milliseconds and sent with `send`; the live query delivers
+ * everybody's operations, and the ones that are not this tab's echo are
+ * applied with no undo entry. Cursor moves go the same way, throttled.
+ *
+ * `status` is the honest state of the connection — live, saving, offline,
+ * or in conflict — and the page shows it, because a sheet that silently
+ * stopped saving is worse than one that says so.
+ */
+
+import { isHttpError } from '@sveltejs/kit';
+import { send, setCursor } from '#lib/remote/live.remote.ts';
+import type { LiveMessage, Presence } from '#lib/server/live.ts';
+import { toA1, type Address } from './address.ts';
+import { tabId } from './local.ts';
+import type { Op } from './ops.ts';
+import type { Sheet } from './sheet.svelte.ts';
+
+export type LiveStatus = 'live' | 'saving' | 'offline' | 'conflict';
+
+export class LiveSheet {
+	readonly sheet: Sheet;
+	readonly id: string;
+	readonly client = tabId();
+
+	/** The server version this tab has caught up to. */
+	version = $state(0);
+	status = $state&lt;LiveStatus&gt;('live');
+	/** Everybody else on the sheet. */
+	present = $state&lt;Presence[]&gt;([]);
+
+	#queue: Op[] = [];
+	#timer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+	#inflight = false;
+	#cursorTimer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+	#lastCursor: string | null = null;
+
+	constructor(id: string, sheet: Sheet, version: number) {
+		this.id = id;
+		this.sheet = sheet;
+		this.version = version;
+		sheet.onop = (op) =&gt; this.#enqueue(op);
+	}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:50-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A message from the live query. */
+receive(message: LiveMessage): void {
+	this.present = message.present.filter((p) =&gt; p.client !== this.client);
+	if (message.client !== this.client) {
+		for (const op of message.ops) this.sheet.applyRemote(op);
+	}
+	if (message.version &gt; this.version) this.version = message.version;
+	if (message.ops.length &gt; 0 &amp;&amp; message.client !== this.client) this.sheet.markSaved();
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:90-128</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#enqueue(op: Op): void {
+	this.#queue.push(op);
+	this.status = 'saving';
+	this.#timer ??= setTimeout(() =&gt; {
+		this.#timer = null;
+		void this.#send();
+	}, 100);
+}
+
+async #send(): Promise&lt;void&gt; {
+	if (this.#inflight || this.#queue.length === 0) return;
+	const ops = this.#queue.splice(0, 100);
+	this.#inflight = true;
+	try {
+		const { version } = await send({ id: this.id, client: this.client, ops });
+		if (version &gt; this.version) this.version = version;
+		this.status = this.#queue.length &gt; 0 ? 'saving' : 'live';
+		if (this.#queue.length === 0) this.sheet.markSaved();
+	} catch (error) {
+		if (
+			isHttpError(error) &amp;&amp;
+			(error.status === 409 || error.status === 413 || error.status === 404)
+		) {
+			this.status = 'conflict';
+			this.#queue.length = 0;
+			throw error;
+		}
+		// A network failure: keep the operations and try again shortly.
+		this.#queue.unshift(...ops);
+		this.status = 'offline';
+		this.#timer ??= setTimeout(() =&gt; {
+			this.#timer = null;
+			void this.#send();
+		}, 2000);
+	} finally {
+		this.#inflight = false;
+		if (this.#queue.length &gt; 0 &amp;&amp; !this.#timer &amp;&amp; this.status !== 'offline') void this.#send();
+	}
+}</code></pre>
+</figure>
+<p><code>LiveSheet</code> hooks the sheet’s <code>onop</code>: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. A 409, 413 or 404 is a conflict the page must show and a reload must fix; anything else is a network failure, the operations are put back, and it tries again in two seconds. <code>status</code> is the honest state of the connection, and the page shows it, because a sheet that silently stopped saving is worse than one that says so.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:30-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const sheet = new Sheet({ locale: initial.locale });
+sheet.load(initial.sheet.doc);
+
+const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);
+
+/**
+ * `watchSheet` is a `query.live`. Its `current` is the latest message
+ * the server yielded and is reactive, so an effect that reads it runs
+ * once per message — which is where the room's operations are applied.
+ */
+const stream = watchSheet({
+	id: initial.sheet.id,
+	client: live.client,
+	since: initial.sheet.version
+});
+$effect(() =&gt; {
+	const message = stream.current;
+	if (message) live.receive(message);
+});
+
+$effect(() =&gt; () =&gt; live.dispose());
+
+// Whatever is queued goes before the page is left.
+beforeNavigate(() =&gt; void live.flush());</code></pre>
+</figure>
+<p>On the page, <code>watchSheet(...)</code> returns the live query. Its <code>current</code> is the latest message and is reactive, so an effect that reads it runs once per message — which is where the room’s operations are applied. <code>beforeNavigate</code> flushes the queue before the page is left, and the effect’s cleanup disposes the connection.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what happens when three operations arrive while a browser is slow, and how many messages it gets.</li><li>You can explain why <code>return()</code> on the generator was not enough and what the abort signal adds.</li><li>You can trace one keystroke from <code>sheet.onop</code> to another tab’s <code>applyRemote</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="sheets-over-the-wire.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Sheets over the wire: queries, forms, commands</span>
+			</a>
+			<a class="pager__link pager__link--next" href="hooks.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Hooks: identity, headers, one framed route, errors by kind</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

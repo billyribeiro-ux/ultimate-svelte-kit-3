@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hooks: around every request — Building Ostinato</title>
+<meta name="description" content="`handle` as a sequence — identity, then security with a font preload filter; `handleFetch` with the one same-origin case that must not be in-process; `handleError` by `kind`; `init`; and the two universal hooks, `transport` and `reroute`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 66.66666666666666%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html" aria-current="page"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>Hooks: around every request</h1>
+			<p class="lede"><code>handle</code> as a sequence — identity, then security with a font preload filter; <code>handleFetch</code> with the one same-origin case that must not be in-process; <code>handleError</code> by <code>kind</code>; <code>init</code>; and the two universal hooks, <code>transport</code> and <code>reroute</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know which hook runs when, why hook types come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3, how <code>transport</code> lets a class cross the wire, and what <code>reroute</code> can and cannot change.</p></aside>
+			<p>Hooks are the code that runs around every request. The server ones are in <code>src/hooks.server.ts</code>; the two that the browser also needs — what a <code>Note</code> looks like on the wire, and what <code>/@handle/slug</code> means — are in <code>src/hooks.ts</code>, which runs on both sides.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SERVER HOOKS
+ * ============
+ *
+ * Handlers composed with `sequence`, in an order that matters:
+ *
+ *   1. identity — reads the artist cookie into `locals.artist`
+ *   2. security — headers, and which fonts to preload
+ *
+ * plus `handleFetch`, `handleError`, `handleValidationError` and `init`. The
+ * universal hooks — `transport` and `reroute` — live in `src/hooks.ts`
+ * because the browser needs them too.
+ */
+
+import { building } from '$app/env';
+import { SESSION_SECRET, TRACE_BUFFER } from '$app/env/private';
+/*
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
+ * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
+ * is not an error, so the file keeps working and every parameter silently loses
+ * its type.
+ */
+import {
+	sequence,
+	type Handle,
+	type HandleFetch,
+	type HandleServerError,
+	type ServerInit
+} from '@sveltejs/kit/hooks';
+import { COOKIE, verify } from '#lib/server/identity.ts';
+import { setCapacity } from '#lib/server/tracing.ts';</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The hook *types* come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3. Importing <code>Handle</code> from <code>@sveltejs/kit</code> still compiles — as <code>any</code> for every destructured argument — so the file keeps working and every parameter silently loses its type. It is the kind of regression that only a <code>noImplicitAny</code> error on the next edit would reveal.</p></aside>
+<h3 id="identity-and-security">Identity, then security</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:33-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const handleIdentity: Handle = async ({ event, resolve }) =&gt; {
+	const artist = await verify(event.cookies.get(COOKIE), SESSION_SECRET);
+
+	if (artist) {
+		event.locals.artist = artist;
+		/*
+		 * The root span is the one for the whole request. Tagging it with the
+		 * handle means the diagnostics page can answer &quot;what did @someone do&quot; —
+		 * and it is the handle rather than the id because the id is the secret
+		 * half of the cookie and a span store is not a place for secrets.
+		 */
+		event.tracing.root.setAttribute('artist.handle', artist.handle);
+	}
+
+	return resolve(event);
+};</code></pre>
+</figure>
+<p>The cookie is read once per request into <code>locals.artist</code>, and the root span for the request is tagged with the handle — the handle, not the id, because the id is the secret half of the cookie and a span store is not a place for secrets.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:50-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The latin subsets, and only those. Outfit ships several; the `unicode-range`
+ * on each `@font-face` means the browser fetches only what a page needs, and
+ * for this interface that is latin.
+ */
+const PRELOAD_FONTS = [
+	'@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2',
+	'@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'
+];
+
+const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
+	const response = await resolve(event, {
+		/*
+		 * Preload the two fonts the first paint needs, by source filename.
+		 *
+		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
+		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * source path, before hashing — so this can name the exact file rather than
+		 * guessing at a hashed URL. `endsWith`, because the path begins with a
+		 * `node_modules/` prefix that a pnpm store layout can make longer than it
+		 * looks.
+		 */
+		preload: (input) =&gt; {
+			if (input.type === 'js' || input.type === 'css') return true;
+			if (input.type !== 'font') return false;
+			return PRELOAD_FONTS.some((font) =&gt; input.filename.endsWith(font));
+		}
+	});
+
+	response.headers.set('x-content-type-options', 'nosniff');
+	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	// An instrument that makes sound has no business hearing any.
+	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');
+
+	/*
+	 * `Vary: Cookie` on the pages, because the header shows the artist's handle
+	 * and a shared cache must not serve one person's page to another. The API
+	 * and the remote functions are exempt: they set their own cache headers.
+	 */
+	if (!event.url.pathname.startsWith('/api/') &amp;&amp; !event.url.pathname.startsWith('/_app/')) {
+		response.headers.append('vary', 'Cookie');
+	}
+
+	return response;
+};
+
+export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></pre>
+</figure>
+<p>SvelteKit preloads scripts and styles by default and never fonts. Since 3.0.0-next.24 a <code>font</code> input to the <code>preload</code> filter carries its source <code>filename</code> — the project-relative path before hashing — so the hook can name the two latin subsets the first paint needs, rather than guessing at a hashed URL. <code>Vary: Cookie</code> goes on pages because the header shows the handle; the API and the remote functions set their own cache headers and are left alone.</p>
+<h3 id="handle-fetch"><code>handleFetch</code>, and one case that must leave the process</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:98-138</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * `handleFetch` sees every `fetch` made with the event's `fetch` — in `load`,
+ * in remote functions, and in the `reroute` hook, which is the one this app
+ * actually makes.
+ *
+ * SAME ORIGIN, TWO CASES
+ * ----------------------
+ * Normally a same-origin call is left alone: SvelteKit answers it in-process,
+ * without a socket, by calling its own `respond`. That is exactly wrong in one
+ * place — the adapter's catch-all function. It has no routes, so &quot;answer it
+ * yourself&quot; means a 404, and the `reroute` hook that asked what `/@handle/slug`
+ * means never finds out. On a real multi-function platform the call would
+ * leave the function and arrive at the API's URL; here that URL is the same
+ * server, so the global `fetch` — a real request over the loopback — is what
+ * gets it to the function that can answer. `event.platform.entry` is how the
+ * hook knows which function it is running in; the emulator says `pages`, so
+ * development takes the in-process path like everything else.
+ *
+ * Anything else — there is nothing else today, and the point of writing the
+ * branch is that &quot;today&quot; is a word that stops being true — gets a ten second
+ * timeout and a `User-Agent` that says who is calling.
+ */
+export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
+	const url = new URL(request.url);
+
+	if (url.origin === event.url.origin) {
+		// During `reroute` the route is not yet known and there is no span to
+		// annotate; the optional chain is the difference between a note in a
+		// trace and a 500 on every vanity address.
+		event.tracing?.current?.addEvent('fetch.internal', { 'url.path': url.pathname });
+		if (event.platform?.entry === 'router') return globalThis.fetch(request);
+		return fetch(request);
+	}
+
+	return fetch(
+		new Request(request, {
+			signal: AbortSignal.timeout(10_000),
+			headers: new Headers([...request.headers, ['user-agent', 'Ostinato/1.0']])
+		})
+	);
+};</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>globalThis.fetch</code> in the catch-all</h4>
+	<p>A same-origin <code>fetch</code> from a <code>load</code> or a hook is normally answered in-process: SvelteKit calls its own <code>respond</code> and no socket is involved. In the adapter’s catch-all function (ch. 34) that is exactly wrong — the function has no routes, so answering itself means a 404, and the <code>reroute</code> hook that asked what <code>/@handle/slug</code> means never finds out. On a real multi-function platform the call would leave the function; here the global <code>fetch</code> over the loopback is what gets it to the function that can answer. <code>event.platform.entry</code> is how the hook knows where it is running.</p>
+</aside>
+<aside class="callout callout--note"><p>The <code>event.tracing?.current?.addEvent(...)</code> has two optional chains, and both earned their place: during <code>reroute</code> no route is known yet and there is no current span. Without the <code>?.</code>, every vanity address was a 500. Found by the end-to-end suite, which is why it has a vanity-address test.</p></aside>
+<h3 id="errors-and-init">Errors by kind, and <code>init</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:140-174</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every error the server catches, in one place, told apart by `kind`.
+ *
+ *   `app`         a deliberate `error(404, …)` — already says what it means
+ *   `framework`   SvelteKit's own: a 404 for a missing route, a bad request
+ *   `validation`  a remote function argument that failed its schema
+ *   `unknown`     something genuinely broken — the only one worth an id
+ *
+ * SvelteKit 3 folded the old `handleValidationError` hook into this one: a
+ * validation failure arrives with `kind: 'validation'` and its `issues`.
+ * In the app's own code that cannot happen — the types would not compile —
+ * so it is either an old tab on a new deployment or somebody prodding the
+ * endpoints, and neither deserves detail. The log gets the path of the first
+ * issue; the caller gets a sentence.
+ *
+ * Returning nothing keeps SvelteKit's defaults — the status and the safe
+ * message — which is right for `app` and `framework` errors.
+ */
+export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
+	if (kind === 'validation') {
+		const first = issues[0];
+		const path = first?.path
+			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
+			.join('.');
+		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
+		return { message: 'That request did not make sense.' };
+	}
+
+	if (kind !== 'unknown') return;
+
+	const id = crypto.randomUUID();
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+
+	return { message: 'Something went wrong on our side.', id };
+};</code></pre>
+</figure>
+<p>SvelteKit 3 folded the old <code>handleValidationError</code> hook into <code>handleError</code>: a remote function argument that failed its schema arrives with <code>kind: &quot;validation&quot;</code> and its <code>issues</code>. In the app’s own code that cannot happen — the types would not compile — so it is either an old tab on a new deployment or somebody prodding the endpoints, and neither deserves detail. Only <code>unknown</code> errors get a correlation id.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:176-191</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Runs once, before the first request.
+ *
+ * Reaching the database here turns &quot;the deploy is broken&quot; into a process that
+ * never claims to be healthy, which is what a load balancer needs in order to
+ * keep the old version serving. The default jam room is created here too, so
+ * `/jam/lobby` exists on a fresh database without a seed.
+ */
+export const init: ServerInit = async () =&gt; {
+	if (building) return;
+
+	setCapacity(TRACE_BUFFER);
+
+	const { ensureLobby } = await import('#lib/server/rooms.ts');
+	await ensureLobby();
+};</code></pre>
+</figure>
+<p><code>init</code> runs once before the first request. Reaching the database here turns “the deploy is broken” into a process that never claims to be healthy — which is what a load balancer needs in order to keep the old version serving. <code>building</code> guards it, because the prerender step runs the server too and must not need a database.</p>
+<h3 id="transport"><code>transport</code>: a class crosses the wire</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:15-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TRANSPORT
+ * =========
+ *
+ * SvelteKit serialises what crosses the server/client boundary — `load`
+ * results, remote function arguments and results — with devalue, which knows
+ * about `Map`, `Set`, `Date`, typed arrays and a few more, and knows nothing
+ * about a class called `Note`. A transporter teaches it: `encode` returns a
+ * plain value for an instance (and something falsy for anything else, which is
+ * how devalue asks &quot;is this yours?&quot;), `decode` builds the instance back.
+ *
+ * The payoff is that a pattern returned by `getPattern(id)` arrives with real
+ * `Note`s in it — `.frequency` and `.name` work — instead of `{ midi: 57 }`
+ * objects that every consumer would have to remember to rehydrate. And it is
+ * symmetric: a `Note` inside a `command` argument makes the same trip the
+ * other way, which is what lets the jam room's `setStep` accept a `Step`
+ * exactly as the grid holds it.
+ */
+export const transport: Transport = {
+	Note: {
+		encode: (value) =&gt; value instanceof Note &amp;&amp; value.midi,
+		decode: (midi: number) =&gt; new Note(midi)
+	}
+};</code></pre>
+</figure>
+<p>SvelteKit serialises what crosses the boundary with devalue, which knows about <code>Map</code>, <code>Set</code>, <code>Date</code> and typed arrays and nothing about <code>Note</code>. A transporter teaches it: <code>encode</code> returns a plain value for an instance and something falsy for anything else — that is how devalue asks “is this yours?” — and <code>decode</code> builds the instance back. A pattern from <code>getPattern</code> arrives with real <code>Note</code>s; a <code>Note</code> inside a command argument makes the same trip the other way, which is what lets the jam room accept a <code>Step</code> exactly as the grid holds it.</p>
+<h3 id="reroute"><code>reroute</code>: an address that is not a route</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:40-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * REROUTE
+ * =======
+ *
+ * `/@handle/slug` is not a route. This asks the server which pattern it names
+ * and returns `/p/&lt;id&gt;`, and SvelteKit renders that route with the vanity
+ * address still in the bar.
+ *
+ * It is `async` and uses the `fetch` it is given, which behaves like the one
+ * in a `load` function: on the server it calls the endpoint directly without
+ * a network hop, on the client it is a real request. The result is cached per
+ * URL, so a shared link costs one lookup per session — and the hook returns
+ * early for every path that is not a vanity address, because a hook that
+ * fetched on every navigation would be a hook that made every navigation slow.
+ *
+ * A handle that does not exist returns nothing, so the URL falls through to a
+ * 404 rather than to a guess.
+ */
+export const reroute: Reroute = async ({ url, fetch }) =&gt; {
+	const vanity = parseVanity(url.pathname);
+	if (!vanity) return;
+
+	const api = new URL('/api/resolve', url);
+	api.searchParams.set('handle', vanity.handle);
+	api.searchParams.set('slug', vanity.slug);
+
+	const response = await fetch(api);
+	if (!response.ok) return;
+
+	const { pathname } = (await response.json()) as { pathname: string | null };
+	return pathname ?? undefined;
+};</code></pre>
+</figure>
+<p><code>/@handle/slug</code> is not a route. <code>reroute</code> asks the server which pattern it names and returns <code>/p/&lt;id&gt;</code>; SvelteKit renders that route with the vanity address still in the bar. It is <code>async</code> and uses the <code>fetch</code> it is given — in-process on the server, a real request in the browser — and the result is cached per URL, so a shared link costs one lookup per session. The early <code>return</code> for every other path is the important line: a hook that fetched on every navigation would make every navigation slow.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can list the hooks in the order they run for one page request.</li><li>You can add a second class to <code>transport</code> and say what <code>encode</code> must return for a value that is not one.</li><li>You can explain why <code>reroute</code> returns early for most paths and what the cache does for the rest.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="live-jam.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A live query: the jam room</span>
+			</a>
+			<a class="pager__link pager__link--next" href="layouts-and-groups.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Two layouts and a group</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes: Tiptap through an attachment — Building Meridian</title>
+<meta name="description" content="Tiptap has no Svelte binding and needs none: `{@attach tiptap()}` hands it the element and destroys it on cleanup. A debounced `command` saves the JSON; a counter makes `isActive()` reactive for the toolbar; remote edits arrive through the live query and are applied only when the person is not mid-sentence.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">30 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 66.66666666666666%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html" aria-current="page"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 30</p>
+			<h1>Notes: Tiptap through an attachment</h1>
+			<p class="lede">Tiptap has no Svelte binding and needs none: <code>{@attach tiptap()}</code> hands it the element and destroys it on cleanup. A debounced <code>command</code> saves the JSON; a counter makes <code>isActive()</code> reactive for the toolbar; remote edits arrive through the live query and are applied only when the person is not mid-sentence.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Integrate an imperative editor library with an attachment, make its non-reactive API drive a toolbar, and merge remote changes without stamping on someone typing.</p></aside>
+			<p>Tiptap’s <code>Editor</code> takes a DOM element and owns it. That is exactly the contract of a Svelte attachment: a function that receives the element when it is in the document and returns a cleanup for when it is not. No <code>onMount</code>, no <code>bind:this</code>, no lifecycle to get out of order — and no wrapper library, because there is nothing for one to add.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:19-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A RICH-TEXT NOTE, THROUGH AN ATTACHMENT
+ * =======================================
+ *
+ * Tiptap has no Svelte binding, and does not need one. Its `Editor` takes
+ * a DOM element and owns it — exactly the contract of an attachment:
+ * `{@attach tiptap()}` hands Tiptap the `&lt;div&gt;` when it is in the
+ * document and calls the cleanup, which destroys the editor, when it is
+ * not. No `onMount`, no `bind:this`, no lifecycle to get out of order.
+ *
+ * Saving is a debounce: type, pause, a `command` sends the JSON. The
+ * toolbar reads `editor.isActive(...)`, which is not reactive on its own;
+ * every transaction bumps a counter the toolbar depends on, so the
+ * buttons follow the cursor.
+ */
+interface Props {
+	view: TripState;
+	editable: boolean;
+}
+
+let { view, editable }: Props = $props();
+
+const EMPTY: NoteDoc = { type: 'doc', content: [] };
+
+let editor: Editor | undefined = $state.raw();
+let transactions = $state(0);
+let status: 'idle' | 'saving' | 'saved' = $state('idle');
+let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:48-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function tiptap(): Attachment&lt;HTMLElement&gt; {
+	return (element) =&gt; {
+		const instance = new Editor({
+			element,
+			extensions: [StarterKit],
+			// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
+			content: (view.document.note ?? EMPTY) as JSONContent,
+			editable,
+			editorProps: { attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() } },
+			onUpdate: () =&gt; schedule(),
+			onTransaction: () =&gt; {
+				transactions += 1;
+			}
+		});
+		editor = instance;
+		return () =&gt; {
+			clearTimeout(timer);
+			instance.destroy();
+			editor = undefined;
+		};
+	};
+}</code></pre>
+</figure>
+<p>The attachment creates the editor with the document from the live snapshot, the <code>editable</code> flag from the viewer’s role, and two callbacks: <code>onUpdate</code> schedules a save, <code>onTransaction</code> bumps a counter. The cleanup destroys the instance. <code>editor</code> is <code>$state.raw</code> because a Tiptap editor is a large object with its own internal state and must not be proxied — <code>raw</code> stores the reference and signals only on reassignment.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:71-101</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Somebody else saved: the live document carries a new note. Replace the
+ * editor's content — but only when this person is not mid-sentence, which
+ * is what `isFocused` stands for here. Last writer wins; project 4 is the
+ * one with the CRDT.
+ */
+$effect(() =&gt; {
+	const remote = view.document.note;
+	if (!editor || editor.isFocused || !remote) return;
+	if (JSON.stringify(remote) !== JSON.stringify(editor.getJSON())) {
+		editor.commands.setContent(remote as JSONContent, { emitUpdate: false });
+	}
+});
+
+function schedule() {
+	status = 'saving';
+	clearTimeout(timer);
+	timer = setTimeout(save, 800);
+}
+
+async function save() {
+	if (!editor) return;
+	try {
+		const doc = v.parse(NoteDocSchema, editor.getJSON());
+		await saveNote({ tripId: view.trip.id, doc });
+		status = 'saved';
+	} catch (error) {
+		status = 'idle';
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}</code></pre>
+</figure>
+<p>Two small mechanisms. Saving is a debounce — type, pause eight hundred milliseconds, one <code>command</code> with the whole document, validated by the same <code>NoteDocSchema</code> the server checks so a too-long note is refused before the request. And the effect handles the other direction: when the live document carries a note somebody else saved, replace the editor’s content — but only when this person is not focused in it, which is what “mid-sentence” means here. Last writer wins on a page two people rarely edit at the same moment; the comment says which project has the CRDT.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:103-146</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** `transactions` is read so the derivation re-runs after every edit. */
+const active = $derived.by(() =&gt; {
+	void transactions;
+	return {
+		bold: editor?.isActive('bold') ?? false,
+		italic: editor?.isActive('italic') ?? false,
+		heading: editor?.isActive('heading', { level: 2 }) ?? false,
+		list: editor?.isActive('bulletList') ?? false,
+		quote: editor?.isActive('blockquote') ?? false
+	};
+});
+
+const tools = [
+	{
+		key: 'bold',
+		label: m.notes_bold,
+		icon: TextBIcon,
+		run: () =&gt; editor?.chain().focus().toggleBold().run()
+	},
+	{
+		key: 'italic',
+		label: m.notes_italic,
+		icon: TextItalicIcon,
+		run: () =&gt; editor?.chain().focus().toggleItalic().run()
+	},
+	{
+		key: 'heading',
+		label: m.notes_heading,
+		icon: TextHOneIcon,
+		run: () =&gt; editor?.chain().focus().toggleHeading({ level: 2 }).run()
+	},
+	{
+		key: 'list',
+		label: m.notes_list,
+		icon: ListBulletsIcon,
+		run: () =&gt; editor?.chain().focus().toggleBulletList().run()
+	},
+	{
+		key: 'quote',
+		label: m.notes_quote,
+		icon: QuotesIcon,
+		run: () =&gt; editor?.chain().focus().toggleBlockquote().run()
+	}
+] as const;</code></pre>
+</figure>
+<p><code>editor.isActive(&quot;bold&quot;)</code> is not reactive; it is a method on an object Svelte knows nothing about. The counter is the bridge: every Tiptap transaction increments <code>transactions</code>, the <code>$derived.by</code> reads it — <code>void transactions</code> is the read — and so recomputes after every edit, and the toolbar buttons follow the cursor. The tools array is data: a key, a message function for the label, an icon, and a command chain, rendered by one <code>{#each}</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:149-179</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;notes stack&quot;&gt;
+	&lt;header class=&quot;cluster cluster--between&quot;&gt;
+		&lt;h2&gt;{m.notes_title()}&lt;/h2&gt;
+		&lt;p class=&quot;muted&quot; role=&quot;status&quot;&gt;
+			{#if status === 'saving'}{m.notes_saving()}{:else if status === 'saved'}{m.notes_saved()}{/if}
+		&lt;/p&gt;
+	&lt;/header&gt;
+
+	{#if editable}
+		&lt;div class=&quot;toolbar no-print&quot; role=&quot;toolbar&quot; aria-label={m.notes_title()}&gt;
+			{#each tools as tool (tool.key)}
+				{@const Icon = tool.icon}
+				&lt;button
+					class=&quot;btn btn--icon btn--sm&quot;
+					class:btn--primary={active[tool.key]}
+					type=&quot;button&quot;
+					aria-pressed={active[tool.key]}
+					title={tool.label()}
+					aria-label={tool.label()}
+					onclick={tool.run}
+				&gt;
+					&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
+				&lt;/button&gt;
+			{/each}
+		&lt;/div&gt;
+	{:else}
+		&lt;p class=&quot;hint&quot;&gt;{m.notes_readonly()}&lt;/p&gt;
+	{/if}
+
+	&lt;div class=&quot;card notes__editor&quot; {@attach tiptap()}&gt;&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why not a Svelte wrapper for Tiptap</h4>
+	<p>Several exist. Each is a component that calls <code>new Editor</code> in <code>onMount</code> and exposes the instance through a store or a prop — which is what the eleven lines of <code>tiptap()</code> do, with an attachment’s cleanup semantics for free. A wrapper would add a dependency, a version to track against Tiptap’s own, and an abstraction between you and the editor’s excellent API. The rule from chapter 01: could we remove it later? Here there was nothing to add in the first place.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write an attachment for a library that owns an element and say what the cleanup must do.</li><li>You can explain the counter that makes a non-reactive API reactive.</li><li>You can say when a remote note replaces the editor’s content and when it does not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="expenses-with-tanstack-and-layerchart.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Expenses: a headless table, two charts, and the settle-up</span>
+			</a>
+			<a class="pager__link pager__link--next" href="companions-presence-and-settings.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Companions, presence, the join page and settings</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

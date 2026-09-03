@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The only way in — Building Tessera</title>
+<meta name="description" content="Four gates in order, one transaction, and the broadcast slice that assumed duplicates arrive as a prefix.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">19 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 43.18181818181818%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html" aria-current="page"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 19</p>
+			<h1>The only way in</h1>
+			<p class="lede">Four gates in order, one transaction, and the broadcast slice that assumed duplicates arrive as a prefix.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Accept a batch of operations idempotently, refuse the ones that should not be there, and tell everybody about the rest.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * INGESTION
+ * =========
+ *
+ * The only way an operation enters a board. Everything a client sends arrives
+ * here, and everything that leaves here is trustworthy — which is the property
+ * the rest of the server relies on when it stops re-validating.
+ *
+ * Four gates, in this order:
+ *
+ *   1. shape      — `parseBatch`, which has already run by the time we are called
+ *   2. permission — per operation, not per batch
+ *   3. clock      — a stamp too far in the future is refused here, at the one
+ *                   boundary where refusing it still keeps it out of the log
+ *   4. identity   — the `actor` is recorded as claimed, the `authorId` is not
+ *
+ * Gate 4 is the one worth staring at. `actor` is minted in the browser and can
+ * be anything; it is fine to store, because it is only used for ordering and for
+ * ignoring one's own echo. `authorId` comes from the session and is what
+ * attribution, rate limiting and &quot;who deleted this&quot; use. Confusing the two gives
+ * you an audit log a client can write whatever it likes into.
+ */</code></pre>
+</figure>
+<p>Everything a client sends arrives here, and everything that leaves here is trustworthy. That is the property the rest of the server relies on when it stops re-validating — a boundary worth naming out loud, because a codebase where *some* things are validated is a codebase where nobody knows which.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function ingest({
+	boardId,
+	userId,
+	role,
+	actor,
+	ops,
+	now = Date.now()
+}: IngestInput): Promise&lt;PushResult&gt; {
+	for (const candidate of ops) {
+		if (!mayApply(role, candidate)) throw new IngestError(403, refusalFor(role));
+
+		/*
+		 * The clock guard, in the one place it does any good.
+		 *
+		 * A stamp two years in the future drags every replica's clock with it,
+		 * permanently, and no correct local time pulls an HLC back. Rejecting it in
+		 * the browser was the first design and protected nothing — by then the
+		 * operation is already in the log. Here it never gets in.
+		 */
+		if (!isPlausible(candidate.stamp, now)) {
+			throw new IngestError(
+				422,
+				'Your device clock is too far ahead of the server. Check the time and try again.'
+			);
+		}
+
+		/*
+		 * The stamp says who made it, and it must agree with who says they made it.
+		 *
+		 * Not a security boundary — `actor` is self-declared either way — but a
+		 * consistency one: an operation filed under one actor whose stamp says
+		 * another breaks the per-actor cursor query, and the client that &quot;sent&quot; it
+		 * would never be told to skip its own echo.
+		 */
+		if (actorOf(candidate.stamp) !== actor) {
+			throw new IngestError(422, 'Operation stamp does not match the sending replica.');
+		}
+	}</code></pre>
+</figure>
+<p>This is where the drift guard from chapter 06 finally lives, and the comment says exactly why it is here and not in the browser: <strong>here it never gets in.</strong> A stamp two years in the future drags every replica’s clock with it, permanently, and no amount of correct local time pulls an HLC back.</p>
+<p>The third check — does the stamp’s actor match the sending replica? — is explicitly *not* a security boundary, and the comment says so. <code>actor</code> is self-declared either way. It is a <strong>consistency</strong> check: an operation filed under one actor whose stamp says another breaks the per-actor cursor query.</p>
+<h3 id="the-write">The write</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const rows = ops.map((candidate) =&gt; ({
+	boardId,
+	stamp: candidate.stamp,
+	actor,
+	authorId: userId,
+	kind: candidate.kind,
+	payload: JSON.stringify(candidate)
+}));
+
+const inserted = await db.transaction(async (tx) =&gt; {
+	/*
+	 * `onConflictDoNothing` against the (board, stamp) unique index makes the
+	 * whole request idempotent. A client whose connection dropped mid-flight
+	 * does not know whether the batch landed, so it sends it again; without
+	 * this, the log grows a duplicate of everything sent during a flaky minute.
+	 *
+	 * The CRDT would survive that — applying an operation twice is a no-op — but
+	 * the *log* would be wrong, and the log is what history replays from.
+	 */
+	const written = await tx
+		.insert(operation)
+		.values(rows)
+		.onConflictDoNothing()
+		// The stamp comes back as well as the sequence, because the broadcast below
+		// needs to know *which* operations were new, not just how many.
+		.returning({ seq: operation.seq, stamp: operation.stamp });
+
+	if (written.length &gt; 0) {
+		await tx
+			.update(board)
+			.set({ updatedAt: new Date(now) })
+			.where(eq(board.id, boardId));
+	}
+
+	return written;
+});</code></pre>
+</figure>
+<p><code>onConflictDoNothing</code> against the unique index makes the whole request idempotent, and <code>.returning({ seq, stamp })</code> brings back <strong>which</strong> operations were new rather than just how many. That second field is there because of the next bug.</p>
+<h3 id="the-slice-bug">The broadcast that dropped operations</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const watermark = await watermarkOf(boardId);
+
+/*
+ * Broadcast only what was actually new, selected by stamp.
+ *
+ * The first version took `ops.slice(ops.length - inserted.length)`, on the
+ * assumption that any duplicates in a re-sent batch would be a prefix. Nothing
+ * guarantees that — a client can legitimately resend a batch whose middle was
+ * already accepted — and when it is wrong the broadcast silently drops a
+ * genuinely new operation while echoing one everybody already had. The
+ * receiving replicas then differ from the log until their next reconnect.
+ *
+ * Echoing a re-sent operation would be harmless, since every replica is
+ * idempotent; dropping a new one is not. Filtering on the returned stamps
+ * costs a `Set` and cannot be wrong.
+ */
+if (inserted.length &gt; 0) {
+	const accepted = new Set(inserted.map((row) =&gt; row.stamp));
+	const fresh = ops.filter((candidate) =&gt; accepted.has(candidate.stamp));
+	publish(boardId, { type: 'ops', ops: fresh, watermark });
+}
+
+return { accepted: ops.length, watermark };</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The first version was <code>ops.slice(ops.length - inserted.length)</code> — take the last N, on the assumption that duplicates in a re-sent batch are a prefix. Nothing guarantees that. A client can legitimately resend a batch whose *middle* was already accepted, and when that happens the broadcast silently drops a genuinely new operation while echoing one everybody already had. The receiving replicas then differ from the log until their next reconnect, which may be an hour.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>The asymmetry that makes the fix obvious</h4>
+	<p>Echoing an operation somebody already has is <strong>harmless</strong> — every replica is idempotent, that is the entire point of part 2. Dropping a new one is not. So when the two error directions have wildly different costs, pick the algorithm that can only ever fail in the cheap direction. Filtering on the returned stamps costs a <code>Set</code> and cannot be wrong.</p>
+</aside>
+<h3 id="reading">Reading it back</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The board's current sequence: the greatest `seq` any of its operations has. */
+export async function watermarkOf(boardId: string): Promise&lt;number&gt; {
+	const rows = await db
+		.select({ seq: operation.seq })
+		.from(operation)
+		.where(eq(operation.boardId, boardId))
+		.orderBy(desc(operation.seq))
+		.limit(1);
+
+	return rows[0]?.seq ?? 0;
+}
+
+/**
+ * Read a page of a board's history after `since`.
+ *
+ * Ordered by `seq`, which is the server's total order and the only order a
+ * client should replay in. Ordering by stamp instead would interleave two
+ * replicas' work by wall clock and hand a client an operation before the one it
+ * depends on — which the CRDT survives and the reader would not enjoy watching.
+ */
+export async function since(
+	boardId: string,
+	seq: number,
+	limit: number
+): Promise&lt;{
+	ops: Operation[];
+	watermark: number;
+}&gt; {
+	const rows = await db
+		.select({ seq: operation.seq, payload: operation.payload })
+		.from(operation)
+		.where(and(eq(operation.boardId, boardId), gt(operation.seq, seq)))
+		.orderBy(operation.seq)
+		.limit(limit);
+
+	return {
+		/*
+		 * Re-parsed, not cast.
+		 *
+		 * These rows were validated on the way in, so this is belt and braces — but
+		 * they are also the oldest data in the system, written by a version of this
+		 * code that may no longer exist. A board from six months ago whose format
+		 * has since changed should fail here, loudly, rather than reach the CRDT and
+		 * converge on something nonsensical.
+		 */
+		ops: rows.map((row) =&gt; parseOperation(JSON.parse(row.payload))),
+		watermark: rows.at(-1)?.seq ?? seq
+	};
+}</code></pre>
+</figure>
+<p>Ordered by <code>seq</code>, which is the server’s total order and the only order a client should replay in. Ordering by stamp would interleave two replicas’ work by wall clock and hand a client an operation before the one it depends on — which the CRDT survives and the reader would not enjoy watching.</p>
+<aside class="callout callout--note"><p>Note that rows are <strong>re-parsed, not cast</strong>, on the way out. They were validated on the way in, so this is belt and braces — but they are also the oldest data in the system, written by a version of this code that may no longer exist. A board from six months ago whose format has since changed should fail here, loudly, rather than reach the CRDT and converge on something nonsensical.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Sending the same batch twice changes nothing and returns the same answer.</li><li>You can name the four gates and say why each one is at this tier.</li><li>You can explain the asymmetry argument for the broadcast filter.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="permissions.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Four roles, checked per operation</span>
+			</a>
+			<a class="pager__link pager__link--next" href="fan-out.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Telling everybody else</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

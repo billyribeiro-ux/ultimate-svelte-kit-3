@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Sheet class, and where the reactivity line is — Building Abacus</title>
+<meta name="description" content="A class in a `.svelte.ts` file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one `$state` number, `version`, is the whole contract between them.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">15 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 38.46153846153847%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html" aria-current="page"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 15</p>
+			<h1>The Sheet class, and where the reactivity line is</h1>
+			<p class="lede">A class in a <code>.svelte.ts</code> file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one <code>$state</code> number, <code>version</code>, is the whole contract between them.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Decide where fine-grained reactivity stops and a version number starts, and know exactly what the grid subscribes to.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SHEET
+ * =========
+ *
+ * Everything about *working on* a sheet that the engine does not know:
+ * which cell is selected, what is being typed, undo and redo, the clipboard,
+ * the fill handle, column widths, the title, whether it has been saved. A
+ * class in a `.svelte.ts` file, so `$state` works in it and so it can be
+ * tested without a component.
+ *
+ * WHERE THE REACTIVITY LINE IS
+ * ----------------------------
+ * The engine holds ten thousand cells in plain `Map`s and recalculates them
+ * without Svelte noticing anything — that is the whole point of chapter 10.
+ * This class publishes one number, `version`, which goes up when the engine
+ * finishes a batch. The grid reads `sheet.version` and then reads cells from
+ * the engine; the read is untracked and the number is what re-runs it. One
+ * signal for the grid instead of one per cell, which is the difference
+ * between a sheet that scrolls and one that does not.
+ *
+ * UNDO IS COMMANDS WITH INVERSES
+ * ------------------------------
+ * Project 6 kept undo as snapshots of a two-kilobyte pattern. A sheet can be
+ * megabytes, so here every change is a *command* that knows how to undo
+ * itself: an edit remembers what the cells held before, a deleted row
+ * remembers its cells. Undo runs the inverse; redo runs the command again.
+ */</code></pre>
+</figure>
+<p>The header states the two ideas of the class. The engine is plain <code>Map</code>s; this class publishes one number. Undo is commands with inverses rather than snapshots, because a sheet can be megabytes and project 6’s two-kilobyte snapshots would not survive contact with it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:46-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Command {
+	label: string;
+	apply(): void;
+	revert(): void;
+}
+
+/**
+ * What the clipboard holds: the cells relative to the copied rectangle, where
+ * that rectangle was (so a paste knows how far each formula has moved), and
+ * the text other applications get.
+ */
+export interface ClipboardPayload {
+	origin: Address;
+	rows: number;
+	cols: number;
+	cells: { dr: number; dc: number; input: string; format: CellFormat }[];
+	text: string;
+}
+
+const HISTORY_LIMIT = 200;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:67-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Sheet {
+	readonly engine: Engine;
+
+	/** Goes up once per change. The grid watches this and nothing finer. */
+	version = $state(0);
+	title = $state('Untitled sheet');
+	locale = $state('en-US');
+
+	/** Column widths and row heights that differ from the default, in pixels. */
+	readonly columns = new SvelteMap&lt;number, number&gt;();
+	readonly rows = new SvelteMap&lt;number, number&gt;();
+	frozen = $state({ rows: 0, cols: 0 });
+
+	/** The selection is a rectangle between two corners; `anchor` is the cell that takes typing. */
+	anchor = $state&lt;Address&gt;({ row: 0, col: 0 });
+	focus = $state&lt;Address&gt;({ row: 0, col: 0 });
+	readonly selection: Rect = $derived(rect(this.anchor, this.focus));
+
+	/** The cell being edited and the text in the editor, or `null`. */
+	editing = $state&lt;{ row: number; col: number; text: string } | null&gt;(null);
+
+	/** Changes since the last save. */
+	dirty = $state(false);
+	canUndo = $state(false);
+	canRedo = $state(false);
+
+	/** Cells changed by somebody else, for the grid to flash. Cleared by the grid after the flash. */
+	readonly flashes = new SvelteSet&lt;number&gt;();
+
+	/** Where a local change goes after it is applied: the collaboration layer, when there is one. */
+	onop: ((op: Op) =&gt; void) | null = null;
+
+	#undo: Command[] = [];
+	#redo: Command[] = [];
+
+	constructor(options: { locale?: string; now?: () =&gt; Date; random?: () =&gt; number } = {}) {
+		if (options.locale) this.locale = options.locale;
+		this.engine = new Engine({
+			// Literals are read in the sheet's locale, and the locale can change.
+			parseLiteral: (text) =&gt; parseInput(text, this.locale).value,
+			now: options.now,
+			random: options.random,
+			locale: this.locale
+		});
+	}</code></pre>
+</figure>
+<p>Every <code>$state</code> field is something a component renders directly: the selection, the editing session, the title, the flags. <code>columns</code>, <code>rows</code> and <code>flashes</code> are <code>SvelteMap</code> and <code>SvelteSet</code> because the grid iterates them and wants to know when an entry changes. The engine is <code>readonly engine</code> with no rune at all.</p>
+<h3 id="the-line">The line</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:117-148</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Every read below touches `this.version` before it touches the engine.
+ * The engine is a plain `Map` — deliberately, so ten thousand cells are
+ * not ten thousand proxies — which means a template expression like
+ * `{sheet.display(r, c)}` would otherwise depend on nothing reactive and
+ * never run again. Reading `version` subscribes it: one number changes
+ * per batch of edits, and every visible cell re-reads its value from the
+ * engine. That is the whole reactivity contract between the grid and the
+ * engine, and it lives in these four methods rather than in the grid.
+ */
+value(row: number, col: number): Scalar {
+	void this.version;
+	return this.engine.value(row, col);
+}
+
+input(row: number, col: number): string {
+	void this.version;
+	return this.engine.get(row, col)?.input ?? '';
+}
+
+format(row: number, col: number): CellFormat {
+	void this.version;
+	return this.engine.get(row, col)?.format ?? GENERAL;
+}
+
+/** The text a cell shows. */
+display(row: number, col: number): string {
+	void this.version;
+	const cell = this.engine.get(row, col);
+	if (!cell) return '';
+	return formatScalar(cell.value, cell.format, this.locale);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why four methods read a number they do not use</h4>
+	<p>The grid renders <code>{sheet.display(r, c)}</code> for ten thousand cells. In Svelte 5 that text is its own tiny effect, and it re-runs only when something it *read* changes. <code>this.engine.get(...)</code> reads a plain <code>Map</code> — nothing reactive — so without the <code>void this.version</code> on the first line, a cell that depends on another cell would show its old value forever. The first end-to-end run found exactly that: <code>=SUM(A1:A2)</code> stayed at 84 after A1 changed. Reading <code>version</code> subscribes every visible cell to one signal that changes once per batch. That is a few thousand cheap re-reads per edit instead of ten thousand signals — and it is the reason the engine can stay a plain <code>Map</code>.</p>
+</aside>
+<p>The alternative — a <code>$state</code> per cell — is what the reactivity lesson in chapter 17 builds, for nine cells. It is the right design for nine and the wrong one for a million, and the difference is not taste: a proxy per cell is memory and a signal write per cell per recalculation is time, and a spreadsheet has more cells than anything else in this course.</p>
+<h3 id="editing">The edit session</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:158-173</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Selection                                                         */
+/* ---------------------------------------------------------------- */
+
+select(anchor: Address, focus: Address = anchor): void {
+	this.anchor = anchor;
+	this.focus = focus;
+}
+
+/** Move the anchor; with `extend`, keep it and move the focus instead — Shift+arrow. */
+move(dRow: number, dCol: number, extend = false): void {
+	const from = extend ? this.focus : this.anchor;
+	const next = { row: Math.max(0, from.row + dRow), col: Math.max(0, from.col + dCol) };
+	if (extend) this.focus = next;
+	else this.select(next);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:175-202</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* The edit session                                                  */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Start editing the anchor cell. The grid's in-cell input and the formula
+ * bar both bind to `editing.text`, so the session lives here rather than
+ * in either of them.
+ */
+beginEdit(text?: string): void {
+	const { row, col } = this.anchor;
+	this.editing = { row, col, text: text ?? this.input(row, col) };
+}
+
+/** Apply what was typed, if it changed, and return the cell it went into. */
+commitEdit(): Address | null {
+	const editing = this.editing;
+	if (!editing) return null;
+	this.editing = null;
+	if (editing.text !== this.input(editing.row, editing.col)) {
+		this.setCell(editing.row, editing.col, editing.text);
+	}
+	return { row: editing.row, col: editing.col };
+}
+
+cancelEdit(): void {
+	this.editing = null;
+}</code></pre>
+</figure>
+<p>The in-cell editor and the formula bar both bind to <code>editing.text</code>. Type in either; both show it. The session lives here rather than in a component so that a click on the grid while a formula is open can insert a reference into it (ch. 20), and so that it can be tested without rendering anything.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:204-243</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Editing                                                           */
+/* ---------------------------------------------------------------- */
+
+/** Type into one cell. */
+setCell(row: number, col: number, input: string | null): void {
+	this.edit([{ row, col, input }], 'Edit');
+}
+
+/** Several cells as one undo step. */
+edit(edits: Edit[], label: string): void {
+	const prepared = edits.map((e) =&gt; this.#withImpliedFormat(e));
+	const before = this.#snapshot(prepared);
+	this.#run({
+		label,
+		apply: () =&gt; this.#applyLocal(prepared),
+		revert: () =&gt; this.#applyLocal(before)
+	});
+}
+
+clear(target: Rect = this.selection): void {
+	const edits: Edit[] = [];
+	for (const k of this.engine.cells.keys()) {
+		const a = unkey(k);
+		if (inRect(target, a)) edits.push({ row: a.row, col: a.col, input: null, format: GENERAL });
+	}
+	if (edits.length &gt; 0) this.edit(edits, 'Clear');
+}
+
+setFormat(format: CellFormat, target: Rect = this.selection): void {
+	if (rectSize(target) &gt; 20_000) return;
+	const edits: Edit[] = [];
+	for (let r = target.top; r &lt;= target.bottom; r += 1) {
+		for (let c = target.left; c &lt;= target.right; c += 1) {
+			// A format on an empty cell is kept, so that typing into it later is formatted.
+			edits.push({ row: r, col: c, format });
+		}
+	}
+	this.edit(edits, 'Format');
+}</code></pre>
+</figure>
+<p><code>edit</code> is the one door every change goes through: prepare the edits (an implied format, ch. 13), snapshot what the cells held, and run a command whose <code>revert</code> applies the snapshot. <code>setFormat</code> refuses more than twenty thousand cells, because a format on an empty cell is *kept* — so selecting a column and pressing “Currency” would otherwise create a million entries.</p>
+<h3 id="documents">In and out: documents and remote operations</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:592-632</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Documents and remote changes                                      */
+/* ---------------------------------------------------------------- */
+
+load(doc: Document): void {
+	this.engine.reset();
+	this.title = doc.title;
+	this.columns.clear();
+	this.rows.clear();
+	for (const [c, w] of Object.entries(doc.columns)) this.columns.set(Number(c), w);
+	for (const [r, h] of Object.entries(doc.rows)) this.rows.set(Number(r), h);
+	this.frozen = { ...doc.frozen };
+	this.engine.apply(
+		doc.cells.map((cell) =&gt; ({ row: cell.r, col: cell.c, input: cell.i, format: cell.f }))
+	);
+	this.#undo.length = 0;
+	this.#redo.length = 0;
+	this.#syncHistory();
+	this.select({ row: 0, col: 0 });
+	this.#sync();
+	// What was just loaded is, by definition, what is saved.
+	this.dirty = false;
+}
+
+toDocument(): Document {
+	const doc = emptyDocument(this.title);
+	for (const [c, w] of this.columns) doc.columns[String(c)] = w;
+	for (const [r, h] of this.rows) doc.rows[String(r)] = h;
+	doc.frozen = { ...this.frozen };
+	for (const [k, cell] of this.engine.cells) {
+		const a = unkey(k);
+		doc.cells.push({
+			r: a.row,
+			c: a.col,
+			i: cell.input,
+			...(cell.format.kind === 'general' ? {} : { f: cell.format })
+		});
+	}
+	doc.cells.sort((a, b) =&gt; a.r - b.r || a.c - b.c);
+	return doc;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:634-658</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Somebody else's change: applied without an undo entry, and flashed. */
+applyRemote(op: Op): void {
+	switch (op.type) {
+		case 'cells': {
+			this.engine.apply(op.cells.map((c) =&gt; ({ row: c.r, col: c.c, input: c.i, format: c.f })));
+			for (const c of op.cells) this.flashes.add(key(c.r, c.c));
+			break;
+		}
+		case 'shift': {
+			const shift: Shift = { kind: op.kind, at: op.at, count: op.count };
+			this.engine.shift(shift);
+			this.#shiftSizes(shift);
+			break;
+		}
+		case 'title':
+			this.title = op.title;
+			break;
+		case 'size':
+			(op.axis === 'column' ? this.columns : this.rows).set(op.index, op.size);
+			break;
+		default:
+			op satisfies never;
+	}
+	this.#sync();
+}</code></pre>
+</figure>
+<p><code>applyRemote</code> is somebody else’s change: applied to the engine with no undo entry — you cannot undo another person’s typing — and flashed, so a cell that changed under you is briefly highlighted. <code>load</code> ends by setting <code>dirty</code> back to false *after* <code>#sync</code>, because what was just loaded is, by definition, what is saved; the browser test that asserts it caught the first version doing that in the wrong order.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:660-712</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Internals                                                         */
+/* ---------------------------------------------------------------- */
+
+/** `12%` typed into a general cell makes it a percent cell; typed into a currency cell, it stays currency. */
+#withImpliedFormat(edit: Edit): Edit {
+	if (edit.format || !edit.input || edit.input.startsWith('=')) return edit;
+	const current = this.engine.get(edit.row, edit.col)?.format ?? GENERAL;
+	if (current.kind !== 'general') return edit;
+	const implied = parseInput(edit.input, this.locale).format;
+	return implied ? { ...edit, format: implied } : edit;
+}
+
+#snapshot(edits: Edit[]): Edit[] {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping
+	const seen = new Set&lt;number&gt;();
+	const before: Edit[] = [];
+	for (const edit of edits) {
+		const k = key(edit.row, edit.col);
+		if (seen.has(k)) continue;
+		seen.add(k);
+		const cell = this.engine.get(edit.row, edit.col);
+		before.push({
+			row: edit.row,
+			col: edit.col,
+			input: cell?.input ?? null,
+			format: cell?.format ?? GENERAL
+		});
+	}
+	return before;
+}
+
+#applyLocal(edits: Edit[]): void {
+	this.engine.apply(edits);
+	this.#emit({
+		type: 'cells',
+		cells: edits.map((e) =&gt; ({ r: e.row, c: e.col, i: e.input ?? null, f: e.format }))
+	});
+	this.#sync();
+}
+
+#emit(op: Op): void {
+	this.onop?.(op);
+}
+
+#sync(): void {
+	this.version = this.engine.version;
+	this.dirty = true;
+}
+
+markSaved(): void {
+	this.dirty = false;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name every <code>$state</code> field of <code>Sheet</code> and say which component renders each.</li><li>You can explain, in one sentence, what <code>void this.version</code> does and what breaks without it.</li><li>You can say why <code>applyRemote</code> does not push an undo entry.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-document.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The document, the operations, and the templates</span>
+			</a>
+			<a class="pager__link pager__link--next" href="commands-with-inverses.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Commands with inverses: undo, structure, clipboard, fill, sort</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

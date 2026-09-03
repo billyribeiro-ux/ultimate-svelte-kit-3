@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cardinality, and the NUL byte that ate every series — Building Sextant</title>
+<meta name="description" content="A series key built from labels, a limit that has to be per metric, and a separator that SQLite quietly truncated at.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 50%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html" aria-current="page"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>Cardinality, and the NUL byte that ate every series</h1>
+			<p class="lede">A series key built from labels, a limit that has to be per metric, and a separator that SQLite quietly truncated at.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Enforce a cardinality limit — and see how a plausible encoding choice produced a bug with no error message at all.</p></aside>
+			<p>A series is a metric name plus a set of labels. Two samples belong to the same series when the metric and every label agree, so we need a <strong>canonical key</strong>: the same labels in a different order must produce the same string.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts<span class="code__lines">:226-253</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The canonical key for a metric's label set.
+ *
+ * Sorted, so `{a, b}` and `{b, a}` are one series rather than two. Getting this
+ * wrong doubles a tenant's cardinality for no reason and — because the two keys
+ * never merge — makes a chart show two half-height lines where one should be.
+ *
+ * PRINTABLE SEPARATORS, AND THE BUG THAT DEMANDED THEM
+ * ---------------------------------------------------
+ * The first version used control characters — a NUL between a key and its value,
+ * and `\x01` between pairs — on the reasoning that they cannot appear in a label
+ * name and are therefore unambiguous.
+ *
+ * They cannot appear in a label name, and they cannot survive SQLite either.
+ * **A text value is truncated at the first NUL byte**, because the string is
+ * C-terminated underneath, so `rps\x01route\0&quot;/a&quot;` was stored as `rps\x01route`
+ * and every series on a metric collapsed into one key. The symptom was a
+ * cardinality limit that rejected the second label value of every metric, which
+ * reads as the limit being broken rather than as the key being truncated — and
+ * nothing anywhere raised an error, because storing a shorter string is not a
+ * failure.
+ *
+ * So: printable separators, and JSON encoding on both sides of them. The
+ * encoding is what makes `=` and `,` safe as delimiters — a value containing
+ * either is quoted and escaped, so it cannot forge a different key — and the
+ * result is legible in a database client, which matters more than it sounds
+ * when somebody is trying to work out where a million series came from.
+ */</code></pre>
+</figure>
+<p>Sorting the keys is the canonicalisation, and getting it wrong doubles a tenant’s cardinality for no reason — two keys for what is really one series, which is a bill and a limit hit for nothing.</p>
+<h3 id="the-bug">The bug</h3>
+<p>The first version separated the parts with control characters — a NUL between a key and its value, another between pairs. That is the standard trick, because a control character cannot appear in a label name. It is also completely wrong here, and the reason is one sentence of SQLite behaviour.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>key built as:   metric \0 label \0 value \0 label \0 value
+stored:         metric
+                       ^ SQLite stores TEXT as a NUL-terminated string,
+                         so the column truncates at the first NUL byte.
+
+symptom:        every series for a metric collapses into ONE row.
+                cardinality counting says 1, forever.
+                the limit rejects the second label value of every metric.
+                no error, no warning, no failing test.</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Nothing about this produces an error. The insert succeeds. The key is a valid string. The count is a plausible number. The only symptom is a limit rejecting data it should not, discovered by noticing that a test asserting two distinct series found one.</p></aside>
+<p>The fix is to use a separator that is *printable*, and JSON-encoding both halves gets it for free — a quote and a colon cannot appear unescaped inside a JSON string, so the encoding is unambiguous without any control characters at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.spec.ts<span class="code__lines">:213-240</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	it('distinguishes different values, including lookalikes', () =&gt; {
+		expect(seriesKeyFor('rps', { a: '1' })).not.toBe(seriesKeyFor('rps', { a: 1 }));
+		expect(seriesKeyFor('rps', { a: 'x' })).not.toBe(seriesKeyFor('rps', { b: 'x' }));
+	});
+
+	it('cannot be forged by a label value containing the separator', () =&gt; {
+		// JSON-encoding the value is what stops `{a: 'xby'}` colliding
+		// with `{a: 'x', b: 'y'}`.
+		expect(seriesKeyFor('m', { a: 'xby' })).not.toBe(seriesKeyFor('m', { a: 'x', b: 'y' }));
+	});
+});
+
+describe('cardinality', () =&gt; {
+	it('refuses new series past the limit and says how many', async () =&gt; {
+		/*
+		 * One well-meaning `user_id` label turns one series into a million, which is
+		 * not &quot;a bigger bill&quot; — it is a query planner choosing a different plan and a
+		 * dashboard that stops loading for everybody in the tenant.
+		 */
+		await db.update(tenant).set({ seriesLimit: 3 }).where(eq(tenant.id, TENANT));
+
+		const result = await ingest({
+			tenantId: TENANT,
+			now: NOW,
+			batch: batch({
+				samples: Array.from({ length: 10 }, (_, i) =&gt; ({
+					timestamp: NOW,
+					metric: 'rps',</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The lesson, which is not &quot;avoid NUL bytes&quot;</h4>
+	<p>It is that an encoding is a contract with <strong>every layer it passes through</strong>, and a separator is part of the encoding. The control-character trick is correct in memory, correct in a file, and wrong in a TEXT column — and the layer that broke it is the one nobody thought of as part of the encoding.</p>
+</aside>
+<h3 id="the-limit">The limit, and what happens at it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/ingest.ts<span class="code__lines">:370-400</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Only the ones that did not exist, which is what the limit counts. */
+const fresh = new Set&lt;string&gt;();
+
+for (const s of batch.samples) {
+	const key = seriesKeyFor(s.metric, s.labels);
+
+	/*
+	 * THE CARDINALITY LIMIT
+	 *
+	 * One well-meaning `user_id` label turns one series into a million, and
+	 * a million series is not &quot;a bigger bill&quot; — it is a query planner
+	 * choosing a different plan, a rollup table larger than the raw data,
+	 * and a dashboard that stops loading for everybody in the tenant.
+	 *
+	 * The limit is per metric rather than global so one runaway metric
+	 * cannot starve the rest, and the rejection is *counted and returned*
+	 * rather than silent, because &quot;my new metric has no data&quot; with no error
+	 * anywhere is a genuinely terrible afternoon.
+	 */
+	const existing = known.get(s.metric);
+	const isNew = !existing?.has(key);
+
+	if (isNew &amp;&amp; (existing?.size ?? 0) + fresh.size &gt;= limits.seriesLimit) {
+		cardinalityRejected += 1;
+		continue;
+	}
+
+	if (isNew) fresh.add(key);
+
+	// Recorded for every series in the batch, not only the new ones. The
+	// first version only tracked new ones, so `lastSeen` was written once</code></pre>
+</figure>
+<p>Rejected samples are <strong>counted and returned in the response body</strong>, not logged. A platform that silently drops data and writes about it in its own logs is asking somebody to watch the watchman — and the collector is the only thing in a position to do anything about it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>The same labels in two different orders produce one series.</li><li>Two distinct label values produce two series, and you have a test that would catch the truncation.</li><li>Exceeding the limit returns a count rather than failing silently.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="ingest.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Ingest: streamed, bounded, idempotent</span>
+			</a>
+			<a class="pager__link pager__link--next" href="pushdown.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Storage: pushdown, and the rule for when not to</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

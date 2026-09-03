@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The waterfall — Building Sextant</title>
+<meta name="description" content="A flat list that behaves like a tree, collapse as &quot;skip while deeper&quot;, and `content-visibility` instead of a virtualizer.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 67.3913043478261%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html" aria-current="page"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>The waterfall</h1>
+			<p class="lede">A flat list that behaves like a tree, collapse as &quot;skip while deeper&quot;, and <code>content-visibility</code> instead of a virtualizer.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Render every span as a keyboard-navigable row, and know when CSS is enough.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Waterfall.svelte<span class="code__lines">:7-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE WATERFALL
+ * =============
+ *
+ * The flame graph next to this shows the *shape* of a request in one glance.
+ * This shows the detail: every span, in order, indented by depth, with its
+ * name, its service, how long it took and how much of that was its own work.
+ *
+ * The two views deliberately overlap. A single view that tried to do both ends
+ * up being bad at both — a flame graph with labels on 0.3% bars is unreadable,
+ * and a waterfall zoomed out far enough to show shape is a wall of text.
+ *
+ * WHY THIS IS A FLAT LIST AND NOT A RECURSIVE COMPONENT
+ * ----------------------------------------------------
+ * The flame graph recurses because it draws a tree and the tree is the point.
+ * A waterfall is a *list* that happens to be indented, and rendering it as a
+ * list is what makes three things possible at once: collapsing a subtree is a
+ * filter over one array, keyboard navigation is `index ± 1`, and the browser
+ * can skip the rows that are off screen. The assembler already produced
+ * `trace.flat` in depth-first order with a `depth` on each node, precisely so
+ * that this file never has to walk the tree again.
+ *
+ * WHY NOT THE VIRTUALIZER
+ * -----------------------
+ * `Virtualizer.svelte.ts` exists a few files away and would work. It is the
+ * right tool when rows have unpredictable heights, which log lines do and these
+ * rows do not — every row here is exactly one line. For fixed-height rows,
+ * `content-visibility: auto` gets the same result from the browser for free:
+ * it skips layout, paint and style for subtrees that are off screen, while
+ * leaving them in the DOM for find-in-page, for screen readers and for
+ * `scrollIntoView`. Reaching for the hand-written virtualizer here would be
+ * carrying a data structure to solve a problem CSS already solved.
+ *
+ * The one thing it needs is `contain-intrinsic-size`, so the browser knows how
+ * tall a skipped row would have been. Without it the scrollbar is wrong and
+ * jumps as you scroll — the same bug the virtualizer's averaging solves, from
+ * the same cause.
+ */</code></pre>
+</figure>
+<p>The flame graph recurses because it draws a tree and the tree is the point. A waterfall is a <strong>list</strong> that happens to be indented, and rendering it as a list is what makes three things possible at once: collapsing a subtree is a filter over one array, keyboard navigation is <code>index ± 1</code>, and the browser can skip the rows that are off screen.</p>
+<h3 id="collapse">Collapse, without a tree walk</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Waterfall.svelte<span class="code__lines">:82-124</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The rows to draw.
+ *
+ * One pass over the flat list. Because it is depth-first, every descendant of a
+ * collapsed node sits immediately after it and has a greater depth — so
+ * &quot;collapse&quot; is: remember a depth, skip while deeper, stop at the first row
+ * that is not. No tree walk, no recursion, no second index.
+ */
+const lines = $derived.by((): Line[] =&gt; {
+	const out: Line[] = [];
+	let skipDeeperThan = Infinity;
+	let hiding = -1;
+
+	for (const node of trace.flat) {
+		if (node.depth &gt; skipDeeperThan) {
+			// Counted rather than merely skipped, so the collapsed row can say how
+			// much it is hiding. A collapse that silently removes forty spans is
+			// how somebody concludes a trace is smaller than it is.
+			if (hiding &gt;= 0) out[hiding]!.hidden += 1;
+			continue;
+		}
+
+		skipDeeperThan = Infinity;
+		hiding = -1;
+
+		out.push({
+			node,
+			offset: Math.min(1, Math.max(0, (node.start - trace.start) / span)),
+			// Never narrower than a hairline: a 0.2ms span in a 4s trace is 0.005%
+			// of the width, which rounds to zero pixels and vanishes. A span that
+			// exists must be visible, even when its bar stops being proportional.
+			width: Math.min(1, Math.max(0.002, node.duration / span)),
+			hidden: 0
+		});
+
+		if (node.children.length &gt; 0 &amp;&amp; collapsed.has(node.spanId)) {
+			skipDeeperThan = node.depth;
+			hiding = out.length - 1;
+		}
+	}
+
+	return out;
+});</code></pre>
+</figure>
+<p>Because <code>trace.flat</code> is depth-first, every descendant of a collapsed node sits immediately after it and has a greater depth. So &quot;collapse&quot; is: remember a depth, skip while deeper, stop at the first row that is not. No recursion, no second index — and the count of what was skipped falls out of the same loop, so a collapsed row can say how much it is hiding.</p>
+<h3 id="content-visibility">When CSS is enough</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Waterfall.svelte<span class="code__lines">:494-513</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	border-bottom: 1px solid var(--border);
+	cursor: pointer;
+
+	/*
+	 * Skip the rows that are off screen.
+	 *
+	 * `contain-intrinsic-size` is the half people leave out: it tells the browser
+	 * how tall a skipped row would be, so the scrollbar is right before anything
+	 * has been laid out. Without it, scrolling a five-thousand-span trace makes
+	 * the scrollbar resize under the thumb.
+	 */
+	content-visibility: auto;
+	contain-intrinsic-size: auto 3rem;
+}
+
+.row:hover {
+	background: var(--surface-hover);
+}
+
+.row:focus-visible {</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Reaching for the virtualizer here would be carrying a data structure to solve a problem CSS already solved</h4>
+	<p><code>Virtualizer.svelte.ts</code> is right when rows have unpredictable heights, which log lines do and these rows do not — every row here is one line. <code>content-visibility: auto</code> gets the same result from the browser for free, while leaving the rows in the DOM for find-in-page, for screen readers and for <code>scrollIntoView</code>. The half people leave out is <code>contain-intrinsic-size</code>: without it the browser does not know how tall a skipped row would be, and the scrollbar resizes under the thumb.</p>
+</aside>
+<h3 id="keyboard">A tree, as ARIA defines one</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Waterfall.svelte<span class="code__lines">:148-161</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Tree keyboard behaviour, as the ARIA practices define it.
+ *
+ * Down/Up move, Right expands or descends, Left collapses or goes to the
+ * parent, Home/End jump to the ends. This is not a nicety on a trace viewer:
+ * the row somebody wants is often the four-hundredth, and finding it by
+ * scrolling and clicking is slower than holding an arrow key.
+ */
+function onRowKey(event: KeyboardEvent, node: SpanNode): void {
+	const at = lines.findIndex((line) =&gt; line.node.spanId === node.spanId);
+	if (at === -1) return;
+
+	const isCollapsed = collapsed.has(node.spanId);
+	let next = at;</code></pre>
+</figure>
+<p>Down and up move, Right expands or descends, Left collapses or goes to the parent, Home and End jump to the ends. On a trace viewer this is not a nicety: the row somebody wants is often the four-hundredth, and finding it by scrolling and clicking is slower than holding an arrow key.</p>
+<p>The handler is on each <strong>row</strong> rather than on the container. Both work — key events bubble — and the per-row version is the one that keeps its promise to accessibility tooling, which checks that an element carrying <code>onclick</code> can also be operated from a keyboard. That check is not pedantry here: the container version depends on focus having been tracked correctly, and the row version cannot get out of step with itself.</p>
+<h3 id="self-time">Two numbers as text, and no geometry for the second</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Waterfall.svelte<span class="code__lines">:380-403</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">				--&gt;
+				&lt;p class=&quot;row__timing&quot;&gt;
+					&lt;span class=&quot;duration&quot;&gt;{formatDuration(node.duration)}&lt;/span&gt;
+					{#if node.children.length &gt; 0}
+						&lt;span class=&quot;self&quot; title=&quot;Time not accounted for by children&quot;&gt;
+							self {formatDuration(node.selfTime)}
+						&lt;/span&gt;
+					{/if}
+				&lt;/p&gt;
+			&lt;/div&gt;
+		{/each}
+	&lt;/div&gt;
+&lt;/section&gt;
+
+&lt;style&gt;
+	.waterfall {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-md);
+		overflow: hidden;
+	}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The tempting design is a darker segment inside the bar sized to self time. It is wrong: self time is not one contiguous interval — it is whatever was left over between the children — so drawing it as a block puts it at a *position in time* where nothing happened. Saying the number is less pretty and is not a lie.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A five-thousand-span trace scrolls smoothly with no virtualizer.</li><li>Collapsing a subtree removes its rows and says how many.</li><li>You can move through the whole trace with the arrow keys.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-flame-graph.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A flame graph that renders itself</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-query-editor.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A query editor with no editor library</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

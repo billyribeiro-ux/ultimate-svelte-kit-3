@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Published sheets, the embed, the API and the health check — Building Abacus</title>
+<meta name="description" content="Pages with `csr = false` ship no JavaScript: a published sheet as a table that prints, an embed reset to the root layout and allowed inside an iframe, a `QUERY` handler beside a `GET`, and a health endpoint that reports the build version.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">35 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 89.74358974358975%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html" aria-current="page"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 35</p>
+			<h1>Published sheets, the embed, the API and the health check</h1>
+			<p class="lede">Pages with <code>csr = false</code> ship no JavaScript: a published sheet as a table that prints, an embed reset to the root layout and allowed inside an iframe, a <code>QUERY</code> handler beside a <code>GET</code>, and a health endpoint that reports the build version.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Serve pages with no JavaScript when nothing needs it, reset a layout for a framed page, and write a search endpoint with the HTTP method that means “a read with a body”.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/s/[id]/+page.ts<span class="code__lines">:1-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { PageLoad } from './$types.js';
+import { getPublished } from '#lib/remote/sheets.remote.ts';
+import { tabulate } from '#lib/sheet/render.ts';
+
+/**
+ * A published sheet ships no JavaScript. `csr = false` means the server
+ * renders the page and the browser gets HTML and CSS and nothing else:
+ * nothing to hydrate, nothing to download, a page that prints. The table
+ * is computed here — the engine runs on the server — and arrives as text.
+ */
+export const csr = false;
+
+export const load: PageLoad = async ({ params }) =&gt; {
+	const published = await getPublished(params.id);
+	return { published, rendered: tabulate(published.doc, 'en-US') };
+};</code></pre>
+</figure>
+<p><code>csr = false</code> means the server renders the page and the browser gets HTML and CSS and nothing else: nothing to hydrate, nothing to download, a page that prints. The engine runs on the server — it is plain TypeScript — and the table arrives as text. The end-to-end suite asserts the page has zero <code>&lt;script&gt;</code> elements.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/s/[id]/+page.svelte<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { PageProps } from './$types.js';
+	import SheetTable from '#lib/components/SheetTable.svelte';
+
+	let { data }: PageProps = $props();
+	// `data` can change when the page is re-rendered with another sheet, so the
+	// date is derived from it rather than computed once.
+	const when = $derived(
+		new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(
+			new Date(data.published.publishedAt)
+		)
+	);
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{data.published.title} — Abacus&lt;/title&gt;
+	&lt;meta
+		name=&quot;description&quot;
+		content=&quot;{data.published.title}, a sheet by {data.published.owner}, published {when}.&quot;
+	/&gt;
+&lt;/svelte:head&gt;
+
+&lt;article class=&quot;page published&quot;&gt;
+	&lt;header class=&quot;published__head&quot;&gt;
+		&lt;div&gt;
+			&lt;p class=&quot;eyebrow&quot;&gt;Published sheet&lt;/p&gt;
+			&lt;h1&gt;{data.published.title}&lt;/h1&gt;
+			&lt;p class=&quot;hint&quot;&gt;
+				By {data.published.owner} · published {when} · {data.published.doc.cells.length.toLocaleString()}
+				cells
+			&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div class=&quot;cluster no-print&quot;&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href=&quot;/sheet/local?from={data.published.id}&quot;
+				&gt;Make a copy to edit&lt;/a
+			&gt;
+			&lt;a class=&quot;btn&quot; href=&quot;/api/sheets/{data.published.id}/export.csv&quot;&gt;Download CSV&lt;/a&gt;
+			&lt;a class=&quot;btn btn--ghost&quot; href=&quot;/embed/{data.published.id}&quot;&gt;Embed&lt;/a&gt;
+		&lt;/div&gt;
+	&lt;/header&gt;
+
+	&lt;SheetTable rendered={data.rendered} caption={data.published.title} /&gt;
+&lt;/article&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/embed/[id]/+page.ts<span class="code__lines">:1-11</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { PageLoad } from './$types.js';
+import { getPublished } from '#lib/remote/sheets.remote.ts';
+import { tabulate } from '#lib/sheet/render.ts';
+
+/** The embed is the published table with nothing else: no JavaScript, no header, framed by anyone. */
+export const csr = false;
+
+export const load: PageLoad = async ({ params }) =&gt; {
+	const published = await getPublished(params.id);
+	return { published, rendered: tabulate(published.doc, 'en-US', { rows: 200, cols: 26 }) };
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/embed/[id]/+page@.svelte<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { PageProps } from './$types.js';
+	import SheetTable from '#lib/components/SheetTable.svelte';
+
+	/**
+	 * THE EMBED
+	 * =========
+	 *
+	 * `+page@.svelte` resets this page to the root layout: no header, no
+	 * navigation, just the table and a line saying where it came from. It is
+	 * the one route `hooks.server.ts` allows inside an iframe — see the
+	 * `frame-ancestors` note there — because being framed is its purpose.
+	 */
+	let { data }: PageProps = $props();
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{data.published.title}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;div class=&quot;embed&quot;&gt;
+	&lt;SheetTable rendered={data.rendered} caption={data.published.title} /&gt;
+	&lt;p class=&quot;embed__foot hint&quot;&gt;
+		&lt;a href=&quot;/s/{data.published.id}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;{data.published.title}&lt;/a&gt; · by {data
+			.published.owner} · made with Abacus
+	&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>+page@.svelte</code> resets this page to the root layout: no header, no navigation, just the table and a line saying where it came from. It is the one route the security hook allows inside an iframe, because being framed is its purpose.</p>
+<h3 id="api">The API</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PUBLISHED SHEETS API
+ * ========================
+ *
+ *   GET    the newest published sheets, for anything that can only make a GET
+ *   QUERY  a search, with the criteria in the body
+ *
+ * `QUERY` is the HTTP method for &quot;a read with a body&quot; — a GET may not carry
+ * one, and a POST says &quot;this changes something&quot;, which a search does not.
+ * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export.
+ */
+
+import * as v from 'valibot';
+import { desc, sql } from 'drizzle-orm';
+import { error, json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types.js';
+import { db, schema } from '#lib/server/db/index.ts';
+
+/** Exported with a leading underscore — SvelteKit's escape hatch for &quot;not a handler&quot; — so the test beside this file can import it. */
+export const _SearchSchema = v.object({
+	q: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(80))),
+	limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50)), 20)
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:42-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ setHeaders }) =&gt; {
+	setHeaders({ 'cache-control': 'public, max-age=60' });
+	return json({ sheets: await list(20) });
+};
+
+export const QUERY: RequestHandler = async ({ request }) =&gt; {
+	let body: unknown;
+	try {
+		body = await request.json();
+	} catch {
+		error(400, 'Send a JSON body');
+	}
+	const parsed = v.safeParse(_SearchSchema, body);
+	if (!parsed.success) error(400, parsed.issues[0]?.message ?? 'Bad request');
+
+	const { q, limit } = parsed.output;
+	const needle = q?.toLowerCase();
+	const all = await list(50);
+	const matched = all
+		.filter(
+			(s) =&gt;
+				!needle || s.title.toLowerCase().includes(needle) || s.owner.toLowerCase().includes(needle)
+		)
+		.slice(0, limit);
+	return json({ sheets: matched, total: matched.length });
+};</code></pre>
+</figure>
+<p><code>QUERY</code> is the HTTP method for a read with a body — a GET may not carry one, and a POST says “this changes something”. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “not a handler”, so the test beside the route can import it; since 3.0.0-next.19 a <code>+</code> file with <code>.test.</code> in its name is not a route.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/published/+server.test.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import * as v from 'valibot';
+import { _SearchSchema } from './+server.ts';
+
+/**
+ * A test beside a route. Since SvelteKit 3.0.0-next.19 a `+` file with
+ * `.test.` in its name is not a route, so a schema's defaults get a fast
+ * unit test next to the thing they describe.
+ */
+const parse = (body: unknown) =&gt; v.parse(_SearchSchema, body);
+
+describe('the search body', () =&gt; {
+	it('has documented defaults and bounds', () =&gt; {
+		expect(parse({})).toEqual({ limit: 20 });
+		expect(parse({ q: '  budget ' }).q).toBe('budget');
+		expect(() =&gt; parse({ limit: 51 })).toThrow();
+		expect(() =&gt; parse({ limit: 0 })).toThrow();
+		expect(() =&gt; parse({ q: 'x'.repeat(81) })).toThrow();
+	});
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE HEALTH CHECK
+ * ================
+ *
+ * What a load balancer, a container orchestrator or a person with `curl`
+ * asks. It touches the database, because a process that is up with a
+ * database that is not is a process that should not receive traffic; and it
+ * returns the build version, because &quot;which version is running&quot; is the
+ * first question in every incident.
+ */
+
+import { json } from '@sveltejs/kit';
+import { version } from '$app/env';
+import type { RequestHandler } from './$types.js';
+import { client } from '#lib/server/db/index.ts';
+
+export const GET: RequestHandler = async ({ setHeaders }) =&gt; {
+	setHeaders({ 'cache-control': 'no-store' });
+	try {
+		await client.execute('select 1');
+		return json({ ok: true, version, uptime: Math.round(process.uptime()) });
+	} catch (error) {
+		return json({ ok: false, version, error: (error as Error).message }, { status: 503 });
+	}
+};</code></pre>
+</figure>
+<p>The health check touches the database and returns the build version — the commit hash from the config — because “which version is running” is the first question in every incident. The container chapter probes it.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>csr = false</code> removes from a page and what it keeps.</li><li>You can explain the <code>@</code> in <code>+page@.svelte</code>.</li><li>You can say why the search is a <code>QUERY</code> and not a <code>POST</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="workspace-signin-settings.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The workspace, sign-in and settings</span>
+			</a>
+			<a class="pager__link pager__link--next" href="unit-and-browser-tests.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Unit and browser tests</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

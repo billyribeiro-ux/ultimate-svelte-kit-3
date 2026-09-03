@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room between any two things — Building Tessera</title>
+<meta name="description" content="Stacking order without renumbering: base-62 keys that always have a gap, and the tiebreak that stops two replicas rendering the same data differently.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">08 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 18.181818181818183%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html" aria-current="page"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 08</p>
+			<h1>Room between any two things</h1>
+			<p class="lede">Stacking order without renumbering: base-62 keys that always have a gap, and the tiebreak that stops two replicas rendering the same data differently.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Reorder one shape by writing one field on one shape, with no operation touching anything else.</p></aside>
+			<p>Shapes stack. &quot;Bring to front&quot;, &quot;send backward&quot;, and the question of which of two overlapping boxes is on top. The obvious model is an integer <code>z</code> per shape, and it is a trap.</p>
+<p>Move one shape between two others and you renumber every shape above it. A one-shape reorder becomes fifty operations, and all fifty conflict with anything anybody else did to the stack — because the operations were never *about* the shapes they touched. Two people reordering two different shapes at the same time produce a mess no merge rule can untangle.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * FRACTIONAL INDEXING
+ * ===================
+ *
+ * Stacking order. &quot;Bring to front&quot;, &quot;send backward&quot;, and the order shapes sit in
+ * when two of them overlap.
+ *
+ * The obvious model — an integer `z` per node — is a trap in a collaborative
+ * document. Moving one shape between two others renumbers every shape above it,
+ * so a one-shape reorder becomes fifty operations that all conflict with
+ * anything anybody else did to the stack. Two people reordering different shapes
+ * at the same time produce a mess that no merge rule can untangle, because the
+ * operations were never about the shapes they touched.
+ *
+ * The fix is to stop using integers. A **fractional index** is a string that
+ * sorts lexicographically, and there is always room to mint another one strictly
+ * between any two. Moving a shape writes exactly one field on exactly one shape,
+ * and that write is an ordinary last-write-wins register.
+ *
+ * The keys are base-62 digits read as the fractional part of a number — `&quot;V&quot;` is
+ * roughly a half, `&quot;V5&quot;` is slightly more than a half — so `between` is long
+ * division that stops as soon as it finds room.
+ *
+ * THE COLLISION NOBODY MENTIONS
+ * -----------------------------
+ * Two replicas that concurrently move different shapes to the same slot compute
+ * the *same* key, because the inputs are the same. Sorting by key alone then
+ * leaves their order down to whatever `Array#sort` felt like, which differs
+ * between replicas — a divergence in the rendering, from a data structure that
+ * has technically converged.
+ *
+ * So nothing sorts by the key alone. `compareOrder` sorts by key and breaks ties
+ * with the element's own id, which is a stamp and therefore unique and totally
+ * ordered. Cheap, and it removes the failure entirely.
+ */
+
+/** Digits in ascending order. ASCII order and value order must agree. */
+const DIGITS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const BASE = DIGITS.length; // 62
+
+/** A stacking key. Sorts lexicographically; never empty; never ends in `'0'`. */
+export type OrderKey = string &amp; { readonly __brand: 'OrderKey' };
+
+/** The key for the first element on an empty board — the midpoint of the range. */
+export const MIDDLE = 'V' as OrderKey; // DIGITS[31], as close to a half as base 62 gets</code></pre>
+</figure>
+<p>A <strong>fractional index</strong> is a string that sorts lexicographically, with the property that there is always room to mint another one strictly between any two. Moving a shape then writes exactly one field on exactly one shape, and that write is an ordinary last-write-wins register — the subject of chapter 10.</p>
+<p>The keys are base-62 digits read as the fractional part of a number. <code>&quot;V&quot;</code> is roughly a half; <code>&quot;V5&quot;</code> is slightly more than a half. So <code>between</code> is long division that stops as soon as it finds room.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function digitAt(key: string | null, index: number, fallback: number): number {
+	if (key === null || index &gt;= key.length) return fallback;
+	const value = DIGITS.indexOf(key[index]!);
+	if (value &lt; 0) throw new RangeError(`&quot;${key}&quot; is not a valid order key`);
+	return value;
+}
+
+/**
+ * A key strictly between `before` and `after`.
+ *
+ * `null` means &quot;no bound&quot;: `between(null, null)` is the middle of the range,
+ * `between(key, null)` is after everything, `between(null, key)` is before
+ * everything.
+ *
+ * The loop walks digit by digit. As soon as two consecutive positions differ by
+ * more than one there is room for a midpoint and it stops; otherwise it copies
+ * the lower bound's digit and descends. Since the upper bound is treated as
+ * `BASE` past its end, descending always terminates — the worst case is one
+ * extra character per call, which is why a thousand consecutive &quot;insert just
+ * above this one&quot; operations grow a key to about a thousand characters and not
+ * to infinity.
+ */
+export function between(before: OrderKey | null, after: OrderKey | null): OrderKey {
+	if (before !== null &amp;&amp; after !== null &amp;&amp; before &gt;= after) {
+		throw new RangeError(`order keys are not ascending: &quot;${before}&quot; &gt;= &quot;${after}&quot;`);
+	}
+
+	let result = '';
+
+	for (let index = 0; ; index += 1) {
+		const low = digitAt(before, index, 0);
+		const high = digitAt(after, index, BASE);
+
+		if (high - low &gt; 1) {
+			// `low + 1` rather than the midpoint when the gap is small keeps keys
+			// short; the midpoint keeps them balanced when the gap is wide. Halving
+			// is the one that survives repeated insertion at the same spot.
+			result += DIGITS[Math.floor((low + high) / 2)];
+			return result as OrderKey;
+		}
+
+		result += DIGITS[low];
+	}
+}</code></pre>
+</figure>
+<p>Walk it by hand once and it stops being magic. <code>between(null, null)</code>: at index 0, <code>low</code> is 0 and <code>high</code> is 62, the gap is wide, so take the midpoint — <code>DIGITS[31]</code>, which is <code>&quot;V&quot;</code>. <code>between(&quot;V&quot;, null)</code>: <code>low</code> is 31, <code>high</code> is 62, midpoint 46, which is <code>&quot;k&quot;</code>. <code>between(&quot;V&quot;, &quot;W&quot;)</code>: <code>low</code> 31, <code>high</code> 32, gap of one — no room — so copy <code>&quot;V&quot;</code> and descend; at index 1 the bound has run out, so <code>low</code> is 0 and <code>high</code> is 62, and the answer is <code>&quot;VV&quot;</code>.</p>
+<aside class="callout callout--note"><p>The termination argument matters, because a loop with no exit condition in it deserves scrutiny. Past the end of the upper bound, <code>high</code> is treated as <code>BASE</code>, so descending always eventually finds a gap. The worst case is one extra character per call — which is why a thousand consecutive &quot;insert just above this one&quot; operations grow a key to about a thousand characters, and not to infinity.</p></aside>
+<h3 id="many">Pasting forty shapes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * `count` keys strictly between the two bounds, ascending.
+ *
+ * Pasting forty shapes should not be forty calls to `between` chained off each
+ * other — that builds a key that grows a character per shape and reads like a
+ * hash. Splitting the gap evenly keeps them all short.
+ */
+export function betweenMany(
+	before: OrderKey | null,
+	after: OrderKey | null,
+	count: number
+): OrderKey[] {
+	if (count &lt; 0) throw new RangeError(`count must not be negative: ${count}`);
+	if (count === 0) return [];
+
+	const middle = between(before, after);
+	if (count === 1) return [middle];
+
+	// Halve the range, fill the lower half, then the upper. Recursion depth is
+	// log2(count), so a paste of a million shapes is twenty frames deep.
+	const half = Math.floor(count / 2);
+	return [
+		...betweenMany(before, middle, half),
+		middle,
+		...betweenMany(middle, after, count - half - 1)
+	];
+}</code></pre>
+</figure>
+<p>Chaining <code>between</code> forty times off its own output builds a key that grows a character per shape and reads like a hash. Splitting the gap by halving keeps them all short, and the recursion is <code>log2(count)</code> deep — a paste of a million shapes is twenty frames.</p>
+<h3 id="the-collision">The collision nobody mentions</h3>
+<p>Here is the failure that articles about fractional indexing tend to skip.</p>
+<p>Two replicas concurrently move two *different* shapes into the same slot. Both compute <code>between(a, b)</code> with the same arguments, so both get the <strong>same key</strong>. The data has converged perfectly — both replicas hold both shapes with identical keys — and the two screens still differ, because sorting by key alone leaves their relative order to whatever <code>Array#sort</code> felt like, and that is implementation-defined for equal elements.</p>
+<p>A divergence in the rendering, from a data structure that is provably correct. The fix is three lines and has to be used everywhere.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Validate a key that arrived from somewhere untrusted. */
+export function isOrderKey(value: string): value is OrderKey {
+	if (value.length === 0) return false;
+	if (value.endsWith('0')) return false; // ambiguous: &quot;V&quot; and &quot;V0&quot; would tie
+	for (const character of value) {
+		if (!DIGITS.includes(character)) return false;
+	}
+	return true;
+}
+
+/**
+ * The comparator every render path uses.
+ *
+ * Never sort by `key` alone — see the note at the top of this file. The `id`
+ * tiebreak is what makes two replicas agree when they have independently minted
+ * the same key.
+ */
+export function compareOrder(
+	a: { readonly key: OrderKey; readonly id: string },
+	b: { readonly key: OrderKey; readonly id: string }
+): number {
+	if (a.key !== b.key) return a.key &lt; b.key ? -1 : 1;
+	return a.id &lt; b.id ? -1 : a.id &gt; b.id ? 1 : 0;
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Never sort by <code>key</code> alone anywhere in the codebase. <code>compareOrder</code> breaks the tie with the element’s id, which is a stamp and therefore unique and totally ordered — so two replicas that have independently minted the same key still agree on what to draw. Every render path in Tessera goes through this function, and a grep for <code>.key &lt;</code> should return exactly one result: this one.</p></aside>
+<h3 id="testing-it">Testing the property, not the examples</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	it('stays ordered under a thousand insertions at the same spot', () =&gt; {
+		// &quot;Send backward&quot; pressed a thousand times. Keys get longer; they never
+		// collide and never come out of order.
+		let low: OrderKey | null = null;
+		const high = key('V');
+		const produced: OrderKey[] = [];
+
+		for (let i = 0; i &lt; 1000; i += 1) {
+			const next = between(low, high);
+			produced.push(next);
+			low = next;
+		}
+
+		expect(produced).toEqual([...produced].sort());
+		expect(new Set(produced).size).toBe(produced.length);
+	});
+});</code></pre>
+</figure>
+<p>The assertion is the invariant itself — still sorted, still unique — checked against a thousand insertions at the worst possible spot rather than against six cases somebody thought of. And the collision:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/fracdex.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('compareOrder', () =&gt; {
+	it('breaks a collision with the element id', () =&gt; {
+		/*
+		 * Two replicas moving different shapes into the same gap compute the same
+		 * key. Sorting on the key alone then leaves the result to whatever the sort
+		 * implementation felt like — which is not the same on two machines, so the
+		 * boards render differently while the data has technically converged.
+		 */
+		const a = { key: key('V'), id: 'node-a' };
+		const b = { key: key('V'), id: 'node-b' };
+
+		expect(compareOrder(a, b)).toBeLessThan(0);
+		expect(compareOrder(b, a)).toBeGreaterThan(0);
+		expect(compareOrder(a, a)).toBe(0);
+	});
+</code></pre>
+</figure>
+<p>That is the pattern for everything in this folder — assert the property, not the example — and chapter 12 takes it as far as it goes.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why integer <code>z</code>-order is unusable in a collaborative document.</li><li>You can compute <code>between(&quot;V&quot;, &quot;W&quot;)</code> on paper and get <code>&quot;VV&quot;</code>.</li><li>You can describe a divergence that happens *after* the data has converged, and the three-line fix.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="version-vectors.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What have I already seen?</span>
+			</a>
+			<a class="pager__link pager__link--next" href="observed-remove-sets.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Which shapes exist</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

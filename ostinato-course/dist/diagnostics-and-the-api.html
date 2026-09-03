@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnostics, tracing and the API — Building Ostinato</title>
+<meta name="description" content="An in-memory span exporter and the instrumentation file that registers it; a page that reads the adapter’s virtual module, `event.platform`, `updated.check()` and `$state.snapshot`; and three endpoints — the resolver the reroute hook asks, a `QUERY` search with a co-located test, and the plain JSON the embed fetches.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 82.05128205128204%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html" aria-current="page"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>Diagnostics, tracing and the API</h1>
+			<p class="lede">An in-memory span exporter and the instrumentation file that registers it; a page that reads the adapter’s virtual module, <code>event.platform</code>, <code>updated.check()</code> and <code>$state.snapshot</code>; and three endpoints — the resolver the reroute hook asks, a <code>QUERY</code> search with a co-located test, and the plain JSON the embed fetches.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>See where SvelteKit’s OpenTelemetry spans go and how to read them; use <code>getRequestEvent()</code> inside a query; and export a <code>QUERY</code> handler with a test file beside it.</p></aside>
+			<h3 id="where-the-spans-go">Where the spans go</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:1-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHERE THE SPANS GO
+ * ==================
+ *
+ * SvelteKit emits an OpenTelemetry span for every `handle`, `load`, form
+ * action and remote function, and OpenTelemetry's job is to hand those to an
+ * *exporter*. The usual exporter sends them to a collector over the network.
+ * This one keeps the last few hundred in memory, which is all a single-process
+ * app needs in order to answer &quot;what did the last request actually do?&quot; on its
+ * own diagnostics page.
+ *
+ * It is deliberately not a replacement for a real collector. It forgets on
+ * restart, it holds one process's spans, and it is bounded by `TRACE_BUFFER`
+ * so that a busy hour cannot turn into a memory leak. It is the thing you want
+ * during development and the thing you outgrow the week you run two instances.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:34-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Module-level state on the server is shared by every request, which is
+ * usually the bug. Here it is the point: the ring *is* the cross-request
+ * memory, it contains nothing private to any one request, and it is read only
+ * by the diagnostics page.
+ */
+const ring: SpanRecord[] = [];
+let capacity = 200;
+
+export function setCapacity(size: number): void {
+	capacity = size;
+	while (ring.length &gt; capacity) ring.shift();
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:84-98</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The exporter OpenTelemetry calls. `export` is handed a batch of finished
+ * spans and a callback to say how it went; there is no way for a push into an
+ * array to go wrong, so it always says success.
+ */
+export class RingExporter implements SpanExporter {
+	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) =&gt; void): void {
+		for (const span of spans) record(span);
+		resultCallback({ code: ExportResultCode.SUCCESS });
+	}
+
+	shutdown(): Promise&lt;void&gt; {
+		return Promise.resolve();
+	}
+}</code></pre>
+</figure>
+<p>SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function when <code>tracing: { server: true }</code> is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by <code>TRACE_BUFFER</code>. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/instrumentation.server.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * INSTRUMENTATION
+ * ===============
+ *
+ * SvelteKit guarantees this file runs before any application code — in
+ * development through the Vite server, in production because the adapter
+ * wires it in front of the entrypoint with `builder.instrument`. That ordering
+ * is the reason the file exists: an OpenTelemetry provider has to be
+ * registered as the *global* one before anything asks for a tracer, or those
+ * early spans go to a no-op provider and vanish.
+ *
+ * What is registered is small. One tracer provider, one processor that hands
+ * each finished span straight to the exporter, and the exporter in
+ * `lib/server/tracing.ts` that keeps them in memory. `register()` also
+ * installs the async-context manager, which is what lets `event.tracing.current`
+ * find the right span from inside an `await`.
+ */
+
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { RingExporter } from '#lib/server/tracing.ts';
+
+const provider = new NodeTracerProvider({
+	spanProcessors: [new SimpleSpanProcessor(new RingExporter())]
+});
+
+provider.register();</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why an instrumentation file</h4>
+	<p>An OpenTelemetry provider has to be registered as the global one *before* anything asks for a tracer, or those early spans go to a no-op provider and vanish. SvelteKit guarantees <code>src/instrumentation.server.ts</code> runs before any application code — in development through the Vite server, in production because the adapter wires it in front of the entrypoint with <code>builder.instrument</code> (ch. 34). The file exists for that ordering and nothing else.</p>
+</aside>
+<h3 id="the-page">The page</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/diagnostics.remote.ts<span class="code__lines">:16-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const getSpans = query(
+	v.object({
+		limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500)), 120)
+	}),
+	({ limit }) =&gt; recentSpans(limit)
+);
+
+export const getTrace = query(v.string(), (id) =&gt; trace(id));
+
+/**
+ * `getRequestEvent()` inside a query: the request's `platform`, which the
+ * adapter filled in — or its emulator did, in development — and the flags
+ * SvelteKit sets about *how* this function was reached.
+ */
+export const getRuntime = query(async () =&gt; {
+	const event = getRequestEvent();
+	return {
+		platform: event.platform ?? null,
+		isRemoteRequest: event.isRemoteRequest,
+		isSubRequest: event.isSubRequest,
+		connections: openConnections(),
+		...(await stats())
+	};
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { version } from '$app/env';
+	import { updated } from '$app/state';
+	import { entries, name as adapter, precompress } from 'virtual:adapter';
+	import { getRuntime, getSpans, getTrace } from '#lib/remote/diagnostics.remote.ts';
+	import Section from '#lib/components/Section.svelte';
+
+	/**
+	 * WHAT THE SERVER KNOWS ABOUT ITSELF
+	 * ==================================
+	 *
+	 * Spans from the in-memory ring, the adapter's platform object, and the
+	 * version check. Nothing here is secret and none of it needs a second
+	 * service — it exists to make &quot;why was that slow&quot; answerable from the app.
+	 */
+	let filters = $state({ limit: 120 });
+	let selected = $state&lt;string | null&gt;(null);
+	let checked = $state&lt;boolean | null&gt;(null);
+
+	/**
+	 * `updated.check()` asks the server for its version right now, rather than
+	 * waiting for the next poll, and resolves with whether it changed.
+	 */
+	async function check() {
+		checked = await updated.check();
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:35-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	&lt;svelte:boundary&gt;
+		{const runtime = $derived(await getRuntime())}
+		&lt;dl class=&quot;facts&quot;&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Build&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;{version}&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Adapter&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;
+					{adapter} · {entries.join(' / ')} · {precompress ? 'precompressed' : 'uncompressed'}
+				&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Answered by&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;
+					{runtime.platform?.adapter ?? '—'} · {runtime.platform?.entry ?? '—'}
+				&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Process started&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;
+					{runtime.platform ? new Date(runtime.platform.startedAt).toISOString() : '—'}
+				&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;This call&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;
+					remote: {runtime.isRemoteRequest} · sub-request: {runtime.isSubRequest}
+				&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Database&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;
+					{runtime.patterns} patterns · {runtime.artists} artists · {runtime.rooms} rooms
+				&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;Live streams open&lt;/dt&gt;
+				&lt;dd class=&quot;mono&quot;&gt;{runtime.connections}&lt;/dd&gt;
+			&lt;/div&gt;
+			&lt;div&gt;
+				&lt;dt&gt;New version?&lt;/dt&gt;
+				&lt;dd class=&quot;cluster&quot;&gt;
+					&lt;span class=&quot;mono&quot;
+						&gt;{updated.current
+							? 'yes'
+							: checked === null
+								? 'not checked'
+								: checked
+									? 'yes'
+									: 'no'}&lt;/span
+					&gt;
+					&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={check}&gt;Check now&lt;/button&gt;
+				&lt;/dd&gt;
+			&lt;/div&gt;
+		&lt;/dl&gt;
+		{#snippet pending()}
+			&lt;p class=&quot;hint&quot;&gt;Asking the server…&lt;/p&gt;
+		{/snippet}
+	&lt;/svelte:boundary&gt;
+&lt;/Section&gt;</code></pre>
+</figure>
+<p>Three sources on one page. <code>virtual:adapter</code> is the module the adapter’s Vite plugin provides (ch. 34) — the app can say which adapter built it without hard-coding the name. <code>runtime.platform</code> is <code>event.platform</code>, filled in by the adapter’s runtime or its emulator, read with <code>getRequestEvent()</code> inside a query. And <code>updated.check()</code> asks the server for its version right now rather than waiting for the next poll.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:99-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;label class=&quot;field limit&quot;&gt;
+	&lt;span class=&quot;field__label&quot;&gt;Show the last&lt;/span&gt;
+	&lt;input class=&quot;input&quot; type=&quot;number&quot; min=&quot;10&quot; max=&quot;500&quot; bind:value={filters.limit} /&gt;
+&lt;/label&gt;
+
+&lt;svelte:boundary&gt;
+	&lt;!-- `$state.snapshot`: a plain copy of the filters object for the remote function, with no proxy in it. --&gt;
+	{const spans = $derived(await getSpans($state.snapshot(filters)))}
+	&lt;div class=&quot;table-wrap&quot;&gt;</code></pre>
+</figure>
+<p><code>$state.snapshot(filters)</code> — the right use of it, this time (compare ch. 14). <code>filters</code> is a <code>$state</code> object, and the remote function wants plain data with no proxy in it; for a plain object, <code>$state.snapshot</code> is exactly that. Change the limit and the derived re-awaits.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:155-183</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if selected}
+	&lt;Section eyebrow=&quot;Trace {selected.slice(0, 8)}&quot; title=&quot;One request, as a waterfall&quot; level={3}&gt;
+		&lt;svelte:boundary&gt;
+			{const spans = $derived(await getTrace(selected))}
+			{const start = $derived(Math.min(...spans.map((s) =&gt; s.start)))}
+			{const total = $derived(Math.max(1, ...spans.map((s) =&gt; s.start + s.duration - start)))}
+			&lt;ol class=&quot;waterfall&quot;&gt;
+				{#each spans as span (span.spanId)}
+					{const left = ((span.start - start) / total) * 100}
+					{const width = Math.max(0.5, (span.duration / total) * 100)}
+					&lt;li class=&quot;waterfall__row&quot;&gt;
+						&lt;span class=&quot;waterfall__name&quot;&gt;{span.name}&lt;/span&gt;
+						&lt;span class=&quot;waterfall__track&quot;&gt;
+							&lt;span
+								class={['waterfall__bar', { 'waterfall__bar--error': !span.ok }]}
+								style:left=&quot;{left}%&quot;
+								style:width=&quot;{width}%&quot;
+							&gt;&lt;/span&gt;
+						&lt;/span&gt;
+						&lt;span class=&quot;mono waterfall__ms&quot;&gt;{span.duration}ms&lt;/span&gt;
+					&lt;/li&gt;
+				{/each}
+			&lt;/ol&gt;
+			{#snippet pending()}
+				&lt;p class=&quot;hint&quot;&gt;Loading the trace…&lt;/p&gt;
+			{/snippet}
+		&lt;/svelte:boundary&gt;
+	&lt;/Section&gt;
+{/if}</code></pre>
+</figure>
+<p>One request as a waterfall: the spans of one trace, oldest first, each bar positioned by its start and sized by its duration. Every value is a <code>{const}</code> in markup; there is no script-side state for the drawing at all.</p>
+<h3 id="the-endpoints">Three endpoints</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/resolve/+server.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT DOES /@handle/slug MEAN
+ * ===========================
+ *
+ * The endpoint the `reroute` hook in `src/hooks.ts` asks. It answers with the
+ * route pathname for a vanity address, or `null`.
+ *
+ * A plain endpoint rather than a remote function, because a remote function
+ * is called *by* the router once a route is known, and this runs *before* the
+ * route is known — that is what rerouting is. The hook is given a `fetch` for
+ * exactly this reason.
+ *
+ * Cached for an hour: the answer for a given handle and slug changes only if
+ * the pattern is deleted, and a stale hit then lands on a 404 that says so.
+ */
+
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types.js';
+import { resolveVanity } from '#lib/server/patterns.ts';
+
+export const GET: RequestHandler = async ({ url, setHeaders }) =&gt; {
+	const handle = url.searchParams.get('handle') ?? '';
+	const slug = url.searchParams.get('slug') ?? '';
+
+	const id = await resolveVanity(handle.toLowerCase(), slug.toLowerCase());
+
+	setHeaders({ 'cache-control': id ? 'public, max-age=3600' : 'no-store' });
+	return json({ pathname: id ? `/p/${id}` : null });
+};</code></pre>
+</figure>
+<p>A plain endpoint rather than a remote function, because a remote function is called *by* the router once a route is known, and this runs *before* the route is known — that is what rerouting is. Cached for an hour when it finds something, <code>no-store</code> when it does not.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:1-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE READ API
+ * ============
+ *
+ * Two handlers on one route:
+ *
+ *   GET    the newest patterns, for anything that can only make a GET
+ *   QUERY  a search, with the criteria in the body
+ *
+ * `QUERY` is the HTTP method for &quot;a read with a body&quot; — a GET may not carry
+ * one, and a POST says &quot;this changes something&quot;, which a search does not.
+ * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export,
+ * and it is used here for the reason it exists: a search with a title, a tempo
+ * range and a sort does not fit in a query string that anybody wants to read.
+ *
+ * The response is deliberately plain JSON with numbers where the app has
+ * `Note`s. This is for scripts, and a script does not have the `transport`
+ * hook.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:28-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Exported with a leading underscore, which is SvelteKit's escape hatch for
+ * &quot;this export is not a handler&quot;: the co-located test imports it.
+ */
+export const _SearchSchema = v.object({
+	q: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(80))),
+	bpm: v.optional(
+		v.object({
+			min: v.optional(v.pipe(v.number(), v.integer(), v.minValue(40)), 40),
+			max: v.optional(v.pipe(v.number(), v.integer(), v.maxValue(240)), 240)
+		}),
+		{ min: 40, max: 240 }
+	),
+	sort: v.optional(v.picklist(['new', 'loved', 'played']), 'new'),
+	limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(60)), 24)
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:65-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const QUERY: RequestHandler = async ({ request }) =&gt; {
+	let body: unknown;
+	try {
+		body = await request.json();
+	} catch {
+		error(400, 'Send a JSON body');
+	}
+
+	const parsed = v.safeParse(_SearchSchema, body);
+	if (!parsed.success) {
+		error(400, parsed.issues[0]?.message ?? 'Bad request');
+	}
+
+	const { q, bpm, sort, limit } = parsed.output;
+	const needle = q?.toLowerCase();
+
+	// The table is small and the filter is simple, so this filters in memory
+	// over a generous page rather than growing a query builder for one endpoint.
+	const all = await store.listPatterns(sort, 60);
+	const matched = all
+		.filter((p) =&gt; p.bpm &gt;= bpm.min &amp;&amp; p.bpm &lt;= bpm.max)
+		.filter(
+			(p) =&gt; !needle || p.title.toLowerCase().includes(needle) || p.artist.handle.includes(needle)
+		)
+		.slice(0, limit);
+
+	return json({ patterns: matched.map(summary), total: matched.length });
+};</code></pre>
+</figure>
+<p><code>QUERY</code> is the HTTP method for “a read with a body” — a GET may not carry one, and a POST says “this changes something”, which a search does not. SvelteKit 3.0.0-next.24 added it to the methods a <code>+server.ts</code> may export. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “this export is not a handler”, so the test beside it can import it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/+server.test.ts<span class="code__lines">:1-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import * as v from 'valibot';
+import { _SearchSchema } from './+server.ts';
+
+/**
+ * A test file beside a route. Until SvelteKit 3.0.0-next.19 every `+`-prefixed
+ * file under `src/routes` was a route, so this would have been an endpoint
+ * exporting `describe`. Files with `.test.`, `.spec.` or `.stories.` in their
+ * names are now skipped by the router, and a schema's defaults — the part of
+ * an API nobody reads and everybody depends on — get a fast unit test next to
+ * the thing they describe.
+ */
+
+const parse = (body: unknown) =&gt; v.parse(_SearchSchema, body);
+
+describe('the search body', () =&gt; {
+	it('has documented defaults', () =&gt; {
+		const parsed = parse({});
+		expect(parsed.sort).toBe('new');
+		expect(parsed.limit).toBe(24);
+		expect(parsed.bpm).toEqual({ min: 40, max: 240 });
+	});
+
+	it('fills in one end of a tempo range', () =&gt; {
+		expect(parse({ bpm: { min: 120 } }).bpm).toEqual({ min: 120, max: 240 });
+		expect(parse({ bpm: { max: 100 } }).bpm).toEqual({ min: 40, max: 100 });
+	});
+
+	it('bounds everything a caller could inflate', () =&gt; {
+		expect(() =&gt; parse({ limit: 61 })).toThrow();
+		expect(() =&gt; parse({ limit: 0 })).toThrow();
+		expect(() =&gt; parse({ q: 'x'.repeat(81) })).toThrow();
+		expect(() =&gt; parse({ bpm: { min: 10 } })).toThrow();
+		expect(() =&gt; parse({ sort: 'random' })).toThrow();
+	});
+
+	it('trims the needle', () =&gt; {
+		expect(parse({ q: '  boom  ' }).q).toBe('boom');
+	});
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Until SvelteKit 3.0.0-next.19 every <code>+</code>-prefixed file under <code>src/routes</code> was a route, and this file would have been an endpoint exporting <code>describe</code>. Files with <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> in their names are now skipped by the router, so a schema’s defaults — the part of an API nobody reads and everybody depends on — get a fast unit test next to the thing they describe.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE PATTERN, FOR THE EMBEDDABLE PLAYER
+ * ======================================
+ *
+ * `&lt;ostinato-player&gt;` on somebody else's page fetches this. It is plain JSON
+ * — the DTO, with numbers for notes — because the element bundles its own
+ * copy of the pattern model and rebuilds `Note`s itself; it has no SvelteKit
+ * and no `transport` hook.
+ *
+ * `Access-Control-Allow-Origin: *`, because the whole point is other origins.
+ * It is read-only and public, so there is nothing to protect by withholding
+ * it — the same data is on the pattern's page for anyone to look at.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, setHeaders }) =&gt; {
+	const published = await getPattern(params.id);
+	if (!published) error(404, 'No such pattern');
+
+	setHeaders({
+		'cache-control': 'public, max-age=300',
+		'access-control-allow-origin': '*'
+	});
+
+	return json({
+		id: published.id,
+		title: published.title,
+		artist: published.artist.handle,
+		url: vanityPath({ handle: published.artist.handle, slug: published.slug }),
+		pattern: toDto(published.pattern)
+	});
+};</code></pre>
+</figure>
+<p>The embeddable player (ch. 33) fetches this from somebody else’s page. Plain JSON with numbers for notes, because the element has no <code>transport</code> hook and rebuilds <code>Note</code>s itself; <code>Access-Control-Allow-Origin: *</code>, because the whole point is other origins, and there is nothing to protect that is not already on the pattern’s page.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>SimpleSpanProcessor</code> does with a finished span and where it ends up.</li><li>You can explain why the resolver is a <code>+server.ts</code> and not a <code>query</code>.</li><li>You can add a <code>QUERY</code> handler to a route of your own and put its test beside it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-jam-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The jam room</span>
+			</a>
+			<a class="pager__link pager__link--next" href="a-custom-element-built-twice.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A custom element, built twice</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

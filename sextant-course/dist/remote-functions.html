@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remote functions: query, batch, form and command — Building Sextant</title>
+<meta name="description" content="Four kinds, one rule for choosing between them, and two mistakes that both render a 500 page over a working form.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">39 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 84.78260869565217%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html" aria-current="page"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 39</p>
+			<h1>Remote functions: query, batch, form and command</h1>
+			<p class="lede">Four kinds, one rule for choosing between them, and two mistakes that both render a 500 page over a working form.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Call the server without writing an endpoint, and know which kind each call should be.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/query.remote.ts<span class="code__lines">:1-8</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * RUNNING QUERIES
+ * ===============
+ *
+ * The seam between the browser and the storage layer. Four functions, and three
+ * of them exist to show a different piece of the remote-function surface doing
+ * work it is actually needed for.
+ */</code></pre>
+</figure>
+<p>A <code>query</code> is a read. The interesting thing about this one is what it does *twice*: it parses and checks the query text, even though the editor already did.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/query.remote.ts<span class="code__lines">:33-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Run a query and return rows.
+ *
+ * The parse and check happen here as well as in the editor. That is not
+ * redundancy for its own sake: the editor's copy exists to draw a squiggle as
+ * somebody types, and this one exists because the query text arrives in a URL
+ * that anybody can edit. A checker that only runs in the browser is a
+ * suggestion.
+ */</code></pre>
+</figure>
+<p>Not redundancy for its own sake. The editor’s copy exists to draw a squiggle as somebody types; this one exists because the query text arrives in a URL that anybody can edit. A checker that only runs in the browser is a suggestion.</p>
+<h3 id="batch"><code>query.batch</code>, and a resolver that returns a function</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/query.remote.ts<span class="code__lines">:94-110</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A sparkline for one group, as a batched query.
+ *
+ * `query.batch` is the point of this function. A results table of forty rows
+ * wants a small chart per row, and forty separate calls is forty round trips —
+ * on a connection with 80ms of latency that is three seconds of staircase before
+ * the last chart appears.
+ *
+ * The batcher collects every call made in one tick and hands them over as an
+ * array. The resolver runs **one** query covering all of them and returns a
+ * lookup function, so each caller gets its own answer from one round trip.
+ *
+ * The subtlety worth knowing: the resolver must return a *function*, not an
+ * array. Returning an array would make the mapping positional, and positional
+ * mapping breaks the moment the resolver deduplicates — which it must, because a
+ * table with the same service twice would otherwise ask for it twice.
+ */</code></pre>
+</figure>
+<p>A results table of forty rows wants a small chart per row, and forty separate calls is forty round trips — on a connection with 80ms of latency that is three seconds of staircase before the last chart appears.</p>
+<p>The subtlety worth knowing is in the last paragraph: the resolver must return a <strong>function</strong>, not an array. Returning an array makes the mapping positional, and positional mapping breaks the moment the resolver deduplicates — which it must, because a table with the same service twice would otherwise ask for it twice.</p>
+<h3 id="form-vs-command"><code>form</code> or <code>command</code>: the rule</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/alerts.remote.ts<span class="code__lines">:1-16</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ALERT RULES, AS REMOTE FUNCTIONS
+ * ================================
+ *
+ * `query` for reads and `form` for writes, and the choice between `form` and
+ * `command` is worth stating because it is the one people get wrong.
+ *
+ * `command` is a function call over the network: it needs JavaScript, and if the
+ * bundle has not loaded, nothing happens. `form` is a real `&lt;form&gt;` that posts,
+ * progressively enhanced when the bundle is there. The rule is what the action
+ * costs when it silently does nothing — for &quot;save this alert rule&quot;, the cost is
+ * somebody believing they are covered when they are not, so it is a form.
+ *
+ * `command` is used below for exactly one thing: the enable/disable toggle,
+ * which is instant, reversible and visibly reflected in the row.
+ */</code></pre>
+</figure>
+<p><code>command</code> is a function call over the network: it needs JavaScript, and if the bundle has not loaded, nothing happens. <code>form</code> is a real <code>&lt;form&gt;</code> that posts, progressively enhanced when the bundle is there. <strong>The rule is what the action costs when it silently does nothing.</strong> For &quot;save this alert rule&quot;, the cost is somebody believing they are covered when they are not — so it is a form. For an enable/disable toggle that is instant, reversible and visibly reflected, a command.</p>
+<h3 id="fields">Fields come from the form, not from a <code>name</code> attribute</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:213-234</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
+	&lt;label for=&quot;name-{rule?.id ?? 'new'}&quot;&gt;Name&lt;/label&gt;
+	&lt;input
+		id=&quot;name-{rule?.id ?? 'new'}&quot;
+		class=&quot;input&quot;
+		required
+		placeholder=&quot;Checkout error rate&quot;
+		{...save.fields.name.as('text', rule?.name ?? '')}
+	/&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;field field--wide&quot;&gt;
+	&lt;label for=&quot;query-{rule?.id ?? 'new'}&quot;&gt;Query&lt;/label&gt;
+	&lt;input
+		id=&quot;query-{rule?.id ?? 'new'}&quot;
+		class=&quot;input mono&quot;
+		required
+		{...save.fields.query.as(
+			'text',
+			rule?.query ?? 'from logs | where level == &quot;error&quot; | summarize n = count()'
+		)}
+	/&gt;</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>&lt;input name=&quot;threshold&quot; /&gt;        ← throws:
+    &quot;Form contained a field that wasn't created with form.fields.as(...)&quot;
+    …and the submission 500s, replacing the whole page.
+
+&lt;input {...save.fields.threshold.as('text')} /&gt;   ← correct</code></pre>
+</figure>
+<p>What the spread buys is worth the ceremony: the field carries its own <code>aria-invalid</code>, its value survives a failed submission without a re-render, and a rename in the valibot schema becomes a type error here rather than a form that silently posts a key the server ignores.</p>
+<h3 id="default-value"><code>defaultValue</code>, because a remote form resets itself</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:241-264</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
+	&lt;label for=&quot;direction-{rule?.id ?? 'new'}&quot;&gt;Fires when the value is&lt;/label&gt;
+	&lt;!--
+		`as('select', …)` sets the select's **value property**; `defaultValue`
+		sets the option a reset returns to. Only the second is `defaultSelected`,
+		and only `defaultSelected` survives a reset — so without this line every
+		option's default is false and a reset falls to the first one. Editing a
+		`below` rule and saving it then leaves the control showing `above`, which
+		is a different rule.
+
+		A remote form resets itself after a successful submission, so that is the
+		path rather than an edge case. `e2e/alerts.e2e.ts` deletes this attribute's
+		effect and watches the control read `above`; that is what it is for.
+	--&gt;
+	&lt;select
+		id=&quot;direction-{rule?.id ?? 'new'}&quot;
+		class=&quot;select&quot;
+		{...save.fields.direction.as('select', rule?.direction ?? 'above')}
+		defaultValue={rule?.direction ?? 'above'}
+	&gt;
+		&lt;option value=&quot;above&quot;&gt;above the threshold&lt;/option&gt;
+		&lt;option value=&quot;below&quot;&gt;below the threshold&lt;/option&gt;
+	&lt;/select&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>A remote form resets after a successful submission — and a reset does not restore what is *selected*, it restores what each option says is its <strong>default</strong>: <code>option.defaultSelected</code>, which is the <code>selected</code> attribute. <code>fields.as('select', …)</code> sets the select’s value <strong>property</strong> and marks no option at all, so before this line every option’s default was <code>false</code> and a reset fell to the first one.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # delete the defaultValue attribute, keep everything else
+$ npx playwright test e2e/alerts.e2e.ts -g &quot;form reset keeps the direction&quot;
+
+  Error: expect(locator).toHaveValue(expected) failed
+  Expected: &quot;below&quot;
+  Received: &quot;above&quot;
+
+  1 failed</code></pre>
+</figure>
+<p>Editing a rule that fires <strong>below</strong> a threshold, saving it, and being left looking at <strong>above</strong> — a different rule, with the form still looking filled in. <code>defaultValue</code> on <code>&lt;select&gt;</code>, added in Svelte 5.57, is the reset target stated next to the value, and the test above exists so that deleting it fails rather than passing quietly.</p>
+<h3 id="invalid">And <code>invalid</code>, not <code>error</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/alerts.remote.ts<span class="code__lines">:117-143</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The rule's query is parsed and checked *before* it is stored.
+ *
+ * A rule whose query does not parse is a rule that silently never fires —
+ * `valueFor` returns null, the machine holds its state, and nothing ever
+ * happens. That is the worst possible failure for an alert, and it is
+ * entirely preventable at the moment somebody types it.
+ *
+ * `invalid(issue.query(…))`, NOT `error(400, …)`. The distinction is not
+ * stylistic: a form's job is to come back with the field marked and the
+ * message beside it, and `error` throws an `HttpError`, which a form handler
+ * turns into a 500 error *page* — the whole form, and the list around it,
+ * replaced by &quot;Internal Error&quot;. The end-to-end test that creates a rule is
+ * what found that; the version with `error` looked perfectly reasonable.
+ */
+const parsed = parse(input.query);
+if (!parsed.query || parsed.errors.length &gt; 0) {
+	invalid(issue.query(parsed.errors[0]?.message ?? 'That query does not parse.'));
+}
+
+const checked = check(parsed.query);
+if (checked.errors.length &gt; 0) invalid(issue.query(checked.errors[0]!.message));
+
+const clearsAt = input.clearsAt.trim() === '' ? null : Number(input.clearsAt);
+if (clearsAt !== null &amp;&amp; !Number.isFinite(clearsAt)) {
+	invalid(issue.clearsAt('The clear threshold must be a number, or empty.'));
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>error(400, …)</code> inside a form handler throws an <code>HttpError</code>, which SvelteKit turns into a 500 error <strong>page</strong> — the whole form, and the list around it, replaced by &quot;Internal Error&quot;. <code>invalid(issue.query(…))</code> puts the message beside the field and marks the input. Both mistakes in this chapter were found by one end-to-end test that creates a rule; both looked perfectly reasonable in review.</p></aside>
+<h3 id="per-instance">One instance per row</h3>
+<p>A remote form is a single object with one attached <code>&lt;form&gt;</code> element, so spreading the same one inside an <code>{#each}</code> throws — and the page then renders its error branch, which looks like the query failed rather than like a markup mistake. <code>.for(id)</code> mints one instance per id, which is also what gives each row its own pending state.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:84-103</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;h2&gt;{rule.name}&lt;/h2&gt;
+
+&lt;div class=&quot;rule__actions&quot;&gt;
+	&lt;!--
+		A checkbox, not a switch made of two divs.
+
+		It is announced correctly, it is reachable with Tab, it toggles
+		with Space, and the label is associated with it. Every one of
+		those is work to rebuild and easy to get subtly wrong.
+	--&gt;
+	&lt;label class=&quot;toggle&quot;&gt;
+		&lt;input
+			type=&quot;checkbox&quot;
+			checked={rule.enabled}
+			onchange={(event) =&gt;
+				toggleRule({
+					tenant: data.tenant,
+					id: rule.id,
+					enabled: event.currentTarget.checked
+				})}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A results table draws forty sparklines in one round trip.</li><li>Your rule form works with JavaScript disabled.</li><li>An invalid rule shows a message beside the field rather than an error page.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="abort-signals.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">`getAbortSignal`, and a streaming fetch</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-read-api.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The read API, and the HTTP method almost nobody uses</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

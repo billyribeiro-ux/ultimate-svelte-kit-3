@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proving the engine: a from-scratch evaluator and ten thousand random edits — Building Abacus</title>
+<meta name="description" content="A property test: after any sequence of edits, the incremental engine must hold exactly the values a from-scratch evaluation would produce. A thousand random sheets, ten thousand edits, a printed seed.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">12 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 30.76923076923077%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html" aria-current="page"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 12</p>
+			<h1>Proving the engine: a from-scratch evaluator and ten thousand random edits</h1>
+			<p class="lede">A property test: after any sequence of edits, the incremental engine must hold exactly the values a from-scratch evaluation would produce. A thousand random sheets, ten thousand edits, a printed seed.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a property test for an incremental system by building the naive version of it and comparing, and know why that is a stronger statement than any list of cases.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:10-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE PROPERTY
+ * ============
+ *
+ * After any sequence of edits, the incremental engine must hold exactly the
+ * values a from-scratch evaluation of the same cells would produce. The
+ * from-scratch evaluator below shares the parser and the evaluator with the
+ * engine — those are tested on their own — and shares nothing else: no
+ * indexes, no dirty sets, no versions. It builds the whole graph every time.
+ *
+ * A thousand random sheets and ten thousand random edits, from a printed
+ * seed, is a stronger statement about the engine than any list of cases a
+ * person could think of, and it is the reason the engine can be optimised
+ * later without fear.
+ */
+
+/** mulberry32: a small, good, seedable generator. */
+function rng(seed: number) {
+	let a = seed &gt;&gt;&gt; 0;
+	return () =&gt; {
+		a = (a + 0x6d2b79f5) &gt;&gt;&gt; 0;
+		let t = a;
+		t = Math.imul(t ^ (t &gt;&gt;&gt; 15), t | 1);
+		t ^= t + Math.imul(t ^ (t &gt;&gt;&gt; 7), t | 61);
+		return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296;
+	};
+}</code></pre>
+</figure>
+<p>The idea is old and underused: build the *obviously correct* version — no indexes, no dirty sets, rebuild the whole graph every time — and check that the clever version agrees with it on inputs nobody chose. The two share the parser and the evaluator, which have their own tests, and nothing else. <code>mulberry32</code> is a seedable generator so that a failure prints a seed and can be replayed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:38-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const ROWS = 5;
+const COLS = 4;
+const NOW = new Date(Date.UTC(2026, 8, 2));
+
+function a1(row: number, col: number): string {
+	return `${String.fromCharCode(65 + col)}${row + 1}`;
+}
+
+/** A random input: a number, empty, or a formula over random cells and ranges. */
+function randomInput(random: () =&gt; number): string | null {
+	const roll = random();
+	if (roll &lt; 0.25) return String(Math.floor(random() * 20) - 5);
+	if (roll &lt; 0.3) return null;
+	if (roll &lt; 0.35) return ['x', 'TRUE', '7', &quot;'abc&quot;][Math.floor(random() * 4)]!;
+
+	const cell = () =&gt; a1(Math.floor(random() * ROWS), Math.floor(random() * COLS));
+	const range = () =&gt; {
+		const r1 = Math.floor(random() * ROWS);
+		const c1 = Math.floor(random() * COLS);
+		const r2 = Math.min(ROWS - 1, r1 + Math.floor(random() * 3));
+		const c2 = Math.min(COLS - 1, c1 + Math.floor(random() * 2));
+		return `${a1(r1, c1)}:${a1(r2, c2)}`;
+	};
+	const pick = Math.floor(random() * 8);
+	switch (pick) {
+		case 0:
+			return `=${cell()}+${cell()}`;
+		case 1:
+			return `=${cell()}*2-1`;
+		case 2:
+			return `=SUM(${range()})`;
+		case 3:
+			return `=IF(${cell()}&gt;3, ${cell()}, ${cell()})`;
+		case 4:
+			return `=AVERAGE(${range()})`;
+		case 5:
+			return `=IFERROR(${cell()}/${cell()}, -1)`;
+		case 6:
+			return `=COUNT(${range()})+${cell()}`;
+		default:
+			return `=MAX(${range()})`;
+	}
+}
+
+/** Everything from scratch: parse all, find cycles, evaluate recursively. */</code></pre>
+</figure>
+<p>Random inputs are the part that takes judgement. A quarter numbers, some empties, a few awkward literals (<code>TRUE</code>, <code>'abc</code>), and formulas over random cells and ranges with the whole operator set — including divisions that will be by zero and references that will be circular. A generator that only produces valid, sensible formulas tests only valid, sensible formulas.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:83-144</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function fromScratch(inputs: Map&lt;number, string&gt;): Map&lt;number, Scalar&gt; {
+	const formulas = new Map&lt;number, Node&gt;();
+	const literals = new Map&lt;number, Scalar&gt;();
+	const errors = new Map&lt;number, ErrorValue&gt;();
+
+	for (const [k, input] of inputs) {
+		if (!input.startsWith('=')) {
+			literals.set(k, parseCanonical(input));
+			continue;
+		}
+		try {
+			formulas.set(k, parse(input.slice(1)));
+		} catch (e) {
+			errors.set(k, new ErrorValue('#ERROR!', String(e)));
+		}
+	}
+
+	const edges = (k: number): number[] =&gt; {
+		const node = formulas.get(k);
+		if (!node) return [];
+		const out: number[] = [];
+		for (const { ref } of references(node)) {
+			if (isRangeRef(ref)) {
+				for (let r = ref.start.row; r &lt;= ref.end.row; r += 1) {
+					for (let c = ref.start.col; c &lt;= ref.end.col; c += 1) {
+						if (formulas.has(key(r, c))) out.push(key(r, c));
+					}
+				}
+			} else if (formulas.has(key(ref.row, ref.col))) {
+				out.push(key(ref.row, ref.col));
+			}
+		}
+		return out;
+	};
+
+	// Cycle members are found on the static graph, exactly as the engine does.
+	const cyclic = cyclicMembers(new Set(formulas.keys()), edges);
+
+	const values = new Map&lt;number, Scalar&gt;();
+	for (const [k, v] of literals) values.set(k, v);
+	for (const [k, e] of errors) values.set(k, e);
+	for (const k of cyclic) values.set(k, CYCLE());
+
+	const ctx: Context = {
+		cell: (row, col) =&gt; resolve(key(row, col)),
+		now: () =&gt; NOW,
+		random: () =&gt; 0.5,
+		locale: 'en-US'
+	};
+
+	function resolve(k: number): Scalar {
+		if (values.has(k)) return values.get(k)!;
+		const node = formulas.get(k);
+		if (!node) return null;
+		const v = evaluate(node, ctx) as Scalar;
+		values.set(k, v);
+		return v;
+	}
+
+	for (const k of formulas.keys()) resolve(k);
+	return values;
+}</code></pre>
+</figure>
+<p>The from-scratch evaluator finds cycle members on the *static* graph with the same <code>cyclicMembers</code> — that function is shared on purpose, because its correctness is a graph-theory fact tested elsewhere — then resolves every formula recursively, memoising as it goes. It is twenty lines because it does not have to be fast.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:146-204</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function agree(engine: Engine, inputs: Map&lt;number, string&gt;, seed: number, step: number) {
+	const expected = fromScratch(inputs);
+	for (let r = 0; r &lt; ROWS; r += 1) {
+		for (let c = 0; c &lt; COLS; c += 1) {
+			const k = key(r, c);
+			const got = engine.value(r, c);
+			const want = expected.get(k) ?? null;
+			if (!same(got, want)) {
+				throw new Error(
+					`seed ${seed} step ${step}: ${a1(r, c)} = ${String(got)} but from scratch = ${String(want)}\n` +
+						[...inputs].map(([kk, v]) =&gt; `${a1(unkey(kk).row, unkey(kk).col)}: ${v}`).join('\n')
+				);
+			}
+		}
+	}
+}
+
+describe('the engine agrees with a from-scratch evaluation', () =&gt; {
+	it('after ten thousand random edits across a thousand sheets', () =&gt; {
+		let checks = 0;
+		for (let seed = 1; seed &lt;= 1000; seed += 1) {
+			const random = rng(seed);
+			const engine = new Engine({ now: () =&gt; NOW, random: () =&gt; 0.5 });
+			const inputs = new Map&lt;number, string&gt;();
+
+			for (let step = 0; step &lt; 10; step += 1) {
+				const row = Math.floor(random() * ROWS);
+				const col = Math.floor(random() * COLS);
+				const input = randomInput(random);
+				engine.set(row, col, input);
+				if (input === null || input === '') inputs.delete(key(row, col));
+				else inputs.set(key(row, col), input);
+				agree(engine, inputs, seed, step);
+				checks += 1;
+			}
+		}
+		expect(checks).toBe(10_000);
+	});
+
+	it('after a batch of edits, exactly as after the same edits one at a time', () =&gt; {
+		for (let seed = 1; seed &lt;= 200; seed += 1) {
+			const random = rng(seed * 7919);
+			const batched = new Engine({ now: () =&gt; NOW, random: () =&gt; 0.5 });
+			const inputs = new Map&lt;number, string&gt;();
+			const edits = [];
+			for (let i = 0; i &lt; 8; i += 1) {
+				const row = Math.floor(random() * ROWS);
+				const col = Math.floor(random() * COLS);
+				const input = randomInput(random);
+				edits.push({ row, col, input });
+				if (input === null || input === '') inputs.delete(key(row, col));
+				else inputs.set(key(row, col), input);
+			}
+			batched.apply(edits);
+			agree(batched, inputs, seed, -1);
+			expect(batched.version).toBe(1);
+		}
+	});
+});</code></pre>
+</figure>
+<p>Then the test: a thousand seeds, ten edits each, agreement checked after every edit, and a <code>checks</code> count asserted so that a loop that silently did nothing would fail. The second test proves a batch of edits gives the same result as the same edits one at a time — and bumps <code>version</code> exactly once, which is the promise chapter 15 builds on.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:206-232</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('rewriting is consistent', () =&gt; {
+	it('inserting rows and deleting them again restores every formula', () =&gt; {
+		const random = rng(42);
+		for (let i = 0; i &lt; 500; i += 1) {
+			const input = randomInput(random);
+			if (!input?.startsWith('=')) continue;
+			const source = input.slice(1);
+			const at = Math.floor(random() * ROWS);
+			const count = 1 + Math.floor(random() * 3);
+			const inserted = shiftFormula(source, { kind: 'insert-rows', at, count });
+			expect(shiftFormula(inserted, { kind: 'delete-rows', at, count })).toBe(source);
+		}
+	});
+
+	it('translating a formula there and back is the identity when nothing falls off', () =&gt; {
+		const random = rng(7);
+		for (let i = 0; i &lt; 500; i += 1) {
+			const input = randomInput(random);
+			if (!input?.startsWith('=')) continue;
+			const source = input.slice(1);
+			const dRow = Math.floor(random() * 3);
+			const dCol = Math.floor(random() * 3);
+			const there = translateFormula(source, dRow, dCol);
+			expect(translateFormula(there, -dRow, -dCol)).toBe(source);
+		}
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the failure message prints the whole sheet</h4>
+	<p>A property test that says “expected 7, got 8 on seed 412” is a puzzle. One that prints every input on the sheet at the moment of the disagreement is a bug report. Ten lines of formatting in <code>agree()</code> turned three real engine bugs — the literal in-degree, the cycle split, and a range that shrank to nothing — into ten-minute fixes.</p>
+</aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec vitest run --project server src/lib/engine
+ ✓ src/lib/engine/engine.spec.ts (20 tests)
+ ✓ src/lib/engine/engine.property.spec.ts (4 tests) 1.6s
+   ✓ after ten thousand random edits across a thousand sheets
+   ✓ after a batch of edits, exactly as after the same edits one at a time
+   ✓ inserting rows and deleting them again restores every formula
+   ✓ translating a formula there and back is the identity when nothing falls off</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what the from-scratch evaluator shares with the engine and what it deliberately does not.</li><li>You can explain why the <code>checks</code> count is asserted.</li><li>You can add a fifth property — “clearing every cell leaves the engine empty” — in the same style.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="moving-references.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Moving references: insert, delete, copy</span>
+			</a>
+			<a class="pager__link pager__link--next" href="locale.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">What a person typed, in their language</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Abacus — a Svelte 5 and SvelteKit 3 course</title>
+<meta name="description" content="Build a spreadsheet in the browser with Svelte 5 and SvelteKit 3 — a formula language, an incremental dependency-graph engine, a virtualised grid, passkeys instead of passwords, live collaboration over a live query, streaming CSV in a worker, and a container that deploys it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body class="is-home">
+
+<main class="home">
+	<p class="eyebrow">A build-along course</p>
+	<h1>Building Abacus</h1>
+	<p class="home__lede">A formula language with a parser and fifty functions, an engine that
+		recalculates only what changed, a grid that scrolls a million rows, passkeys,
+		a second person editing beside you, and the Dockerfile that ships it — built
+		from an empty folder, using every part of Svelte 5 and SvelteKit 3 that earns
+		its place, including everything the September 2026 releases added. A
+		spreadsheet is where reactivity was invented, and every chapter says so.</p>
+
+	<div class="home__meta">
+		<span>39 chapters</span>
+		<span>Svelte 5.57</span><span>SvelteKit 3</span><span>Passkeys</span><span>adapter-node</span>
+	</div>
+
+	<a class="home__start" href="what-we-are-building.html">Start chapter 01 →</a>
+
+	<h2 class="home__heading">Everything we'll cover</h2>
+	<ol class="cards">
+		<li>
+			<a class="card" href="what-we-are-building.html">
+				<span class="card__num">01</span>
+				<span class="card__body">
+					<span class="card__title">What we are building</span>
+					<span class="card__summary">Abacus: a spreadsheet in the browser — a formula language, an engine that recalculates only what changed, a grid that scrolls a million rows, passkeys, live collaboration, and a container that deploys it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-config.html">
+				<span class="card__num">02</span>
+				<span class="card__body">
+					<span class="card__title">One file to configure everything</span>
+					<span class="card__summary">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: what each option does, what it costs, and the one that is new to this project.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-map.html">
+				<span class="card__num">03</span>
+				<span class="card__body">
+					<span class="card__title">The map: every feature, and where it earns its place</span>
+					<span class="card__summary">A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September 2026 additions — and the chapter where each one is for something.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="addresses.html">
+				<span class="card__num">04</span>
+				<span class="card__body">
+					<span class="card__title">Addresses: where a cell is</span>
+					<span class="card__summary">`B3` is column 1, row 2. One small module translates between the letters people use and the numbers the code uses, and packs a cell’s position into one number for a `Map` key.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="values.html">
+				<span class="card__num">05</span>
+				<span class="card__body">
+					<span class="card__title">Values: what a cell can hold</span>
+					<span class="card__summary">A number, a string, a boolean, nothing, or an error — and, during evaluation, a range of those. Coercion rules every spreadsheet shares, and an ordering for comparisons.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-lexer.html">
+				<span class="card__num">06</span>
+				<span class="card__body">
+					<span class="card__title">The lexer: characters into tokens</span>
+					<span class="card__summary">`SUM(A1:B2)*1.1` becomes a name, a paren, a reference, a colon, a reference, a paren, an operator, a number. Each token remembers where it started, so an error can point at a character.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-parser.html">
+				<span class="card__num">07</span>
+				<span class="card__body">
+					<span class="card__title">The parser: a Pratt parser in a hundred lines</span>
+					<span class="card__summary">Binding powers instead of a grammar. Each operator has a number; an expression is a prefix followed by every operator that binds tighter than the one we are inside. The precedence table is the readable part.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="evaluation-and-functions.html">
+				<span class="card__num">08</span>
+				<span class="card__body">
+					<span class="card__title">Evaluation and the function library</span>
+					<span class="card__summary">The evaluator walks the tree with a `Context` and knows nothing about sheets. Fifty functions register themselves in a `Map`, receive their arguments as thunks so `IF` is lazy, and share a few coercion helpers.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-dependency-graph.html">
+				<span class="card__num">09</span>
+				<span class="card__body">
+					<span class="card__title">The dependency graph</span>
+					<span class="card__summary">A spreadsheet is a graph that recalculates itself. Cells in a `Map`, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="cycles.html">
+				<span class="card__num">10</span>
+				<span class="card__body">
+					<span class="card__title">Cycles: an error that is a value</span>
+					<span class="card__summary">`A1 = B1 + 1`, `B1 = A1 + 1`. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="moving-references.html">
+				<span class="card__num">11</span>
+				<span class="card__body">
+					<span class="card__title">Moving references: insert, delete, copy</span>
+					<span class="card__summary">Insert a row above `A5` and every `A5` becomes `A6`. Delete the column a formula reads and the reference becomes `#REF!`. Copy `=A1*2` one row down and it becomes `=A2*2` — unless it said `$A$1`. One mechanism does all three.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="proving-the-engine.html">
+				<span class="card__num">12</span>
+				<span class="card__body">
+					<span class="card__title">Proving the engine: a from-scratch evaluator and ten thousand random edits</span>
+					<span class="card__summary">A property test: after any sequence of edits, the incremental engine must hold exactly the values a from-scratch evaluation would produce. A thousand random sheets, ten thousand edits, a printed seed.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="locale.html">
+				<span class="card__num">13</span>
+				<span class="card__body">
+					<span class="card__title">What a person typed, in their language</span>
+					<span class="card__summary">A German types `1.234,56` and an American types `1,234.56` and they mean the same number. Nothing here knows any locale: it asks `Intl` how the locale writes a number and a date, and reads the answer backwards.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-document.html">
+				<span class="card__num">14</span>
+				<span class="card__body">
+					<span class="card__title">The document, the operations, and the templates</span>
+					<span class="card__summary">What a sheet looks like at rest: a valibot schema shared by the server, the browser and the local file, with inputs and never values. Operations are the unit of change between browsers, and `applyOps` keeps the stored document current without running the engine.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-sheet-class.html">
+				<span class="card__num">15</span>
+				<span class="card__body">
+					<span class="card__title">The Sheet class, and where the reactivity line is</span>
+					<span class="card__summary">A class in a `.svelte.ts` file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one `$state` number, `version`, is the whole contract between them.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="commands-with-inverses.html">
+				<span class="card__num">16</span>
+				<span class="card__body">
+					<span class="card__title">Commands with inverses: undo, structure, clipboard, fill, sort</span>
+					<span class="card__summary">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-reactivity-lesson.html">
+				<span class="card__num">17</span>
+				<span class="card__body">
+					<span class="card__title">The lesson: the same engine, out of $derived</span>
+					<span class="card__summary">Nine cells whose values are `$derived`s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-axis.html">
+				<span class="card__num">18</span>
+				<span class="card__body">
+					<span class="card__title">The axis: where row 40,000 starts</span>
+					<span class="card__summary">Rows have heights and a person may have changed a few of them. Where a row starts, which row is under a pixel, how tall the sheet is — all answered without an array of a million numbers, by storing only the exceptions with a running total.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-grid.html">
+				<span class="card__num">19</span>
+				<span class="card__body">
+					<span class="card__title">The grid: a thousand cells out of a million</span>
+					<span class="card__summary">Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One `cell` snippet, five layers.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="keyboard-and-pointer.html">
+				<span class="card__num">20</span>
+				<span class="card__body">
+					<span class="card__title">Keyboard, pointer, clipboard</span>
+					<span class="card__summary">Arrows, Tab and Enter, typing to replace, F2 to edit, Ctrl+arrow to the edge of the data, Ctrl+A, undo and redo — then pointer drags for selection, references, the fill handle and column resizing, and copy, cut and paste through the clipboard events.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-cell-editor-and-formula-bar.html">
+				<span class="card__num">21</span>
+				<span class="card__body">
+					<span class="card__title">The cell editor and the formula bar</span>
+					<span class="card__summary">An input inside the cell, focused by an attachment. A formula bar whose coloured references are a mirror under a transparent input, with function-name completion and a syntax error that says where. Both bind to the same `editing.text`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="toolbar-find-and-workbench.html">
+				<span class="card__num">22</span>
+				<span class="card__body">
+					<span class="card__title">The toolbar, find and replace, and the workbench</span>
+					<span class="card__summary">Buttons that call the sheet model, with native popovers for menus and no `Menu` component. A find bar with a resettable index. A workbench that owns the two things that need a file, and clears a file input with a `DataTransfer`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="csv-in-a-worker.html">
+				<span class="card__num">23</span>
+				<span class="card__body">
+					<span class="card__title">CSV: a streaming parser in a worker, and a streamed export</span>
+					<span class="card__summary">RFC 4180 with the lenient parts every real file needs, as a state machine that takes chunks of any size. A Web Worker feeds it from `File.stream()` and reports progress. Export goes the other way as a `ReadableStream` response.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-schema.html">
+				<span class="card__num">24</span>
+				<span class="card__body">
+					<span class="card__title">The schema, and migrations instead of push</span>
+					<span class="card__summary">Five tables. A sheet is one JSON document with a version number; passkeys are public keys in `credentials`; one-time `challenges` expire. Migrations are files in `drizzle/`, applied by a script the Dockerfile runs before the server listens.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="identity.html">
+				<span class="card__num">25</span>
+				<span class="card__body">
+					<span class="card__title">Identity: a signed cookie</span>
+					<span class="card__summary">“This browser is user X”, signed with HMAC so it cannot be changed, verified on every request by the `handle` hook, and read by remote functions through `getRequestEvent`. Pure functions over strings, tested without a request.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="passkeys.html">
+				<span class="card__num">26</span>
+				<span class="card__body">
+					<span class="card__title">Passkeys: signing in without a password</span>
+					<span class="card__summary">A key pair: the private half stays in the device, the public half lives in `credentials`. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against `PUBLIC_ORIGIN`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="sheets-over-the-wire.html">
+				<span class="card__num">27</span>
+				<span class="card__body">
+					<span class="card__title">Sheets over the wire: queries, forms, commands</span>
+					<span class="card__summary">Every read and write of a stored sheet as a remote function: `query` for reads, `form` for anything a page without JavaScript must still do, `command` for the rest. Access checks that answer 404 for “not yours”, a version check on save, and a cell limit.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="live-collaboration.html">
+				<span class="card__num">28</span>
+				<span class="card__body">
+					<span class="card__title">Live collaboration: a live query, a mailbox, and numbered operations</span>
+					<span class="card__summary">`watchSheet` is a `query.live`: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="hooks.html">
+				<span class="card__num">29</span>
+				<span class="card__body">
+					<span class="card__title">Hooks: identity, headers, one framed route, errors by kind</span>
+					<span class="card__summary">`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones, `init`, and the `transport` that carries an `ErrorValue` across the wire.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-shell.html">
+				<span class="card__num">30</span>
+				<span class="card__body">
+					<span class="card__title">The shell: layouts, tokens, toasts</span>
+					<span class="card__summary">A root layout that is almost empty so the embed can reset to it, an app layout with the header and the “new version” banner, design tokens that are light first with `light-dark()`, forced colours, print, and toasts mounted imperatively.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-landing-and-templates.html">
+				<span class="card__num">31</span>
+				<span class="card__body">
+					<span class="card__title">The landing page and the prerendered templates</span>
+					<span class="card__summary">A prerendered landing page with a GSAP entrance behind an attachment and `hydratable` random dots, and template pages prerendered from `entries()` with their formulas already computed on the server.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-local-sheet.html">
+				<span class="card__num">32</span>
+				<span class="card__body">
+					<span class="card__title">The local sheet: OPFS and a BroadcastChannel</span>
+					<span class="card__summary">No account, no server. The document lives in the Origin Private File System with `localStorage` as a fallback, two tabs stay in step over a `BroadcastChannel`, and signing in offers to save it to an account through a form.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-stored-sheet.html">
+				<span class="card__num">33</span>
+				<span class="card__body">
+					<span class="card__title">The stored sheet: a universal load, a live query, a query in the component</span>
+					<span class="card__summary">A universal `load` that calls remote queries and redirects to sign in. A page that reads its initial document once with `untrack`, applies live messages from `stream.current` in an effect, and reads the sheet record from the query so publishing and sharing update in place.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="workspace-signin-settings.html">
+				<span class="card__num">34</span>
+				<span class="card__body">
+					<span class="card__title">The workspace, sign-in and settings</span>
+					<span class="card__summary">A list of sheets with a create form (`preflight`, `enhance`), per-card rename and delete (`.for(id)`, `withOverride`), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="published-and-embed.html">
+				<span class="card__num">35</span>
+				<span class="card__body">
+					<span class="card__title">Published sheets, the embed, the API and the health check</span>
+					<span class="card__summary">Pages with `csr = false` ship no JavaScript: a published sheet as a table that prints, an embed reset to the root layout and allowed inside an iframe, a `QUERY` handler beside a `GET`, and a health endpoint that reports the build version.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="unit-and-browser-tests.html">
+				<span class="card__num">36</span>
+				<span class="card__body">
+					<span class="card__title">Unit and browser tests</span>
+					<span class="card__summary">Two Vitest projects: pure logic in Node, and the `$state` classes in a real Chromium. What each layer’s tests look like, and the one test that caught the bug the course is built around.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="end-to-end.html">
+				<span class="card__num">37</span>
+				<span class="card__body">
+					<span class="card__title">End to end: two profiles, real passkeys, two browsers on one sheet</span>
+					<span class="card__summary">Playwright against the adapter’s own server on its own database, on a desktop and a phone profile. A virtual authenticator for the passkey ceremonies, two contexts for collaboration, and what the suite found.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="deploying.html">
+				<span class="card__num">38</span>
+				<span class="card__body">
+					<span class="card__title">Deploying: a container that migrates, listens and stops</span>
+					<span class="card__summary">A three-stage Dockerfile that bakes the origin in, runs as `node`, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="where-next.html">
+				<span class="card__num">39</span>
+				<span class="card__body">
+					<span class="card__title">Where next</span>
+					<span class="card__summary">How the project was scaffolded and checked, the `verify` gate, and five directions it could go: charts, conditional formatting, a shared broadcaster, an interval tree, spilling.</span>
+				</span>
+			</a>
+		</li></ol>
+
+	<footer class="home__footer">
+		<p>Every code block in this course is read out of the finished project
+		in <code>abacus</code> at build time — file and line numbers included — so
+		it cannot drift from what the code actually says. Type it out rather than
+		pasting where you can: the errors you make and fix are the part that sticks.
+		Where the project made a decision, the chapter says what the alternative
+		was and why it lost.</p>
+	</footer>
+</main>
+
+</body>
+</html>

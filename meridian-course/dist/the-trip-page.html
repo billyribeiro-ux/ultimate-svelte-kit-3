@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The trip page: one await, one state object, one stream — Building Meridian</title>
+<meta name="description" content="The page awaits `tripBySlug` in markup with no boundary; `TripView` starts the live query and reads props once with `untrack`; `TripState` derives everything from whichever snapshot is newer; two presence effects that must not loop; tabs from the URL.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 53.333333333333336%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html" aria-current="page"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>The trip page: one await, one state object, one stream</h1>
+			<p class="lede">The page awaits <code>tripBySlug</code> in markup with no boundary; <code>TripView</code> starts the live query and reads props once with <code>untrack</code>; <code>TripState</code> derives everything from whichever snapshot is newer; two presence effects that must not loop; tabs from the URL.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a page whose first paint comes from one query and whose every later paint comes from a live stream, with local interaction state kept apart from server state.</p></aside>
+			<p>This is the page everything else hangs off, and it is short because the work is elsewhere. The page awaits one remote query; the view starts the live one; the state object derives every value the tabs read; and the tabs are components that take the state object as a prop.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/+page.svelte<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import TripView from '#lib/trip/TripView.svelte';
+
+	const slug = $derived(page.params.slug ?? '');
+&lt;/script&gt;
+
+&lt;!--
+	One `await`, in the markup, with no boundary around it.
+
+	No `pending` snippet, because on the server a boundary with `pending`
+	renders that snippet and skips the rest — the trip would arrive as a
+	placeholder and a second request. No `failed` snippet either, because the
+	failure that matters here is a 404 (a private trip, a slug that is not
+	one of ours), and that belongs to `+error.svelte`, in the right language,
+	with the right status — which is where an uncaught error from a remote
+	function goes.
+
+	In the browser, SvelteKit holds a navigation until the await settles, so
+	nothing flashes; keyed on the slug, a different trip is a fresh view.
+--&gt;
+{const initial = await tripBySlug(slug)}
+
+{#key slug}
+	&lt;TripView {initial} {slug} /&gt;
+{/key}</code></pre>
+</figure>
+<p>One <code>await</code>, in the markup, with no boundary. The comment says why twice over: a <code>pending</code> snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to <code>+error.svelte</code> with the right status and language — where an uncaught error from a remote function goes. <code>{#key slug}</code> makes a different trip a fresh <code>TripView</code>, which is what lets the view read its props once.</p>
+<h3 id="state">The state object</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/state.svelte.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE TRIP ON SCREEN
+ * ==================
+ *
+ * One object every part of the trip page reads from. It holds two kinds of
+ * thing and keeps them apart:
+ *
+ *   - what the SERVER says: the document, arriving first from `tripBySlug`
+ *     and then, whenever anything changes, from the live query. `document`
+ *     is derived from whichever is newer; nothing here ever mutates it.
+ *   - what THIS PERSON is doing: the selected stop. Local `$state`, never
+ *     sent anywhere. (The open tab is not here: it lives in the URL, so a
+ *     link to the expenses tab is a link to the expenses tab.)
+ *
+ * Everything else — the days, the stops grouped by day, the scheduled
+ * route and its length — is `$derived` from the two, so a change on the
+ * server or a click on the screen re-derives exactly the parts that depend
+ * on it.
+ */
+
+import { pathLength } from '@meridian/waypoint/geo';
+import { eachDay } from '#lib/domain/dates.ts';
+import { groupByDay, type DayGroup } from '#lib/domain/itinerary.ts';
+import type { LiveTrip } from '#lib/remote/live.remote.ts';
+import type { Stop } from '#lib/server/db/schema.ts';
+import type { TripDocument } from '#lib/server/trips.ts';
+
+export const TABS = ['itinerary', 'map', 'globe', 'expenses', 'notes', 'companions'] as const;
+export type Tab = (typeof TABS)[number];</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/state.svelte.ts<span class="code__lines">:31-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class TripState {
+	#initial: TripDocument;
+	#live: () =&gt; LiveTrip | null | undefined;
+
+	selectedStopId: string | null = $state(null);
+
+	/*
+	 * `$derived.by` with a closure rather than `$derived(expr)`: the private
+	 * fields are assigned in the constructor, after field initialisers run,
+	 * and TypeScript rightly refuses a direct read of them here. Inside the
+	 * closure the read happens later, on first access, when they exist.
+	 */
+	readonly document: TripDocument = $derived.by(() =&gt; this.#live()?.document ?? this.#initial);
+	readonly trip = $derived(this.document.trip);
+	readonly days: string[] = $derived(eachDay(this.trip.startDate, this.trip.endDate));
+	readonly groups: DayGroup&lt;Stop&gt;[] = $derived(groupByDay(this.document.stops, this.days));
+
+	/** The stops that have a day, in the order the days and positions say. */
+	readonly scheduled: Stop[] = $derived(
+		this.groups.filter((group) =&gt; group.date !== null).flatMap((group) =&gt; group.stops)
+	);
+	/** metres along the scheduled stops */
+	readonly total: number = $derived(pathLength(this.scheduled));
+
+	readonly presence = $derived.by(() =&gt; this.#live()?.presence ?? []);
+
+	constructor(initial: TripDocument, live: () =&gt; LiveTrip | null | undefined) {
+		this.#initial = initial;
+		this.#live = live;
+	}
+
+	select(id: string | null): void {
+		this.selectedStopId = id;
+	}
+}</code></pre>
+</figure>
+<p>Two kinds of thing, kept apart. What the server says — the document — is derived from whichever is newer: the live query’s latest snapshot, or the first paint’s document until the stream delivers. What this person is doing — the selected stop, the tab — is local <code>$state</code> that is never sent anywhere. Everything else is <code>$derived</code> from the two, so a change on the server or a click on the screen re-derives exactly the parts that depend on it. The <code>$derived.by</code> closures are there because the private fields are assigned in the constructor, after field initialisers run; the comment explains the TypeScript reason.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a class and not a store, or a context</h4>
+	<p>A class with <code>$state</code> and <code>$derived</code> fields is the Svelte 5 shape for “an object several components read from”. It is typed, it has methods, it can be constructed with arguments, and every field is fine-grained — a component that reads <code>view.total</code> re-renders when the total changes and not when the presence list does. A store would make every consumer subscribe to everything; a context would hide the dependency. Passing <code>view</code> as a prop is explicit, and <code>Itinerary</code>, <code>Expenses</code>, <code>Notes</code> and <code>Companions</code> all take exactly that.</p>
+</aside>
+<h3 id="the-view">The view</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:27-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">interface Props {
+	initial: { document: TripDocument; role: ViewerRole; viewerId: string | null };
+	slug: string;
+}
+
+let { initial, slug }: Props = $props();
+
+/*
+ * THE LIVE QUERY
+ * --------------
+ * `watchTrip(slug)` is a `query.live`: `.current` is the latest snapshot the
+ * server sent, `.connected` says whether the stream is up. `TripState` reads
+ * `live.current` through a getter, so everything derived from the document
+ * follows the stream, and falls back to the first paint's document until
+ * the stream delivers.
+ */
+/*
+ * The props are read once, on purpose: the page keys this component on
+ * the slug, so a different trip is a different instance. `untrack` says
+ * so, and keeps the compiler from asking whether that was meant.
+ */
+const live = untrack(() =&gt; watchTrip(slug));
+const view = untrack(() =&gt; new TripState(initial.document, () =&gt; live.current));
+
+const editable = untrack(() =&gt; canEdit(initial.role));
+const owner = untrack(() =&gt; isOwner(initial.role));
+const member = untrack(() =&gt; initial.viewerId !== null &amp;&amp; initial.role !== 'link');
+const locale = getLocale();
+
+const tab: Tab = $derived.by(() =&gt; {
+	const wanted = page.url.searchParams.get('tab');
+	return (TABS as readonly string[]).includes(wanted ?? '') ? (wanted as Tab) : 'itinerary';
+});</code></pre>
+</figure>
+<p><code>watchTrip(slug)</code> is the live query; <code>.current</code> is the latest snapshot and <code>.connected</code> says whether the stream is up. It is created inside <code>untrack</code>, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and <code>untrack</code> both says so and quiets the compiler’s fair question. The tab comes from the URL: <code>?tab=map</code> is a link, so it works with the back button, can be shared, and needs no state.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:70-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * PRESENCE
+ * --------
+ * Two effects, on purpose. The first owns the heartbeat and the goodbye
+ * and depends on nothing that changes, so it runs once. The second sends
+ * a beat whenever the selected stop changes, so companions see the chip
+ * move — and does not tear the interval down to do it.
+ *
+ * Neither reads `view.trip`. The first version did, and it was a loop:
+ * a heartbeat wakes the room, the live query yields a new snapshot,
+ * `view.trip` is a new object, the effect re-runs, its cleanup says
+ * goodbye, the goodbye wakes the room… The id is a string that never
+ * changes for the life of this component, so it is read once, here.
+ *
+ * And the command itself is called inside `untrack`. A remote command
+ * keeps a little reactive state of its own — how many calls are in
+ * flight — and reads it as it starts. Read inside an effect, that state
+ * becomes a dependency of the effect, and the write that follows re-runs
+ * it: a synchronous loop that Svelte stops with
+ * `effect_update_depth_exceeded`. `untrack` says: run this, depend on
+ * nothing it touches.
+ */
+const tripId = untrack(() =&gt; initial.document.trip.id);
+
+$effect(() =&gt; {
+	if (!member) return;
+	const beat = () =&gt;
+		fireAndForget(
+			heartbeat({ tripId, stopId: untrack(() =&gt; view.selectedStopId) }),
+			'presence heartbeat'
+		);
+	untrack(beat);
+	const timer = setInterval(beat, 15_000);
+	return () =&gt; {
+		clearInterval(timer);
+		fireAndForget(leave({ tripId }), 'presence goodbye');
+	};
+});</code></pre>
+</figure>
+<p>Read the comment above the effects slowly; it records two bugs the end-to-end suite found, and both are general. First, an effect that read <code>view.trip</code> re-ran every time the live query yielded — because <code>view.trip</code> is a new object each time — and its cleanup said goodbye, which woke the room, which yielded, which re-ran the effect: a loop through the server. The id is a string that never changes, so it is read once. Second, a remote command keeps a little reactive state of its own and reads it as it starts; called inside an effect, that read becomes a dependency and the write that follows re-runs the effect synchronously until Svelte stops it with <code>effect_update_depth_exceeded</code>. <code>untrack</code> around the call says: run this, depend on nothing it touches.</p>
+<aside class="callout callout--warn"><p>The general rule: an <code>$effect</code> should read the reactive values it *reacts to* and nothing else. Anything it merely *uses* — a remote function, a library call that keeps state, a derived object you only need one field of — goes inside <code>untrack</code>, or is read once outside the effect. The Svelte MCP autofixer flags every function call inside an effect for exactly this reason; most are fine, and the ones that are not are loops.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/fire-and-forget.ts<span class="code__lines">:1-22</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { dev } from '$app/env';
+
+/**
+ * FIRE AND FORGET, BUT NOT BLINDLY
+ * ================================
+ *
+ * A presence heartbeat is not worth a toast: if one is lost, the next is
+ * fifteen seconds away, and a person who is about to leave does not want
+ * to be told that their goodbye failed. So these commands are sent and
+ * not awaited. But `.catch(() =&gt; {})` hides *every* failure, including the
+ * kind that is a bug — a heartbeat that the server's schema rejects — and
+ * that is exactly what happened before the end-to-end suite noticed that
+ * the seeded ids were malformed (see `scripts/seed.ts`).
+ *
+ * The compromise: ignored in production, where nothing can be done about
+ * it, and a console warning in development, where somebody is looking.
+ */
+export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): void {
+	promise.catch((error: unknown) =&gt; {
+		if (dev) console.warn(`[meridian] ${what} failed and was ignored:`, error);
+	});
+}</code></pre>
+</figure>
+<p>The heartbeat and the goodbye are sent and not awaited, and the first version wrote <code>.catch(() =&gt; {})</code> after each — reasonable for a heartbeat, whose next attempt is fifteen seconds away, and exactly how a real bug hid for an afternoon: when the seeded ids turned out not to be UUIDs (chapter 13), every heartbeat that named a seeded stop failed validation on the server and nobody heard. <code>fireAndForget()</code> keeps the production behaviour — nothing a person could act on — and adds a console warning in development, where somebody is looking. Silence is a decision; it should be one you can see in the code.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:128-171</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:head&gt;
+	&lt;title&gt;{view.trip.name} — {m.app_name()}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;article class=&quot;trip container&quot;&gt;
+	&lt;header class=&quot;trip__header&quot;&gt;
+		&lt;div class=&quot;stack stack--sm&quot;&gt;
+			&lt;h1 class=&quot;trip__name&quot;&gt;{view.trip.name}&lt;/h1&gt;
+			&lt;p class=&quot;cluster muted&quot;&gt;
+				&lt;span&gt;{formatRange(view.trip.startDate, view.trip.endDate, locale)}&lt;/span&gt;
+				{#if view.total &gt; 0}
+					&lt;span&gt;·&lt;/span&gt;
+					&lt;span&gt;{m.route_total({ distance: formatDistance(view.total, locale) })}&lt;/span&gt;
+				{/if}
+			&lt;/p&gt;
+			{#if view.trip.description}
+				&lt;p class=&quot;trip__lede&quot;&gt;{view.trip.description}&lt;/p&gt;
+			{/if}
+		&lt;/div&gt;
+
+		&lt;div class=&quot;trip__status cluster&quot;&gt;
+			&lt;Presence {view} viewerId={initial.viewerId} /&gt;
+			&lt;CommandPalette {view} {editable} onadd={() =&gt; (dialog = { kind: 'add', date: null })} /&gt;
+			{#if live.connected}
+				&lt;span class=&quot;chip chip--sea live&quot; title={m.live_connected()}&gt;
+					&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+					{m.live_connected()}
+				&lt;/span&gt;
+			{:else if live.current}
+				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={() =&gt; live.reconnect()}&gt;
+					{m.live_reconnect()}
+				&lt;/button&gt;
+			{/if}
+			{#if owner}
+				&lt;a
+					class=&quot;btn btn--sm btn--ghost&quot;
+					href={localizeHref(resolve('/(site)/t/[slug=slug]/settings', { slug }))}
+				&gt;
+					&lt;GearSixIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+					{m.trip_settings()}
+				&lt;/a&gt;
+			{/if}
+		&lt;/div&gt;
+	&lt;/header&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:173-184</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;nav class=&quot;tabs no-print&quot; aria-label={m.app_name()}&gt;
+	{#each TABS as name (name)}
+		&lt;a
+			class=&quot;tabs__link&quot;
+			href=&quot;?tab={name}&quot;
+			aria-current={tab === name ? 'page' : undefined}
+			data-sveltekit-noscroll
+		&gt;
+			{tabLabels[name]()}
+		&lt;/a&gt;
+	{/each}
+&lt;/nav&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:186-216</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if tab === 'itinerary'}
+	&lt;div class=&quot;split&quot;&gt;
+		&lt;Itinerary
+			{view}
+			{editable}
+			viewerId={initial.viewerId}
+			onadd={(date) =&gt; (dialog = { kind: 'add', date })}
+			onedit={(stop) =&gt; (dialog = { kind: 'edit', stop })}
+		/&gt;
+		&lt;div class=&quot;split__map&quot;&gt;
+			&lt;MapView
+				stops={view.scheduled}
+				selected={view.selectedStopId}
+				{editable}
+				onselect={(id) =&gt; view.select(id)}
+				onadd={(point) =&gt; (dialog = { kind: 'add', date: null, point })}
+				onmove={moveTo}
+			/&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+{:else if tab === 'map'}
+	&lt;div class=&quot;full-map&quot;&gt;
+		&lt;MapView
+			stops={view.scheduled}
+			selected={view.selectedStopId}
+			{editable}
+			onselect={(id) =&gt; view.select(id)}
+			onadd={(point) =&gt; (dialog = { kind: 'add', date: null, point })}
+			onmove={moveTo}
+		/&gt;
+	&lt;/div&gt;</code></pre>
+</figure>
+<p>The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — <code>live.reconnect()</code> is the method SvelteKit gives every live query. The tabs are links with <code>data-sveltekit-noscroll</code>. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same <code>view</code> and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in <code>view</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:260-268</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if editable}
+	&lt;StopDialog
+		mode={dialog}
+		tripId={view.trip.id}
+		days={view.days}
+		onclose={() =&gt; (dialog = null)}
+		onsaved={(stop) =&gt; view.select(stop.id)}
+	/&gt;
+{/if}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the trip page has no <code>pending</code> snippet and where a 404 goes.</li><li>You can explain what <code>TripState.document</code> is derived from and what that means for caching.</li><li>You can state the effect rule and identify both loops the presence effects avoid.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-shell.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The shell: a root that knows nobody</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-itinerary.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The itinerary: days you can drag</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

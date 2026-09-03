@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage: pushdown, and the rule for when not to — Building Sextant</title>
+<meta name="description" content="Compiling a predicate to SQL when — and only when — SQL’s answer is identical, including nulls.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 52.17391304347826%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html" aria-current="page"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>Storage: pushdown, and the rule for when not to</h1>
+			<p class="lede">Compiling a predicate to SQL when — and only when — SQL’s answer is identical, including nulls.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make queries fast without ever making them different.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.ts<span class="code__lines">:1-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PUSHDOWN
+ * ========
+ *
+ * Turning a checked SQF query into SQL that the database can answer, and letting
+ * the reference evaluator finish whatever could not be pushed.
+ *
+ * WHY BOTH, AND NOT ONE OR THE OTHER
+ * ----------------------------------
+ * Evaluating everything in JavaScript means loading a day of logs into memory to
+ * count them. Compiling everything to SQL means reimplementing three-valued
+ * logic, attribute paths, percentile sketches and every scalar function in a
+ * dialect where a mistake is silent — and then having no way to tell whether the
+ * two agree, because there is only one of them.
+ *
+ * So: push down the parts that are both *cheap to translate* and *expensive to
+ * skip* — the time range, simple column predicates, sort, limit — and hand the
+ * rest to `eval.ts`, which is already correct. The two are compared directly in
+ * `storage.spec.ts`: the same query, over the same rows, once through SQL and
+ * once through the evaluator, asserting the same answer.
+ *
+ * THE RULE FOR WHAT PUSHES DOWN
+ * -----------------------------
+ * **A predicate is pushed down only if SQL's answer is identical to the
+ * evaluator's, including for nulls.** That is a much stronger bar than &quot;SQLite
+ * has a similar operator&quot;, and it rules out things that look obviously safe:
+ *
+ *   - `attributes.x == 1` is not pushed. SQLite's `json_extract` returns the
+ *     JSON null for a missing key, and comparing it produces NULL — which
+ *     matches — but a *numeric string* attribute compares as text in SQL and
+ *     numerically in the evaluator, which does not.
+ *   - `contains` is not pushed. `LIKE` is case-insensitive only for ASCII in
+ *     SQLite, and the evaluator lowercases with full Unicode rules.
+ *   - Anything involving a function is not pushed, because `strlen` counts code
+ *     points and `length()` counts UTF-16 units.
+ *
+ * Each of those could be pushed with enough care. None of them is worth being
+ * subtly wrong about, and the cost of not pushing them is a few thousand extra
+ * rows through a filter that runs in microseconds.
+ */
+
+import { type Column, type SQL, and, asc, desc, eq, gt, gte, lt, lte, ne, sql } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { Query, Expr } from '#lib/sqf/ast.ts';
+import { evaluate, type EvalResult } from '#lib/sqf/eval.ts';
+import type { Row } from '#lib/sqf/value.ts';
+import { db } from './db/index.ts';
+import { event, sample, span } from './db/schema.ts';</code></pre>
+</figure>
+<p>The evaluator can answer any query. The database can answer some of them much faster. The whole of this file is one question: which ones, and how do you stay honest about it?</p>
+<h3 id="the-rule">The rule</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.ts<span class="code__lines">:279-296</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A predicate as SQL, or `null` when it cannot be translated exactly.
+ *
+ * `null` is not a failure. It means &quot;the evaluator will do this one&quot;, which is
+ * always correct and sometimes slower. Returning something approximate instead
+ * would be faster and wrong, and wrong in the way that is hardest to notice: a
+ * filter that returns *nearly* the right rows.
+ */
+function compile(expr: Expr, source: keyof typeof TABLES): SQL | null {
+	if (expr.kind !== 'binary') return null;
+
+	if (expr.op === 'and') {
+		const left = compile(expr.left, source);
+		const right = compile(expr.right, source);
+		// Both halves or neither. Pushing one half of an `and` is safe — it only
+		// over-selects, and the evaluator applies the whole predicate again — but
+		// pushing one half of an `or` is not, and keeping the rule uniform is worth
+		// more than the occasional half-optimisation.</code></pre>
+</figure>
+<p><code>null</code> from <code>compile</code> is not a failure — it means &quot;the evaluator will do this one&quot;, which is always correct and sometimes slower. Returning something *approximate* would be faster and wrong, in the way that is hardest to notice: a filter that returns nearly the right rows.</p>
+<p>The specific case worth knowing is <code>attributes.status &gt;= 500</code>. SQLite has <code>json_extract</code>, so it looks pushable. It is not: SQLite compares an extracted value as text, and the evaluator compares a numeric string numerically, so the two would silently return different rows.</p>
+<h3 id="stop-at-the-first">Stop at the first predicate you cannot push</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.ts<span class="code__lines">:209-231</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Only the leading `where` stages, and only until one cannot be pushed.
+ *
+ * Stopping at the first failure rather than skipping it is deliberate. A
+ * `summarize` in the middle changes what the columns *mean*, so a predicate
+ * after it refers to computed columns that do not exist in the table — pushing
+ * a later `where` because an earlier one was pushable would silently apply it
+ * to the wrong thing.
+ */
+for (const stage of query.stages) {
+	if (stage.kind !== 'where') break;
+
+	const compiled = compile(stage.predicate, query.source);
+	if (!compiled) break;
+
+	conditions.push(compiled);
+	pushed.push('filter');
+}
+
+/*
+ * Sort and limit push down only when nothing before them needed the evaluator.
+ *
+ * If the evaluator still has filtering to do, the database's idea of &quot;the</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Skipping an unpushable predicate and continuing is the tempting version and it is wrong. A <code>summarize</code> in the middle changes what the columns *mean*, so a <code>where</code> after it refers to computed columns that do not exist in the table. Pushing a later filter because an earlier one was pushable applies it to the wrong thing.</p></aside>
+<h3 id="limit-above-filter">The classic pushdown bug</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.ts<span class="code__lines">:228-251</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Sort and limit push down only when nothing before them needed the evaluator.
+ *
+ * If the evaluator still has filtering to do, the database's idea of &quot;the
+ * first 100&quot; is the first 100 of a *larger* set, and taking them here would
+ * return the wrong hundred. That is the classic pushdown bug: a `LIMIT` moved
+ * above a filter, producing a page of results that is stable, plausible and
+ * missing rows.
+ */
+const fullyPushed = pushed.length - 1 === countLeadingWheres(query);
+const ordering = fullyPushed ? orderingFor(query) : null;
+const limit = fullyPushed ? limitFor(query) : null;
+
+if (ordering) pushed.push('sort');
+if (limit !== null) pushed.push('limit');
+
+let statement = db
+	// The projection, not `select()`. See the note above `PROJECTION`.
+	.select({ ...PROJECTION[query.source] })
+	.from(table)
+	.where(and(...conditions))
+	.$dynamic();
+
+if (ordering) statement = statement.orderBy(...ordering);</code></pre>
+</figure>
+<p>If the evaluator still has filtering to do, the database’s idea of &quot;the first 100&quot; is the first 100 of a *larger* set. Taking them at the database is the classic mistake: a <code>LIMIT</code> moved above a filter, producing a page of results that is stable, plausible and missing rows.</p>
+<h3 id="the-projection">And a projection, added because a test found what was missing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.ts<span class="code__lines">:95-122</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE ONLY COLUMNS A QUERY EVER SEES
+ * ==================================
+ *
+ * `db.select()` with no projection returns every column of the table, which for
+ * `event` means `id`, `tenant_id` and `received_at` as well — and Drizzle keys
+ * them by their *JavaScript* names, so a row arrives with `traceId` while SQF
+ * calls that column `trace_id`.
+ *
+ * Both halves of that are bugs, and both were invisible until a query was run
+ * through the interface:
+ *
+ *   1. `from logs` showed `id` and `tenant_id` in the results table. Internal
+ *      columns in a user-facing result are not merely untidy — the chart view
+ *      picked `id` as its numeric column and drew a lovely straight line of
+ *      primary keys.
+ *
+ *   2. A predicate on `trace_id` that could not be pushed to SQL was evaluated
+ *      against `row.trace_id`, which did not exist, so it silently matched
+ *      nothing. The pushed-down path worked, which is the worst possible split:
+ *      the same query returns different answers depending on whether the planner
+ *      happened to push it.
+ *
+ * Selecting an explicit projection keyed by the *schema's* names fixes both at
+ * once, and makes `schema.ts` the single statement of what a column is called.
+ */
+/*
+ * Typed as `SQLiteColumn` rather than the generic `Column` that `PUSHABLE` uses.</code></pre>
+</figure>
+<p>The first version used <code>db.select()</code> with no projection. That returns every column — including <code>id</code>, <code>tenant_id</code> and <code>received_at</code> — and keys them by Drizzle’s JavaScript names, so a row arrived with <code>traceId</code> while SQF calls the column <code>trace_id</code>.</p>
+<p>Both halves were bugs and both were invisible from inside. Internal columns reached the results table, and the chart view — which picks the first numeric column — found <code>id</code> and drew a beautiful straight line of primary keys. Worse, a predicate on <code>trace_id</code> worked when it was pushed to SQL and matched nothing when it fell back to the evaluator, so the answer depended on whether the planner happened to push it.</p>
+<h3 id="differential-again">Testing a planner the same way we tested the evaluator</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/storage.spec.ts<span class="code__lines">:85-112</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Run a query both ways and assert they agree.
+ *
+ * The pushed-down path goes through SQL and then the evaluator; the oracle path
+ * loads every row in the window and runs only the evaluator. A disagreement is
+ * always a pushdown bug, because the oracle has nothing to be wrong about.
+ */
+async function bothWays(source: 'logs' | 'spans', text: string) {
+	const { query, errors } = parse(text);
+	expect(
+		errors.map((e) =&gt; e.message),
+		text
+	).toEqual([]);
+	expect(
+		check(query!).errors.map((e) =&gt; e.message),
+		text
+	).toEqual([]);
+
+	const pushed = await run(query!, { tenantId: TENANT, ...WINDOW, maxRows: 100_000 });
+	const oracle = evaluate(query!, await allRows(source), { maxRows: 100_000 });
+
+	return { pushed, oracle };
+}
+
+async function agree(source: 'logs' | 'spans', text: string) {
+	const { pushed, oracle } = await bothWays(source, text);
+	expect(pushed.rows, text).toEqual(oracle.rows);
+}</code></pre>
+</figure>
+<p>The oracle loads every row in the window and runs only the evaluator. A disagreement is *always* a pushdown bug, because the oracle has nothing to be wrong about. That is the same technique as chapter 14, applied one layer down, and it is how the two projection bugs above got their regression tests.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A pushed query and an evaluator-only query return identical rows, nulls included.</li><li>A <code>take</code> after an unpushable filter is applied by the evaluator, not by SQL.</li><li><code>from logs</code> returns only the columns the schema documents.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="cardinality-and-the-nul-byte.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Cardinality, and the NUL byte that ate every series</span>
+			</a>
+			<a class="pager__link pager__link--next" href="sessions-and-keys.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Sessions for people, keys for machines</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

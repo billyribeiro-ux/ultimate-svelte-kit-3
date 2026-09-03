@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reactivity utilities: `svelte/reactivity`, runed, and the line between them — Building Meridian</title>
+<meta name="description" content="`MediaQuery`, `createSubscriber` and `svelte/reactivity/window` from the framework; `Debounced` from runed; the decision about `SvelteMap` versus a plain `Map` in a derivation; and the rule for when a utility library earns its line.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">40 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 88.88888888888889%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html" aria-current="page"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 40</p>
+			<h1>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</h1>
+			<p class="lede"><code>MediaQuery</code>, <code>createSubscriber</code> and <code>svelte/reactivity/window</code> from the framework; <code>Debounced</code> from runed; the decision about <code>SvelteMap</code> versus a plain <code>Map</code> in a derivation; and the rule for when a utility library earns its line.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know what the framework ships for “an external value as state”, when a utility library adds something, and when a plain data structure is the right one inside a derivation.</p></aside>
+			<p>Most of what a reactivity utility does is turn something outside Svelte — a media query, a browser event, a timer, storage — into a value a template can read. Svelte 5 ships the primitives for that in <code>svelte/reactivity</code>, and this chapter is about which ones the project uses, the one place it reached for runed instead, and the one place it deliberately used a plain <code>Map</code>.</p>
+<h3 id="shipped">What the framework ships</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:23-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">class ThemeState {
+	choice: Theme = $state('system');
+
+	#systemDark = new MediaQuery('(prefers-color-scheme: dark)');
+
+	readonly resolved: 'light' | 'dark' = $derived(
+		this.choice === 'system' ? (this.#systemDark.current ? 'dark' : 'light') : this.choice
+	);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:17-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `svelte/reactivity/window` exposes the window's scroll position as a
+ * reactive value with the listener managed for us — no `onMount`, no
+ * `removeEventListener`, and `undefined` on the server, where there is
+ * no window to ask.
+ */
+const scrolled = $derived((scrollY.current ?? 0) &gt; 8);</code></pre>
+</figure>
+<p><code>MediaQuery</code> is a media query as a reactive value: construct it once, read <code>.current</code> anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme and the globe for reduced motion. <code>svelte/reactivity/window</code> exports <code>scrollY</code>, <code>innerWidth</code>, <code>online</code> and the rest as reactive values that are <code>undefined</code> on the server, which is why <code>scrollY.current ?? 0</code>. Both replace an <code>onMount</code> with <code>addEventListener</code> and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/geolocation.svelte.ts<span class="code__lines">:28-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Geolocation {
+	#fix: Fix | null = null;
+	#error: string | null = null;
+	#subscribe: () =&gt; void;
+
+	constructor() {
+		this.#subscribe = createSubscriber((update) =&gt; {
+			if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+				this.#error = 'unsupported';
+				update();
+				return;
+			}
+
+			const id = navigator.geolocation.watchPosition(
+				(position) =&gt; {
+					this.#fix = {
+						lng: position.coords.longitude,
+						lat: position.coords.latitude,
+						accuracy: position.coords.accuracy,
+						at: position.timestamp
+					};
+					this.#error = null;
+					update();
+				},
+				(error) =&gt; {
+					this.#error = error.message || 'unavailable';
+					update();
+				},
+				{ enableHighAccuracy: false, maximumAge: 30_000, timeout: 20_000 }
+			);
+
+			return () =&gt; navigator.geolocation.clearWatch(id);
+		});
+	}
+
+	/** The last position, or `null` before the first one arrives. Reading it starts the watch. */
+	get fix(): Fix | null {
+		this.#subscribe();
+		return this.#fix;
+	}
+
+	get error(): string | null {
+		this.#subscribe();
+		return this.#error;
+	}
+}</code></pre>
+</figure>
+<p><code>createSubscriber</code> is the general form. Give it a function that starts listening and returns a stop function; call what it returns inside a getter; and the listening starts when the getter is first read inside an effect or a template, and stops when nothing reads it. The position watch starts when the map shows <code>geo.fix</code> and stops when the button is toggled off. That is the pattern for any subscription-shaped API — <code>BroadcastChannel</code>, <code>ResizeObserver</code>, a WebSocket, <code>document.visibilityState</code> — and it is why the <code>Geolocation</code> class has getters rather than being a store.</p>
+<h3 id="runed">Where runed comes in</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:32-50</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let query = $state('');
+/*
+ * runed's `Debounced` follows a reactive value with a delay: `current`
+ * changes 150 ms after the last keystroke, so the list is not rebuilt
+ * on every one. It is a getter, so `query` stays a plain `$state`.
+ */
+const settled = new Debounced(() =&gt; query, 150);
+
+const all = await places();
+
+const filtered = $derived.by(() =&gt; {
+	const needle = settled.current.trim().toLocaleLowerCase(locale);
+	if (!needle) return all;
+	return all.filter(
+		(place) =&gt;
+			place.name.toLocaleLowerCase(locale).includes(needle) ||
+			countryName(place.country).toLocaleLowerCase(locale).includes(needle)
+	);
+});</code></pre>
+</figure>
+<p>runed is a collection of the utilities the framework does not ship, written against runes by the Bits UI maintainers. The project uses one, <code>Debounced</code>, and the reason is the one from chapter 35: a debounce is fifteen lines that get a subtle bug, and one import that does not. The others most apps reach for are <code>useEventListener</code> (an event with automatic cleanup), <code>ElementSize</code> and <code>useResizeObserver</code> (an element’s box as state), <code>PersistedState</code> (a <code>$state</code> mirrored to storage — the theme class in this project is a hand-written one, because it also has to set a data attribute), <code>IsIdle</code>, <code>Previous</code>, and <code>FiniteStateMachine</code>. The line: if the framework ships it, use the framework’s; if runed has it and you would write more than ten lines, use runed’s; otherwise write it.</p>
+<h3 id="plain-map">When a plain <code>Map</code> is right</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:60-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Who is looking at which stop, by stop id. */
+const lookers = $derived.by(() =&gt; {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation and never mutated after; a reactive Map would signal on every insert for nobody
+	const out = new Map&lt;string, string[]&gt;();
+	for (const person of view.presence) {
+		if (!person.stopId || person.userId === viewerId) continue;
+		out.set(person.stopId, [...(out.get(person.stopId) ?? []), person.name]);
+	}
+	return out;
+});</code></pre>
+</figure>
+<p><code>svelte/reactivity</code> also exports <code>SvelteMap</code>, <code>SvelteSet</code>, <code>SvelteDate</code> and <code>SvelteURL</code> — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a <code>new Map()</code>, and three times in this project the suggestion is declined with a comment. The <code>Map</code> here is built whole inside a <code>$derived.by</code> and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: <code>SvelteMap</code> for a map that lives across renders and changes; a plain <code>Map</code> for one that is computed and returned.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not a store</h4>
+	<p>Every mechanism in this chapter used to be a store: <code>readable(() =&gt; …)</code> with a start function is <code>createSubscriber</code> with worse ergonomics; a <code>writable</code> in a module is a <code>$state</code> in a <code>.svelte.ts</code> file. Stores still work, and Svelte 5 still ships them, and a library that exports a store can be read with <code>$store</code> or <code>fromStore</code>. But they are a second reactivity system with a subscription API, and everything they did is now a rune or a class in <code>svelte/reactivity</code>. No file in this project imports <code>svelte/store</code>, and the waypoint library — which could have shipped stores for its <code>Route</code> — ships runes in a <code>.svelte.ts</code> file instead, which chapter 06 explains.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name three things <code>svelte/reactivity</code> and <code>svelte/reactivity/window</code> export and what each replaces.</li><li>You can describe <code>createSubscriber</code>’s contract and give an API you would wrap with it.</li><li>You can say when <code>SvelteMap</code> is right and when a plain <code>Map</code> inside a derivation is.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-wrapper-pattern.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The wrapper pattern, and when to write an attachment instead</span>
+			</a>
+			<a class="pager__link pager__link--next" href="unit-and-browser-tests.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Unit and browser tests: two Vitest projects, one command</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

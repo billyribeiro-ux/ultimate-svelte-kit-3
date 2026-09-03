@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pads and the grid — Building Ostinato</title>
+<meta name="description" content="One pad is a button with a class list; the grid is a keyed `{#each}` with `animate:flip`, `bind:group` for the brush, a function binding for the row checkbox, `bind:indeterminate`, and a `contenteditable` name.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">16 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 41.02564102564102%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html" aria-current="page"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 16</p>
+			<h1>Pads and the grid</h1>
+			<p class="lede">One pad is a button with a class list; the grid is a keyed <code>{#each}</code> with <code>animate:flip</code>, <code>bind:group</code> for the brush, a function binding for the row checkbox, <code>bind:indeterminate</code>, and a <code>contenteditable</code> name.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a component that owns nothing and reports everything, and use every binding on a form control that Svelte has — including the three-state checkbox.</p></aside>
+			<p>A pad is the smallest component in the project and the most numerous: sixteen per track, eight tracks, a hundred and twenty-eight of them. It is a button. It knows its velocity, its note, its column, and whether the playhead is on it; it reports a click and an arrow key. It holds no state at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Pad.svelte<span class="code__lines">:13-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	let {
+		velocity,
+		note,
+		melodic,
+		column,
+		playing,
+		kind,
+		readonly = false,
+		onpaint,
+		ontranspose
+	}: {
+		velocity: number;
+		note: Note;
+		melodic: boolean;
+		column: number;
+		playing: boolean;
+		kind: string;
+		readonly?: boolean;
+		onpaint: () =&gt; void;
+		ontranspose: (semitones: number) =&gt; void;
+	} = $props();
+
+	const on = $derived(velocity &gt; 0);
+
+	function keydown(event: KeyboardEvent) {
+		if (readonly || !melodic || !on) return;
+		const steps: Record&lt;string, number&gt; = { ArrowUp: 1, ArrowDown: -1, PageUp: 12, PageDown: -12 };
+		const delta = steps[event.key];
+		if (delta === undefined) return;
+		event.preventDefault();
+		ontranspose(delta);
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/Pad.svelte<span class="code__lines">:47-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`class` takes an array: strings and objects, falsy entries dropped — clsx
+	semantics, built in. It reads as the list of things this pad *is*.
+--&gt;
+&lt;button
+	type=&quot;button&quot;
+	class={[
+		'pad',
+		{
+			'pad--on': on,
+			'pad--accent': velocity &gt; 80,
+			'pad--playing': playing,
+			'pad--beat': column % 4 === 0,
+			'pad--readonly': readonly
+		}
+	]}
+	style:--hue={`var(--hue-${kind})`}
+	style:--level={velocity / 127}
+	aria-pressed={on}
+	aria-label=&quot;Step {column + 1}{on
+		? `, ${melodic ? note.name : velocity &gt; 80 ? 'accent' : 'soft'}`
+		: ''}&quot;
+	disabled={readonly &amp;&amp; !on}
+	onclick={onpaint}
+	onkeydown={keydown}
+&gt;
+	{#if on &amp;&amp; melodic}
+		&lt;span class=&quot;pad__note&quot;&gt;{note.pitchClass}&lt;sub&gt;{note.octave}&lt;/sub&gt;&lt;/span&gt;
+	{/if}
+&lt;/button&gt;</code></pre>
+</figure>
+<p><code>class</code> takes an array — strings and objects, falsy entries dropped — with the same rules as the <code>clsx</code> library, built in. It reads as a list of the things this pad *is*. Two <code>style:</code> directives set custom properties: the hue comes from the track kind, the level from the velocity, and the stylesheet computes the colour from both with <code>oklch(calc(…))</code>. Svelte does the styling; CSS does the maths.</p>
+<aside class="callout callout--note"><p><code>aria-pressed={on}</code> is what makes a screen reader say “pressed” for a lit step, and <code>aria-label</code> spells out what it is: “Step 5, accent” or “Step 9, C3”. The pad has no visible text — a lit square is all it needs to be — so the label is the whole story for anyone who cannot see it.</p></aside>
+<h3 id="the-grid">The grid</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:19-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let {
+	pattern,
+	step = -1,
+	brush = $bindable('cycle'),
+	selected = null,
+	readonly = false,
+	tools = true,
+	onpaint,
+	ontranspose,
+	onfill,
+	onselect,
+	onmove,
+	onremove,
+	onrename
+}: {
+	pattern: Pattern;
+	step?: number;
+	brush?: Brush;
+	selected?: string | null;
+	readonly?: boolean;
+	/** The per-track buttons: sound, move, remove. Off in a jam room, where tracks are shared. */
+	tools?: boolean;
+	onpaint?: (trackId: string, index: number) =&gt; void;
+	ontranspose?: (trackId: string, index: number, semitones: number) =&gt; void;
+	onfill?: (trackId: string, on: boolean) =&gt; void;
+	onselect?: (trackId: string) =&gt; void;
+	onmove?: (trackId: string, direction: -1 | 1) =&gt; void;
+	onremove?: (trackId: string) =&gt; void;
+	onrename?: (trackId: string, name: string) =&gt; void;
+} = $props();</code></pre>
+</figure>
+<p>The grid does not own the pattern either. It renders one and reports edits through callbacks — <code>onpaint</code>, <code>onfill</code>, <code>onmove</code> — so the same component draws the studio (where the callbacks edit the session), the published page (read-only, no callbacks) and the jam room (where every callback is a command sent to the server, ch. 31). <code>brush</code> is the one <code>$bindable</code>, because two things write it: this toolbar, and the keyboard shortcuts on the page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:61-77</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if !readonly}
+	&lt;!--
+		`bind:group` on radio inputs: four inputs, one value. The brush is a
+		`$bindable` prop, so the studio's keyboard shortcuts and this toolbar
+		write the same variable.
+	--&gt;
+	&lt;fieldset class=&quot;brushes&quot;&gt;
+		&lt;legend class=&quot;visually-hidden&quot;&gt;Brush&lt;/legend&gt;
+		{#each brushes as option (option.value)}
+			&lt;label class={['chip', { 'chip--on': brush === option.value }]}&gt;
+				&lt;input class=&quot;visually-hidden&quot; type=&quot;radio&quot; bind:group={brush} value={option.value} /&gt;
+				{option.label}
+				&lt;kbd&gt;{option.key}&lt;/kbd&gt;
+			&lt;/label&gt;
+		{/each}
+	&lt;/fieldset&gt;
+{/if}</code></pre>
+</figure>
+<p><code>bind:group</code> on four radio inputs: one variable, whichever is checked. The inputs are visually hidden and the <code>&lt;label&gt;</code> is the chip, which is why the end-to-end tests click the label — a hidden radio has no size to click.</p>
+<h3 id="flip">Moving a row</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:79-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;ol class=&quot;tracks&quot;&gt;
+	&lt;!--
+		Keyed by id, so moving a track moves its DOM rather than rewriting
+		every row; `animate:flip` then draws the move from where it was to
+		where it is, using the FLIP technique: measure, apply, invert, play.
+	--&gt;
+	{#each pattern.tracks as track, row (track.id)}
+		&lt;li
+			class={['track', { 'track--selected': track.id === selected, 'track--muted': track.muted }]}
+			style:--hue={`var(--hue-${track.kind})`}
+			animate:flip={{ duration: flipDuration }}
+			out:fade={{ duration: 120 }}
+		&gt;
+			&lt;!--
+				Declaration tags inside the `&lt;li&gt;`, not before it: an element with
+				`animate:` must be the *only* child of its keyed `{#each}` block, and
+				a declaration is a child too. They are visible to everything below.
+			--&gt;
+			{const count = track.steps.filter((s) =&gt; s.velocity &gt; 0).length}
+			{const all = count === STEPS}
+			{const some = count &gt; 0 &amp;&amp; !all}
+			{const melodic = MELODIC.has(track.kind)}</code></pre>
+</figure>
+<p>The rows are keyed by <code>track.id</code>. When <code>moveTrack</code> splices the array, Svelte moves the <code>&lt;li&gt;</code> rather than rewriting the rows between, and <code>animate:flip</code> draws the move — FLIP: measure where it was, apply the change, invert the difference with a transform, play it back to zero. The duration is zero when the person prefers reduced motion.</p>
+<aside class="callout callout--warn"><p>The four <code>{const}</code> declarations are *inside* the <code>&lt;li&gt;</code>, and the comment says why: an element with <code>animate:</code> must be the only child of its keyed <code>{#each}</code> block, and a declaration tag counts as a child. Written before the <code>&lt;li&gt;</code>, the compiler refuses. This was found by the Svelte MCP server’s autofixer while writing this file, which is what that tool is for.</p></aside>
+<h3 id="three-states">A checkbox with three states</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:101-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;header class=&quot;track__head&quot;&gt;
+	&lt;!--
+		Function bindings: `bind:checked={get, set}`. The box is *derived*
+		from the steps — every step on means checked, some on means
+		indeterminate — and ticking it is a command, not an assignment.
+		`bind:indeterminate` is the third state a checkbox has and most
+		interfaces never use; here it is the honest answer to &quot;is this
+		row on?&quot; when the answer is &quot;partly&quot;.
+	--&gt;
+	&lt;input
+		type=&quot;checkbox&quot;
+		class=&quot;track__all&quot;
+		aria-label=&quot;All steps of {track.name}&quot;
+		disabled={readonly}
+		bind:checked={() =&gt; all, (on) =&gt; onfill?.(track.id, on)}
+		bind:indeterminate={() =&gt; some, () =&gt; {}}
+	/&gt;</code></pre>
+</figure>
+<p>The box at the start of each row means “every step on”. It is *derived* from the steps — so <code>bind:checked</code> gets a function binding: a getter that computes it and a setter that, instead of assigning, calls <code>onfill</code>. Ticking the box is a command, not an assignment, and the box shows whatever the steps say once the command has run.</p>
+<p><code>bind:indeterminate</code> is the third state a checkbox has and most interfaces never use. When some steps are on and some off, the honest answer to “is this row on?” is “partly”, and the browser has a way to draw that. Its setter is a no-op: the browser clears <code>indeterminate</code> on click, and the getter decides what it should be again on the next render.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:121-135</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if readonly || !onrename}
+	&lt;span class=&quot;track__name&quot;&gt;{track.name}&lt;/span&gt;
+{:else}
+	&lt;!-- `plaintext-only` keeps pasted formatting out; the binding writes on every keystroke. --&gt;
+	&lt;span
+		class=&quot;track__name track__name--editable&quot;
+		contenteditable=&quot;plaintext-only&quot;
+		role=&quot;textbox&quot;
+		aria-label=&quot;Track name&quot;
+		tabindex=&quot;0&quot;
+		bind:textContent={
+			() =&gt; track.name, (name) =&gt; onrename(track.id, name.trim() || track.name)
+		}
+	&gt;&lt;/span&gt;
+{/if}</code></pre>
+</figure>
+<p>The track name is a <code>contenteditable</code> span with <code>bind:textContent</code> — another function binding, reading the name and writing it back trimmed, with the old name kept if the new one is empty. <code>plaintext-only</code> stops a paste from bringing formatting with it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:137-176</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if !readonly &amp;&amp; tools}
+	&lt;span class=&quot;track__tools&quot;&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--ghost btn--icon btn--sm&quot;
+			aria-label=&quot;Sound settings for {track.name}&quot;
+			aria-pressed={track.id === selected}
+			onclick={() =&gt; onselect?.(track.id)}
+		&gt;
+			&lt;SlidersHorizontalIcon size={16} /&gt;
+		&lt;/button&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--ghost btn--icon btn--sm&quot;
+			aria-label=&quot;Move {track.name} up&quot;
+			disabled={row === 0}
+			onclick={() =&gt; onmove?.(track.id, -1)}
+		&gt;
+			&lt;CaretUpIcon size={16} /&gt;
+		&lt;/button&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--ghost btn--icon btn--sm&quot;
+			aria-label=&quot;Move {track.name} down&quot;
+			disabled={row === pattern.tracks.length - 1}
+			onclick={() =&gt; onmove?.(track.id, 1)}
+		&gt;
+			&lt;CaretDownIcon size={16} /&gt;
+		&lt;/button&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--ghost btn--icon btn--sm btn--danger&quot;
+			aria-label=&quot;Remove {track.name}&quot;
+			disabled={pattern.tracks.length === 1}
+			onclick={() =&gt; onremove?.(track.id)}
+		&gt;
+			&lt;TrashIcon size={16} /&gt;
+		&lt;/button&gt;
+	&lt;/span&gt;
+{/if}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:179-193</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;track__steps&quot;&gt;
+	{#each track.steps as s, column (column)}
+		&lt;Pad
+			velocity={s.velocity}
+			note={s.note}
+			{melodic}
+			{column}
+			kind={track.kind}
+			playing={column === step}
+			{readonly}
+			onpaint={() =&gt; onpaint?.(track.id, column)}
+			ontranspose={(semitones) =&gt; ontranspose?.(track.id, column, semitones)}
+		/&gt;
+	{/each}
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The pads are the second <code>{#each}</code>, keyed by column. <code>{melodic}</code> and <code>{column}</code> are the shorthand for <code>melodic={melodic}</code> — the four declarations from the top of the <code>&lt;li&gt;</code> are in scope all the way down here. <code>playing={column === step}</code> is the whole playhead: the scheduler’s <code>step</code> comes in as a prop, and the one pad whose column matches lights up.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what a function binding is and when to use it instead of a variable.</li><li>You can explain why the <code>{const}</code> tags are inside the <code>&lt;li&gt;</code>.</li><li>You can name the three things <code>bind:group</code>, <code>bind:checked</code> and <code>bind:indeterminate</code> bind to in this file.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="a-knob.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A knob</span>
+			</a>
+			<a class="pager__link pager__link--next" href="transport-and-mixer.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The transport and the mixer</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

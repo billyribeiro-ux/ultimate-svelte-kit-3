@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The stored sheet: a universal load, a live query, a query in the component — Building Abacus</title>
+<meta name="description" content="A universal `load` that calls remote queries and redirects to sign in. A page that reads its initial document once with `untrack`, applies live messages from `stream.current` in an effect, and reads the sheet record from the query so publishing and sharing update in place.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">33 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 84.61538461538461%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html" aria-current="page"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 33</p>
+			<h1>The stored sheet: a universal load, a live query, a query in the component</h1>
+			<p class="lede">A universal <code>load</code> that calls remote queries and redirects to sign in. A page that reads its initial document once with <code>untrack</code>, applies live messages from <code>stream.current</code> in an effect, and reads the sheet record from the query so publishing and sharing update in place.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Combine a load, a live query and component-level queries on one page, and know which of the three each piece of data should come from.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.ts<span class="code__lines">:1-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { redirect } from '@sveltejs/kit';
+import type { PageLoad } from './$types.js';
+import { getProfile, whoAmI } from '#lib/remote/auth.remote.ts';
+import { getSheet } from '#lib/remote/sheets.remote.ts';
+
+/**
+ * A stored sheet needs a person: the live query is per person, and the
+ * operations are signed by one. Nobody signed in is sent to sign in and
+ * brought back here afterwards. A universal `load`, so the remote queries
+ * run on the server for the first visit and in the browser after.
+ */
+export const load: PageLoad = async ({ params, url }) =&gt; {
+	const me = await whoAmI();
+	if (!me) redirect(303, `/signin?next=${encodeURIComponent(url.pathname)}`);
+
+	const [sheet, profile] = await Promise.all([getSheet(params.id), getProfile()]);
+	return { sheet, locale: profile?.locale ?? 'en-US', me };
+};</code></pre>
+</figure>
+<p>A universal <code>load</code>, so the remote queries run on the server for the first visit and in the browser after. Nobody signed in is sent to sign in and brought back afterwards — the <code>next</code> parameter — and the sheet and the person’s locale are loaded together.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:14-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A STORED SHEET
+ * ==============
+ *
+ * The sheet model, the live connection, and the chrome that only a stored
+ * sheet has: who else is here, whether it is saving, sharing and
+ * publishing. The document arrived through `load`; from here on the live
+ * query is the source of truth for everybody else's changes and `send`
+ * is the outlet for ours.
+ */
+let { data }: PageProps = $props();
+
+// The first document is read once, at creation, and never again: a later
+// `data` change must not throw away edits. `untrack` reads without subscribing.
+const initial = untrack(() =&gt; data);
+
+const sheet = new Sheet({ locale: initial.locale });
+sheet.load(initial.sheet.doc);
+
+const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);</code></pre>
+</figure>
+<p>The first document is read *once*, at creation, with <code>untrack</code>. A later <code>data</code> change — a refresh, a navigation to the same route — must not throw away the edits in the sheet model, so the model is built from a snapshot rather than from a reactive read.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:55-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const shareUrl = $derived(`${page.url.origin}/sheet/${initial.sheet.id}`);
+const publishedUrl = $derived(`${page.url.origin}/s/${initial.sheet.id}`);
+
+/**
+ * The sheet's record — access, published or not — read from the query
+ * rather than from `data`. `load` ran the same query, so this resolves at
+ * once from the cache; the difference is what happens next: `publish`,
+ * `unpublish` and `setAccess` call `getSheet(id).refresh()`, and a query
+ * awaited here updates in place, while `data` is a snapshot of what the
+ * load returned.
+ */
+const record = $derived(await getSheet(initial.sheet.id));
+const owner = $derived(record.ownerId === data.me.id);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the record comes from the query and not from data</h4>
+	<p>The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call <code>getSheet(id).refresh()</code>. A query awaited in the component updates in place when it is refreshed; <code>data</code> is a snapshot of what the load returned. The first version read <code>data.sheet</code> and the Unpublish button never appeared, because the load did not re-run. <code>await</code> inside <code>$derived</code> resolves at once from the cache the load already filled, so there is no second request and no flash.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:86-106</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">		}
+	} catch (e) {
+		toast((e as Error).message, 'error');
+	}
+}
+
+/**
+ * `stream.current` is undefined until the first message arrives, which
+ * tells &quot;not connected yet&quot; apart from &quot;lost the connection&quot;: only the
+ * second deserves a Reconnect button, and a button that appears for a
+ * moment on every load would shift the grid under a finger on a phone.
+ */
+const everConnected = $derived(stream.current !== undefined);
+const statusLabel = $derived(
+	{
+		live: stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…',
+		saving: 'Saving…',
+		offline: 'Offline — changes are kept and will be sent',
+		conflict: 'Could not save — reload to continue'
+	}[live.status]
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:113-156</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- Leaving with unsent changes: the browser asks, because we asked it to. --&gt;
+&lt;svelte:window
+	onbeforeunload={(event) =&gt; {
+		if (live.pending) event.preventDefault();
+	}}
+/&gt;
+
+&lt;div class=&quot;page sheetpage&quot;&gt;
+	&lt;header class=&quot;sheetpage__head no-print&quot;&gt;
+		&lt;!-- The title is the sheet's; typing here renames it for everybody. --&gt;
+		&lt;h1
+			class=&quot;title&quot;
+			contenteditable=&quot;plaintext-only&quot;
+			spellcheck=&quot;false&quot;
+			aria-label=&quot;Sheet title&quot;
+			bind:textContent={() =&gt; sheet.title, (text) =&gt; sheet.rename(text)}
+			onkeydown={(event) =&gt; {
+				if (event.key === 'Enter') {
+					event.preventDefault();
+					(event.currentTarget as HTMLElement).blur();
+				}
+			}}
+		&gt;&lt;/h1&gt;
+
+		&lt;div class=&quot;cluster&quot;&gt;
+			&lt;span
+				class={['chip', { 'chip--on': live.status === 'live' &amp;&amp; stream.connected }]}
+				role=&quot;status&quot;
+			&gt;
+				{statusLabel}
+			&lt;/span&gt;
+			{#if !stream.connected &amp;&amp; everConnected}
+				&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--ghost&quot; onclick={() =&gt; stream.reconnect()}
+					&gt;Reconnect&lt;/button
+				&gt;
+			{/if}
+			{#each live.present as who (who.client)}
+				&lt;span class=&quot;chip chip--on&quot; title={who.cell ? `at ${who.cell}` : 'here'}&gt;
+					&lt;UsersIcon size={12} /&gt;
+					{who.name}
+				&lt;/span&gt;
+			{/each}
+		&lt;/div&gt;
+	&lt;/header&gt;</code></pre>
+</figure>
+<p>The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, “Could not save” — and a chip for everybody else in the room. <code>stream.current</code> being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:158-236</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	&lt;Workbench
+		{sheet}
+		cursors={live.present}
+		exportHref=&quot;/api/sheets/{initial.sheet.id}/export.csv&quot;
+		onactivate={(cell) =&gt; live.cursor(cell)}
+	&gt;
+		{#snippet extra()}
+			&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; popovertarget=&quot;share-menu&quot;&gt;
+				&lt;LinkIcon size={16} /&gt; Share
+			&lt;/button&gt;
+			&lt;div id=&quot;share-menu&quot; class=&quot;share&quot; popover=&quot;auto&quot;&gt;
+				&lt;h2 class=&quot;share__title&quot;&gt;Share&lt;/h2&gt;
+				{#if owner}
+					&lt;!--
+						A form for the access setting, because a setting that survives a
+						page with no JavaScript is a setting that survives anything.
+					--&gt;
+					&lt;form {...setAccess} class=&quot;stack&quot;&gt;
+						&lt;input {...setAccess.fields.id.as('hidden', initial.sheet.id)} /&gt;
+						&lt;label class=&quot;check&quot;&gt;
+							&lt;input
+								{...setAccess.fields.access.as('radio', 'private')}
+								checked={record.access === 'private'}
+								onchange={(e) =&gt; e.currentTarget.form?.requestSubmit()}
+							/&gt;
+							Only me
+						&lt;/label&gt;
+						&lt;label class=&quot;check&quot;&gt;
+							&lt;input
+								{...setAccess.fields.access.as('radio', 'link')}
+								checked={record.access === 'link'}
+								onchange={(e) =&gt; e.currentTarget.form?.requestSubmit()}
+							/&gt;
+							Anyone signed in with the link can edit
+						&lt;/label&gt;
+					&lt;/form&gt;
+				{:else}
+					&lt;p class=&quot;hint&quot;&gt;Shared with you by its owner.&lt;/p&gt;
+				{/if}
+				&lt;div class=&quot;linkrow&quot;&gt;
+					&lt;input class=&quot;input mono&quot; readonly value={shareUrl} aria-label=&quot;Link to this sheet&quot; /&gt;
+					&lt;button
+						type=&quot;button&quot;
+						class=&quot;btn btn--icon&quot;
+						aria-label=&quot;Copy link&quot;
+						onclick={() =&gt; copy(shareUrl)}
+					&gt;
+						&lt;CopyIcon size={16} /&gt;
+					&lt;/button&gt;
+				&lt;/div&gt;
+
+				{#if owner}
+					&lt;h2 class=&quot;share__title&quot;&gt;Publish&lt;/h2&gt;
+					&lt;p class=&quot;hint&quot;&gt;
+						A read-only copy at a public address, frozen as it is now. Publish again to update it.
+					&lt;/p&gt;
+					&lt;div class=&quot;cluster&quot;&gt;
+						&lt;button
+							type=&quot;button&quot;
+							class={['btn btn--sm', { 'btn--primary': !record.published }]}
+							onclick={togglePublish}
+						&gt;
+							&lt;GlobeIcon size={16} /&gt;
+							{record.published ? 'Unpublish' : 'Publish'}
+						&lt;/button&gt;
+						{#if record.published}
+							&lt;a class=&quot;btn btn--sm&quot; href=&quot;/s/{initial.sheet.id}&quot;&gt;View&lt;/a&gt;
+							&lt;button
+								type=&quot;button&quot;
+								class=&quot;btn btn--sm btn--ghost&quot;
+								onclick={() =&gt; copy(publishedUrl)}&gt;Copy public link&lt;/button
+							&gt;
+						{/if}
+					&lt;/div&gt;
+				{/if}
+			&lt;/div&gt;
+		{/snippet}
+	&lt;/Workbench&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>Sharing and publishing live in a native popover. The access setting is a *form* — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three sources of data on this page — load, live query, component query — and say what each is right for.</li><li>You can explain what <code>untrack(() =&gt; data)</code> prevents.</li><li>You can say why the Reconnect button waits for <code>stream.current</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-local-sheet.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The local sheet: OPFS and a BroadcastChannel</span>
+			</a>
+			<a class="pager__link pager__link--next" href="workspace-signin-settings.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The workspace, sign-in and settings</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

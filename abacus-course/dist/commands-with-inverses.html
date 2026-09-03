@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commands with inverses: undo, structure, clipboard, fill, sort — Building Abacus</title>
+<meta name="description" content="Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">16 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 41.02564102564102%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html" aria-current="page"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 16</p>
+			<h1>Commands with inverses: undo, structure, clipboard, fill, sort</h1>
+			<p class="lede">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build undo as commands rather than snapshots, and handle the case that snapshots would have hidden: an inverse that is not a mirror image.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:559-590</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* History                                                           */
+/* ---------------------------------------------------------------- */
+
+undo(): void {
+	const command = this.#undo.pop();
+	if (!command) return;
+	command.revert();
+	this.#redo.push(command);
+	this.#syncHistory();
+}
+
+redo(): void {
+	const command = this.#redo.pop();
+	if (!command) return;
+	command.apply();
+	this.#undo.push(command);
+	this.#syncHistory();
+}
+
+#run(command: Command): void {
+	command.apply();
+	this.#undo.push(command);
+	if (this.#undo.length &gt; HISTORY_LIMIT) this.#undo.shift();
+	this.#redo.length = 0;
+	this.#syncHistory();
+}
+
+#syncHistory(): void {
+	this.canUndo = this.#undo.length &gt; 0;
+	this.canRedo = this.#redo.length &gt; 0;
+}</code></pre>
+</figure>
+<p><code>#run</code> applies a command, pushes it, and clears the redo stack — a new action after an undo forks history, and the old branch is gone. <code>HISTORY_LIMIT</code> keeps a long session from holding two hundred megabytes of snapshots. <code>canUndo</code> and <code>canRedo</code> are <code>$state</code> mirrors of the private stacks so the toolbar can disable its buttons.</p>
+<h3 id="structure">A deletion is not a mirror image</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:245-263</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Structure                                                         */
+/* ---------------------------------------------------------------- */
+
+insertRows(at: number, count = 1): void {
+	this.#shift({ kind: 'insert-rows', at, count });
+}
+
+deleteRows(at: number, count = 1): void {
+	this.#shift({ kind: 'delete-rows', at, count });
+}
+
+insertColumns(at: number, count = 1): void {
+	this.#shift({ kind: 'insert-cols', at, count });
+}
+
+deleteColumns(at: number, count = 1): void {
+	this.#shift({ kind: 'delete-cols', at, count });
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:265-324</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">#shift(shift: Shift): void {
+	const rows = shift.kind === 'insert-rows' || shift.kind === 'delete-rows';
+	const insert = shift.kind === 'insert-rows' || shift.kind === 'insert-cols';
+	const inverse: Shift = {
+		kind: rows
+			? insert
+				? 'delete-rows'
+				: 'insert-rows'
+			: insert
+				? 'delete-cols'
+				: 'insert-cols',
+		at: shift.at,
+		count: shift.count
+	};
+
+	// A deletion must remember what it deleted, so that undo can put it back:
+	// the cells in the deleted band, and every formula the deletion rewrote.
+	// Inserting the rows again does not undo a rewrite — `A1:A2` that became
+	// `A1:A1` would stay `A1:A1`, and a reference into the band became `#REF!`
+	// for good — so those formulas are restored from this snapshot.
+	const restore: Edit[] = [];
+	const sizes = rows ? this.rows : this.columns;
+	const removedSizes: [index: number, size: number][] = [];
+	if (!insert) {
+		for (const [index, size] of sizes) {
+			if (index &gt;= shift.at &amp;&amp; index &lt; shift.at + shift.count) removedSizes.push([index, size]);
+		}
+		for (const [k, cell] of this.engine.cells) {
+			const a = unkey(k);
+			const index = rows ? a.row : a.col;
+			const inBand = index &gt;= shift.at &amp;&amp; index &lt; shift.at + shift.count;
+			const body = cell.input.slice(1);
+			const rewritten = cell.formula !== null &amp;&amp; shiftFormula(body, shift) !== body;
+			if (inBand || rewritten) {
+				restore.push({ row: a.row, col: a.col, input: cell.input, format: cell.format });
+			}
+		}
+	}
+
+	this.#run({
+		label: `${insert ? 'Insert' : 'Delete'} ${rows ? 'rows' : 'columns'}`,
+		apply: () =&gt; {
+			this.engine.shift(shift);
+			this.#shiftSizes(shift);
+			this.#emit({ type: 'shift', kind: shift.kind, at: shift.at, count: shift.count });
+			this.#sync();
+		},
+		revert: () =&gt; {
+			this.engine.shift(inverse);
+			this.#shiftSizes(inverse);
+			this.#emit({ type: 'shift', kind: inverse.kind, at: inverse.at, count: inverse.count });
+			for (const [index, size] of removedSizes) {
+				sizes.set(index, size);
+				this.#emit({ type: 'size', axis: rows ? 'row' : 'column', index, size });
+			}
+			if (restore.length &gt; 0) this.#applyLocal(restore);
+			this.#sync();
+		}
+	});
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why undoing a deletion needs a snapshot of formulas it did not delete</h4>
+	<p>Delete row 2 from a sheet where A3 says <code>=SUM(A1:A2)</code>. The engine rewrites the formula to <code>=SUM(A1:A1)</code> and moves it up. Undo inserts a row at 2 — and <code>A1:A1</code> stays <code>A1:A1</code>, because an insertion *below* a range does not grow it. The inverse shift restores the shape of the sheet but not the text of the formulas, and a reference into the deleted band became <code>#REF!</code> for good. So a deletion snapshots two things: the cells in the band, and every formula the shift would rewrite, found by rewriting and comparing. Undo runs the inverse shift and then restores both. The browser test that undoes a deleted row, cells and all, is what found this; a snapshot-based undo would have hidden it and cost the memory instead.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:326-361</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Column widths and row heights move with their columns and rows. */
+#shiftSizes(shift: Shift): void {
+	const rows = shift.kind === 'insert-rows' || shift.kind === 'delete-rows';
+	const insert = shift.kind === 'insert-rows' || shift.kind === 'insert-cols';
+	const map = rows ? this.rows : this.columns;
+	// Scratch space, copied back into the reactive map below in one go.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	const moved = new Map&lt;number, number&gt;();
+	for (const [index, size] of map) {
+		if (index &lt; shift.at) moved.set(index, size);
+		else if (insert) moved.set(index + shift.count, size);
+		else if (index &gt;= shift.at + shift.count) moved.set(index - shift.count, size);
+	}
+	map.clear();
+	for (const [index, size] of moved) map.set(index, size);
+}
+
+resizeColumn(col: number, width: number): void {
+	this.columns.set(col, Math.max(24, Math.min(2000, Math.round(width))));
+	this.dirty = true;
+	this.#emit({ type: 'size', axis: 'column', index: col, size: this.columnWidth(col) });
+}
+
+resizeRow(row: number, height: number): void {
+	this.rows.set(row, Math.max(16, Math.min(1000, Math.round(height))));
+	this.dirty = true;
+	this.#emit({ type: 'size', axis: 'row', index: row, size: this.rowHeight(row) });
+}
+
+rename(title: string): void {
+	const next = title.trim() || 'Untitled sheet';
+	if (next === this.title) return;
+	this.title = next;
+	this.dirty = true;
+	this.#emit({ type: 'title', title: next });
+}</code></pre>
+</figure>
+<h3 id="clipboard">The clipboard</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:363-398</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Clipboard                                                         */
+/* ---------------------------------------------------------------- */
+
+copy(target: Rect = this.selection): ClipboardPayload {
+	const cells: ClipboardPayload['cells'] = [];
+	const lines: string[] = [];
+	for (let r = target.top; r &lt;= target.bottom; r += 1) {
+		const line: string[] = [];
+		for (let c = target.left; c &lt;= target.right; c += 1) {
+			const cell = this.engine.get(r, c);
+			if (cell)
+				cells.push({
+					dr: r - target.top,
+					dc: c - target.left,
+					input: cell.input,
+					format: cell.format
+				});
+			line.push(this.display(r, c));
+		}
+		lines.push(rowToCsv(line, '\t'));
+	}
+	return {
+		origin: { row: target.top, col: target.left },
+		rows: target.bottom - target.top + 1,
+		cols: target.right - target.left + 1,
+		cells,
+		text: lines.join('\n')
+	};
+}
+
+cut(target: Rect = this.selection): ClipboardPayload {
+	const payload = this.copy(target);
+	this.clear(target);
+	return payload;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:400-431</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Paste our own cells, with formulas moved the way a copy moves them:
+ * `=A1*2` copied one row down becomes `=A2*2`, and `$A$1` stays. The
+ * distance is from where the cells were copied to where they land.
+ */
+paste(payload: ClipboardPayload, at: Address = this.anchor): void {
+	const dRow = at.row - payload.origin.row;
+	const dCol = at.col - payload.origin.col;
+	const edits: Edit[] = payload.cells.map(({ dr, dc, input, format }) =&gt; ({
+		row: at.row + dr,
+		col: at.col + dc,
+		input: input.startsWith('=') ? `=${translateFormula(input.slice(1), dRow, dCol)}` : input,
+		format
+	}));
+	if (edits.length &gt; 0) this.edit(edits, 'Paste');
+	this.select(at, { row: at.row + payload.rows - 1, col: at.col + payload.cols - 1 });
+}
+
+/** Paste text from anywhere: tab-separated (a spreadsheet) or comma-separated. */
+pasteText(text: string, at: Address = this.anchor): void {
+	const delimiter = text.includes('\t') ? '\t' : undefined;
+	const rows = parseCsv(text.replace(/\r?\n$/, ''), { delimiter });
+	const edits: Edit[] = [];
+	for (const [dr, line] of rows.entries()) {
+		for (const [dc, value] of line.entries()) {
+			edits.push({ row: at.row + dr, col: at.col + dc, input: value });
+		}
+	}
+	if (edits.length &gt; 0) this.edit(edits, 'Paste');
+	const last = rows.at(-1) ?? [];
+	this.select(at, { row: at.row + rows.length - 1, col: at.col + Math.max(0, last.length - 1) });
+}</code></pre>
+</figure>
+<p>A copy produces two things: the cells relative to the copied rectangle (with where it was, so a paste knows how far each formula moved) and tab-separated text for other applications. Pasting our own cells translates formulas with chapter 11’s <code>translateFormula</code>; pasting text from anywhere parses it as tab- or comma-separated with the CSV parser of chapter 23. The grid puts both on the clipboard under two MIME types (ch. 20).</p>
+<h3 id="fill">The fill handle</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:433-488</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Fill                                                              */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Drag the fill handle: extend `source` to cover `target`. Formulas are
+ * translated, a run of numbers or dates continues its arithmetic series,
+ * text ending in a number counts up, and anything else repeats.
+ */
+fill(source: Rect, target: Rect): void {
+	const edits: Edit[] = [];
+	const down = target.bottom &gt; source.bottom || target.top &lt; source.top;
+	const length = down ? source.bottom - source.top + 1 : source.right - source.left + 1;
+
+	const lanes = down
+		? Array.from({ length: source.right - source.left + 1 }, (_, i) =&gt; source.left + i)
+		: Array.from({ length: source.bottom - source.top + 1 }, (_, i) =&gt; source.top + i);
+
+	for (const lane of lanes) {
+		const sourceCells = Array.from({ length }, (_, i) =&gt;
+			down ? this.engine.get(source.top + i, lane) : this.engine.get(lane, source.left + i)
+		);
+		const series = detectSeries(sourceCells.map((c) =&gt; c?.value ?? null));
+
+		const from = down ? target.top : target.left;
+		const to = down ? target.bottom : target.right;
+		for (let position = from; position &lt;= to; position += 1) {
+			const sourceStart = down ? source.top : source.left;
+			if (position &gt;= sourceStart &amp;&amp; position &lt; sourceStart + length) continue;
+			const offset = position - sourceStart; // negative when filling upwards/leftwards
+			const index = ((offset % length) + length) % length;
+			const template = sourceCells[index];
+			const row = down ? position : lane;
+			const col = down ? lane : position;
+
+			if (!template) {
+				edits.push({ row, col, input: null, format: GENERAL });
+				continue;
+			}
+			let input = template.input;
+			if (template.formula) {
+				const dRow = down ? position - (sourceStart + index) : 0;
+				const dCol = down ? 0 : position - (sourceStart + index);
+				input = `=${translateFormula(input.slice(1), dRow, dCol)}`;
+			} else if (series) {
+				input = series(offset);
+			} else {
+				const counted = /^(.*?)(\d+)$/.exec(input);
+				if (counted &amp;&amp; length === 1) input = `${counted[1]}${Number(counted[2]) + offset}`;
+			}
+			edits.push({ row, col, input, format: template.format });
+		}
+	}
+	if (edits.length &gt; 0) this.edit(edits, 'Fill');
+	this.select({ row: target.top, col: target.left }, { row: target.bottom, col: target.right });
+}</code></pre>
+</figure>
+<p>Drag the handle and the source extends over the target. Formulas are translated; a run of numbers continues its arithmetic series; text ending in a number counts up; anything else repeats. The lane arithmetic handles filling up and to the left too — <code>offset</code> goes negative and the modulo is written to stay positive.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:719-734</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * If the values are an arithmetic series — 1, 2, 3 or 10, 20 or a run of
+ * dates a week apart — a function from offset to the next input; else `null`.
+ * A single number is not a series (it repeats), which is what the fill
+ * handle does everywhere.
+ */
+export function detectSeries(values: Scalar[]): ((offset: number) =&gt; string) | null {
+	if (values.length &lt; 2 || !values.every((v) =&gt; typeof v === 'number')) return null;
+	const numbers = values as number[];
+	const step = numbers[1]! - numbers[0]!;
+	for (let i = 2; i &lt; numbers.length; i += 1) {
+		if (Math.abs(numbers[i]! - numbers[i - 1]! - step) &gt; 1e-9) return null;
+	}
+	const first = numbers[0]!;
+	return (offset) =&gt; String(Number((first + step * offset).toPrecision(15)));
+}</code></pre>
+</figure>
+<h3 id="sort-find">Sorting, finding, replacing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:490-524</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Sort                                                              */
+/* ---------------------------------------------------------------- */
+
+/** Reorder the rows of a rectangle by one of its columns. Empties sort last either way. */
+sort(target: Rect, byCol: number, direction: 'asc' | 'desc'): void {
+	const rowsInOrder = Array.from(
+		{ length: target.bottom - target.top + 1 },
+		(_, i) =&gt; target.top + i
+	);
+	const keyed = rowsInOrder.map((row) =&gt; ({ row, value: this.engine.value(row, byCol) }));
+	keyed.sort((a, b) =&gt; {
+		if (a.value === null &amp;&amp; b.value === null) return 0;
+		if (a.value === null) return 1;
+		if (b.value === null) return -1;
+		const c = compare(a.value, b.value);
+		const sign = typeof c === 'number' ? c : 0;
+		return direction === 'asc' ? sign : -sign;
+	});
+
+	const edits: Edit[] = [];
+	keyed.forEach(({ row: fromRow }, i) =&gt; {
+		const toRow = target.top + i;
+		for (let c = target.left; c &lt;= target.right; c += 1) {
+			const cell = this.engine.get(fromRow, c);
+			const input = cell
+				? cell.formula
+					? `=${translateFormula(cell.input.slice(1), toRow - fromRow, 0)}`
+					: cell.input
+				: null;
+			edits.push({ row: toRow, col: c, input, format: cell?.format ?? GENERAL });
+		}
+	});
+	this.edit(edits, `Sort ${direction === 'asc' ? 'ascending' : 'descending'}`);
+}</code></pre>
+</figure>
+<p>Sorting is an edit like any other — the rows of the rectangle rewritten in a new order — which means it undoes for free, and a formula that moves with its row is translated by the distance it moved. Empties sort last in either direction, because that is what a person means by “sort”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:526-557</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
+/* Find and replace                                                  */
+/* ---------------------------------------------------------------- */
+
+find(query: string, options: { matchCase?: boolean; regex?: boolean } = {}): Address[] {
+	if (query === '') return [];
+	const pattern = toPattern(query, options);
+	const found: Address[] = [];
+	for (const [k, cell] of this.engine.cells) {
+		const a = unkey(k);
+		if (pattern.test(cell.input) || pattern.test(this.display(a.row, a.col))) found.push(a);
+	}
+	return found.sort((a, b) =&gt; a.row - b.row || a.col - b.col);
+}
+
+replace(
+	query: string,
+	replacement: string,
+	options: { matchCase?: boolean; regex?: boolean } = {}
+): number {
+	if (query === '') return 0;
+	const pattern = toPattern(query, { ...options, global: true });
+	const edits: Edit[] = [];
+	for (const [k, cell] of this.engine.cells) {
+		if (!pattern.test(cell.input)) continue;
+		pattern.lastIndex = 0;
+		const a = unkey(k);
+		edits.push({ row: a.row, col: a.col, input: cell.input.replace(pattern, replacement) });
+	}
+	if (edits.length &gt; 0) this.edit(edits, 'Replace');
+	return edits.length;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/sheet.svelte.test.ts<span class="code__lines">:74-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('structure', () =&gt; {
+	it('undoes a deleted row, cells and all', () =&gt; {
+		const sheet = fresh();
+		sheet.setCell(0, 0, '1');
+		sheet.setCell(1, 0, '2');
+		sheet.setCell(2, 0, '=SUM(A1:A2)');
+		sheet.resizeRow(1, 60);
+		sheet.deleteRows(1);
+		expect(sheet.input(1, 0)).toBe('=SUM(A1:A1)');
+		expect(sheet.rowHeight(1)).toBe(28);
+
+		sheet.undo();
+		expect(sheet.input(1, 0)).toBe('2');
+		expect(sheet.input(2, 0)).toBe('=SUM(A1:A2)');
+		expect(sheet.value(2, 0)).toBe(3);
+		expect(sheet.rowHeight(1)).toBe(60);
+	});
+});</code></pre>
+</figure>
+<p>The browser test for the deletion case, run in a real Chromium by the <code>client</code> Vitest project because the class uses runes and <code>flushSync</code>. It is short, and it is the reason the snapshot above exists.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what a deletion command snapshots and why inserting the rows back is not enough.</li><li>You can explain why sorting undoes without any special code.</li><li>You can predict what dragging <code>1, 2</code> down three cells produces, and what dragging <code>Item 7</code> down does.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-sheet-class.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The Sheet class, and where the reactivity line is</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-reactivity-lesson.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The lesson: the same engine, out of $derived</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

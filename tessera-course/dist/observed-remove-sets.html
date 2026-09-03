@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which shapes exist — Building Tessera</title>
+<meta name="description" content="The resurrection bug, why a tombstone is not the fix, and why &quot;add wins&quot; is the forgiving direction.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20.454545454545457%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html" aria-current="page"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>Which shapes exist</h1>
+			<p class="lede">The resurrection bug, why a tombstone is not the fix, and why &quot;add wins&quot; is the forgiving direction.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a set where deleting is safe, undoing a delete works, and a straggler’s replay cannot bring anything back.</p></aside>
+			<p>A board is a set of shapes and a set of edges. Membership sounds like the easy part, and it contains the single most famous failure in this whole field.</p>
+<h3 id="the-bug">The resurrection bug</h3>
+<p>Model membership as a <code>Set</code>. I delete a box. You are offline, holding the original &quot;add&quot;. You reconnect, your replica replays what it has, and <strong>the box comes back</strong>. Nothing errored. Both replicas applied every operation they received. One of them is wrong and neither can tell.</p>
+<p>The obvious patch is a tombstone: a <code>deleted: true</code> flag. That fixes resurrection and creates two new problems. Deletion becomes permanent, so undo cannot work. And re-creating an element with the same identity resurrects nothing, because the tombstone is still there.</p>
+<p>The real fix is to make removal refer to <strong>what it saw</strong>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/orset.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ADD-WINS OBSERVED-REMOVE SET
+ * ============================
+ *
+ * Which nodes and edges exist on the board.
+ *
+ * The naive answer — a `Set` with a `deleted` flag — has a famous failure. I
+ * delete a box while you are offline; you come back; the box reappears, because
+ * your replica still holds an &quot;add&quot; and nothing records that it was ever
+ * removed. The fix is not &quot;add a tombstone&quot;: a plain tombstone makes deletion
+ * permanent, so undoing a delete becomes impossible and re-creating the same
+ * element resurrects nothing.
+ *
+ * An observed-remove set fixes both by making removal refer to **what it saw**.
+ *
+ *   add(e)      records a fresh stamp under `e`
+ *   remove(e)   records the stamps *currently visible* under `e` as removed
+ *   present(e)  is &quot;some add stamp for e has not been removed&quot;
+ *
+ * The consequences fall out:
+ *
+ *   - Redelivering an add I already removed changes nothing: its stamp is in the
+ *     removed set.
+ *   - An add that happened **concurrently** with a remove survives, because the
+ *     remove could not have seen its stamp. Hence &quot;add wins&quot;.
+ *   - Undo of a delete is a new add with a new stamp — which no existing remove
+ *     observed, so it comes back.
+ *
+ * WHY ADD-WINS, AND NOT REMOVE-WINS
+ * ---------------------------------
+ * The two are equally consistent; they differ in what they do with &quot;I deleted
+ * this while you were editing it&quot;. Add-wins keeps the element. That is the
+ * forgiving direction: the worst case is a box somebody has to delete again,
+ * against a worst case of losing work that somebody was in the middle of. In a
+ * tool where deletion is one keystroke and undo is another, cheap-to-repair beats
+ * tidy.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Read the three consequences again, slowly</h4>
+	<p>They are not three separate features that happen to work. They are one rule — *a remove names the adds it observed* — seen from three angles. Redelivering a removed add is a no-op because its stamp is already in the removed set. A concurrent add survives because the remove *could not possibly* have named a stamp that did not exist yet. And undo works because a new add mints a new stamp, which no existing remove has ever seen. One rule, three problems gone.</p>
+</aside>
+<h3 id="the-code">The whole structure</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/orset.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The two halves of an element's history. Both only ever grow. */
+export interface ElementHistory {
+	readonly added: ReadonlySet&lt;Stamp&gt;;
+	readonly removed: ReadonlySet&lt;Stamp&gt;;
+}
+
+export class OrSet&lt;K extends string&gt; {
+	readonly #added = new Map&lt;K, Set&lt;Stamp&gt;&gt;();
+	readonly #removed = new Map&lt;K, Set&lt;Stamp&gt;&gt;();
+
+	/** Record an add. Idempotent: the same stamp twice is one add. */
+	add(key: K, stamp: Stamp): boolean {
+		const stamps = this.#added.get(key);
+		if (stamps) {
+			if (stamps.has(stamp)) return false;
+			stamps.add(stamp);
+		} else {
+			this.#added.set(key, new Set([stamp]));
+		}
+		return true;
+	}
+
+	/**
+	 * The add stamps a remove issued *now* would observe.
+	 *
+	 * The caller puts these in the operation, so the operation is a self-contained
+	 * delta: it means the same thing applied here, applied on a replica that has
+	 * fallen behind, and applied again in six months during a replay. A remove
+	 * that said only &quot;delete node X&quot; would mean different things depending on when
+	 * it landed, which is the whole bug this design exists to avoid.
+	 */
+	observedAdds(key: K): Stamp[] {
+		return [...(this.#added.get(key) ?? [])];
+	}
+
+	/** Record a remove of the given add stamps. Idempotent. */
+	remove(key: K, stamps: readonly Stamp[]): boolean {
+		if (stamps.length === 0) return false;
+
+		let changed = false;
+		const removed = this.#removed.get(key) ?? new Set&lt;Stamp&gt;();
+
+		for (const stamp of stamps) {
+			if (!removed.has(stamp)) {
+				removed.add(stamp);
+				changed = true;
+			}
+		}
+
+		if (changed) this.#removed.set(key, removed);
+		return changed;
+	}
+
+	/** Is this element on the board? */
+	has(key: K): boolean {
+		const added = this.#added.get(key);
+		if (!added || added.size === 0) return false;
+
+		const removed = this.#removed.get(key);
+		if (!removed) return true;
+
+		for (const stamp of added) {
+			if (!removed.has(stamp)) return true;
+		}
+		return false;
+	}</code></pre>
+</figure>
+<p>Two maps, both of which only ever grow. <code>has(key)</code> is *computed*, not stored — &quot;some add stamp for this element has not been removed&quot; — and that is the reason this structure never had the ordering bug that the text CRDT in chapter 11 did have. Nothing here is derived state waiting to go stale.</p>
+<p>Look closely at <code>observedAdds</code>. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Wrong: means something different depending on when it lands.
+{ kind: 'remove', node: 'n1' }
+
+// Right: means exactly one thing, here, on a replica three weeks behind,
+// and during a replay in six months.
+{ kind: 'remove', node: 'n1', observed: ['1756…0000aaaaaaaa', '1756…0003bbbbbbbb'] }</code></pre>
+</figure>
+<h3 id="add-wins">Why add-wins and not remove-wins</h3>
+<p>Both are perfectly consistent. They differ in exactly one situation: *I deleted this while you were editing it*. Add-wins keeps the element; remove-wins discards it.</p>
+<p>This is a product decision, not a mathematical one, and it should be made with the failure modes side by side. The cost of add-wins going the wrong way is a box somebody has to delete a second time. The cost of remove-wins going the wrong way is work that somebody was in the middle of, gone. In a tool where deletion is one keystroke and undo is another, cheap-to-repair beats tidy.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/orset.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the resurrection bug this structure exists to prevent', () =&gt; {
+	it('does not bring an element back when its add is redelivered', () =&gt; {
+		/*
+		 * I delete a box; you are offline holding the original add; you reconnect
+		 * and your replica replays it. With a plain set the box returns. Here the
+		 * remove already names that exact add stamp, so replaying it changes
+		 * nothing.
+		 */
+		const s = set();
+		s.add('node-1', addA);
+		s.remove('node-1', [addA]);
+
+		s.add('node-1', addA); // the straggler
+		expect(s.has('node-1')).toBe(false);
+	});
+});
+
+describe('add-wins', () =&gt; {
+	it('keeps an add that happened concurrently with a remove', () =&gt; {
+		/*
+		 * You delete the node. At the same moment, not having seen your delete, I
+		 * re-create it. My add stamp is not in your remove set — it could not be,
+		 * you never saw it — so the node survives. That is the forgiving direction:
+		 * the cost of being wrong is one more keystroke, not lost work.
+		 */
+		const mine = set();
+		const yours = set();
+
+		mine.add('node-1', addA);
+		yours.add('node-1', addA);
+
+		yours.remove('node-1', yours.observedAdds('node-1'));
+		mine.add('node-1', addB); // concurrent re-create
+
+		mine.merge(yours);
+		yours.merge(mine);
+
+		expect(mine.has('node-1')).toBe(true);
+		expect(yours.has('node-1')).toBe(true);
+	});
+
+	it('lets undo bring a deleted element back', () =&gt; {
+		const s = set();
+		s.add('node-1', addA);
+		s.remove('node-1', s.observedAdds('node-1'));
+
+		s.add('node-1', readdA); // undo mints a fresh stamp
+		expect(s.has('node-1')).toBe(true);
+	});
+});</code></pre>
+</figure>
+<h3 id="compaction">Forgetting, safely</h3>
+<p>Both maps only grow, so eventually something has to forget. This is the only operation in the entire CRDT that *loses* information, and it takes the one argument that makes losing it safe.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/orset.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Drop history that no replica can still need.
+ *
+ * An add stamp that has been removed, where every replica has seen the remove,
+ * can never affect `has()` again — nothing can arrive that refers to it. Both
+ * halves go, and the element's memory with them.
+ *
+ * This is the only operation in the CRDT that *loses* information, so it takes
+ * the one argument that makes it safe: a version vector every replica is known
+ * to dominate. Pass a vector that is ahead of some straggler and you have
+ * resurrected their deleted nodes — which is why the caller of this is a
+ * scheduled server job with a retention window, not the editor.
+ */
+compact(stable: VersionVector): number {
+	let dropped = 0;
+
+	for (const [key, removed] of this.#removed) {
+		const added = this.#added.get(key);
+		if (!added) continue;
+
+		for (const stamp of removed) {
+			if (!versionHas(stable, stamp)) continue;
+			if (!added.has(stamp)) continue;
+
+			added.delete(stamp);
+			removed.delete(stamp);
+			dropped += 1;
+		}
+
+		if (added.size === 0) this.#added.delete(key);
+		if (removed.size === 0) this.#removed.delete(key);
+	}
+
+	return dropped;
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Pass a vector that is ahead of some straggler and you have just resurrected their deleted nodes — silently, permanently, and only for them. This is why compaction’s only caller is a scheduled server job with a retention window (<code>BOARD_LOG_RETENTION_DAYS</code> from chapter 04), and never the editor.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/crdt/orset.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Fold another set's history into this one. Pure union — no ordering needed. */
+merge(other: OrSet&lt;K&gt;): void {
+	for (const [key, stamps] of other.#added) {
+		for (const stamp of stamps) this.add(key, stamp);
+	}
+	for (const [key, stamps] of other.#removed) {
+		this.remove(key, [...stamps]);
+	}
+}
+
+/** The serialisable form, sorted so two equal sets encode to equal bytes. */
+toJSON(): { added: Record&lt;string, string[]&gt;; removed: Record&lt;string, string[]&gt; } {
+	const encode = (map: Map&lt;K, Set&lt;Stamp&gt;&gt;) =&gt;
+		Object.fromEntries(
+			[...map.entries()]
+				.map(([key, stamps]) =&gt; [key, [...stamps].sort()] as const)
+				.sort(([a], [b]) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0))
+		);
+
+	return { added: encode(this.#added), removed: encode(this.#removed) };
+}
+
+static fromJSON&lt;K extends string&gt;(json: ReturnType&lt;OrSet&lt;K&gt;['toJSON']&gt;): OrSet&lt;K&gt; {
+	const set = new OrSet&lt;K&gt;();
+	for (const [key, stamps] of Object.entries(json.added)) {
+		for (const stamp of stamps) set.add(key as K, stamp as Stamp);
+	}
+	for (const [key, stamps] of Object.entries(json.removed)) {
+		set.remove(key as K, stamps as Stamp[]);
+	}
+	return set;
+}</code></pre>
+</figure>
+<p><code>merge</code> is a pure union with no ordering anywhere in it, which is the clearest possible statement that this structure is commutative. And <code>toJSON</code> sorts both keys and stamps — so two replicas in the same state produce byte-identical output, which is what makes a snapshot comparable and hashable.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can describe the resurrection bug and explain why a tombstone does not fix it.</li><li>You can say why a remove operation must carry the stamps it observed.</li><li>You can argue for add-wins in terms of the cost of being wrong in each direction.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="fractional-indexing.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Room between any two things</span>
+			</a>
+			<a class="pager__link pager__link--next" href="last-write-wins-registers.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The fields on a shape</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

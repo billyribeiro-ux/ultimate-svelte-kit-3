@@ -1,0 +1,57 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`. In a CRDT this is the
+		// difference between a merge that handles a missing element and one that
+		// reads a property of undefined on a replica that has not seen the insert
+		// yet — which is the single most common way a convergence bug is written.
+		"noUncheckedIndexedAccess": true,
+
+		// An overriding method must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through to the next must be deliberate. The op
+		// dispatcher is one big switch, and a missing `break` there silently applies
+		// two operations for one.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every path through a value-returning function must return.
+		"noImplicitReturns": true,
+
+		// Unused locals and parameters are errors. Dead code in a merge function is
+		// usually half of a case somebody stopped writing.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"e2e/**/*.ts",
+		"scripts/**/*.js",
+		"*.config.ts",
+		"*.config.js"
+	],
+	/*
+	 * The service worker is excluded here and checked by `tsconfig.service-worker.json`.
+	 *
+	 * It runs in a `ServiceWorkerGlobalScope`, not a window: `self` is a different
+	 * type, `document` does not exist, and the DOM lib actively lies about both.
+	 * SvelteKit says so on every `sync` — "src/service-worker should be added to
+	 * the exclude array" — and the cost of ignoring it is a file that type-checks
+	 * against an environment it will never run in.
+	 */
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker.ts"]
+}

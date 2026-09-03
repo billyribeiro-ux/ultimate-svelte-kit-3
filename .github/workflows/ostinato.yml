@@ -1,0 +1,112 @@
+# Project 6 — Ostinato, and its course.
+#
+# One job runs exactly what a developer runs before pushing: `pnpm run verify`
+# — type-check (app and service worker), prettier + eslint, unit and browser
+# tests, the build through the project's own adapter, and the end-to-end suite
+# on a desktop and a phone profile against `node build/index.js`.
+#
+# A second job proves the course: every quoted range is a whole thing in a real
+# file (`verify.js`), the pages build, and the built pages pass the reader-side
+# checks in `tools/check-dist.js`.
+#
+# Path filters keep this from running for the other five projects; they are
+# verified the same way from their own folders.
+
+name: ostinato
+
+on:
+  push:
+    paths:
+      - 'ostinato/**'
+      - 'ostinato-course/**'
+      - '.github/workflows/ostinato.yml'
+  pull_request:
+    paths:
+      - 'ostinato/**'
+      - 'ostinato-course/**'
+      - '.github/workflows/ostinato.yml'
+
+concurrency:
+  group: ostinato-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: ostinato
+
+jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the unit tests and the build.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      SESSION_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      TRACE_BUFFER: '200'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ostinato/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ostinato/.nvmrc
+          cache: pnpm
+          cache-dependency-path: ostinato/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # The landing page is prerendered from the database, so the build inside
+      # `verify` needs one with the schema and the seed in it. The end-to-end
+      # suite runs this again for itself; it starts from nothing both times.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: ostinato/test-results
+          if-no-files-found: ignore
+
+  course:
+    name: course (verify ranges · build · check pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ostinato/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ostinato/.nvmrc
+          cache: pnpm
+          cache-dependency-path: ostinato/pnpm-lock.yaml
+
+      # The course quotes the project and its page checker borrows the
+      # project's Playwright, so the project's dependencies are installed.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node ../ostinato-course/verify.js
+      - run: node ../ostinato-course/build.js
+      - run: node ../ostinato-course/tools/check-dist.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- ostinato-course/dist

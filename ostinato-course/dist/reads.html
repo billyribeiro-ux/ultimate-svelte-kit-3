@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reads: query, batch and prerender — Building Ostinato</title>
+<meta name="description" content="The store returns `Published` records with real patterns inside; the `.remote.ts` file turns them into `query`, `query.batch` for thirty cards in one request, and `prerender` for the featured strip computed at build time.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">23 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 58.97435897435898%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html" aria-current="page"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 23</p>
+			<h1>Reads: query, batch and prerender</h1>
+			<p class="lede">The store returns <code>Published</code> records with real patterns inside; the <code>.remote.ts</code> file turns them into <code>query</code>, <code>query.batch</code> for thirty cards in one request, and <code>prerender</code> for the featured strip computed at build time.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a remote query with a valibot argument, know when <code>query.batch</code> turns N requests into one, and know what <code>prerender</code> leaves out of the server bundle.</p></aside>
+			<p>Two files. <code>src/lib/server/patterns.ts</code> talks to the table and returns the shape the app uses — a <code>Published</code> record with a real <code>Pattern</code> in it, not a row with a JSON string. <code>src/lib/remote/patterns.remote.ts</code> exposes those to the browser, one function at a time, each with its argument validated on the way in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:17-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Published {
+	id: string;
+	slug: string;
+	title: string;
+	bpm: number;
+	artist: { id: string; handle: string };
+	remixOf: string | null;
+	plays: number;
+	likes: number;
+	featured: boolean;
+	createdAt: number;
+	pattern: Pattern;
+}
+
+type Row = typeof schema.patterns.$inferSelect &amp; { artist: { id: string; handle: string } };
+
+function published(row: Row): Published {
+	return {
+		id: row.id,
+		slug: row.slug,
+		title: row.title,
+		bpm: row.bpm,
+		artist: row.artist,
+		remixOf: row.remixOf,
+		plays: row.plays,
+		likes: row.likes,
+		featured: row.featured,
+		createdAt: row.createdAt,
+		pattern: parseStored(row.data)
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:58-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const withArtist = { artist: { columns: { id: true, handle: true } } } as const;
+
+export async function getPattern(id: string): Promise&lt;Published | null&gt; {
+	const row = await db.query.patterns.findFirst({
+		where: eq(schema.patterns.id, id),
+		with: withArtist
+	});
+	return row ? published(row) : null;
+}
+
+export async function resolveVanity(handle: string, slug: string): Promise&lt;string | null&gt; {
+	const row = await db
+		.select({ id: schema.patterns.id })
+		.from(schema.patterns)
+		.innerJoin(schema.artists, eq(schema.artists.id, schema.patterns.artistId))
+		.where(and(eq(schema.artists.handle, handle), eq(schema.patterns.slug, slug)))
+		.get();
+	return row?.id ?? null;
+}</code></pre>
+</figure>
+<p><code>withArtist</code> is a <code>with:</code> clause reused by every read, so a pattern always arrives with its artist’s id and handle and nothing else about them. <code>resolveVanity</code> is one join — handle plus slug to id — and is what the <code>reroute</code> hook asks (ch. 26).</p>
+<h3 id="the-remote-file">The remote file</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:1-14</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PATTERNS, OVER THE WIRE
+ * =======================
+ *
+ * Every read and write of a published pattern. A `.remote.ts` file is the
+ * server/client boundary made explicit: each export here becomes a function
+ * the browser can call, with its argument validated by the schema on the way
+ * in and its result serialised — `Note`s and all, thanks to `transport` — on
+ * the way out.
+ *
+ * Six of the seven kinds of remote function are in this one file: `query`,
+ * `query.batch`, `prerender`, `command`, `form` and the `requested()` helper.
+ * `query.live` is in `rooms.remote.ts`, where there is something live.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:29-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** One pattern, or a 404 the page does not have to write. */
+export const getPattern = query(v.string(), async (id) =&gt; {
+	const found = await store.getPattern(id);
+	if (!found) error(404, 'No such pattern');
+	return found;
+});
+
+const ListSchema = v.object({
+	sort: v.optional(v.picklist(['new', 'loved', 'played']), 'new'),
+	limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(60)), 24)
+});
+
+export const getPatterns = query(ListSchema, ({ sort, limit }) =&gt; store.listPatterns(sort, limit));
+
+/** The current artist's own patterns; empty for a browser with no handle. */
+export const getMine = query(async () =&gt; {
+	const artist = currentArtist();
+	return artist ? store.patternsBy(artist.id) : [];
+});</code></pre>
+</figure>
+<p><code>query(schema, fn)</code>: the schema is valibot — SvelteKit accepts anything that implements Standard Schema — and the argument the function receives is the schema’s *output* type. <code>getPattern</code> throws a 404 with <code>error()</code>, so the page that calls it does not have to. <code>getMine</code> takes no argument and reads the cookie through <code>currentArtist()</code>.</p>
+<h3 id="batch">Thirty cards, one request</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:49-61</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * BATCHED COUNTS
+ * --------------
+ * A gallery page shows thirty cards and every card wants its play count.
+ * Thirty `getCounts(id)` calls in one render become *one* request with
+ * `query.batch`: SvelteKit collects every argument used during the render,
+ * calls this once with all of them, and the function returns a lookup that
+ * hands each caller its own answer.
+ */
+export const getCounts = query.batch(v.string(), async (ids) =&gt; {
+	const counts = await store.countsFor(ids);
+	return (id) =&gt; counts.get(id) ?? { plays: 0, likes: 0 };
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>query.batch</code></h4>
+	<p>A gallery page renders thirty cards and each one calls <code>getCounts(id)</code>. Without batching that is thirty requests. <code>query.batch</code> tells SvelteKit to collect every argument used during one render, call the function *once* with all of them, and hand each caller its own answer through the lookup the function returns. The store’s <code>countsFor</code> is one <code>WHERE id IN (...)</code> query. Nothing in the cards changes — they still call <code>getCounts(id)</code> — which is the whole point.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:111-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Play and like counts for many patterns at once — what `query.batch` asks for. */
+export async function countsFor(
+	ids: string[]
+): Promise&lt;Map&lt;string, { plays: number; likes: number }&gt;&gt; {
+	if (ids.length === 0) return new Map();
+	const rows = await db
+		.select({ id: schema.patterns.id, plays: schema.patterns.plays, likes: schema.patterns.likes })
+		.from(schema.patterns)
+		.where(sql`${schema.patterns.id} in ${ids}`);
+	return new Map(rows.map((row) =&gt; [row.id, { plays: row.plays, likes: row.likes }]));
+}</code></pre>
+</figure>
+<h3 id="prerender">Computed at build time</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:63-75</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PRERENDERED
+ * -----------
+ * The featured strip on the landing page is computed at build time and served
+ * as a static file, which is what `prerender` means. It changes when the app
+ * is deployed and not before — &quot;featured&quot; is a curated list, and a curated
+ * list changing between deploys would be surprising anyway.
+ *
+ * `dynamic: true` is deliberately *absent*: with no argument there is only one
+ * possible call, and it was prerendered, so the function is left out of the
+ * server bundle entirely.
+ */
+export const getFeatured = prerender(() =&gt; store.featuredPatterns());</code></pre>
+</figure>
+<p>The featured strip on the landing page changes when the app is deployed and not before. <code>prerender</code> runs the function during the build and writes the result as a static file; the landing page, itself prerendered, reads that file. With no argument there is one possible call, so <code>dynamic: true</code> is absent and the function is left out of the server bundle entirely.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/patterns.ts<span class="code__lines">:78-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type Sort = 'new' | 'loved' | 'played';
+
+export async function listPatterns(sort: Sort, limit: number): Promise&lt;Published[]&gt; {
+	const order =
+		sort === 'loved'
+			? [desc(schema.patterns.likes), desc(schema.patterns.createdAt)]
+			: sort === 'played'
+				? [desc(schema.patterns.plays), desc(schema.patterns.createdAt)]
+				: [desc(schema.patterns.createdAt)];
+
+	const rows = await db.query.patterns.findMany({ orderBy: order, limit, with: withArtist });
+	return rows.map(published);
+}
+
+export async function featuredPatterns(): Promise&lt;Published[]&gt; {
+	const rows = await db.query.patterns.findMany({
+		where: eq(schema.patterns.featured, true),
+		orderBy: [desc(schema.patterns.likes)],
+		limit: 6,
+		with: withArtist
+	});
+	return rows.map(published);
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what type the argument of <code>getPatterns</code> has, and where that type came from.</li><li>You can explain what changes for the caller when a query becomes a <code>query.batch</code> — and what does not.</li><li>You can say when a prerendered remote function is re-run.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="identity-without-passwords.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Identity without passwords</span>
+			</a>
+			<a class="pager__link pager__link--next" href="writes.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Writes: command and form</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

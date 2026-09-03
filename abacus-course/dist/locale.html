@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a person typed, in their language — Building Abacus</title>
+<meta name="description" content="A German types `1.234,56` and an American types `1,234.56` and they mean the same number. Nothing here knows any locale: it asks `Intl` how the locale writes a number and a date, and reads the answer backwards.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 33.33333333333333%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html" aria-current="page"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>What a person typed, in their language</h1>
+			<p class="lede">A German types <code>1.234,56</code> and an American types <code>1,234.56</code> and they mean the same number. Nothing here knows any locale: it asks <code>Intl</code> how the locale writes a number and a date, and reads the answer backwards.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Parse and format numbers and dates for any locale without a table of separators, and know why formatters are cached.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.ts<span class="code__lines">:1-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT A PERSON TYPED
+ * ===================
+ *
+ * A German types `1.234,56` and means one thousand two hundred and
+ * thirty-four and a bit; an American types `1,234.56` and means the same
+ * number. `12%` means twelve hundredths and should *look* like a percentage
+ * from then on. `2026-09-02` is a date everywhere; `02/09/2026` is the second
+ * of September in London and the ninth of February in New York.
+ *
+ * This module turns typed text into a value and, when the text implies one,
+ * a format. Nothing in it knows any locale: it asks `Intl` how the locale
+ * writes a number and a date, and reads the answer backwards.
+ */
+
+import type { Scalar } from '#lib/formula/values.ts';
+import { serialFromParts } from './dates.ts';
+import { numberFormatter, dateFormatter, type CellFormat } from './format.ts';
+
+export interface Separators {
+	decimal: string;
+	group: string;
+}
+
+const separatorCache = new Map&lt;string, Separators&gt;();
+
+/** The decimal and grouping characters a locale uses, read from `Intl` itself. */
+export function separators(locale: string): Separators {
+	let found = separatorCache.get(locale);
+	if (!found) {
+		const parts = numberFormatter(locale, { useGrouping: true }).formatToParts(-12345.6);
+		found = {
+			decimal: parts.find((p) =&gt; p.type === 'decimal')?.value ?? '.',
+			group: parts.find((p) =&gt; p.type === 'group')?.value ?? ','
+		};
+		separatorCache.set(locale, found);
+	}
+	return found;
+}</code></pre>
+</figure>
+<p>The trick in <code>separators</code> is the whole philosophy of the module: format a known number with <code>Intl.NumberFormat</code> and read the decimal and group characters out of the *parts*. The browser already knows that German groups with a dot; a table in this file would be a table that is wrong for the locale nobody tested.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.ts<span class="code__lines">:41-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type DateOrder = 'ymd' | 'dmy' | 'mdy';
+
+const orderCache = new Map&lt;string, DateOrder&gt;();
+
+/** Which of day, month and year a locale writes first — again, asked rather than assumed. */
+export function dateOrder(locale: string): DateOrder {
+	let found = orderCache.get(locale);
+	if (!found) {
+		const parts = dateFormatter(locale, { year: 'numeric', month: 'numeric', day: 'numeric' })
+			.formatToParts(new Date(Date.UTC(2001, 1, 3)))
+			.filter((p) =&gt; p.type === 'year' || p.type === 'month' || p.type === 'day')
+			.map((p) =&gt; p.type[0]);
+		const order = parts.join('');
+		found = order === 'ymd' ? 'ymd' : order === 'mdy' ? 'mdy' : 'dmy';
+		orderCache.set(locale, found);
+	}
+	return found;
+}</code></pre>
+</figure>
+<p>Same trick for dates: format 3 February 2001 and look at which part comes first. <code>02/03/2001</code> is 3 February in London and 2 March in New York, and the only honest way to know is to ask.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.ts<span class="code__lines">:60-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A number in the locale's notation, or `null`. Group separators are
+ * optional but, if present, must be *consistent* — `1,2,3` is not a number
+ * in any locale, and the point of the check is that a typo becomes text
+ * rather than a silently wrong number.
+ */
+export function parseNumber(text: string, locale: string): number | null {
+	const { decimal, group } = separators(locale);
+	let t = text.trim();
+	if (t === '') return null;
+
+	let sign = 1;
+	if (t.startsWith('-') || t.startsWith('−')) {
+		sign = -1;
+		t = t.slice(1).trim();
+	} else if (t.startsWith('+')) {
+		t = t.slice(1).trim();
+	}
+	// Accounting negative: (1,234.56)
+	if (t.startsWith('(') &amp;&amp; t.endsWith(')')) {
+		sign = -sign;
+		t = t.slice(1, -1).trim();
+	}
+
+	// Split off the fraction on the locale's decimal mark; a lone `.` in a
+	// locale that uses `,` is not a decimal mark, and vice versa.
+	const dot = t.lastIndexOf(decimal);
+	const whole = dot === -1 ? t : t.slice(0, dot);
+	const fraction = dot === -1 ? '' : t.slice(dot + decimal.length);
+	if (fraction !== '' &amp;&amp; !/^\d+$/.test(fraction)) return null;
+
+	// The whole part: digits, optionally grouped in threes. A narrow no-break
+	// space (fr-FR) and a regular space are both accepted as the group mark.
+	const groups = whole.split(
+		group === '\u202f' || group === '\u00a0' || group === ' ' ? /[\s\u202f\u00a0]/ : group
+	);
+	if (groups.length === 1) {
+		if (!/^\d*$/.test(whole)) return null;
+	} else {
+		if (!/^\d{1,3}$/.test(groups[0]!)) return null;
+		if (!groups.slice(1).every((g) =&gt; /^\d{3}$/.test(g))) return null;
+	}
+	const digits = groups.join('');
+	if (digits === '' &amp;&amp; fraction === '') return null;
+
+	const n = Number(`${digits || '0'}.${fraction || '0'}`);
+	return Number.isFinite(n) ? sign * n : null;
+}</code></pre>
+</figure>
+<p>Parsing a number backwards from the locale’s notation. Group separators are optional but, if present, must be *consistent*: <code>1,2,3</code> is not a number in any locale, and the point of the check is that a typo becomes text rather than a silently wrong number. A narrow no-break space is accepted as a group mark because that is what French <code>Intl</code> produces and no keyboard has a key for it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.ts<span class="code__lines">:145-183</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The entry point: what a typed string means. Formulas are not handled here
+ * — anything starting with `=` is the engine's — and a leading apostrophe
+ * forces text, which is how a person keeps a phone number from becoming a
+ * number.
+ */
+export function parseInput(text: string, locale: string): Parsed {
+	if (text === '') return { value: null };
+	if (text.startsWith(&quot;'&quot;)) return { value: text.slice(1), format: { kind: 'text' } };
+
+	const t = text.trim();
+	const upper = t.toUpperCase();
+	if (upper === 'TRUE') return { value: true };
+	if (upper === 'FALSE') return { value: false };
+
+	if (t.endsWith('%')) {
+		const n = parseNumber(t.slice(0, -1), locale);
+		if (n !== null) return { value: n / 100, format: { kind: 'percent', decimals: 0 } };
+	}
+
+	const currency = /^([$€£¥])\s?(.+)$/.exec(t) ?? /^(.+?)\s?([$€£¥])$/.exec(t);
+	if (currency) {
+		const symbol = currency[1]!.length === 1 ? currency[1]! : currency[2]!;
+		const rest = currency[1]!.length === 1 ? currency[2]! : currency[1]!;
+		const n = parseNumber(rest, locale);
+		if (n !== null) {
+			const codes: Record&lt;string, string&gt; = { $: 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' };
+			return { value: n, format: { kind: 'currency', currency: codes[symbol]!, decimals: 2 } };
+		}
+	}
+
+	const n = parseNumber(t, locale);
+	if (n !== null) return { value: n };
+
+	const date = parseDate(t, locale);
+	if (date !== null) return { value: date, format: { kind: 'date', style: 'short' } };
+
+	return { value: text };
+}</code></pre>
+</figure>
+<p><code>parseInput</code> is the entry point the engine is given as its <code>parseLiteral</code>. It decides what a typed string *means* and, when the text implies a format — <code>12%</code>, <code>$40</code>, a date — says so, so that a cell typed as a percentage stays a percentage. A leading apostrophe forces text, which is how a person keeps a phone number from becoming a number.</p>
+<h3 id="formatting">How a value looks</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/format.ts<span class="code__lines">:1-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * HOW A VALUE LOOKS
+ * =================
+ *
+ * A cell holds `1234.5`; a person sees `1,234.50`, or `1.234,50`, or `$1,234.50`,
+ * or `2 Sep 2026` if the format says the number is a date. This module is the
+ * whole of that translation, and it has one rule: every locale-dependent
+ * decision is made by `Intl`, never by hand. The browser already knows that
+ * German groups with a dot and decimals with a comma; a table of separators in
+ * this file would be a table that is wrong for the locale nobody tested.
+ *
+ * FORMATTERS ARE CACHED
+ * ---------------------
+ * `new Intl.NumberFormat()` costs tens of microseconds — it loads locale data.
+ * A grid formats every visible cell on every scroll, and ten thousand of
+ * those per second is a hundred milliseconds of building the same formatter.
+ * One formatter per (locale, options) pair, kept in a `Map`, is the difference
+ * between a grid that scrolls and one that stutters.
+ */
+
+import { ErrorValue, plainNumber, type Scalar } from '#lib/formula/values.ts';
+import { dateFromSerial, isPlausibleDate, partsFromSerial } from './dates.ts';
+
+export type CellFormat =
+	| { kind: 'general' }
+	| { kind: 'number'; decimals: number; grouping: boolean }
+	| { kind: 'percent'; decimals: number }
+	| { kind: 'currency'; currency: string; decimals: number }
+	| { kind: 'date'; style: 'short' | 'medium' | 'long' | 'iso' }
+	| { kind: 'datetime' }
+	| { kind: 'time' }
+	| { kind: 'text' };
+
+export const GENERAL: CellFormat = { kind: 'general' };</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/format.ts<span class="code__lines">:36-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const numberFormatters = new Map&lt;string, Intl.NumberFormat&gt;();
+const dateFormatters = new Map&lt;string, Intl.DateTimeFormat&gt;();
+
+export function numberFormatter(
+	locale: string,
+	options: Intl.NumberFormatOptions
+): Intl.NumberFormat {
+	const key = `${locale}|${JSON.stringify(options)}`;
+	let formatter = numberFormatters.get(key);
+	if (!formatter) {
+		formatter = new Intl.NumberFormat(locale, options);
+		numberFormatters.set(key, formatter);
+	}
+	return formatter;
+}
+
+export function dateFormatter(
+	locale: string,
+	options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+	const key = `${locale}|${JSON.stringify(options)}`;
+	let formatter = dateFormatters.get(key);
+	if (!formatter) {
+		// Serials are UTC-based (see dates.ts); formatting in UTC is what keeps a
+		// date from shifting by a day between two people in two zones.
+		formatter = new Intl.DateTimeFormat(locale, { timeZone: 'UTC', ...options });
+		dateFormatters.set(key, formatter);
+	}
+	return formatter;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why formatters are cached</h4>
+	<p><code>new Intl.NumberFormat()</code> costs tens of microseconds because it loads locale data. A grid formats every visible cell on every scroll; ten thousand of those per second is a hundred milliseconds of building the same formatter. One formatter per (locale, options) pair in a <code>Map</code> is the difference between a grid that scrolls and one that stutters — and the JSON of the options is a perfectly good cache key.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/format.ts<span class="code__lines">:67-120</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The text a cell shows for a value under a format. Never throws; an error shows its code. */
+export function formatScalar(value: Scalar, format: CellFormat, locale: string): string {
+	if (value === null) return '';
+	if (value instanceof ErrorValue) return value.code;
+	if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+
+	if (typeof value === 'string') {
+		// A number typed as text stays text; a text format on a number shows the
+		// number's plain form.
+		return value;
+	}
+
+	if (!Number.isFinite(value)) return '#NUM!';
+
+	switch (format.kind) {
+		case 'general':
+			return numberFormatter(locale, { maximumSignificantDigits: 15, useGrouping: false }).format(
+				value
+			);
+		case 'text':
+			return plainNumber(value);
+		case 'number':
+			return numberFormatter(locale, {
+				minimumFractionDigits: format.decimals,
+				maximumFractionDigits: format.decimals,
+				useGrouping: format.grouping
+			}).format(value);
+		case 'percent':
+			return numberFormatter(locale, {
+				style: 'percent',
+				minimumFractionDigits: format.decimals,
+				maximumFractionDigits: format.decimals
+			}).format(value);
+		case 'currency':
+			return numberFormatter(locale, {
+				style: 'currency',
+				currency: format.currency,
+				minimumFractionDigits: format.decimals,
+				maximumFractionDigits: format.decimals
+			}).format(value);
+		case 'date':
+			return formatDate(value, format.style, locale);
+		case 'datetime':
+			if (!isPlausibleDate(value)) return plainNumber(value);
+			return dateFormatter(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
+				dateFromSerial(value)
+			);
+		case 'time':
+			return dateFormatter(locale, { timeStyle: 'short' }).format(dateFromSerial(value));
+		default:
+			format satisfies never;
+			return plainNumber(value);
+	}
+}</code></pre>
+</figure>
+<p>Every branch is an <code>Intl</code> call with options and nothing else. Dates are formatted in UTC because serials are UTC-based (ch. 08), which is what keeps 2 September from becoming 1 September for the reader in Los Angeles.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/locale.spec.ts<span class="code__lines">:21-49</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('parsing numbers', () =&gt; {
+	it('reads the same number in two notations', () =&gt; {
+		expect(parseNumber('1,234.56', 'en-US')).toBe(1234.56);
+		expect(parseNumber('1.234,56', 'de-DE')).toBe(1234.56);
+		expect(parseNumber('1234.56', 'en-US')).toBe(1234.56);
+		expect(parseNumber('-0.5', 'en-US')).toBe(-0.5);
+		expect(parseNumber('(42)', 'en-US')).toBe(-42);
+		expect(parseNumber('1 234,5', 'fr-FR')).toBe(1234.5);
+	});
+
+	it('refuses inconsistent grouping and the other locale', () =&gt; {
+		expect(parseNumber('1,2,3', 'en-US')).toBeNull();
+		expect(parseNumber('12,34', 'en-US')).toBeNull();
+		expect(parseNumber('1.234.5', 'de-DE')).toBeNull();
+		expect(parseNumber('abc', 'en-US')).toBeNull();
+		expect(parseNumber('', 'en-US')).toBeNull();
+	});
+
+	it('round-trips through the formatter', () =&gt; {
+		for (const locale of ['en-US', 'de-DE', 'fr-FR', 'pt-BR']) {
+			const text = formatScalar(
+				9876543.21,
+				{ kind: 'number', decimals: 2, grouping: true },
+				locale
+			);
+			expect(parseNumber(text, locale)).toBe(9876543.21);
+		}
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say how <code>separators(&quot;de-DE&quot;)</code> discovers the comma without a table.</li><li>You can predict what <code>parseInput(&quot;1,234&quot;, &quot;de-DE&quot;)</code> and <code>parseInput(&quot;1,234&quot;, &quot;en-US&quot;)</code> return.</li><li>You can explain what the formatter cache key is made of.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="proving-the-engine.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Proving the engine: a from-scratch evaluator and ten thousand random edits</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-document.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The document, the operations, and the templates</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The schema, and migrations instead of push — Building Abacus</title>
+<meta name="description" content="Five tables. A sheet is one JSON document with a version number; passkeys are public keys in `credentials`; one-time `challenges` expire. Migrations are files in `drizzle/`, applied by a script the Dockerfile runs before the server listens.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 61.53846153846154%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html" aria-current="page"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>The schema, and migrations instead of push</h1>
+			<p class="lede">Five tables. A sheet is one JSON document with a version number; passkeys are public keys in <code>credentials</code>; one-time <code>challenges</code> expire. Migrations are files in <code>drizzle/</code>, applied by a script the Dockerfile runs before the server listens.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Design a small schema on purpose, and know the difference between <code>drizzle-kit push</code> and a migration.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SCHEMA
+ * ==========
+ *
+ * Five tables. A sheet is one JSON document (see `sheet/document.ts`): it is
+ * read and written whole, its cells are never queried by SQL, and a table
+ * of cells would be a row per cell for no query anybody runs. `version` goes
+ * up by one per write, so a browser can tell &quot;changed&quot; from &quot;same&quot; without
+ * comparing two documents, and so a stale write can be refused.
+ *
+ * PASSKEYS, NOT PASSWORDS
+ * -----------------------
+ * There is no password column anywhere. A person registers a passkey — the
+ * browser and the operating system hold a private key, the server holds the
+ * public one in `credentials` — and signs in by proving they still have it.
+ * `challenges` holds the one-time random values each ceremony is built on,
+ * with an expiry, because a challenge that can be replayed is not a challenge.
+ *
+ * Timestamps are integers — milliseconds since the epoch — because SQLite
+ * has no date type and a string date sorts wrong the first time somebody
+ * changes the format.
+ */
+
+import { relations, sql } from 'drizzle-orm';
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+
+const now = sql`(unixepoch('subsec') * 1000)`;</code></pre>
+</figure>
+<p>The comment gives the two reasons the schema is small: a sheet is read and written whole, so a table of cells would be a row per cell for no query anybody runs; and there is no password column anywhere. Timestamps are integers because SQLite has no date type.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:29-70</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const users = sqliteTable('users', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	/** BCP 47, for number and date formats: `en-US`, `de-DE`. */
+	locale: text('locale').notNull().default('en-US'),
+	createdAt: integer('created_at').notNull().default(now)
+});
+
+export const credentials = sqliteTable(
+	'credentials',
+	{
+		/** The credential id the authenticator chose, base64url. */
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() =&gt; users.id, { onDelete: 'cascade' }),
+		/** The COSE public key, base64url. */
+		publicKey: text('public_key').notNull(),
+		/** The signature counter, for detecting a cloned authenticator. */
+		counter: integer('counter').notNull().default(0),
+		/** `[&quot;internal&quot;]`, `[&quot;usb&quot;]`, … as JSON: hints the browser uses to find the key. */
+		transports: text('transports').notNull().default('[]'),
+		deviceType: text('device_type').notNull().default('singleDevice'),
+		backedUp: integer('backed_up', { mode: 'boolean' }).notNull().default(false),
+		/** What the person called it: &quot;MacBook&quot;, &quot;Phone&quot;. */
+		label: text('label').notNull().default('Passkey'),
+		createdAt: integer('created_at').notNull().default(now),
+		lastUsedAt: integer('last_used_at')
+	},
+	(table) =&gt; [index('credentials_user').on(table.userId)]
+);
+
+export const challenges = sqliteTable('challenges', {
+	id: text('id').primaryKey(),
+	/** Set for registration of an additional passkey; null for a sign-in or a first registration. */
+	userId: text('user_id'),
+	kind: text('kind', { enum: ['register', 'login'] }).notNull(),
+	challenge: text('challenge').notNull(),
+	/** For a first registration: the name the person chose, carried across the ceremony. */
+	name: text('name'),
+	expiresAt: integer('expires_at').notNull()
+});</code></pre>
+</figure>
+<p>A credential is the public half of a passkey plus the bookkeeping that makes it safe: a signature <code>counter</code> for detecting a cloned key, the <code>transports</code> the browser can use to find it, and a <code>label</code> the person chose. A challenge is a random value with an expiry, because a challenge that can be replayed is not a challenge.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:72-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const sheets = sqliteTable(
+	'sheets',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() =&gt; users.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		/**
+		 * Who may open and edit it: the owner alone, or anybody signed in who has
+		 * the link. There is no per-person invitation list; a link is the
+		 * invitation, which is what every collaborative sheet ends up being.
+		 */
+		access: text('access', { enum: ['private', 'link'] })
+			.notNull()
+			.default('private'),
+		/** The whole sheet, as `Document` JSON. */
+		doc: text('doc').notNull(),
+		version: integer('version').notNull().default(0),
+		cellCount: integer('cell_count').notNull().default(0),
+		/** A read-only copy anyone may open at /s/&lt;id&gt;, frozen at `publishedAt`. */
+		published: text('published'),
+		publishedAt: integer('published_at'),
+		createdAt: integer('created_at').notNull().default(now),
+		updatedAt: integer('updated_at').notNull().default(now)
+	},
+	(table) =&gt; [index('sheets_owner').on(table.ownerId), index('sheets_updated').on(table.updatedAt)]
+);
+
+/**
+ * Cell operations applied to a sheet since it was created: the log the live
+ * query replays to a browser that joins late, and the record of who changed
+ * what. Trimmed by `compactOps` once the document has absorbed them.
+ */
+export const ops = sqliteTable(
+	'ops',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		sheetId: text('sheet_id')
+			.notNull()
+			.references(() =&gt; sheets.id, { onDelete: 'cascade' }),
+		/** The sheet version this op produced. */
+		version: integer('version').notNull(),
+		userId: text('user_id'),
+		/** `CellOp[]` as JSON. */
+		payload: text('payload').notNull(),
+		createdAt: integer('created_at').notNull().default(now)
+	},
+	(table) =&gt; [index('ops_sheet_version').on(table.sheetId, table.version)]
+);</code></pre>
+</figure>
+<p>A sheet has <code>access</code> — private, or anybody signed in who has the link — a <code>version</code> that goes up by one per write, so a stale write can be refused, and a <code>published</code> copy frozen at <code>publishedAt</code>. The <code>ops</code> table is the log the live query replays to a browser that joins late.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/db/index.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The database handle.
+ *
+ * One client for the process, created at import time. libSQL pools internally,
+ * so a second client would mean a second pool competing for the same file — and
+ * with SQLite, two pools writing to one file is how you meet `SQLITE_BUSY`.
+ */
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { DATABASE_URL } from '$app/env/private';
+import * as schema from './schema.ts';
+
+const client = createClient({ url: DATABASE_URL, intMode: 'number' });
+
+/*
+ * WAL lets readers proceed while a writer appends — a shared sheet is many
+ * readers and one writer at a time — and the busy timeout makes a second
+ * writer wait a few milliseconds instead of failing at once.
+ */
+await client.execute('pragma journal_mode = wal');
+await client.execute('pragma busy_timeout = 5000');
+
+export const db = drizzle(client, { schema });
+export { client };
+export * as schema from './schema.ts';</code></pre>
+</figure>
+<p>One client for the process, in WAL mode with a busy timeout: a shared sheet is many readers and one writer at a time, and the timeout makes a second writer wait a few milliseconds instead of failing at once.</p>
+<h3 id="migrations">Migrations</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/migrate.ts<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * MIGRATE
+ * =======
+ *
+ * Bring the database up to the schema, by applying the SQL files in
+ * `drizzle/` that have not been applied yet. Drizzle keeps a table of which
+ * ones have, so running this on an up-to-date database does nothing and
+ * running it twice is the same as running it once.
+ *
+ * Two ways to run it:
+ *
+ *   node scripts/migrate.ts                     before starting the server
+ *   node --import ./scripts/migrate.ts build    what the Dockerfile does —
+ *                                               the migration runs first, then
+ *                                               the server, in one process,
+ *                                               so `node` stays PID 1 and
+ *                                               SIGTERM reaches it
+ *
+ * This is the production counterpart of `pnpm run db:push`, which compares the
+ * schema with the database and alters it directly. `push` is right for a
+ * development database that nobody minds losing; migrations are right for one
+ * that holds somebody's budget, because every change is a file that was
+ * reviewed before it ran.
+ */
+
+import { drizzle } from 'drizzle-orm/libsql';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import { createClient } from '@libsql/client';
+
+if (!process.env.DATABASE_URL) {
+	try {
+		process.loadEnvFile('.env');
+	} catch {
+		// no .env: the variables must already be in the environment
+	}
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set');
+
+const client = createClient({ url, intMode: 'number' });
+const started = performance.now();
+await migrate(drizzle(client), { migrationsFolder: 'drizzle' });
+console.info(`Migrations applied in ${Math.round(performance.now() - started)} ms`);
+client.close();</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the production database is migrated and the development one is pushed</h4>
+	<p><code>drizzle-kit push</code> compares the schema with the database and alters it directly. That is right for a development database nobody minds losing. A production database holds somebody’s budget, and every change to it should be a file that was reviewed before it ran — which is what <code>drizzle-kit generate</code> writes into <code>drizzle/</code> and <code>migrate()</code> applies in order, keeping a table of what has been applied so running it twice is running it once. The end-to-end suite builds its database with the migrations too (<code>scripts/prepare-e2e-db.js</code>), so a schema change that was not turned into a migration fails there, before it fails in production.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/prepare-e2e-db.js<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PREPARE THE END-TO-END DATABASE
+ * ===============================
+ *
+ * Migrate, then seed. A script rather than two `package.json` entries because
+ * of the step in the middle: delete the previous run's database first. A suite
+ * that runs against rows left over from last time produces failures that look
+ * like application bugs and are not.
+ *
+ * The schema arrives through the migrations in `drizzle/` — the same files the
+ * Dockerfile applies — rather than `drizzle-kit push`, so a schema change that
+ * was not turned into a migration fails here, before it fails in production.
+ *
+ * `DATABASE_URL` is overridden to `file:e2e.db` for both the push and the
+ * server, so a test run never touches `local.db` — the one with the budget
+ * somebody spent an evening on.
+ */
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, rmSync } from 'node:fs';
+
+const DB = 'e2e.db';
+
+const env = {
+	...process.env,
+	DATABASE_URL: `file:${DB}`,
+	PUBLIC_ORIGIN: 'http://localhost:4173',
+	SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
+	CELL_LIMIT: '50000'
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:1-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SEED
+ * ====
+ *
+ * A workspace with nothing in it teaches nothing, so this creates a house
+ * account and one sheet per template, and publishes each of them — so that
+ * `/s/&lt;id&gt;` and `/embed/&lt;id&gt;` have something to show, and the end-to-end
+ * suite has known pages to open.
+ *
+ * Runs outside SvelteKit — `node scripts/seed.ts` — so it cannot use
+ * `$app/env/private` and reads `.env` itself. Everything else it needs, it
+ * imports from the project: the templates, the schema.
+ *
+ * Idempotent: ids are fixed, and a row that already exists is left alone. Run
+ * it twice and you get the same database, not two of everything.
+ */
+
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+import { eq } from 'drizzle-orm';
+import { TEMPLATE_SLUGS, templateDocument } from '../src/lib/sheet/templates.ts';
+import * as schema from '../src/lib/server/db/schema.ts';
+
+if (!process.env.DATABASE_URL) {
+	try {
+		process.loadEnvFile('.env');
+	} catch {
+		// no .env: the variables must already be in the environment
+	}
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set');
+
+const client = createClient({ url, intMode: 'number' });
+const db = drizzle(client, { schema });
+
+/** The house account owns the seeded sheets. It has no passkey: nobody signs in as it. */
+const HOUSE = { id: 'abacushouse00001', name: 'Abacus', locale: 'en-US' };</code></pre>
+</figure>
+<p>The seed creates a house account and one published sheet per template, with fixed ids, so <code>/s/seedbudget</code> exists on every machine and the tests can open it. It is idempotent: a row that already exists is left alone.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why there is no <code>cells</code> table.</li><li>You can explain what <code>counter</code> on a credential detects.</li><li>You can say which command each of <code>db:push</code>, <code>db:generate</code> and <code>scripts/migrate.ts</code> runs and when.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="csv-in-a-worker.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">CSV: a streaming parser in a worker, and a streamed export</span>
+			</a>
+			<a class="pager__link pager__link--next" href="identity.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Identity: a signed cookie</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/*
+ * The one stylesheet the application loads.
+ *
+ * Import order is load-bearing: tokens define the variables everything else
+ * reads, the reset removes defaults, base sets element styles from tokens, and
+ * utilities come last so a utility class beats an element rule at equal
+ * specificity.
+ */
+
+@import './lib/styles/tokens.css';
+@import './lib/styles/reset.css';
+@import './lib/styles/base.css';
+@import './lib/styles/utilities.css';
+
+/*
+ * The fonts, declared by hand.
+ *
+ * The files are copied out of node_modules by `scripts/sync-fonts.js` so their
+ * paths are stable and `app.html` can preload them. Importing the fontsource
+ * stylesheet instead would give them hashed names that nothing can preload.
+ *
+ * `format('woff2')`, not `format('woff2-variations')`. The `-variations` form is
+ * a superseded draft that some browsers no longer match, and a face they cannot
+ * match is a face they will not download — so the preload sits unused and the
+ * console says so. The variable axis is declared by the `font-weight` range
+ * below, which is what actually matters.
+ *
+ * `font-display: swap` shows the fallback immediately and swaps when the real
+ * face arrives. The alternative, `optional`, avoids the swap entirely but will
+ * silently decline to use the font at all on a slow connection — and a diagram
+ * tool whose labels are measured for export cannot have the font be optional.
+ */
+@font-face {
+	font-family: 'Instrument Sans Variable';
+	src: url('/fonts/instrument-sans-latin-wght-normal.woff2') format('woff2');
+	font-weight: 400 700;
+	font-style: normal;
+	font-display: swap;
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2122, U+2191, U+2193, U+2212,
+		U+2215;
+}
+
+@font-face {
+	font-family: 'JetBrains Mono Variable';
+	src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+	font-weight: 400 700;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+2212;
+}

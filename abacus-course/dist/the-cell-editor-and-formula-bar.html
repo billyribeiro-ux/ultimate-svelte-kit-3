@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The cell editor and the formula bar — Building Abacus</title>
+<meta name="description" content="An input inside the cell, focused by an attachment. A formula bar whose coloured references are a mirror under a transparent input, with function-name completion and a syntax error that says where. Both bind to the same `editing.text`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">21 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 53.84615384615385%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html" aria-current="page"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 21</p>
+			<h1>The cell editor and the formula bar</h1>
+			<p class="lede">An input inside the cell, focused by an attachment. A formula bar whose coloured references are a mirror under a transparent input, with function-name completion and a syntax error that says where. Both bind to the same <code>editing.text</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Share one editing session between two inputs, colour text inside an input, and reset a piece of state without an effect.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:1-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { Sheet } from '#lib/sheet/sheet.svelte.ts';
+
+	/**
+	 * THE IN-CELL EDITOR
+	 * ==================
+	 *
+	 * An input drawn over the cell being edited. It has no state of its own:
+	 * the text lives in `sheet.editing.text`, which the formula bar binds to
+	 * as well — type in either and the other follows, because they are two
+	 * views of one `$state` object rather than two copies kept in sync.
+	 *
+	 * The grid decides when editing starts and what happens on commit; this
+	 * component reports the keys that end it.
+	 */
+	let {
+		sheet,
+		oncommit,
+		oncancel
+	}: {
+		sheet: Sheet;
+		/** Enter, Tab, or a click elsewhere: the direction says where the selection goes next. */
+		oncommit: (direction: 'down' | 'up' | 'right' | 'left' | 'stay') =&gt; void;
+		oncancel: () =&gt; void;
+	} = $props();
+
+	let input = $state&lt;HTMLInputElement&gt;();
+
+	/**
+	 * `{@attach}` rather than `autofocus`: the attachment runs when the element
+	 * is in the DOM and can put the caret at the end, which an attribute cannot.
+	 * It also selects nothing, so typing continues the text rather than
+	 * replacing it — the way F2 works in every spreadsheet.
+	 */
+	const focusAtEnd = (node: HTMLInputElement) =&gt; {
+		node.focus();
+		node.setSelectionRange(node.value.length, node.value.length);
+	};</code></pre>
+</figure>
+<p>The editor is an input that binds to <code>sheet.editing.text</code>. <code>focusAtEnd</code> is an attachment — a function that receives the element when it mounts — and it puts the caret at the end, which is where a person expects it after pressing F2. <code>bind:value</code> on a nested <code>$state</code> property works because <code>editing</code> is a reactive object.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:40-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	function keydown(event: KeyboardEvent) {
+		switch (event.key) {
+			case 'Enter':
+				event.preventDefault();
+				oncommit(event.shiftKey ? 'up' : 'down');
+				break;
+			case 'Tab':
+				event.preventDefault();
+				oncommit(event.shiftKey ? 'left' : 'right');
+				break;
+			case 'Escape':
+				event.preventDefault();
+				oncancel();
+				break;
+		}
+		// Arrow keys stay inside the input: moving the caret through a long
+		// formula matters more than moving the selection, and Enter is one key away.
+		event.stopPropagation();
+	}
+
+	/** Exposed so the grid can insert a reference at the caret when a cell is clicked mid-formula. */
+	export function insertAtCaret(
+		text: string,
+		replace: { start: number; end: number } | null
+	): {
+		start: number;
+		end: number;
+	} {
+		if (!input || !sheet.editing) return { start: 0, end: 0 };
+		const current = sheet.editing.text;
+		const start = replace ? replace.start : (input.selectionStart ?? current.length);
+		const end = replace ? replace.end : (input.selectionEnd ?? current.length);
+		sheet.editing.text = current.slice(0, start) + text + current.slice(end);
+		const caret = start + text.length;
+		queueMicrotask(() =&gt; {
+			input?.focus();
+			input?.setSelectionRange(caret, caret);
+		});
+		return { start, end: caret };
+	}
+&lt;/script&gt;
+
+{#if sheet.editing}
+	&lt;input
+		bind:this={input}
+		class={['editor', { 'editor--formula': sheet.editing.text.startsWith('=') }]}
+		type=&quot;text&quot;
+		aria-label=&quot;Cell editor&quot;
+		spellcheck=&quot;false&quot;
+		autocomplete=&quot;off&quot;
+		bind:value={sheet.editing.text}
+		onkeydown={keydown}
+		{@attach focusAtEnd}
+	/&gt;
+{/if}
+
+&lt;style&gt;</code></pre>
+</figure>
+<p>The editor owns Enter, Tab and Escape, and *stops propagation* of everything so the grid’s handler never sees a keystroke meant for the input. <code>insertAtCaret</code> is an exported function, which is what the grid calls through <code>bind:this</code> when a cell is clicked during a formula: it splices the reference at the caret — or over the reference the last click inserted — and puts the caret after it.</p>
+<h3 id="the-mirror">The mirror</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:11-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE FORMULA BAR
+ * ===============
+ *
+ * The address of the active cell, and its input — editable. While a
+ * formula is being typed, every reference is coloured, function names
+ * are completed, and a syntax error says where it is.
+ *
+ * THE COLOURED TEXT IS A MIRROR
+ * -----------------------------
+ * A text input cannot colour its own characters. Underneath the input
+ * there is a `&lt;div&gt;` showing the same text as coloured spans, in the same
+ * font and padding, and the input's text is transparent — the caret and
+ * the selection are the input's, the colours are the mirror's. Old trick,
+ * still the right one.
+ *
+ * The input binds to `sheet.editing.text`, the same `$state` the in-cell
+ * editor binds to. Type in either; both show it.
+ */
+let { sheet, readonly = false }: { sheet: Sheet; readonly?: boolean } = $props();
+
+let input = $state&lt;HTMLInputElement&gt;();
+let caret = $state(0);
+
+/** What the bar shows: the edit in progress, or the anchor cell's input. */
+const text = $derived.by(() =&gt; {
+	if (sheet.editing) return sheet.editing.text;
+	void sheet.version;
+	return sheet.input(sheet.anchor.row, sheet.anchor.col);
+});
+
+const isFormula = $derived(text.startsWith('='));</code></pre>
+</figure>
+<p>A text input cannot colour its own characters. Underneath the input there is a <code>&lt;div&gt;</code> showing the same text as coloured spans, in the same font and padding, and the input’s text is transparent — the caret and the selection are the input’s, the colours are the mirror’s. Old trick, still the right one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:44-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** The text as coloured segments for the mirror. */
+const segments = $derived.by(() =&gt; {
+	if (!isFormula) return [{ text, hue: null as number | null }];
+	const marks = highlights(text.slice(1));
+	const out: { text: string; hue: number | null }[] = [{ text: '=', hue: null }];
+	let at = 1;
+	for (const mark of marks) {
+		const start = mark.start + 1;
+		const end = mark.end + 1;
+		if (start &gt; at) out.push({ text: text.slice(at, start), hue: null });
+		out.push({ text: text.slice(start, end), hue: mark.hue });
+		at = end;
+	}
+	if (at &lt; text.length) out.push({ text: text.slice(at), hue: null });
+	return out;
+});
+
+/** A syntax error in the formula being typed, with its position. */
+const problem = $derived.by(() =&gt; {
+	if (!sheet.editing || !isFormula || text.length &lt; 2) return null;
+	try {
+		parse(text.slice(1));
+		return null;
+	} catch (e) {
+		return e instanceof FormulaSyntaxError
+			? { message: e.message, at: e.position + 1 }
+			: { message: String(e), at: 0 };
+	}
+});
+
+/** When not editing: why the anchor cell shows an error, if it does. */
+const cellProblem = $derived.by(() =&gt; {
+	if (sheet.editing) return null;
+	void sheet.version;
+	const cell = sheet.engine.get(sheet.anchor.row, sheet.anchor.col);
+	if (!cell) return null;
+	if (cell.error) return cell.error;
+	return cell.value instanceof ErrorValue
+		? `${cell.value.code} ${cell.value.message}`.trim()
+		: null;
+});</code></pre>
+</figure>
+<p>Everything the bar shows is <code>$derived</code>: the text (the edit in progress, or the anchor cell’s input), the coloured segments, the syntax error with its position, and — when nothing is being edited — why the anchor cell shows an error. Note <code>void sheet.version</code> where a derived reads the engine: the same subscription the grid uses, for the same reason.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:179-214</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;bar&quot;&gt;
+	&lt;output class=&quot;address mono&quot; aria-label=&quot;Active cell&quot;&gt;{toA1(sheet.anchor)}&lt;/output&gt;
+	&lt;span class=&quot;fx&quot; aria-hidden=&quot;true&quot;&gt;&lt;FunctionIcon size={14} /&gt;&lt;/span&gt;
+
+	&lt;div class=&quot;field&quot;&gt;
+		&lt;div class=&quot;mirror mono&quot; aria-hidden=&quot;true&quot;&gt;
+			{#each segments as segment, i (i)}
+				{#if segment.hue === null}{segment.text}{:else}&lt;span
+						class=&quot;ref&quot;
+						style:--hl=&quot;var(--ref-hue-{segment.hue})&quot;&gt;{segment.text}&lt;/span
+					&gt;{/if}
+			{/each}
+		&lt;/div&gt;
+		&lt;input
+			bind:this={input}
+			class={['input-line mono', { 'input-line--formula': isFormula }]}
+			type=&quot;text&quot;
+			role=&quot;combobox&quot;
+			aria-label=&quot;Formula&quot;
+			aria-autocomplete=&quot;list&quot;
+			aria-expanded={suggestions.length &gt; 0}
+			aria-controls=&quot;formula-suggestions&quot;
+			spellcheck=&quot;false&quot;
+			autocomplete=&quot;off&quot;
+			{readonly}
+			value={text}
+			oninput={(event) =&gt; {
+				if (!sheet.editing) sheet.beginEdit(event.currentTarget.value);
+				else sheet.editing.text = event.currentTarget.value;
+				updateCaret();
+			}}
+			onfocus={focus}
+			onkeydown={keydown}
+			onkeyup={updateCaret}
+			onclick={updateCaret}
+		/&gt;</code></pre>
+</figure>
+<h3 id="completion">Completion, and a reset without an effect</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:90-119</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** The function-name prefix under the caret, if the caret is in one. */
+const prefix = $derived.by(() =&gt; {
+	if (!sheet.editing || !isFormula) return null;
+	let tokens;
+	try {
+		tokens = tokenize(text.slice(1));
+	} catch {
+		return null;
+	}
+	const at = caret - 1;
+	const token = tokens.find((t) =&gt; t.type === 'name' &amp;&amp; t.start &lt; at &amp;&amp; at &lt;= t.end);
+	if (!token) return null;
+	// Already followed by &quot;(&quot;: it is a call, not a name being typed.
+	if (text[token.end + 1] === '(') return null;
+	return { text: token.text.toUpperCase(), start: token.start + 1, end: token.end + 1 };
+});
+
+const suggestions = $derived(
+	prefix ? FUNCTION_NAMES.filter((name) =&gt; name.startsWith(prefix.text)).slice(0, 8) : []
+);
+/**
+ * Which suggestion the arrow keys have reached. A `$derived` that a key
+ * handler assigns to: the assignment holds until `suggestions` changes,
+ * at which point the expression runs again and the choice resets to the
+ * first — a reset without an `$effect`.
+ */
+let highlighted = $derived.by(() =&gt; {
+	void suggestions;
+	return 0;
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why highlighted is a $derived that a key handler writes to</h4>
+	<p>The arrow keys move a highlight through the suggestions, and the highlight must go back to the first suggestion whenever the list changes. The obvious code is <code>$state</code> plus an <code>$effect</code> that resets it — and the Svelte autofixer flags exactly that, because assigning state in an effect is how components loop. A <code>$derived</code> may be *reassigned*: the assignment holds until the expression re-runs, and it re-runs when <code>suggestions</code> changes because the body reads it. One declaration, no effect, and the reset is a consequence of the dependency rather than a second piece of code that has to agree with the first. The find bar does the same with its match index.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:121-176</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function accept(name: string) {
+	if (!sheet.editing || !prefix) return;
+	const before = text.slice(0, prefix.start);
+	const after = text.slice(prefix.end);
+	const inserted = `${name}(`;
+	sheet.editing.text = before + inserted + after;
+	const position = before.length + inserted.length;
+	queueMicrotask(() =&gt; {
+		input?.focus();
+		input?.setSelectionRange(position, position);
+		caret = position;
+	});
+}
+
+/* ---------------------------------------------------------------- */
+/* Keys                                                              */
+/* ---------------------------------------------------------------- */
+
+function focus() {
+	if (readonly) return;
+	if (!sheet.editing) sheet.beginEdit();
+}
+
+function keydown(event: KeyboardEvent) {
+	if (suggestions.length &gt; 0) {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			highlighted = (highlighted + 1) % suggestions.length;
+			return;
+		}
+		if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlighted = (highlighted - 1 + suggestions.length) % suggestions.length;
+			return;
+		}
+		if (event.key === 'Tab' || event.key === 'Enter') {
+			event.preventDefault();
+			accept(suggestions[highlighted]!);
+			return;
+		}
+	}
+	if (event.key === 'Enter') {
+		event.preventDefault();
+		const cell = sheet.commitEdit();
+		if (cell) sheet.select(cell);
+		input?.blur();
+	} else if (event.key === 'Escape') {
+		event.preventDefault();
+		sheet.cancelEdit();
+		input?.blur();
+	}
+}
+
+function updateCaret() {
+	caret = input?.selectionStart ?? 0;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:216-244</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">		{#if suggestions.length &gt; 0}
+			&lt;ul class=&quot;suggestions&quot; id=&quot;formula-suggestions&quot; role=&quot;listbox&quot;&gt;
+				{#each suggestions as name, i (name)}
+					{@const spec = FUNCTIONS.get(name)}
+					&lt;li
+						role=&quot;option&quot;
+						aria-selected={i === highlighted}
+						class={{ 'suggestion--active': i === highlighted }}
+					&gt;
+						&lt;button
+							type=&quot;button&quot;
+							onpointerdown={(e) =&gt; e.preventDefault()}
+							onclick={() =&gt; accept(name)}
+						&gt;
+							&lt;span class=&quot;mono&quot;&gt;{spec?.signature}&lt;/span&gt;
+							&lt;span class=&quot;hint&quot;&gt;{spec?.description}&lt;/span&gt;
+						&lt;/button&gt;
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+		{/if}
+	&lt;/div&gt;
+&lt;/div&gt;
+
+{#if problem}
+	&lt;p class=&quot;issue problem&quot; role=&quot;alert&quot;&gt;{problem.message} — at character {problem.at}&lt;/p&gt;
+{:else if cellProblem}
+	&lt;p class=&quot;issue problem&quot; role=&quot;status&quot;&gt;{cellProblem}&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>The list is a <code>listbox</code> of <code>option</code>s, the input is a <code>combobox</code> that says so with <code>aria-expanded</code> and <code>aria-controls</code>, and the syntax error is <code>role=&quot;alert&quot;</code> so it is announced. <code>onpointerdown</code> on each option prevents default so the input does not lose focus before the click lands — the one line every custom completion needs and most forget.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the editor calls <code>stopPropagation</code> and what the grid would do otherwise.</li><li>You can say how the mirror stays aligned with the input and what would break it.</li><li>You can rewrite a <code>$state</code> + <code>$effect</code> reset as an assignable <code>$derived</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="keyboard-and-pointer.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Keyboard, pointer, clipboard</span>
+			</a>
+			<a class="pager__link pager__link--next" href="toolbar-find-and-workbench.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The toolbar, find and replace, and the workbench</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

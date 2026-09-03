@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passkeys: signing in without a password — Building Abacus</title>
+<meta name="description" content="A key pair: the private half stays in the device, the public half lives in `credentials`. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against `PUBLIC_ORIGIN`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">26 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 66.66666666666666%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html" aria-current="page"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 26</p>
+			<h1>Passkeys: signing in without a password</h1>
+			<p class="lede">A key pair: the private half stays in the device, the public half lives in <code>credentials</code>. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against <code>PUBLIC_ORIGIN</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Implement WebAuthn registration and authentication with the bookkeeping most relying parties get wrong, and describe the browser’s answer with a schema that matches the library’s types.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/passkeys.ts<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PASSKEYS
+ * ========
+ *
+ * Signing in without a password. A passkey is a key pair: the private half
+ * lives in the person's phone, laptop or security key and never leaves it;
+ * the public half lives here, in `credentials`. Registering makes the pair;
+ * signing in proves the private half is still there by signing a challenge
+ * this server just made up.
+ *
+ * Every ceremony is two remote calls — *begin*, which returns options for
+ * the browser's `navigator.credentials` and stores a one-time challenge, and
+ * *finish*, which verifies the browser's answer against that challenge. The
+ * verification is `@simplewebauthn/server`; what this file adds is the
+ * bookkeeping every relying party has to do and most get wrong: single-use
+ * challenges that expire, the counter that detects a cloned key, and the
+ * origin and relying-party id checked against `PUBLIC_ORIGIN` rather than
+ * against whatever the request claims.
+ */
+
+import {
+	generateAuthenticationOptions,
+	generateRegistrationOptions,
+	verifyAuthenticationResponse,
+	verifyRegistrationResponse,
+	type AuthenticationResponseJSON,
+	type PublicKeyCredentialCreationOptionsJSON,
+	type PublicKeyCredentialRequestOptionsJSON,
+	type RegistrationResponseJSON
+} from '@simplewebauthn/server';
+import { error } from '@sveltejs/kit';
+import { and, eq, lt } from 'drizzle-orm';
+import { PUBLIC_ORIGIN } from '$app/env/public';
+import { db, schema } from './db/index.ts';
+import { base64url, fromBase64url, newId, type User } from './identity.ts';
+
+export const RP_NAME = 'Abacus';
+/** The relying-party id is the hostname, without port or scheme: `localhost`, `abacus.example`. */
+export const RP_ID = new URL(PUBLIC_ORIGIN).hostname;
+
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+const encoder = new TextEncoder();</code></pre>
+</figure>
+<p>The verification is <code>@simplewebauthn/server</code>; what this file adds is the bookkeeping every relying party has to do. The relying-party id is the *hostname* of <code>PUBLIC_ORIGIN</code> — no scheme, no port — which is why that variable is <code>static</code> and baked in at build time: a passkey registered for one hostname must not be asserted against another.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/passkeys.ts<span class="code__lines">:45-74</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/* ------------------------------------------------------------------ */
+/* Challenges                                                          */
+/* ------------------------------------------------------------------ */
+
+async function storeChallenge(row: {
+	kind: 'register' | 'login';
+	challenge: string;
+	userId: string | null;
+	name: string | null;
+}): Promise&lt;string&gt; {
+	const id = newId(24);
+	// Sweep the expired ones while we are here; a table of dead challenges
+	// helps nobody.
+	await db.delete(schema.challenges).where(lt(schema.challenges.expiresAt, Date.now()));
+	await db
+		.insert(schema.challenges)
+		.values({ id, ...row, expiresAt: Date.now() + CHALLENGE_TTL_MS });
+	return id;
+}
+
+/** The challenge, consumed: it is deleted on the way out, so it cannot be used twice. */
+async function takeChallenge(id: string, kind: 'register' | 'login') {
+	const row = await db.query.challenges.findFirst({
+		where: and(eq(schema.challenges.id, id), eq(schema.challenges.kind, kind))
+	});
+	if (row) await db.delete(schema.challenges).where(eq(schema.challenges.id, id));
+	if (!row || row.expiresAt &lt; Date.now())
+		error(400, 'That sign-in attempt has expired — try again');
+	return row;
+}</code></pre>
+</figure>
+<p>A challenge is stored with a five-minute expiry and *consumed* when taken: deleted on the way out, so it cannot be used twice. Expired ones are swept whenever a new one is stored.</p>
+<h3 id="registration">Registration</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/passkeys.ts<span class="code__lines">:80-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Options for `navigator.credentials.create()`. For a new person, `name` is
+ * what they typed and a user id is minted now — it travels through the
+ * challenge row and becomes a row in `users` only when the ceremony
+ * finishes. For an existing person adding a second passkey, their current
+ * credentials are excluded so the same key is not registered twice.
+ */
+export async function beginRegistration(
+	name: string,
+	existing: User | null
+): Promise&lt;{ options: PublicKeyCredentialCreationOptionsJSON; challengeId: string }&gt; {
+	const userId = existing?.id ?? newId();
+	const exclude = existing
+		? await db.query.credentials.findMany({ where: eq(schema.credentials.userId, existing.id) })
+		: [];
+
+	const options = await generateRegistrationOptions({
+		rpName: RP_NAME,
+		rpID: RP_ID,
+		userName: existing?.name ?? name,
+		userDisplayName: existing?.name ?? name,
+		userID: encoder.encode(userId),
+		attestationType: 'none',
+		excludeCredentials: exclude.map((c) =&gt; ({
+			id: c.id,
+			transports: JSON.parse(c.transports) as string[]
+		})),
+		authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' }
+	});
+
+	const challengeId = await storeChallenge({
+		kind: 'register',
+		challenge: options.challenge,
+		userId,
+		name: existing ? null : name
+	});
+	return { options, challengeId };
+}</code></pre>
+</figure>
+<p>For a new person, a user id is minted now and travels through the challenge row; it becomes a row in <code>users</code> only when the ceremony finishes, so an abandoned sign-up leaves nothing behind. For an existing person adding a second passkey, their current credentials are *excluded* so the same key is not registered twice — the end-to-end suite checks that the same virtual device is refused with exactly that error.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/passkeys.ts<span class="code__lines">:119-164</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function finishRegistration(
+	challengeId: string,
+	response: RegistrationResponseJSON,
+	label: string
+): Promise&lt;User&gt; {
+	const pending = await takeChallenge(challengeId, 'register');
+
+	let verification;
+	try {
+		verification = await verifyRegistrationResponse({
+			response,
+			expectedChallenge: pending.challenge,
+			expectedOrigin: PUBLIC_ORIGIN,
+			expectedRPID: RP_ID,
+			// `preferred`, not `required`: a hardware key with no PIN is still a passkey.
+			requireUserVerification: false
+		});
+	} catch (e) {
+		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+	}
+	if (!verification.verified) error(400, 'That passkey could not be verified');
+
+	const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+
+	let user = await db.query.users.findFirst({ where: eq(schema.users.id, pending.userId!) });
+	if (!user) {
+		const [created] = await db
+			.insert(schema.users)
+			.values({ id: pending.userId!, name: pending.name ?? 'Someone' })
+			.returning();
+		user = created!;
+	}
+
+	await db.insert(schema.credentials).values({
+		id: credential.id,
+		userId: user.id,
+		publicKey: base64url(credential.publicKey),
+		counter: credential.counter,
+		transports: JSON.stringify(credential.transports ?? []),
+		deviceType: credentialDeviceType,
+		backedUp: credentialBackedUp,
+		label: label.trim().slice(0, 40) || 'Passkey'
+	});
+
+	return { id: user.id, name: user.name };
+}</code></pre>
+</figure>
+<p><code>expectedOrigin</code> and <code>expectedRPID</code> come from the configuration, never from the request; a request that claims another origin is the attack. <code>requireUserVerification</code> is false because a hardware key with no PIN is still a passkey.</p>
+<h3 id="authentication">Authentication</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/passkeys.ts<span class="code__lines">:170-236</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Options for `navigator.credentials.get()`. No `allowCredentials`: the
+ * passkey is *discoverable*, so the browser shows the person their accounts
+ * for this site and nobody has to type a name first.
+ */
+export async function beginAuthentication(): Promise&lt;{
+	options: PublicKeyCredentialRequestOptionsJSON;
+	challengeId: string;
+}&gt; {
+	const options = await generateAuthenticationOptions({
+		rpID: RP_ID,
+		userVerification: 'preferred'
+	});
+	const challengeId = await storeChallenge({
+		kind: 'login',
+		challenge: options.challenge,
+		userId: null,
+		name: null
+	});
+	return { options, challengeId };
+}
+
+export async function finishAuthentication(
+	challengeId: string,
+	response: AuthenticationResponseJSON
+): Promise&lt;User&gt; {
+	const pending = await takeChallenge(challengeId, 'login');
+
+	const stored = await db.query.credentials.findFirst({
+		where: eq(schema.credentials.id, response.id),
+		with: { user: true }
+	});
+	if (!stored) error(400, 'That passkey is not registered here');
+
+	let verification;
+	try {
+		verification = await verifyAuthenticationResponse({
+			response,
+			expectedChallenge: pending.challenge,
+			expectedOrigin: PUBLIC_ORIGIN,
+			expectedRPID: RP_ID,
+			requireUserVerification: false,
+			credential: {
+				id: stored.id,
+				publicKey: fromBase64url(stored.publicKey),
+				counter: stored.counter,
+				transports: JSON.parse(stored.transports) as string[]
+			}
+		});
+	} catch (e) {
+		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+	}
+	if (!verification.verified) error(400, 'That passkey could not be verified');
+
+	/*
+	 * The counter goes up every time the authenticator signs. A response with
+	 * a counter at or below the stored one came from a *copy* of the key —
+	 * the library refuses it — and the new value is stored so the next copy
+	 * is caught too.
+	 */
+	await db
+		.update(schema.credentials)
+		.set({ counter: verification.authenticationInfo.newCounter, lastUsedAt: Date.now() })
+		.where(eq(schema.credentials.id, stored.id));
+
+	return { id: stored.user.id, name: stored.user.name };
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why there is no username field</h4>
+	<p>The passkey is *discoverable*: <code>beginAuthentication</code> sends no <code>allowCredentials</code>, so the browser shows the person their accounts for this site and nobody types a name first. The counter check after verification is the cloned-key defence: a response with a counter at or below the stored one came from a copy, the library refuses it, and the new value is stored so the next copy is caught too.</p>
+</aside>
+<h3 id="the-wire">The wire: a schema that matches the library’s types</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:37-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What the browser hands back from `navigator.credentials.create()`, as JSON.
+ * The schema names every field the WebAuthn library reads; anything else a
+ * client sends is dropped, and a client that sends the wrong shape is refused
+ * before any cryptography runs. The library then checks the contents.
+ */
+const Base64UrlSchema = v.pipe(v.string(), v.regex(/^[A-Za-z0-9_-]*$/, 'Expected base64url'));
+const AttachmentSchema = v.optional(v.picklist(['platform', 'cross-platform']));
+const ExtensionOutputsSchema = v.object({
+	appid: v.optional(v.boolean()),
+	credProps: v.optional(v.object({ rk: v.optional(v.boolean()) })),
+	hmacCreateSecret: v.optional(v.boolean())
+});
+
+const RegistrationResponseSchema = v.object({
+	id: Base64UrlSchema,
+	rawId: Base64UrlSchema,
+	type: v.literal('public-key'),
+	authenticatorAttachment: AttachmentSchema,
+	clientExtensionResults: ExtensionOutputsSchema,
+	response: v.object({
+		clientDataJSON: Base64UrlSchema,
+		attestationObject: Base64UrlSchema,
+		authenticatorData: v.optional(Base64UrlSchema),
+		transports: v.optional(v.array(v.string())),
+		publicKeyAlgorithm: v.optional(v.number()),
+		publicKey: v.optional(Base64UrlSchema)
+	})
+});</code></pre>
+</figure>
+<p>The browser’s answer arrives as JSON, and a remote command validates its argument with valibot. The schema names every field the library reads — base64url strings, the two attachment kinds, the extension outputs — and <code>v.object</code> drops anything else a client sends. The output type is assignable to the library’s <code>RegistrationResponseJSON</code>, and the library’s type from the browser package is assignable to the schema’s input, so both directions are checked by the compiler with no casts. The first draft used <code>looseObject</code> and needed two <code>as unknown as</code> casts; that was the sign the schema was wrong, not the types.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:67-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const finishRegistration = command(
+	v.object({
+		challengeId: v.string(),
+		response: RegistrationResponseSchema,
+		label: v.pipe(v.string(), v.maxLength(40))
+	}),
+	async ({ challengeId, response, label }) =&gt; {
+		const user = await passkeys.finishRegistration(challengeId, response, label);
+		await startSession(user);
+		void whoAmI().refresh();
+		void getProfile().refresh();
+		void listPasskeys().refresh();
+		return user;
+	}
+);
+
+/* ------------------------------------------------------------------ */
+/* Signing in                                                          */
+/* ------------------------------------------------------------------ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE BROWSER'S HALF OF A PASSKEY
+ * ===============================
+ *
+ * Two functions the sign-in page calls. Each is the same shape: ask the
+ * server for options, hand them to the browser's credential API through
+ * `@simplewebauthn/browser` (which does the base64url work and the feature
+ * detection), and send the browser's answer back to be verified. The
+ * private key never appears anywhere in this file, because it never leaves
+ * the authenticator.
+ */
+
+import {
+	browserSupportsWebAuthn,
+	startAuthentication,
+	startRegistration
+} from '@simplewebauthn/browser';
+import {
+	beginAuthentication,
+	beginRegistration,
+	finishAuthentication,
+	finishRegistration
+} from '#lib/remote/auth.remote.ts';
+import type { User } from '#lib/server/identity.ts';
+
+export const passkeysSupported = (): boolean =&gt;
+	typeof window !== 'undefined' &amp;&amp; browserSupportsWebAuthn();</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:40-64</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Create a passkey — for a new account with `name`, or as an extra key for the current one. */
+export async function registerPasskey(name: string): Promise&lt;User&gt; {
+	const { options, challengeId } = await beginRegistration({ name });
+	const response = await startRegistration({ optionsJSON: options });
+	return finishRegistration({ challengeId, response, label: deviceLabel() });
+}
+
+/** Sign in with any passkey registered here; the browser shows the picker. */
+export async function signInWithPasskey(): Promise&lt;User&gt; {
+	const { options, challengeId } = await beginAuthentication();
+	const response = await startAuthentication({ optionsJSON: options });
+	return finishAuthentication({ challengeId, response });
+}
+
+/** A message a person can act on, from the errors the credential API throws. */
+export function explain(error: unknown): string {
+	if (error instanceof Error) {
+		if (error.name === 'NotAllowedError') return 'The passkey prompt was cancelled or timed out.';
+		if (error.name === 'InvalidStateError')
+			return 'This device already has a passkey for that account.';
+		if (error.name === 'NotSupportedError') return 'This browser cannot create passkeys.';
+		return error.message;
+	}
+	return 'Something went wrong with the passkey.';
+}</code></pre>
+</figure>
+<p>The browser’s half: ask for options, hand them to <code>startRegistration</code> or <code>startAuthentication</code>, send the answer back. <code>explain</code> turns the credential API’s error names into sentences a person can act on — <code>NotAllowedError</code> is a cancelled prompt, <code>InvalidStateError</code> is “this device already has a passkey for that account”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:1-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { Page } from '@playwright/test';
+
+/**
+ * A PASSKEY DEVICE THAT EXISTS FOR ONE TEST
+ * =========================================
+ *
+ * A browser under test has no fingerprint reader. Chromium's DevTools
+ * protocol can attach a *virtual authenticator*: a software device that
+ * creates key pairs, signs challenges and answers the &quot;is the user
+ * present?&quot; question by itself. Everything else is real — the browser's
+ * `navigator.credentials` API, the JSON the library sends, the signatures
+ * the server verifies — so a green test here means a person with a real
+ * device gets the same result.
+ *
+ * `hasResidentKey` makes the device store discoverable credentials, which
+ * is what lets &quot;Sign in with a passkey&quot; work without typing a name first.
+ * `automaticPresenceSimulation` answers the touch prompt at once.
+ */
+export async function attachAuthenticator(page: Page) {
+	const cdp = await page.context().newCDPSession(page);
+	await cdp.send('WebAuthn.enable');
+	const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+		options: {
+			protocol: 'ctap2',
+			transport: 'internal',
+			hasResidentKey: true,
+			hasUserVerification: true,
+			isUserVerified: true,
+			automaticPresenceSimulation: true
+		}
+	});
+	return {
+		id: authenticatorId,
+		/** The credentials the device holds — one per registration. */
+		async credentials() {
+			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
+			return credentials;
+		},
+		async detach() {
+			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+			await cdp.detach();
+		}
+	};
+}</code></pre>
+</figure>
+<p>How this is tested: Chromium’s DevTools protocol attaches a *virtual authenticator* — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what a challenge is for and why it is deleted when taken.</li><li>You can explain what <code>excludeCredentials</code> prevents and what error the browser raises.</li><li>You can say why the valibot schema is explicit rather than loose, and what the casts were telling you.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="identity.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Identity: a signed cookie</span>
+			</a>
+			<a class="pager__link pager__link--next" href="sheets-over-the-wire.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Sheets over the wire: queries, forms, commands</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

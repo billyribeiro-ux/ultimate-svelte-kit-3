@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Splitting fairly, to the cent — Building Meridian</title>
+<meta name="description" content="One expense split by weight with the leftover cents handed out by largest remainder; balances per person; and the greedy settlement that pairs the biggest debtor with the biggest creditor. All integers, all deterministic, all tested.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">10 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 22.22222222222222%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html" aria-current="page"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 10</p>
+			<h1>Splitting fairly, to the cent</h1>
+			<p class="lede">One expense split by weight with the leftover cents handed out by largest remainder; balances per person; and the greedy settlement that pairs the biggest debtor with the biggest creditor. All integers, all deterministic, all tested.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Split an amount so the parts always sum to the whole, and turn a set of balances into the transfers that clear them — the same way on every machine.</p></aside>
+			<p>€10 between three people is €3.33 each and a cent left over, and somebody has to get it. Naive code either loses the cent, or gives it to “whoever came first” — which depends on the order the database returned the rows, which means two people looking at the same trip can see different settle-ups. This module makes both things impossible.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.ts<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHO OWES WHOM
+ * =============
+ *
+ * Three questions, three functions, all on integers:
+ *
+ *   `shares`    — one expense, split by weight, to the cent, with the
+ *                 leftover cents handed out by largest remainder so the
+ *                 parts always sum to the whole;
+ *   `balances`  — everything paid minus everything owed, per person;
+ *   `settle`    — the transfers that clear the balances, greedily pairing
+ *                 the biggest debtor with the biggest creditor, which gives
+ *                 at most `people − 1` transfers.
+ *
+ * The greedy answer is not always the *minimum* number of transfers — that
+ * problem is NP-hard in general — but for a trip of six it is the answer a
+ * person would write down, and it is deterministic, which is what the tests
+ * and the two browsers looking at the same page need.
+ */
+
+export interface Share {
+	readonly userId: string;
+	/** Relative weight: 1 for an even split, 2 for somebody who ate for two. */
+	readonly weight: number;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.ts<span class="code__lines">:27-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The minor units each participant owes for one expense. */
+export function shares(amountMinor: number, participants: readonly Share[]): Map&lt;string, number&gt; {
+	if (!Number.isInteger(amountMinor) || amountMinor &lt; 0) {
+		throw new RangeError('amount must be a non-negative integer of minor units');
+	}
+	const totalWeight = participants.reduce((sum, p) =&gt; sum + p.weight, 0);
+	if (participants.length === 0 || totalWeight &lt;= 0) {
+		throw new RangeError('at least one participant with positive weight is needed');
+	}
+
+	const exact = participants.map((p) =&gt; (amountMinor * p.weight) / totalWeight);
+	const floors = exact.map(Math.floor);
+	let leftover = amountMinor - floors.reduce((sum, n) =&gt; sum + n, 0);
+
+	/*
+	 * Largest remainder: whoever was rounded down the most gets the next cent.
+	 * Ties break on user id so two servers agree — the alternative, &quot;whoever
+	 * came first&quot;, depends on the order the rows came back.
+	 */
+	const order = participants
+		.map((p, i) =&gt; ({ i, remainder: exact[i]! - floors[i]!, id: p.userId }))
+		.sort((a, b) =&gt; b.remainder - a.remainder || (a.id &lt; b.id ? -1 : 1));
+
+	for (const { i } of order) {
+		if (leftover &lt;= 0) break;
+		floors[i] = floors[i]! + 1;
+		leftover -= 1;
+	}
+
+	return new Map(participants.map((p, i) =&gt; [p.userId, floors[i]!]));
+}</code></pre>
+</figure>
+<p><strong>Largest remainder.</strong> Compute each person’s exact share as a fraction, take the floor of each, and count how many cents are left. Then hand the leftover cents, one each, to the people who were rounded down the most. Ties are broken on user id, so two servers agree and so the test can assert exactly who gets the extra cent. The parts always sum to the whole, by construction — that is the property the first test checks, and the one that matters.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.ts<span class="code__lines">:59-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface ExpenseLike {
+	readonly amountMinor: number;
+	readonly paidBy: string;
+	readonly shares: readonly Share[];
+}
+
+/** Per person: positive is owed money, negative owes it. Sums to zero. */
+export function balances(expenses: readonly ExpenseLike[]): Map&lt;string, number&gt; {
+	const out = new Map&lt;string, number&gt;();
+	const add = (id: string, delta: number) =&gt; out.set(id, (out.get(id) ?? 0) + delta);
+
+	for (const expense of expenses) {
+		add(expense.paidBy, expense.amountMinor);
+		for (const [userId, owed] of shares(expense.amountMinor, expense.shares)) {
+			add(userId, -owed);
+		}
+	}
+
+	return out;
+}</code></pre>
+</figure>
+<p><code>balances</code> is bookkeeping: everything you paid, minus every share you owe, per person. It calls <code>shares</code> for each expense rather than trusting a stored share amount, so the balances on screen are always computed from the raw rows — the cents the server would compute are the cents the browser shows, because both run this function on the same integers.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.ts<span class="code__lines">:80-115</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Transfer {
+	readonly from: string;
+	readonly to: string;
+	readonly amountMinor: number;
+}
+
+/** The payments that bring every balance to zero. */
+export function settle(balanceByUser: ReadonlyMap&lt;string, number&gt;): Transfer[] {
+	const debtors = [...balanceByUser]
+		.filter(([, amount]) =&gt; amount &lt; 0)
+		.map(([id, amount]) =&gt; ({ id, remaining: -amount }))
+		.sort((a, b) =&gt; b.remaining - a.remaining || (a.id &lt; b.id ? -1 : 1));
+	const creditors = [...balanceByUser]
+		.filter(([, amount]) =&gt; amount &gt; 0)
+		.map(([id, amount]) =&gt; ({ id, remaining: amount }))
+		.sort((a, b) =&gt; b.remaining - a.remaining || (a.id &lt; b.id ? -1 : 1));
+
+	const transfers: Transfer[] = [];
+	let d = 0;
+	let c = 0;
+
+	while (d &lt; debtors.length &amp;&amp; c &lt; creditors.length) {
+		const debtor = debtors[d]!;
+		const creditor = creditors[c]!;
+		const amount = Math.min(debtor.remaining, creditor.remaining);
+
+		if (amount &gt; 0) transfers.push({ from: debtor.id, to: creditor.id, amountMinor: amount });
+
+		debtor.remaining -= amount;
+		creditor.remaining -= amount;
+		if (debtor.remaining === 0) d += 1;
+		if (creditor.remaining === 0) c += 1;
+	}
+
+	return transfers;
+}</code></pre>
+</figure>
+<p><code>settle</code> is the greedy algorithm: sort the debtors and the creditors by size, and pay the biggest debt into the biggest credit, moving on whichever side hits zero. It produces at most one fewer transfer than there are people. The comment is honest that this is not always the *minimum* number of transfers — that problem is NP-hard in general — and honest that for six friends it is the answer a person would write down. Determinism matters more than optimality here, and the tie-break on id is what provides it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/split.spec.ts<span class="code__lines">:1-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { balances, settle, shares } from './split.ts';
+
+const even = (...ids: string[]) =&gt; ids.map((userId) =&gt; ({ userId, weight: 1 }));
+
+describe('shares', () =&gt; {
+	it('splits evenly when it can', () =&gt; {
+		expect([...shares(3000, even('a', 'b', 'c'))]).toEqual([
+			['a', 1000],
+			['b', 1000],
+			['c', 1000]
+		]);
+	});
+
+	it('hands the leftover cents out by largest remainder, and always sums to the whole', () =&gt; {
+		const result = shares(1000, even('a', 'b', 'c'));
+		expect([...result.values()].reduce((s, n) =&gt; s + n, 0)).toBe(1000);
+		expect([...result.values()].sort()).toEqual([333, 333, 334]);
+	});
+
+	it('is deterministic about who gets the extra cent', () =&gt; {
+		const first = shares(1000, even('b', 'a', 'c'));
+		const second = shares(1000, even('c', 'b', 'a'));
+		expect(first.get('a')).toBe(334);
+		expect(second.get('a')).toBe(334);
+	});
+
+	it('respects weights', () =&gt; {
+		const result = shares(900, [
+			{ userId: 'a', weight: 2 },
+			{ userId: 'b', weight: 1 }
+		]);
+		expect(result.get('a')).toBe(600);
+		expect(result.get('b')).toBe(300);
+	});
+
+	it('refuses nonsense', () =&gt; {
+		expect(() =&gt; shares(10.5, even('a'))).toThrow(RangeError);
+		expect(() =&gt; shares(100, [])).toThrow(RangeError);
+		expect(() =&gt; shares(100, [{ userId: 'a', weight: 0 }])).toThrow(RangeError);
+	});
+});</code></pre>
+</figure>
+<p>The tests say what the properties are: even splits are even, the leftover goes by largest remainder and the parts sum to the whole, the recipient of the extra cent does not depend on input order, weights work, and nonsense is refused with a <code>RangeError</code> rather than a <code>NaN</code> that surfaces on screen. They run in Node in the <code>server</code> project in a few milliseconds.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain largest-remainder apportionment and why the tie-break is on id.</li><li>You can say why balances are recomputed from raw rows rather than stored.</li><li>You know what the greedy settlement guarantees and what it does not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="ids-dates-and-money.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Ids, dates and money</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-itinerary-as-data.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The itinerary as data</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

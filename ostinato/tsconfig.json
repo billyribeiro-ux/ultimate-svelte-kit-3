@@ -1,0 +1,59 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`.
+		//
+		// A sequencer is arrays all the way down: sixteen steps per track, eight
+		// tracks per pattern, a voice per track, a buffer per sample. Every one of
+		// those has an off-by-one waiting for the moment somebody adds a
+		// thirty-second-note mode, and this flag turns that moment into a red
+		// squiggle rather than a click on beat seventeen.
+		"noUncheckedIndexedAccess": true,
+
+		// An overriding method must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through to the next must be deliberate. The voice
+		// factory is a switch over instrument kinds; a missing `break` there plays
+		// a kick *and* a snare and sounds like a feature.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every path through a value-returning function must return.
+		"noImplicitReturns": true,
+
+		// Unused locals and parameters are errors. In audio code, a variable nobody
+		// reads is usually a gain node nobody connected.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"e2e/**/*.ts",
+		"scripts/**/*.js",
+		"scripts/**/*.ts",
+		"adapters/**/*.js",
+		"adapters/**/*.d.ts",
+		"*.config.ts",
+		"*.config.js"
+	],
+	/*
+	 * The service worker is excluded here and checked by `tsconfig.service-worker.json`,
+	 * which uses the WebWorker library instead of the DOM one. SvelteKit says so on
+	 * every `sync` — "src/service-worker should be added to the exclude array".
+	 */
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker.ts"]
+}

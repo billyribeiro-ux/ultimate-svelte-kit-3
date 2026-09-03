@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A workspace of two — Building Meridian</title>
+<meta name="description" content="The app at the root, the library it publishes in `packages/waypoint`, and the pnpm settings that make a workspace safe: `workspace:*`, `allowBuilds`, a minimum release age, and a `prepare` script that builds the library before the app can import it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">02 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 4.444444444444445%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html" aria-current="page"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 02</p>
+			<h1>A workspace of two</h1>
+			<p class="lede">The app at the root, the library it publishes in <code>packages/waypoint</code>, and the pnpm settings that make a workspace safe: <code>workspace:*</code>, <code>allowBuilds</code>, a minimum release age, and a <code>prepare</code> script that builds the library before the app can import it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the workspace configuration and know why the app depends on its own library the way a stranger would, and what pnpm 11 refuses to do until you say so.</p></aside>
+			<p>The first seven projects were single packages. This one is a <strong>workspace</strong>: the SvelteKit app at the root, and a library in <code>packages/waypoint</code> that the app depends on as if it had downloaded it from the registry. That is not an affectation. A library that is only ever imported by relative path is never really tested as a library; the first outside consumer finds the missing <code>exports</code> entry, the <code>.ts</code> import that should have been <code>.js</code>, the type that was never emitted. Making the app the first consumer finds all of that on every build.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># A workspace of two: the app at the root, and the library it publishes in
+# `packages/waypoint`. The app depends on the library as `workspace:*`, which
+# links the folder rather than downloading a tarball — so the app is the
+# library's first consumer, and the packaging is proved on every build.
+packages:
+  - 'packages/*'
+
+# pnpm 11 refuses to run a dependency's install scripts unless you say so by
+# name, which is the correct default: `postinstall` is arbitrary code from a
+# transitive dependency you have never read. esbuild needs it to unpack its
+# platform binary, and Vite needs esbuild.
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@libsql/client@0.18.0'
+  - '@libsql/core@0.18.0'
+  - maplibre-gl@6.7.0</code></pre>
+</figure>
+<p>Three settings, each a decision. <code>packages</code> names the folders. <code>allowBuilds</code> is pnpm 11’s answer to supply-chain attacks through install scripts: a dependency’s <code>postinstall</code> does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. <code>minimumReleaseAgeExclude</code> is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the three packages we deliberately took on the day they shipped.</p>
+<aside class="callout callout--note"><p>If you have never seen <code>allowBuilds</code> fail: run <code>pnpm install</code> on a fresh clone with it removed and watch pnpm list the packages that *wanted* to run scripts and were not allowed to. That list is worth reading once. Most of it is telemetry.</p></aside>
+<h3 id="the-scripts">The scripts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:11-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;pnpm run build:element &amp;&amp; vite dev&quot;,
+	&quot;build&quot;: &quot;pnpm run build:element &amp;&amp; vite build&quot;,
+	&quot;build:element&quot;: &quot;vite build --config vite.element.config.ts&quot;,
+	&quot;preview&quot;: &quot;vite preview&quot;,
+	&quot;start&quot;: &quot;node build&quot;,
+	&quot;prepare&quot;: &quot;pnpm run package &amp;&amp; pnpm run i18n &amp;&amp; svelte-kit sync || echo ''&quot;,
+	&quot;package&quot;: &quot;pnpm --filter @meridian/waypoint run package&quot;,
+	&quot;i18n&quot;: &quot;paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --strategy url cookie preferredLanguage baseLocale&quot;,
+	&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot;&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot; --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;format&quot;: &quot;prettier --write .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test:e2e&quot;: &quot;playwright test&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;verify:package&quot;: &quot;pnpm --filter @meridian/waypoint run verify&quot;,
+	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
+	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
+	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
+	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
+	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;
+},</code></pre>
+</figure>
+<p>The order of operations is the whole story of this file. <code>prepare</code> runs after <code>pnpm install</code>, and it does three things the app cannot start without: it builds the library (<code>package</code>), so <code>@meridian/waypoint</code> resolves to real files in <code>packages/waypoint/dist</code>; it compiles the messages (<code>i18n</code>), so <code>#lib/paraglide/messages.js</code> exists to be imported; and it runs <code>svelte-kit sync</code>, so the generated types exist. The <code>|| echo &quot;&quot;</code> on the end is for the one situation where any of those fails on purpose — a Docker build that installs dependencies before it copies the source — and chapter 44 shows the Dockerfile running the three steps itself, explicitly, once the source is there.</p>
+<p><code>build</code> and <code>dev</code> both start with <code>build:element</code>: the standalone custom element is a second Vite build into <code>static/embed</code>, and it has to exist before SvelteKit copies <code>static/</code> into the output. <code>check</code> compiles the messages first for the same reason <code>prepare</code> does, then passes one compiler-warnings flag whose reason is chapter 36. <code>verify</code> is the whole gate — type-check, lint, unit and browser tests, the production build, the end-to-end suite — and CI runs exactly that command, so what is green locally is green there.</p>
+<h3 id="dependencies">What is in the box</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:67-102</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;dependencies&quot;: {
+	&quot;@fontsource-variable/fraunces&quot;: &quot;^5.3.0&quot;,
+	&quot;@fontsource-variable/inter&quot;: &quot;^5.3.0&quot;,
+	&quot;@internationalized/date&quot;: &quot;^3.12.4&quot;,
+	&quot;@libsql/client&quot;: &quot;^0.18.0&quot;,
+	&quot;@meridian/waypoint&quot;: &quot;workspace:*&quot;,
+	&quot;@opentelemetry/api&quot;: &quot;^1.9.1&quot;,
+	&quot;@opentelemetry/core&quot;: &quot;^2.11.0&quot;,
+	&quot;@opentelemetry/sdk-trace-base&quot;: &quot;^2.11.0&quot;,
+	&quot;@opentelemetry/sdk-trace-node&quot;: &quot;^2.11.0&quot;,
+	&quot;@tanstack/svelte-table&quot;: &quot;^9.2.4&quot;,
+	&quot;@threlte/core&quot;: &quot;^8.6.0&quot;,
+	&quot;@threlte/extras&quot;: &quot;^9.21.1&quot;,
+	&quot;@tiptap/core&quot;: &quot;^3.31.0&quot;,
+	&quot;@tiptap/pm&quot;: &quot;^3.31.0&quot;,
+	&quot;@tiptap/starter-kit&quot;: &quot;^3.31.0&quot;,
+	&quot;better-auth&quot;: &quot;^1.7.2&quot;,
+	&quot;bits-ui&quot;: &quot;^2.19.0&quot;,
+	&quot;drizzle-orm&quot;: &quot;^0.45.2&quot;,
+	&quot;gsap&quot;: &quot;^3.15.0&quot;,
+	&quot;layerchart&quot;: &quot;^2.3.1&quot;,
+	&quot;maplibre-gl&quot;: &quot;^6.7.0&quot;,
+	&quot;phosphor-svelte&quot;: &quot;^3.1.0&quot;,
+	&quot;runed&quot;: &quot;^0.37.1&quot;,
+	&quot;svelte-dnd-action&quot;: &quot;^0.9.79&quot;,
+	&quot;svelte-maplibre&quot;: &quot;^2.0.0&quot;,
+	&quot;svelte-sonner&quot;: &quot;^1.2.1&quot;,
+	&quot;three&quot;: &quot;^0.185.1&quot;,
+	&quot;topojson-client&quot;: &quot;^3.1.0&quot;,
+	&quot;valibot&quot;: &quot;^1.4.2&quot;,
+	&quot;world-atlas&quot;: &quot;^2.0.2&quot;
+},
+&quot;imports&quot;: {
+	&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
+	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
+}</code></pre>
+</figure>
+<p>Forty-odd dependencies is more than any earlier project, and every one is here because a chapter needed it. The one to look at now is <code>&quot;@meridian/waypoint&quot;: &quot;workspace:*&quot;</code> — the protocol tells pnpm to link the folder rather than fetch a tarball, and to replace the specifier with the real version if this package were ever published. The <code>imports</code> map at the bottom is Node’s subpath-imports feature: <code>#lib/...</code> resolves to <code>src/lib/...</code> in Node, in Vite and in TypeScript alike, which is why this project has no <code>$lib</code> alias and no <code>paths</code> in its tsconfig. (SvelteKit 3 still supplies <code>$lib</code>; the project prefers the standard.)</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.npmrc<span class="code__lines">:1-1</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">engine-strict=false</code></pre>
+</figure>
+<p>One line, and an honest one. <code>engines</code> pins Node 24 — the current LTS at the time of writing, and what <code>.nvmrc</code> and the Dockerfile use — but <code>engine-strict=false</code> lets a machine on the previous LTS install and run with a warning rather than a wall. The features the project needs from Node 24 are conveniences, not requirements, and a course that refuses to start on last year’s Node is a course fewer people finish.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ corepack enable            # pnpm 11, pinned by &quot;packageManager&quot;
+$ pnpm install               # installs both packages, then runs prepare:
+                             #   svelte-package → packages/waypoint/dist
+                             #   paraglide-js compile → src/lib/paraglide
+                             #   svelte-kit sync → .svelte-kit/types
+$ cp .env.example .env       # DATABASE_URL, PUBLIC_ORIGIN, BETTER_AUTH_SECRET
+$ node scripts/migrate.ts &amp;&amp; node scripts/seed.ts
+$ pnpm run dev               # builds the element, then vite dev on :5173</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what <code>workspace:*</code> does and why the app depends on the library that way.</li><li>You can say which packages are allowed to run install scripts, and why the default is none.</li><li>You know the three things <code>prepare</code> builds and why the app cannot start without them.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="what-we-are-building.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">What we are building</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-config.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">One file to configure everything</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

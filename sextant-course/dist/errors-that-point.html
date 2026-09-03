@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errors that point at something — Building Sextant</title>
+<meta name="description" content="One error type for the whole front end, the difference between a message and a hint, and did-you-mean by edit distance.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 19.565217391304348%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html" aria-current="page"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>Errors that point at something</h1>
+			<p class="lede">One error type for the whole front end, the difference between a message and a hint, and did-you-mean by edit distance.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Produce errors somebody can act on, and know when a suggestion is worse than no suggestion.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/errors.ts<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ERRORS THAT POINT AT SOMETHING
+ * ==============================
+ *
+ * One error type for the whole front end — lexer, parser, checker — because a
+ * person typing a query does not care which phase objected, only where and why.
+ *
+ * Every error carries a `Span`, so the editor can underline the exact text, and
+ * a `hint` where there is something concrete to suggest. The distinction between
+ * `message` and `hint` matters: the message says what is wrong, the hint says
+ * what to do, and mixing them produces the &quot;expected one of: 47 tokens&quot; style of
+ * message that is technically complete and practically useless.
+ */</code></pre>
+</figure>
+<p>One type for the lexer, the parser and the checker, because a person typing a query does not care which phase objected — only where and why.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/errors.ts<span class="code__lines">:17-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class SqfError extends Error {
+	readonly span: Span;
+	/** A concrete suggestion, when there is one. Never a restatement of the message. */
+	readonly hint: string | undefined;
+
+	constructor(message: string, span: Span, hint?: string) {
+		super(message);
+		this.name = 'SqfError';
+		this.span = span;
+		this.hint = hint;
+	}</code></pre>
+</figure>
+<h3 id="message-vs-hint">Message and hint are different jobs</h3>
+<p>The message says <strong>what is wrong</strong>. The hint says <strong>what to do</strong>. Mixing them produces the &quot;expected one of: 47 tokens&quot; style of message that is technically complete and practically useless.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>message   A duration cannot be compared with a plain number
+hint      write a duration, like `500ms` or `2s`
+
+message   No column called `servce` on `logs`
+hint      did you mean `service`?
+
+message   `count` is an aggregation and can only appear in `summarize`
+hint      move it into a `summarize`, or use `where` on a column</code></pre>
+</figure>
+<p>And a text rendering, for the tests and for the command line. The editor never uses it — it has the span and draws its own underline — but having one means a failing test says what went wrong instead of <code>expected true to be false</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/errors.ts<span class="code__lines">:29-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The error rendered against the source, the way a compiler prints one.
+ *
+ * Used by the test suite and by the CLI in `scripts/`. The editor does not use
+ * it — it has the span and draws its own underline — but having a text form
+ * means a failing test says what went wrong instead of `expected true to be
+ * false`.
+ */
+format(source: string): string {
+	const before = source.slice(0, this.span.start);
+	const line = before.split('\n').length;
+	const column = this.span.start - (before.lastIndexOf('\n') + 1);
+	const width = Math.max(1, this.span.end - this.span.start);
+
+	const text = source.split('\n')[line - 1] ?? '';
+
+	return [
+		`${this.message} (line ${line}, column ${column + 1})`,
+		`  ${text}`,
+		`  ${' '.repeat(column)}${'^'.repeat(width)}`,
+		...(this.hint ? [`  hint: ${this.hint}`] : [])
+	].join('\n');
+}</code></pre>
+</figure>
+<h3 id="did-you-mean">Did-you-mean, and when to keep quiet</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/errors.ts<span class="code__lines">:54-75</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Did-you-mean, by edit distance.
+ *
+ * Bounded at distance 2 and at a third of the word's length, because past that
+ * the suggestion is noise: proposing `duration` for a typo of `d` is worse than
+ * proposing nothing, and a wrong suggestion is followed more often than no
+ * suggestion is ignored.
+ */
+export function nearest(word: string, candidates: readonly string[]): string | undefined {
+	let best: string | undefined;
+	let bestDistance = Math.min(2, Math.floor(word.length / 3)) + 1;
+
+	for (const candidate of candidates) {
+		const distance = editDistance(word, candidate);
+		if (distance &lt; bestDistance) {
+			best = candidate;
+			bestDistance = distance;
+		}
+	}
+
+	return best;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A wrong suggestion is worse than none</h4>
+	<p>The bound is the interesting part: distance 2, <strong>and</strong> at most a third of the word’s length. Proposing <code>duration</code> for a typo of <code>d</code> is worse than proposing nothing, because a wrong suggestion is followed more often than no suggestion is ignored. Somebody will type <code>duration</code>, get a different wrong answer, and conclude the tool is confused.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every error carries a span, and a hint when there is something concrete to say.</li><li><code>format()</code> prints a compiler-style caret under the offending text.</li><li>You can explain why the edit-distance bound scales with the word’s length.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-pratt-parser.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The Pratt parser</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-schema.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The schema: what a column is, and what a function promises</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

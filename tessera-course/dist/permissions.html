@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four roles, checked per operation — Building Tessera</title>
+<meta name="description" content="Why a single check at connection time is a suggestion rather than a permission system, and the 404 that stops a board id being an oracle.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 40.909090909090914%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html" aria-current="page"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>Four roles, checked per operation</h1>
+			<p class="lede">Why a single check at connection time is a suggestion rather than a permission system, and the 404 that stops a board id being an oracle.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make &quot;no&quot; mean something, in the one place a client cannot go around.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rbac.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * PERMISSIONS
+ * ===========
+ *
+ * Four roles, and one rule that matters more than the roles: **every operation
+ * is checked on the server, individually.**
+ *
+ * It is tempting to check once — &quot;this person is a viewer, so do not open the
+ * socket&quot; — and let the UI hide the toolbar. That is not a permission system, it
+ * is a suggestion. A collaborative editor ships the entire document model to the
+ * browser along with the code that mutates it; a viewer who opens the console
+ * has everything they need to emit a perfectly well-formed `node.remove`. The
+ * only place a &quot;no&quot; means anything is the ingestion path, which is why
+ * `sync/ingest.ts` calls `mayApply` for each operation rather than once per
+ * batch.
+ *
+ * Per-operation rather than per-batch matters too. A batch is client-supplied;
+ * checking the first operation and trusting the rest lets one legal edit carry
+ * five hundred illegal ones.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The thing that is specifically different about a collaborative editor</h4>
+	<p>A normal application ships the *interface* to the browser and keeps the logic on the server. A collaborative editor ships the entire document model <strong>and the code that mutates it</strong>, because that is what makes it work offline. So a viewer who opens the console has everything they need to construct a perfectly well-formed <code>node.remove</code> and post it. Hiding the toolbar is a courtesy to honest users. The only place a &quot;no&quot; means anything is the ingestion path.</p>
+</aside>
+<p>And per *operation*, not per batch: a batch is client-supplied, so checking the first one and trusting the rest lets one legal edit carry five hundred illegal ones.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rbac.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** What a role may do, from most to least. */
+const RANK: Record&lt;Role, number&gt; = { owner: 3, editor: 2, commenter: 1, viewer: 0 };
+
+export function atLeast(role: Role, minimum: Role): boolean {
+	return RANK[role] &gt;= RANK[minimum];
+}
+
+/**
+ * May somebody with this role apply this operation?
+ *
+ * Written as a total function of (role, operation) with no database access, so
+ * it is testable without fixtures and callable inside a hot loop over a batch.
+ */
+export function mayApply(role: Role, operation: Operation): boolean {
+	/*
+	 * Deliberately not a table of operation kinds.
+	 *
+	 * The first draft had one, and let commenters send `node.set` on the grounds
+	 * that position is not content. It is: a diagram where somebody has
+	 * rearranged the boxes is a different diagram, and &quot;who moved this?&quot; is
+	 * exactly the question roles exist to make unnecessary.
+	 *
+	 * So the line is drawn at the document boundary. Editors and owners change the
+	 * document; commenters and viewers do not, and comments live in their own
+	 * table with their own checks. The `operation` argument stays in the signature
+	 * because that boundary is the kind of thing that grows a special case — a
+	 * `text.insert` on a sticky note, say — and when it does, this is where it
+	 * goes rather than in four call sites.
+	 */
+	void operation;
+	return atLeast(role, 'editor');
+}</code></pre>
+</figure>
+<p>The comment inside <code>mayApply</code> is a design decision that reversed. The first draft had a table of operation kinds and let commenters send <code>node.set</code>, on the grounds that position is not content. It is: a diagram where somebody has rearranged the boxes is a different diagram, and &quot;who moved this?&quot; is exactly the question roles exist to make unnecessary.</p>
+<aside class="callout callout--note"><p>The <code>operation</code> argument stays in the signature even though the body currently ignores it (<code>void operation;</code> keeps the linter quiet and documents the intent). That boundary is the kind of thing that grows a special case — a <code>text.insert</code> on a sticky note, say — and when it does, this is where it goes rather than in four call sites.</p></aside>
+<h3 id="the-oracle">The 404 that is not a lie</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rbac.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Look up somebody's role on a board, or `null` if they have none.
+ *
+ * One query with a join, not two. Fetching the board and then the membership
+ * leaks the board's existence to somebody with no access — they get &quot;forbidden&quot;
+ * for a real id and &quot;not found&quot; for an invented one, which is enough to
+ * enumerate boards. Here, both cases return `null` and the caller answers 404
+ * for each.
+ */
+export async function accessTo(boardId: string, userId: string): Promise&lt;BoardAccess | null&gt; {
+	const rows = await db
+		.select({
+			boardId: board.id,
+			workspaceId: board.workspaceId,
+			role: membership.role
+		})
+		.from(board)
+		.innerJoin(membership, eq(membership.workspaceId, board.workspaceId))
+		.where(and(eq(board.id, boardId), eq(membership.userId, userId)))
+		.limit(1);
+
+	return rows[0] ?? null;
+}</code></pre>
+</figure>
+<p>One query with a join, not two. Fetching the board and *then* the membership leaks the board’s existence: you get &quot;forbidden&quot; for a real id and &quot;not found&quot; for an invented one, which is enough to enumerate every board on the server. Here both cases return <code>null</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/rbac.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Require at least `minimum` on a board.
+ *
+ * Answers 404 rather than 403 when the person has no membership at all, so that
+ * a board id is not an oracle. Once they *are* a member, 403 is the honest
+ * answer and tells them something they can act on.
+ */
+export async function requireAccess(
+	boardId: string,
+	userId: string,
+	minimum: Role
+): Promise&lt;BoardAccess&gt; {
+	const access = await accessTo(boardId, userId);
+	if (!access) throw new AccessError(404, 'No such board.');
+	if (!atLeast(access.role, minimum)) throw new AccessError(403, refusalFor(access.role));
+	return access;
+}</code></pre>
+</figure>
+<p>404 when there is no membership at all, 403 once there is. The first stops a board id being an oracle; the second is the honest answer and tells somebody something they can act on — ask for access.</p>
+<h3 id="the-seam">A file whose only job is to be importable</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/roles.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The role type, on its own, importable from the browser.
+ *
+ * `db/schema.ts` also exports `Role`, and importing it from there would drag
+ * Drizzle, the libSQL client and a native binding into the client bundle — which
+ * fails the build, loudly, but only after you have written the import in four
+ * components.
+ *
+ * A file whose only job is to be safe to import from both sides is not
+ * ceremony. It is the seam between the two, made explicit.
+ */
+export const ROLES = ['owner', 'editor', 'commenter', 'viewer'] as const;
+
+export type Role = (typeof ROLES)[number];</code></pre>
+</figure>
+<p>Fourteen lines, and it exists because importing <code>Role</code> from <code>db/schema.ts</code> drags Drizzle, the libSQL client and a native binding into the client bundle. That fails the build loudly — but only after you have written the import in four components. A file whose only job is to be safe to import from both sides is not ceremony; it is the seam between the two, made explicit.</p>
+<h3 id="auth">Sessions</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/auth.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Authentication.
+ *
+ * Better Auth with the Drizzle adapter, email and password, and nothing else.
+ * Social providers are a configuration change rather than a design change, and
+ * leaving them out keeps the seed data reproducible.
+ */
+import { BETTER_AUTH_SECRET } from '$app/env/private';
+import { PUBLIC_ORIGIN } from '$app/env/public';
+import { betterAuth } from 'better-auth/minimal';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { sveltekitCookies } from 'better-auth/svelte-kit';
+import { getRequestEvent } from '$app/server';
+import { db } from '#lib/server/db/index.ts';
+
+export const auth = betterAuth({
+	/*
+	 * The same origin the CSRF check uses, from the same variable.
+	 *
+	 * Two sources of truth for &quot;where is this app&quot; is a bug waiting for a
+	 * deployment: the cookie is issued for one origin and rejected by the check
+	 * for another, and the symptom is a sign-in that appears to succeed and then
+	 * lands back on the sign-in page with no error anywhere.
+	 */
+	baseURL: PUBLIC_ORIGIN,
+	secret: BETTER_AUTH_SECRET,
+	database: drizzleAdapter(db, { provider: 'sqlite' }),
+
+	emailAndPassword: {
+		enabled: true,
+		// Eight is the usual default and is too short to be worth the reassurance
+		// it gives. Twelve costs nothing to type and a great deal to guess.
+		minPasswordLength: 12
+	},
+
+	session: {
+		expiresIn: 60 * 60 * 24 * 30,
+		// Slide the expiry when a session is used, so somebody who works on a board
+		// every day is never signed out mid-drag.
+		updateAge: 60 * 60 * 24
+	},
+
+	plugins: [
+		/*
+		 * MUST be last. The plugin wraps the response so that cookies set during a
+		 * remote function call reach the browser; a plugin after it would see the
+		 * response before that wrapping and its own cookies would be dropped.
+		 */
+		sveltekitCookies(getRequestEvent)
+	]
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>Two things in there will cost you an hour each if you get them wrong. <code>baseURL</code> must come from the same variable the CSRF check uses, or the cookie is issued for one origin and rejected by the check for another — and the symptom is a sign-in that appears to succeed and lands back on the sign-in page with no error anywhere. And <code>sveltekitCookies</code> must be <strong>last</strong> in the plugin list, because it wraps the response so cookies set during a remote function call reach the browser.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Every operation is checked individually, on the server.</li><li>A board id you have no access to is indistinguishable from one that does not exist.</li><li>You can explain why the role type lives in its own fourteen-line file.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-log.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A database that stores operations</span>
+			</a>
+			<a class="pager__link pager__link--next" href="ingestion.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The only way in</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

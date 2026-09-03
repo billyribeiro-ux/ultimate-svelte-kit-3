@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The session: a pattern and its history — Building Ostinato</title>
+<meta name="description" content="A class in a `.svelte.ts` file holds the pattern as deep `$state`, keeps undo as snapshots, autosaves with a root effect, and can be tested without a component.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 35.8974358974359%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html" aria-current="page"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>The session: a pattern and its history</h1>
+			<p class="lede">A class in a <code>.svelte.ts</code> file holds the pattern as deep <code>$state</code>, keeps undo as snapshots, autosaves with a root effect, and can be tested without a component.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know when to put state in a class rather than a component, how deep <code>$state</code> makes a sixteen-by-eight grid cheap to update, and why undo is a stack of plain data.</p></aside>
+			<p>The studio page is long, and most of what it does is not about the page. Undo, the selected track, whether the pattern has changed since it was saved, where it came from — none of that is *rendering*. So it lives in a class, in a file that ends in <code>.svelte.ts</code>, which is the file extension that lets <code>$state</code> be used outside a component.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:1-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE STUDIO SESSION
+ * ==================
+ *
+ * The pattern being worked on, and everything about *working on it* that is
+ * not the pattern itself: undo, the selected track, whether it has changed
+ * since it was last saved, where it came from.
+ *
+ * A class in a `.svelte.ts` file, so that `$state` works in it and so that it
+ * can be tested without a component. The pattern is deep `$state`: toggling
+ * one step updates the one pad that shows it. Everything else is small.
+ *
+ * UNDO IS SNAPSHOTS
+ * -----------------
+ * Before every change that a person would want to take back, `commit()` pushes
+ * a copy of the whole pattern — in DTO form, which is plain data with no
+ * proxies in it, safe to keep in an array nothing observes, and small. A
+ * pattern is a couple of kilobytes; a hundred of them is nothing, and the
+ * limit is there so that a long session cannot grow without bound.
+ */</code></pre>
+</figure>
+<p>The fields are all <code>$state</code>. The pattern is *deep* state: Svelte wraps it in a proxy, and the proxy wraps every array and object inside it as it is reached. Toggling <code>step.velocity</code> on one pad notifies exactly the things that read that one step — the pad — and nothing else. A hundred and twenty-eight pads on screen, one re-render per click.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:44-65</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Session {
+	pattern = $state&lt;Pattern&gt;(emptyPattern());
+	/** Which track the sound panel is editing. */
+	selected = $state&lt;string | null&gt;(null);
+	brush = $state&lt;Brush&gt;('cycle');
+	/** The published pattern this is a remix of, if any. */
+	remixOf = $state&lt;string | null&gt;(null);
+	/** Changes since the last `markSaved()`. */
+	dirty = $state(false);
+	/**
+	 * When the pattern was last saved, as a reactive date. `SvelteDate` is a
+	 * `Date` whose reads are tracked — so the &quot;saved 3s ago&quot; label re-renders
+	 * when the *clock* it is compared against ticks, not just when this changes.
+	 */
+	savedAt = $state&lt;SvelteDate | null&gt;(null);
+	/** Bumped whenever a whole new pattern is loaded; `{#key}` in the grid watches it. */
+	generation = $state(0);
+
+	#undo: PatternDto[] = [];
+	#redo: PatternDto[] = [];
+	canUndo = $state(false);
+	canRedo = $state(false);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a class, and not a store or a component</h4>
+	<p>A class with <code>$state</code> fields is the plainest way to have reactive state that outlives, and is bigger than, any one component. It can be created in a test with <code>new Session()</code> and every method called directly, which is what <code>session.svelte.test.ts</code> does (ch. 37). A store would work but would push every update through <code>set</code>; a component would drag rendering into a thing that has nothing to render. The <code>.svelte.ts</code> extension is the whole trick — the compiler treats runes in it exactly as it does in a component script.</p>
+</aside>
+<h3 id="loading">Loading a pattern</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:71-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">load(pattern: Pattern, options: { remixOf?: string | null; keepHistory?: boolean } = {}): void {
+	if (!options.keepHistory) {
+		this.#undo.length = 0;
+		this.#redo.length = 0;
+		this.#syncHistoryFlags();
+	}
+	this.pattern = pattern;
+	this.remixOf = options.remixOf ?? null;
+	this.selected = pattern.tracks[0]?.id ?? null;
+	this.dirty = false;
+	this.generation += 1;
+}
+
+/** The `?p=` form of the current pattern — the share link. */
+get encoded(): string {
+	return encodePattern(this.pattern);
+}
+
+/**
+ * A copy with no proxies in it, for anything that leaves Svelte.
+ *
+ * NOT `$state.snapshot`, and the reason is worth knowing. `$state.snapshot`
+ * clones with `structuredClone`, which drops the prototype of any class
+ * instance — and calls `toJSON()` first if there is one. A `Note` would come
+ * back as a number. It is the right tool for plain data and the wrong tool
+ * for a model with a class in it; `clonePattern` knows what a `Note` is.
+ */
+snapshot(): Pattern {
+	return clonePattern(this.pattern);
+}</code></pre>
+</figure>
+<p><code>load</code> replaces the whole pattern. <code>generation</code> goes up by one, and the grid is wrapped in <code>{#key session.generation}</code> (ch. 19), so a whole new pattern gets a whole new grid rather than a row-by-row diff with transitions playing between two grooves that have nothing to do with each other.</p>
+<aside class="callout callout--warn"><p><code>snapshot()</code> is not <code>$state.snapshot()</code>, and the comment above it says why: <code>$state.snapshot</code> uses <code>structuredClone</code>, which calls <code>toJSON()</code> on anything that has one and drops the prototype of anything that does not. A <code>Note</code> (ch. 4) has a <code>toJSON</code> — it becomes its MIDI number — and the copy would have numbers where notes should be. <code>clonePattern</code> is the model’s own copy, and it knows what a <code>Note</code> is. Reach for <code>$state.snapshot</code> for plain data; for a model with a class in it, write the clone.</p></aside>
+<h3 id="undo">Undo is a stack of snapshots</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:106-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Call before a change a person might want back. */
+commit(): void {
+	// `toDto` reads through the proxy and writes plain data: a snapshot by construction.
+	this.#undo.push(toDto(this.pattern));
+	if (this.#undo.length &gt; HISTORY_LIMIT) this.#undo.shift();
+	this.#redo.length = 0;
+	this.dirty = true;
+	this.#syncHistoryFlags();
+}
+
+undo(): void {
+	const previous = this.#undo.pop();
+	if (!previous) return;
+	this.#redo.push(toDto(this.pattern));
+	this.pattern = fromDto(previous);
+	this.dirty = true;
+	this.#syncHistoryFlags();
+}
+
+redo(): void {
+	const next = this.#redo.pop();
+	if (!next) return;
+	this.#undo.push(toDto(this.pattern));
+	this.pattern = fromDto(next);
+	this.dirty = true;
+	this.#syncHistoryFlags();
+}
+
+#syncHistoryFlags(): void {
+	this.canUndo = this.#undo.length &gt; 0;
+	this.canRedo = this.#redo.length &gt; 0;
+}</code></pre>
+</figure>
+<p>Every edit calls <code>commit()</code> *before* it changes anything. The snapshot is a DTO — plain arrays and numbers, produced by <code>toDto</code> reading through the proxy — so the history holds no proxies, and nothing observes it. <code>undo</code> moves the current pattern to the redo stack and puts the previous one back with <code>fromDto</code>, which rebuilds the <code>Note</code>s. A hundred entries is the limit; a pattern is two kilobytes and nobody undoes further than that.</p>
+<aside class="callout callout--note"><p><code>canUndo</code> and <code>canRedo</code> are <code>$state</code> booleans kept in step by <code>#syncHistoryFlags()</code>, rather than derived from the private arrays. A <code>$derived</code> cannot see a plain array change, and the arrays are deliberately plain — making them <code>$state</code> so that a button can grey out would proxy every snapshot for the sake of two booleans.</p></aside>
+<h3 id="editing">Editing</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:147-165</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Paint a step with the current brush. */
+paint(trackId: string, index: number): void {
+	const track = this.track(trackId);
+	const step = track?.steps[index];
+	if (!step) return;
+
+	const next =
+		this.brush === 'cycle'
+			? cycleVelocity(step.velocity)
+			: this.brush === 'accent'
+				? 112
+				: this.brush === 'soft'
+					? 64
+					: 0;
+	if (next === step.velocity) return;
+
+	this.commit();
+	step.velocity = next;
+}</code></pre>
+</figure>
+<p>The brush decides what a click does. <code>cycle</code> is the default — off, soft, on, accent, off — and the other three paint a fixed velocity. The early <code>return</code> when nothing would change matters more than it looks: it is what keeps a click on an already-erased step from pushing an undo entry that undoes nothing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:174-182</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">transpose(trackId: string, index: number, semitones: number): void {
+	const track = this.track(trackId);
+	const step = track?.steps[index];
+	if (!track || !step || !MELODIC.has(track.kind)) return;
+	const note = step.note.transpose(semitones);
+	if (note === step.note) return;
+	this.commit();
+	step.note = note;
+}</code></pre>
+</figure>
+<p><code>Note.transpose</code> returns the *same* object when the result would be identical (ch. 4), which is what makes <code>note === step.note</code> a correct test for “nothing changed” — and again, no empty undo entry.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:213-234</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Reorder by dragging; `animate:flip` in the grid draws the move. */
+moveTrack(id: string, direction: -1 | 1): void {
+	const tracks = this.pattern.tracks;
+	const from = tracks.findIndex((track) =&gt; track.id === id);
+	const to = from + direction;
+	if (from === -1 || to &lt; 0 || to &gt;= tracks.length) return;
+	this.commit();
+	const [track] = tracks.splice(from, 1);
+	tracks.splice(to, 0, track!);
+}
+
+/** Change what a track *is*; melodic tracks get a sensible starting note. */
+setKind(id: string, kind: Kind): void {
+	const track = this.track(id);
+	if (!track || track.kind === kind) return;
+	this.commit();
+	const wasMelodic = MELODIC.has(track.kind);
+	track.kind = kind;
+	if (MELODIC.has(kind) &amp;&amp; !wasMelodic) {
+		for (const step of track.steps) step.note = defaultNote(kind);
+	}
+}</code></pre>
+</figure>
+<p><code>moveTrack</code> splices the array in place. Because the grid keys its rows by <code>track.id</code>, Svelte moves the existing <code>&lt;li&gt;</code> rather than rebuilding it, and <code>animate:flip</code> (ch. 16) draws the move. <code>setKind</code> reads <code>wasMelodic</code> *before* assigning the new kind — the order matters, because after the assignment the old kind is gone.</p>
+<h3 id="persistence">Persistence and autosave</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:240-265</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Write to `localStorage`. Cheap enough to call on every change. */
+persist(): void {
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify({ p: this.encoded, remixOf: this.remixOf }));
+	} catch {
+		// Private mode, full quota: the studio still works, it just forgets.
+	}
+}
+
+/** Whatever the last visit left behind, or `false` if nothing usable. */
+restore(): boolean {
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		if (!raw) return false;
+		const saved = JSON.parse(raw) as { p: string; remixOf: string | null };
+		this.load(decodePattern(saved.p), { remixOf: saved.remixOf });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+markSaved(): void {
+	this.dirty = false;
+	this.savedAt = new SvelteDate();
+}</code></pre>
+</figure>
+<p>What is saved is the encoded string from chapter 7 — the same thing a share link holds — plus the id this is a remix of. <code>localStorage</code> can throw (private mode, a full quota), and a studio that forgets is better than a studio that crashes, so the <code>catch</code> is empty on purpose and says so.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/studio/session.svelte.ts<span class="code__lines">:267-301</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Autosave: persist after every change, without a save button.
+ *
+ * `$effect.root` creates an effect *outside* a component. The session is
+ * built by the studio page and would normally create its effects in that
+ * component's context — but it is also built by tests, where there is no
+ * component, and an `$effect` there would throw. A root effect works in
+ * both and returns the function that tears it down, which the page calls
+ * from its own cleanup.
+ *
+ * Reading `this.encoded` inside the effect is what subscribes it to every
+ * step, knob and title — the whole pattern, because the encoding reads the
+ * whole pattern.
+ */
+autosave(): () =&gt; void {
+	return $effect.root(() =&gt; {
+		let first = true;
+		$effect(() =&gt; {
+			void this.encoded;
+			void this.remixOf;
+
+			/*
+			 * Skip the first run. The effect fires once with the pattern the page
+			 * started from — a preset, or the server's placeholder for a fresh
+			 * visit — and persisting *that* would overwrite the saved session
+			 * moments before `restore()` reads it. Only changes are saved.
+			 */
+			if (first) {
+				first = false;
+				return;
+			}
+			this.persist();
+		});
+	});
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>$effect.root</code></h4>
+	<p>An <code>$effect</code> needs an owner — normally the component it is written in — so that it is torn down when the component is. <code>Session</code> is not a component; it is built by the page *and* by tests, and a bare <code>$effect</code> in a test throws. <code>$effect.root</code> creates an owner and hands back the function that disposes of it. The page calls <code>autosave()</code> inside its own <code>$effect</code> and returns the disposer as that effect’s cleanup (ch. 19), so from the page’s point of view it is one line.</p>
+</aside>
+<aside class="callout callout--warn"><p>The <code>first</code> flag is not a nicety. The effect runs once immediately with whatever pattern the page started from — on a fresh visit that is the server’s placeholder preset — and *persisting that* would overwrite the saved session a few milliseconds before <code>restore()</code> reads it. This was found by the end-to-end test that reloads the studio and expects yesterday’s pattern (ch. 38). Effects run on creation; when the first run must not have the side effect, say so.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>.svelte.ts</code> is in the filename, and what would happen if it were not.</li><li>You can explain why undo snapshots are DTOs rather than <code>$state.snapshot()</code> results.</li><li>You can trace one click on a pad through <code>paint</code> → <code>commit</code> → <code>step.velocity = next</code> and say which component re-renders.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="render-to-a-file.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Render to a file, and load one</span>
+			</a>
+			<a class="pager__link pager__link--next" href="a-knob.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A knob</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

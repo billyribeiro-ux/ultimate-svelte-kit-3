@@ -1,0 +1,54 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`.
+		//
+		// A spreadsheet is a grid of maybes: a row that may not exist, a cell in
+		// it that may be empty, a token after the last token. Every one of those
+		// is a crash at runtime or a red squiggle now, and this flag picks now.
+		"noUncheckedIndexedAccess": true,
+
+		// An overriding method must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through must be deliberate. The evaluator is a
+		// switch over node kinds; a missing `break` there evaluates an addition as
+		// a subtraction and looks like a rounding error.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every path through a value-returning function must return.
+		"noImplicitReturns": true,
+
+		// Unused locals and parameters are errors.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"e2e/**/*.ts",
+		"scripts/**/*.js",
+		"scripts/**/*.ts",
+		"*.config.ts",
+		"*.config.js"
+	],
+	/*
+	 * The CSV worker runs in a Web Worker, where `window` does not exist and
+	 * `self` is a `DedicatedWorkerGlobalScope`. It is excluded here and checked
+	 * by `tsconfig.worker.json` with the WebWorker library instead of the DOM one.
+	 */
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/lib/csv/worker.ts"]
+}

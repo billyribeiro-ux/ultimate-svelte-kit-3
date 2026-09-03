@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companions, presence, the join page and settings — Building Meridian</title>
+<meta name="description" content="The member list with roles and “here now”; the owner’s invite link and two moderation buttons; presence chips fed by the live query; the join page as one query and one form; and the settings page — an owner-only page, a form that reads its props once, single-flight refresh, and a delete that asks first.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">31 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 68.88888888888889%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html" aria-current="page"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 31</p>
+			<h1>Companions, presence, the join page and settings</h1>
+			<p class="lede">The member list with roles and “here now”; the owner’s invite link and two moderation buttons; presence chips fed by the live query; the join page as one query and one form; and the settings page — an owner-only page, a form that reads its props once, single-flight refresh, and a delete that asks first.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Finish the trip’s social surface: everything a person can do to another person on the trip, and the page an owner uses to change the trip itself.</p></aside>
+			<p>The last tab and the two pages around it. Nothing here introduces a new library; it is the remote functions from chapter 19 with faces, and the interesting parts are the choices about which write is a form and which is a command.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:10-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * WHO IS ON THE TRIP
+ * ==================
+ *
+ * The member list with their roles, who is here right now, and — for the
+ * owner — the invite link and the two things they can do to a companion.
+ * An invite is a `command` because it exists to be copied; leaving is a
+ * `form` because it is a page with a button and should work with
+ * JavaScript off.
+ */
+interface Props {
+	view: TripState;
+	role: ViewerRole;
+	viewerId: string | null;
+}
+
+let { view, role, viewerId }: Props = $props();
+
+const owner = $derived(isOwner(role));
+const here = $derived(new Set(view.presence.map((p) =&gt; p.userId)));
+
+const roleLabel: Record&lt;Role, () =&gt; string&gt; = {
+	owner: m.role_owner,
+	editor: m.role_editor,
+	viewer: m.role_viewer
+};
+
+let inviteRole: 'editor' | 'viewer' = $state('editor');
+let inviteUrl = $state&lt;string | null&gt;(null);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:40-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">async function invite() {
+	try {
+		const result = await createInvite({ tripId: view.trip.id, role: inviteRole });
+		inviteUrl = result.url;
+	} catch (error) {
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}
+
+async function copy() {
+	if (!inviteUrl) return;
+	try {
+		await navigator.clipboard.writeText(inviteUrl);
+		toast(m.companions_copied());
+	} catch {
+		// The link is on screen; a person can still select it.
+	}
+}
+
+async function setRole(userId: string, next: 'editor' | 'viewer') {
+	try {
+		await changeRole({ tripId: view.trip.id, userId, role: next });
+	} catch (error) {
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}
+
+async function remove(userId: string) {
+	try {
+		await removeMember({ tripId: view.trip.id, userId });
+	} catch (error) {
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}</code></pre>
+</figure>
+<p>Making an invite is a <code>command</code> because the result exists to be copied — a link, on screen, with a button that writes it to the clipboard. Leaving is a <code>form</code>, because it is a page with a button and should work with JavaScript off. <code>here</code> is a set derived from the presence list, so the chip beside a companion who has the trip open appears and disappears with the stream.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:76-128</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class=&quot;stack stack--lg&quot;&gt;
+	&lt;h2&gt;{m.companions_title()}&lt;/h2&gt;
+
+	&lt;ul class=&quot;members&quot; role=&quot;list&quot;&gt;
+		{#each view.document.members as member (member.userId)}
+			&lt;li class=&quot;card member&quot;&gt;
+				&lt;div class=&quot;stack stack--sm&quot;&gt;
+					&lt;strong&gt;
+						{member.name}
+						{#if member.userId === viewerId}&lt;span class=&quot;muted&quot;&gt;({m.companions_you()})&lt;/span&gt;{/if}
+					&lt;/strong&gt;
+					&lt;p class=&quot;cluster&quot;&gt;
+						&lt;span class=&quot;chip&quot; class:chip--sea={member.role === 'owner'}
+							&gt;{roleLabel[member.role]()}&lt;/span
+						&gt;
+						{#if here.has(member.userId)}
+							&lt;span class=&quot;chip chip--sun&quot;&gt;{m.companions_here()}&lt;/span&gt;
+						{/if}
+					&lt;/p&gt;
+				&lt;/div&gt;
+				{#if owner &amp;&amp; member.role !== 'owner'}
+					&lt;div class=&quot;cluster&quot;&gt;
+						{#if member.role === 'editor'}
+							&lt;button
+								class=&quot;btn btn--sm&quot;
+								type=&quot;button&quot;
+								onclick={() =&gt; setRole(member.userId, 'viewer')}
+							&gt;
+								{m.companions_make_viewer()}
+							&lt;/button&gt;
+						{:else}
+							&lt;button
+								class=&quot;btn btn--sm&quot;
+								type=&quot;button&quot;
+								onclick={() =&gt; setRole(member.userId, 'editor')}
+							&gt;
+								{m.companions_make_editor()}
+							&lt;/button&gt;
+						{/if}
+						&lt;button
+							class=&quot;btn btn--sm btn--danger&quot;
+							type=&quot;button&quot;
+							onclick={() =&gt; remove(member.userId)}
+							aria-label=&quot;{m.companions_remove()} {member.name}&quot;
+						&gt;
+							&lt;UserMinusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+							{m.companions_remove()}
+						&lt;/button&gt;
+					&lt;/div&gt;
+				{/if}
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:130-162</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if owner}
+	&lt;div class=&quot;card card--pad stack&quot;&gt;
+		&lt;h3&gt;{m.companions_invite()}&lt;/h3&gt;
+		&lt;div class=&quot;cluster&quot;&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.companions_invite_role()}&lt;/span&gt;
+				&lt;select class=&quot;select&quot; bind:value={inviteRole}&gt;
+					&lt;option value=&quot;editor&quot;&gt;{m.companions_role_editor()}&lt;/option&gt;
+					&lt;option value=&quot;viewer&quot;&gt;{m.companions_role_viewer()}&lt;/option&gt;
+				&lt;/select&gt;
+			&lt;/label&gt;
+			&lt;button class=&quot;btn btn--primary invite__make&quot; type=&quot;button&quot; onclick={invite}&gt;
+				&lt;LinkIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+				{m.companions_make_link()}
+			&lt;/button&gt;
+		&lt;/div&gt;
+		{#if inviteUrl}
+			&lt;p class=&quot;muted&quot;&gt;{m.companions_link_ready()}&lt;/p&gt;
+			&lt;div class=&quot;cluster&quot;&gt;
+				&lt;code class=&quot;invite__url&quot;&gt;{inviteUrl}&lt;/code&gt;
+				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={copy}&gt;
+					&lt;CopyIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+					{m.companions_copy()}
+				&lt;/button&gt;
+			&lt;/div&gt;
+		{/if}
+	&lt;/div&gt;
+{:else if role !== 'link'}
+	&lt;form {...leaveTrip}&gt;
+		&lt;input {...leaveTrip.fields.tripId.as('hidden', view.trip.id)} /&gt;
+		&lt;button class=&quot;btn btn--danger&quot; type=&quot;submit&quot;&gt;{m.trip_leave()}&lt;/button&gt;
+	&lt;/form&gt;
+{/if}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { m } from '#lib/paraglide/messages.js';
+	import type { TripState } from './state.svelte.ts';
+
+	/**
+	 * Who else is looking at this trip right now: one chip per person, with
+	 * the stop under their pointer in the tooltip. Fed by the live query; the
+	 * server drops anybody who has not been heard from in thirty seconds.
+	 */
+	interface Props {
+		view: TripState;
+		viewerId: string | null;
+	}
+
+	let { view, viewerId }: Props = $props();
+
+	const others = $derived(view.presence.filter((p) =&gt; p.userId !== viewerId));
+
+	const initials = (name: string) =&gt;
+		name
+			.split(/\s+/)
+			.slice(0, 2)
+			.map((part) =&gt; part[0]?.toUpperCase() ?? '')
+			.join('');
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:27-42</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if others.length &gt; 0}
+	&lt;ul class=&quot;presence&quot; role=&quot;list&quot; aria-label={m.companions_here()}&gt;
+		{#each others as person (person.userId)}
+			{@const stop = person.stopId ? view.document.stops.find((s) =&gt; s.id === person.stopId) : null}
+			&lt;li
+				class=&quot;presence__chip&quot;
+				title={stop
+					? m.presence_looking({ name: person.name, stop: stop.name })
+					: m.presence_here({ name: person.name })}
+			&gt;
+				&lt;span class=&quot;presence__avatar&quot; aria-hidden=&quot;true&quot;&gt;{initials(person.name)}&lt;/span&gt;
+				&lt;span class=&quot;presence__name&quot;&gt;{person.name}&lt;/span&gt;
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+{/if}</code></pre>
+</figure>
+<p>Presence is one chip per other person, with the stop under their pointer in the tooltip, fed entirely by <code>view.presence</code> — which the server refreshes from its thirty-second time-to-live. The initials are computed from the name; there are no avatars in this app, and a coloured circle with two letters is what a person recognises across a table.</p>
+<h3 id="join">The join page</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { formatRange } from '#lib/domain/dates.ts';
+	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
+
+	const token = $derived(page.params.token ?? '');
+	const locale = getLocale();
+&lt;/script&gt;
+
+&lt;svelte:head&gt;
+	&lt;title&gt;{m.join_title()} — {m.app_name()}&lt;/title&gt;
+&lt;/svelte:head&gt;
+
+&lt;!--
+	An invite link opened by somebody signed in (the `(app)` group saw to
+	that, and will bring them back here after signing in). One query says
+	whether the link still works; one remote form accepts it — a real form,
+	so the button works on a phone that has not finished loading the script.
+--&gt;
+{const invite = await inviteByToken(token)}
+
+&lt;section class=&quot;container join&quot;&gt;
+	&lt;div class=&quot;card card--pad stack&quot;&gt;
+		&lt;h1&gt;{m.join_title()}&lt;/h1&gt;
+		&lt;p&gt;{m.join_text({ trip: invite.trip.name })}&lt;/p&gt;
+		&lt;p class=&quot;muted&quot;&gt;{formatRange(invite.trip.startDate, invite.trip.endDate, locale)}&lt;/p&gt;
+
+		{#if invite.alreadyMember}
+			&lt;p&gt;{m.join_already()}&lt;/p&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href={localizeHref(`/t/${invite.trip.slug}`)}&gt;{m.join_open()}&lt;/a&gt;
+		{:else if invite.used}
+			&lt;p class=&quot;issue&quot;&gt;{m.join_used()}&lt;/p&gt;
+		{:else if invite.expired}
+			&lt;p class=&quot;issue&quot;&gt;{m.join_expired()}&lt;/p&gt;
+		{:else}
+			&lt;form {...acceptInvite}&gt;
+				&lt;input {...acceptInvite.fields.token.as('hidden', token)} /&gt;
+				&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={acceptInvite.pending &gt; 0}&gt;
+					{m.join_accept()}
+				&lt;/button&gt;
+			&lt;/form&gt;
+		{/if}
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+<p>One query says whether the link still works; one remote form accepts it. The page is under <code>(app)</code>, so a stranger is sent to sign in and brought back here afterwards — the invite test in chapter 42 follows exactly that path with a brand-new account. Every state the invite can be in has a sentence: already a member, used, expired, or a button.</p>
+<h3 id="settings">Settings: owner only</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { error } from '@sveltejs/kit';
+	import { page } from '$app/state';
+	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import EmbedSection from './EmbedSection.svelte';
+	import SettingsForm from './SettingsForm.svelte';
+
+	const slug = $derived(page.params.slug ?? '');
+
+	/*
+	 * One query, read two ways. `await query` below gives the first render
+	 * its value and blocks the page until it is there. `query.current` is the
+	 * same value as a reactive read: when the form saves with
+	 * `.updates(tripBySlug(slug))`, the server sends the refreshed trip back
+	 * in the same response, the cache is set, and everything reading
+	 * `.current` — the embed section — re-renders with it. `undefined` only
+	 * before the first load, which the `await` has already waited out.
+	 */
+	const query = $derived(tripBySlug(slug));
+	const visibility = $derived(query.current?.document.trip.visibility ?? 'private');
+&lt;/script&gt;
+
+&lt;!--
+	Owner only. The remote function already refuses to *change* anything for
+	anybody else; this refuses to *show* the page, with a 403 rather than a
+	404 because a member who is not the owner already knows the trip exists.
+--&gt;
+{const initial = await query}
+{#if initial.role !== 'owner'}
+	{error(403, 'Only the owner can change a trip.')}
+{/if}
+
+{#key slug}</code></pre>
+</figure>
+<p>The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — <code>error()</code> in markup, which SvelteKit turns into the right status on the server and the error page in the browser.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	import { untrack } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { CURRENCIES } from '#lib/domain/money.ts';
+	import type { Visibility } from '#lib/domain/schemas.ts';
+	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
+	import type { Trip } from '#lib/server/db/schema.ts';
+	import DateRangeField from '#lib/ui/DateRangeField.svelte';
+
+	interface Props {
+		trip: Trip;
+	}
+
+	let { trip }: Props = $props();
+
+	// The fields start from the trip and belong to the form from then on. `untrack` says so
+	// out loud: we read the prop once, on purpose, and the page re-creates this form per slug.
+	const initial = untrack(() =&gt; trip);
+	let name = $state(initial.name);
+	let description = $state(initial.description);
+	let startDate = $state(initial.startDate);
+	let endDate = $state(initial.endDate);
+	let currency = $state(initial.currency);
+	let visibility: Visibility = $state(initial.visibility);
+	let saving = $state(false);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:30-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">async function save(event: SubmitEvent) {
+	event.preventDefault();
+	saving = true;
+	try {
+		/*
+		 * SINGLE-FLIGHT: `.updates(...)` names the query this page is holding,
+		 * so the server refreshes it in the same response and the page —
+		 * including the embed section below, which reads the visibility —
+		 * has the new trip before the toast appears. No second round trip.
+		 */
+		await updateTrip({
+			id: trip.id,
+			name,
+			description,
+			startDate,
+			endDate,
+			currency,
+			visibility
+		}).updates(tripBySlug(trip.slug));
+		toast(m.trip_saved());
+	} catch (error) {
+		toast.error(error instanceof Error ? error.message : String(error));
+	} finally {
+		saving = false;
+	}
+}</code></pre>
+</figure>
+<p>The fields start from the trip and belong to the form from then on: <code>untrack</code> reads the prop once, on purpose, and the page keys the form on the slug so a different trip is a different form. This is the *other* answer to the stop dialog’s question — assignable deriveds reset on a prop change; <code>untrack</code> says the prop never changes — and each is right where it is used. The save is a command with <code>.updates(tripBySlug(trip.slug))</code>: single-flight from the client’s side, naming the query this page is holding so the server refreshes it in the same response and the embed section below sees the new visibility before the toast appears.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:118-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- A remote form: deleting works with JavaScript off, and asks first when it is on. --&gt;
+&lt;form
+	class=&quot;card card--pad cluster cluster--between&quot;
+	{...deleteTrip}
+	onsubmit={(event) =&gt; {
+		if (!confirm(m.trip_delete_confirm())) event.preventDefault();
+	}}
+&gt;
+	&lt;input {...deleteTrip.fields.id.as('hidden', trip.id)} /&gt;
+	&lt;span class=&quot;muted&quot;&gt;{m.trip_delete_confirm()}&lt;/span&gt;
+	&lt;button class=&quot;btn btn--danger&quot; type=&quot;submit&quot;&gt;{m.trip_delete()}&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>Delete is a remote <code>form</code> with a <code>confirm()</code> in its <code>onsubmit</code>. With JavaScript off the form posts and the trip is gone; with it on, the browser asks first, and <code>preventDefault</code> cancels the submission if the person changes their mind. That is progressive enhancement in four lines, and it is the pattern for every destructive button in the app.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the invite is a command and leaving is a form.</li><li>You can explain the settings page’s 403 and where <code>error()</code> in markup is handled.</li><li>You can compare <code>untrack</code> in the settings form with assignable deriveds in the stop dialog and say when each is right.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="notes-with-tiptap-through-an-attachment.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Notes: Tiptap through an attachment</span>
+			</a>
+			<a class="pager__link pager__link--next" href="signing-in-and-up.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Signing in and up</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

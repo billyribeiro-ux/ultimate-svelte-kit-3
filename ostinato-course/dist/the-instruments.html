@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The instruments — Building Ostinato</title>
+<meta name="description" content="A kick, a snare, a hi-hat, a clap, a bass and a lead, each built from oscillators, noise and a filter at the moment it is needed. No samples, and a recipe you can read.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 23.076923076923077%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html" aria-current="page"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>The instruments</h1>
+			<p class="lede">A kick, a snare, a hi-hat, a clap, a bass and a lead, each built from oscillators, noise and a filter at the moment it is needed. No samples, and a recipe you can read.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand how a synthesised drum is made from three questions — what decays, how fast, through what filter — and why every voice function takes a *time* rather than playing now.</p></aside>
+			<p>Every sound in Ostinato is built when it is needed, from parts the browser provides. That is a deliberate choice for a project about a framework: a synthesised kit is a few hundred readable lines, and a sample pack is two hundred megabytes nobody can read.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:1-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE INSTRUMENTS
+ * ===============
+ *
+ * Every sound in Ostinato is built from oscillators, noise and filters at the
+ * moment it is needed — no samples, except the ones somebody drops onto a
+ * `sample` track. That is a deliberate choice for a project about a framework:
+ * a synthesised drum kit is a few hundred lines that anybody can read, and a
+ * sample pack is two hundred megabytes that nobody can.
+ *
+ * Each function here takes a *context*, a *destination*, a *time* and the
+ * track's *settings*, and schedules a sound to start at that time. Nothing
+ * plays now; everything plays *then*. That is how Web Audio wants to be used
+ * — see `scheduler.svelte.ts` for why — and it is what lets the same functions
+ * render a whole pattern to a file through an `OfflineAudioContext`, which is
+ * a `BaseAudioContext` exactly like the live one except that it runs as fast
+ * as it can and writes the result to a buffer.
+ *
+ * HOW A DRUM IS MADE
+ * ------------------
+ * Every acoustic hit is a burst of energy that decays. The recipe for each
+ * synthesised drum is the same three questions: *what* decays (a pitch, a
+ * noise, or both), *how fast*, and *through what filter*. The numbers below
+ * are the answers that sounded right after an afternoon of listening; none of
+ * them are sacred and every one of them is worth changing.
+ */
+
+import { velocityGain } from '#lib/music/time.ts';
+
+export interface Voice {
+	/** Where the sound starts, on the context's clock. */
+	time: number;
+	/** 0–127. */
+	velocity: number;
+	/** 0–1, the track's tone knob. */
+	tone: number;
+	/** 0–1, the track's decay knob. */
+	decay: number;
+}
+
+export interface Melodic extends Voice {
+	frequency: number;
+	/** How long the note is held before the release, in seconds. */
+	duration: number;
+}
+
+/** Between `min` and `max`, by `unit` in `[0, 1]`. */</code></pre>
+</figure>
+<p>The header makes the one promise every function keeps: nothing plays *now*; everything plays *then*. Each voice takes a <code>time</code> on the context’s clock and schedules its nodes to start there. That is how Web Audio wants to be used — chapter 12 explains why — and it is also what lets the same functions render a whole pattern to a file through an <code>OfflineAudioContext</code>, which is a <code>BaseAudioContext</code> like the live one except that it runs as fast as it can.</p>
+<h3 id="noise-and-envelopes">Noise and envelopes</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:50-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A second of white noise, made once per context and reused.
+ *
+ * `WeakMap` keyed by the context: an `OfflineAudioContext` is created per
+ * export and thrown away, and a plain `Map` would keep every one of them — and
+ * its buffer — alive for the life of the page.
+ */
+const noiseBuffers = new WeakMap&lt;BaseAudioContext, AudioBuffer&gt;();
+
+function noise(ctx: BaseAudioContext): AudioBufferSourceNode {
+	let buffer = noiseBuffers.get(ctx);
+	if (!buffer) {
+		buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+		const data = buffer.getChannelData(0);
+		for (let i = 0; i &lt; data.length; i += 1) data[i] = Math.random() * 2 - 1;
+		noiseBuffers.set(ctx, buffer);
+	}
+	const source = ctx.createBufferSource();
+	source.buffer = buffer;
+	return source;
+}
+
+/**
+ * A gain node that opens instantly at `time` and closes exponentially.
+ *
+ * `exponentialRampToValueAtTime` cannot reach zero — exponential curves never
+ * do — so the target is a value small enough to be silence and the node is
+ * stopped just after. Ramping to literal `0` throws.
+ */
+function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: number): GainNode {
+	const gain = ctx.createGain();
+	gain.gain.setValueAtTime(Math.max(peak, 0.0001), time);
+	gain.gain.exponentialRampToValueAtTime(0.0001, time + seconds);
+	return gain;
+}
+
+/**
+ * KICK
+ * ----
+ * A sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen
+ * milliseconds. The fall *is* the &quot;click&quot; at the front of a kick; the tail is
+ * the sine settling at its low pitch and fading. `tone` sets how high the
+ * pitch starts, `decay` how long the tail lasts.</code></pre>
+</figure>
+<p>Two helpers. The noise buffer is made once per context and kept in a <code>WeakMap</code>, because an <code>OfflineAudioContext</code> is created per export and thrown away — a plain <code>Map</code> would keep every one of them alive. The envelope is a gain that opens instantly and closes exponentially, and the <code>0.0001</code> is not a typo: exponential ramps cannot reach zero, so the target is a value quiet enough to be silence and the node is stopped just after.</p>
+<h3 id="drums">How a drum is made</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:94-112</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function kick(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	const seconds = lerp(0.15, 0.9, v.decay);
+	const osc = ctx.createOscillator();
+	osc.type = 'sine';
+	osc.frequency.setValueAtTime(lerp(100, 220, v.tone), v.time);
+	osc.frequency.exponentialRampToValueAtTime(42, v.time + 0.06);
+
+	const env = envelope(ctx, v.time, velocityGain(v.velocity), seconds);
+	osc.connect(env).connect(out);
+	osc.start(v.time);
+	osc.stop(v.time + seconds + 0.05);
+}
+
+/**
+ * SNARE
+ * -----
+ * Two things at once, which is what a real snare is: a drum head (a short
+ * triangle wave around 180Hz) and the wires underneath it (band-passed noise).
+ * `tone` tilts the balance towards the noise; `decay` lengthens the wires.</code></pre>
+</figure>
+<p>A kick is a sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen milliseconds. The fall *is* the click at the front; the tail is the sine settling at its low pitch and fading. <code>tone</code> sets how high the pitch starts, <code>decay</code> how long the tail lasts. Every drum below is the same three questions with different answers.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:114-136</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function snare(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	const peak = velocityGain(v.velocity);
+	const seconds = lerp(0.12, 0.4, v.decay);
+
+	const body = ctx.createOscillator();
+	body.type = 'triangle';
+	body.frequency.setValueAtTime(lerp(160, 240, v.tone), v.time);
+	body.frequency.exponentialRampToValueAtTime(110, v.time + 0.08);
+	const bodyEnv = envelope(ctx, v.time, peak * lerp(0.9, 0.4, v.tone), 0.12);
+	body.connect(bodyEnv).connect(out);
+	body.start(v.time);
+	body.stop(v.time + 0.2);
+
+	const wires = noise(ctx);
+	const filter = ctx.createBiquadFilter();
+	filter.type = 'bandpass';
+	filter.frequency.value = lerp(1800, 4200, v.tone);
+	filter.Q.value = 0.8;
+	const wiresEnv = envelope(ctx, v.time, peak * lerp(0.5, 1, v.tone), seconds);
+	wires.connect(filter).connect(wiresEnv).connect(out);
+	wires.start(v.time);
+	wires.stop(v.time + seconds + 0.05);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:166-195</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function clap(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	const peak = velocityGain(v.velocity);
+	const filter = ctx.createBiquadFilter();
+	filter.type = 'bandpass';
+	filter.frequency.value = lerp(1000, 2200, v.tone);
+	filter.Q.value = 1.2;
+	filter.connect(out);
+
+	for (let i = 0; i &lt; 4; i += 1) {
+		const at = v.time + i * 0.011;
+		const burst = noise(ctx);
+		const isTail = i === 3;
+		const env = envelope(
+			ctx,
+			at,
+			peak * (isTail ? 0.9 : 0.7),
+			isTail ? lerp(0.1, 0.4, v.decay) : 0.02
+		);
+		burst.connect(env).connect(filter);
+		burst.start(at);
+		burst.stop(at + (isTail ? 0.5 : 0.03));
+	}
+}
+
+/**
+ * BASS
+ * ----
+ * A sawtooth through a low-pass filter whose cutoff *moves* — it opens with
+ * the note and closes as it decays. That moving filter is the sound of every
+ * analogue synth bass ever recorded. `tone` is how far the filter opens.</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a clap is four bursts</h4>
+	<p>A clap is several people not clapping at quite the same moment. Rendering it as one burst of noise sounds like a snare with the head removed; three very short bursts ten milliseconds apart and then one longer tail is the whole character. The numbers came from an afternoon of listening, and the comment says so — a magic number with a reason attached is documentation; without one it is a superstition.</p>
+</aside>
+<h3 id="synths">Bass and lead</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:197-232</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function bass(ctx: BaseAudioContext, out: AudioNode, v: Melodic): void {
+	const peak = velocityGain(v.velocity) * 0.7;
+	const release = lerp(0.05, 0.4, v.decay);
+	const end = v.time + v.duration + release;
+
+	const osc = ctx.createOscillator();
+	osc.type = 'sawtooth';
+	osc.frequency.value = v.frequency;
+
+	const filter = ctx.createBiquadFilter();
+	filter.type = 'lowpass';
+	filter.Q.value = 6;
+	const open = lerp(300, 3000, v.tone);
+	filter.frequency.setValueAtTime(open, v.time);
+	filter.frequency.exponentialRampToValueAtTime(
+		Math.max(80, open * 0.15),
+		v.time + v.duration + release
+	);
+
+	const gain = ctx.createGain();
+	gain.gain.setValueAtTime(0.0001, v.time);
+	gain.gain.exponentialRampToValueAtTime(peak, v.time + 0.005);
+	gain.gain.setValueAtTime(peak, v.time + v.duration);
+	gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+	osc.connect(filter).connect(gain).connect(out);
+	osc.start(v.time);
+	osc.stop(end + 0.02);
+}
+
+/**
+ * LEAD
+ * ----
+ * Two detuned square waves — the second a few cents sharp — which is where the
+ * width comes from, through a gentler filter than the bass. `tone` brightens,
+ * `decay` lengthens the release.</code></pre>
+</figure>
+<p>A sawtooth through a low-pass filter whose cutoff *moves* — open with the note, closing as it decays. That moving filter is the sound of every analogue synth bass ever recorded, and <code>tone</code> is how far it opens. The lead is two square waves detuned a few cents apart, which is where its width comes from.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can describe a kick, a snare and a clap as “what decays, how fast, through what”.</li><li>You can say why every voice takes a <code>time</code> argument and what an <code>OfflineAudioContext</code> is.</li><li>Open <code>SoundPanel.svelte</code>’s Audition button later and hear each of these with its knobs.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="stored-and-preset.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Stored patterns and presets</span>
+			</a>
+			<a class="pager__link pager__link--next" href="one-step-scheduled.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">One step, scheduled</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The headless pattern: Bits UI and TanStack Table — Building Meridian</title>
+<meta name="description" content="What a headless library gives you and what it asks of you: behaviour, ARIA and keyboard from the library; markup, classes and data from you. Bits UI’s `Root`/parts structure, `bind:` on the root, `class` on every part, portals, snippets with library-provided state; TanStack’s table object with a getter and a render helper.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">38 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 84.44444444444444%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html" aria-current="page"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 38</p>
+			<h1>The headless pattern: Bits UI and TanStack Table</h1>
+			<p class="lede">What a headless library gives you and what it asks of you: behaviour, ARIA and keyboard from the library; markup, classes and data from you. Bits UI’s <code>Root</code>/parts structure, <code>bind:</code> on the root, <code>class</code> on every part, portals, snippets with library-provided state; TanStack’s table object with a getter and a render helper.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Recognise a headless library by its API, wire one into Svelte 5 state without an effect, and style it entirely from your own tokens.</p></aside>
+			<p>A headless library implements the hard parts of a widget — focus management, keyboard navigation, ARIA roles and states, the date arithmetic of a calendar, the sorting of a table — and renders nothing you cannot replace. The trade is explicit: you get correctness, and you own every pixel. Two libraries in this project have that shape, and they share a set of idioms worth naming.</p>
+<h3 id="parts">Idiom one: a root and its parts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:99-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
+	&lt;Dialog.Portal&gt;
+		&lt;Dialog.Overlay class=&quot;overlay&quot; /&gt;
+		&lt;Dialog.Content class=&quot;dialog&quot;&gt;
+			&lt;header class=&quot;dialog__header&quot;&gt;
+				&lt;Dialog.Title class=&quot;dialog__title&quot;&gt;
+					{mode?.kind === 'edit' ? m.stop_edit() : m.stop_new()}
+				&lt;/Dialog.Title&gt;
+				&lt;Dialog.Close class=&quot;btn btn--icon btn--ghost btn--sm&quot; aria-label={m.nav_menu()}&gt;
+					&lt;XIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+				&lt;/Dialog.Close&gt;
+			&lt;/header&gt;
+			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.stop_search()}&lt;/Dialog.Description&gt;</code></pre>
+</figure>
+<p>Bits UI components are trees of *parts*: <code>Dialog.Root</code> holds the state, <code>Dialog.Portal</code> moves the content to the end of the body, <code>Dialog.Overlay</code> and <code>Dialog.Content</code> are the elements, <code>Dialog.Title</code> and <code>Dialog.Description</code> wire the ARIA relationships. Each part accepts <code>class</code>, which is how the tokens get in. The state is on the root, controlled two ways: <code>open={mode !== null}</code> plus <code>onOpenChange</code> for the dialog whose openness is derived from something else, <code>bind:open</code> for the palette whose openness is its own.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:69-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Dialog.Root bind:open&gt;
+	&lt;Dialog.Portal&gt;
+		&lt;Dialog.Overlay class=&quot;overlay&quot; /&gt;
+		&lt;Dialog.Content class=&quot;palette&quot;&gt;
+			&lt;Dialog.Title class=&quot;visually-hidden&quot;&gt;{m.palette_open()}&lt;/Dialog.Title&gt;
+			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.palette_hint()}&lt;/Dialog.Description&gt;
+
+			&lt;Command.Root class=&quot;cmd&quot; label={m.palette_open()} loop&gt;
+				&lt;Command.Input class=&quot;cmd__input&quot; placeholder={m.palette_placeholder()} /&gt;
+				&lt;Command.List class=&quot;cmd__list&quot;&gt;
+					&lt;Command.Viewport&gt;
+						&lt;Command.Empty class=&quot;cmd__empty&quot;&gt;{m.palette_empty()}&lt;/Command.Empty&gt;
+
+						&lt;Command.Group&gt;
+							&lt;Command.GroupHeading class=&quot;cmd__heading&quot;&gt;{m.palette_stops()}&lt;/Command.GroupHeading&gt;
+							&lt;Command.GroupItems&gt;</code></pre>
+</figure>
+<p>The same idiom nests: the palette is a <code>Dialog</code> around a <code>Command</code>, and the <code>Command</code> has its own root and parts. Nothing about the composition is special — they are components — which is what makes a headless library composable in the first place.</p>
+<h3 id="snippets">Idiom two: snippets that receive library state</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:65-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;DateRangePicker.Root
+	bind:value
+	onValueChange={(range) =&gt; {
+		if (range.start &amp;&amp; range.end) onchange?.(range.start.toString(), range.end.toString());
+	}}
+	{placeholder}
+	{locale}
+	weekdayFormat=&quot;short&quot;
+	fixedWeeks
+	minValue={futureOnly ? placeholder : undefined}
+	class=&quot;range&quot;
+&gt;
+	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
+
+	&lt;div class=&quot;range__row&quot; class:range__row--invalid={issues.length &gt; 0}&gt;
+		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
+			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input&quot;&gt;
+				{#snippet children({ segments })}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:56-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;/div&gt;
+&lt;Combobox.Portal&gt;
+	&lt;Combobox.Content class=&quot;search__list&quot; sideOffset={4}&gt;
+		&lt;Combobox.Viewport&gt;
+			{#each matches as place (place.id)}
+				&lt;Combobox.Item value={place.id} label={place.name} class=&quot;search__item&quot;&gt;
+					{#snippet children({ selected })}
+						&lt;span&gt;{place.name}&lt;/span&gt;
+						&lt;span class=&quot;muted&quot;&gt;{place.country}&lt;/span&gt;
+						{#if selected}&lt;span class=&quot;visually-hidden&quot;&gt;✓&lt;/span&gt;{/if}
+					{/snippet}
+				&lt;/Combobox.Item&gt;
+			{:else}
+				&lt;p class=&quot;search__empty muted&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
+			{/each}
+		&lt;/Combobox.Viewport&gt;
+	&lt;/Combobox.Content&gt;
+&lt;/Combobox.Portal&gt;</code></pre>
+</figure>
+<p>When a part has to render something the library computes — the segments of a date input, the months and weekdays of a calendar, whether an item is selected — it exposes it through a <code>children</code> snippet with parameters. <code>{#snippet children({ segments })}</code> receives the segments and renders one <code>Segment</code> part per entry; <code>{#snippet children({ selected })}</code> receives the item’s state. This is Svelte 5’s replacement for slot props, and it is typed: the parameter’s shape comes from the library’s declarations.</p>
+<h3 id="state">Idiom three: your state, their behaviour</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:25-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let { onpick }: Props = $props();
+
+// What has been typed, read from the input itself: the root's `inputValue`
+// is a prop to set, not one to bind.
+let query = $state('');
+let value = $state('');
+
+// The gazetteer, awaited once. `await` in a `$derived` is fine in async mode.
+const all = $derived(await places());
+
+const matches = $derived.by(() =&gt; {
+	const needle = query.trim().toLowerCase();
+	if (!needle) return all.slice(0, 8);
+	return all.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
+});
+
+function pick(id: string) {
+	const place = all.find((p) =&gt; p.id === id);
+	if (place) onpick(place);
+}</code></pre>
+</figure>
+<p>The combobox filters nothing. It opens a list, moves a highlight, and reports a value; which items are in the list is yours, and here it is a <code>$derived</code> over a <code>$state</code> string that an <code>oninput</code> handler updates. No effect copies library state into Svelte state or back — the root’s <code>bind:value</code> and <code>onValueChange</code> are the whole contract, and a <code>$derived</code> reads whatever it needs. The moment you find yourself writing an effect to “sync” a headless component, look for the prop or the callback you missed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:118-131</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `get data()` is a getter, so the table sees the latest rows whenever the
+ * live document changes, without being re-created. The adapter syncs
+ * options in `$effect.pre`, before the rows below are read.
+ */
+const table = createTable({
+	features,
+	columns,
+	get data() {
+		return rows;
+	},
+	getRowId: (row) =&gt; row.id,
+	initialState: { sorting: [{ id: 'date', desc: false }] }
+});</code></pre>
+</figure>
+<p>TanStack Table is headless in the same sense with one more idiom: the table is an *object* with methods, created once, and its options are read through getters so the object sees the latest state without being re-created. <code>get data() { return rows }</code> is a reactive getter — the adapter reads it inside <code>$effect.pre</code> — so the live document’s rows reach the table as they change. The rendering is a plain <code>&lt;table&gt;</code> that asks the object what to draw.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:243-268</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each table.getHeaderGroups() as group (group.id)}
+	&lt;tr&gt;
+		{#each group.headers as header (header.id)}
+			{@const sorted = header.column.getIsSorted()}
+			&lt;th
+				class:num={header.column.columnDef.meta?.align === 'end'}
+				aria-sort={sorted === 'asc'
+					? 'ascending'
+					: sorted === 'desc'
+						? 'descending'
+						: 'none'}
+			&gt;
+				&lt;button
+					class=&quot;sort&quot;
+					type=&quot;button&quot;
+					onclick={header.column.getToggleSortingHandler()}
+				&gt;
+					{render(header.column.columnDef.header, header.getContext(), header.column.id)}
+					{#if sorted === 'asc'}&lt;CaretUpIcon size={12} aria-hidden=&quot;true&quot; /&gt;
+					{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;{/if}
+				&lt;/button&gt;
+			&lt;/th&gt;
+		{/each}
+		{#if editable}&lt;th&gt;&lt;/th&gt;{/if}
+	&lt;/tr&gt;
+{/each}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why headless is the right default for an application</h4>
+	<p>A styled component library brings a look, and the look is somebody else’s. A design system that is “Material with the colours changed” is recognisable from across the room. Headless libraries let a small team have the behaviour of a mature library and a design that is their own — every visible thing in this project is in <code>tokens.css</code> and a component’s <code>&lt;style&gt;</code>, and swapping Bits UI for another headless library would change imports and not a single class. The cost is that you write the styles, and for a dialog, a combobox and a palette that is an afternoon.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three idioms and find each in one of the components above.</li><li>You can say when to use <code>bind:open</code> and when <code>open</code> plus <code>onOpenChange</code>.</li><li>You know why <code>get data()</code> is a getter and what would go wrong with a plain property.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="choosing-libraries.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The survey: what was chosen, what was rejected, and why</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-wrapper-pattern.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The wrapper pattern, and when to write an attachment instead</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

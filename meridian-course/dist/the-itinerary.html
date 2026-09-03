@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The itinerary: days you can drag — Building Meridian</title>
+<meta name="description" content="One `dndzone` per day with svelte-dnd-action, `animate:flip` for the settling, an optimistic override that is derived rather than synced, `place()` from the domain on both sides, a stop card, a dialog with assignable deriveds, and a combobox over the gazetteer.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">25 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 55.55555555555556%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html" aria-current="page"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 25</p>
+			<h1>The itinerary: days you can drag</h1>
+			<p class="lede">One <code>dndzone</code> per day with svelte-dnd-action, <code>animate:flip</code> for the settling, an optimistic override that is derived rather than synced, <code>place()</code> from the domain on both sides, a stop card, a dialog with assignable deriveds, and a combobox over the gazetteer.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Wire a drag-and-drop library into a live document so the screen shows the drop immediately and agrees with the server when it answers — and build the dialog and search that add stops.</p></aside>
+			<p>svelte-dnd-action is an *action*: <code>use:dndzone</code> on a list, with the items and a shared <code>type</code> so cards can move between lists. It handles pointer, touch and keyboard — focus a card, press space, arrow — and tells you two things: <code>consider</code> (how the list would look if you dropped here) and <code>finalize</code> (you dropped here). Everything else is ours, and the interesting part is what happens between the drop and the server’s answer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:15-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * DAYS YOU CAN DRAG
+ * =================
+ *
+ * One `dndzone` per day (and one for the ideas), all of the same `type`,
+ * so a card can be dragged from Tuesday to Thursday or parked in Ideas.
+ * `svelte-dnd-action` handles pointer, touch and keyboard — focus a card,
+ * press space, use the arrows — and tells us two things: `consider`
+ * (the list as it would look if you dropped here) and `finalize` (you
+ * dropped here).
+ *
+ * The server is the source of truth, and the live query will send the
+ * new order a few hundred milliseconds after the drop. In between, the
+ * screen shows what the drag said. That is the `override`: a copy of the
+ * groups that wins until the server's version moves past the one we
+ * dropped on. Derived, not synced — `groups` picks whichever is right
+ * *now*, and there is no effect that could get out of step.
+ */
+interface Props {
+	/** Named `view`, not `state`: a local called `state` makes `$state` read as a store subscription. */
+	view: TripState;
+	editable: boolean;
+	viewerId: string | null;
+	onadd?: (date: string | null) =&gt; void;
+	onedit?: (stop: Stop) =&gt; void;
+}
+
+let { view, editable, viewerId, onadd, onedit }: Props = $props();
+
+const locale = getLocale();
+
+interface Override {
+	readonly version: number;
+	readonly groups: DayGroup&lt;Stop&gt;[];
+}
+
+let override = $state&lt;Override | null&gt;(null);
+
+const groups = $derived(
+	override &amp;&amp; view.trip.version &lt;= override.version ? override.groups : view.groups
+);</code></pre>
+</figure>
+<p>The override. The server is the source of truth and the live query will send the new order a few hundred milliseconds after the drop; in between, the screen should show what the drag said. So <code>override</code> is a copy of the groups with a version stamp, and <code>groups</code> is derived: use the override while the server’s version has not moved past the one we dropped on, and the live groups otherwise. Derived, not synced — there is no effect that copies one into the other and could get out of step. The prop is named <code>view</code> and not <code>state</code> for the reason in the comment: a local called <code>state</code> makes <code>$state</code> read as a store subscription.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:57-69</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** The route number of a scheduled stop, so the list agrees with the map's pins. */
+const numbers = $derived(new Map(view.scheduled.map((stop, i) =&gt; [stop.id, i + 1])));
+
+/** Who is looking at which stop, by stop id. */
+const lookers = $derived.by(() =&gt; {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation and never mutated after; a reactive Map would signal on every insert for nobody
+	const out = new Map&lt;string, string[]&gt;();
+	for (const person of view.presence) {
+		if (!person.stopId || person.userId === viewerId) continue;
+		out.set(person.stopId, [...(out.get(person.stopId) ?? []), person.name]);
+	}
+	return out;
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:71-108</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function withZone(date: string | null, items: Stop[]): DayGroup&lt;Stop&gt;[] {
+	return groups.map((group) =&gt; (group.date === date ? { date, stops: items } : group));
+}
+
+// `svelte-dnd-action` types items as `Record&lt;string, any&gt;`; ours are stops.
+const itemsOf = (event: CustomEvent&lt;DndEvent&gt;) =&gt; event.detail.items as Stop[];
+
+function consider(date: string | null, event: CustomEvent&lt;DndEvent&gt;) {
+	override = { version: Number.MAX_SAFE_INTEGER, groups: withZone(date, itemsOf(event)) };
+}
+
+async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;) {
+	const items = itemsOf(event);
+	const dropped = view.trip.version;
+	override = { version: dropped, groups: withZone(date, items) };
+
+	// Both the zone that lost the card and the one that gained it fire
+	// `finalize`; only the one that received it sends the move.
+	if (event.detail.info.trigger !== TRIGGERS.DROPPED_INTO_ZONE) return;
+	const index = items.findIndex((stop) =&gt; stop.id === event.detail.info.id);
+	if (index &lt; 0) return;
+
+	try {
+		await moveStop({ tripId: view.trip.id, id: event.detail.info.id, date, index });
+	} catch (error) {
+		override = null;
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}
+
+async function remove(stop: Stop) {
+	try {
+		await removeStop({ tripId: view.trip.id, id: stop.id });
+		toast(m.stop_removed());
+	} catch (error) {
+		toast.error(error instanceof Error ? error.message : String(error));
+	}
+}</code></pre>
+</figure>
+<p>Both the zone that lost the card and the zone that gained it fire <code>finalize</code>; only the one that received it — <code>TRIGGERS.DROPPED_INTO_ZONE</code> — sends the move. The move is a day and an index, which is what <code>moveStop</code> takes and what <code>place()</code> in the domain turns into row changes; the server writes them, the live query yields, and the derived <code>groups</code> switches back to the server’s order, which is the same order. If the command fails, the override is dropped and the cards animate back to where the server says they are.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:111-170</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;days&quot;&gt;
+	{#each groups as group (group.date ?? 'ideas')}
+		&lt;section class=&quot;day&quot; data-date={group.date ?? 'ideas'}&gt;
+			&lt;header class=&quot;day__header&quot;&gt;
+				&lt;h3 class=&quot;day__title&quot;&gt;
+					{group.date ? formatDate(group.date, locale, 'day') : m.day_ideas()}
+				&lt;/h3&gt;
+				{#if group.date}
+					&lt;span class=&quot;muted&quot;&gt;{formatDate(group.date, locale, 'short')}&lt;/span&gt;
+				{/if}
+				{#if editable}
+					&lt;button
+						class=&quot;btn btn--sm btn--ghost day__add&quot;
+						type=&quot;button&quot;
+						onclick={() =&gt; onadd?.(group.date)}
+					&gt;
+						&lt;PlusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+						{m.day_add_stop()}
+					&lt;/button&gt;
+				{/if}
+			&lt;/header&gt;
+
+			&lt;ul
+				class=&quot;day__list&quot;
+				role=&quot;list&quot;
+				use:dndzone={{
+					items: group.stops,
+					type: 'stops',
+					flipDurationMs: 200,
+					dragDisabled: !editable,
+					dropTargetStyle: {},
+					dropTargetClasses: ['day__list--target']
+				}}
+				onconsider={(e) =&gt; consider(group.date, e)}
+				onfinalize={(e) =&gt; finalize(group.date, e)}
+			&gt;
+				{#each group.stops as stop (stop.id)}
+					&lt;li class=&quot;day__item&quot; animate:flip={{ duration: 200 }}&gt;
+						&lt;StopCard
+							{stop}
+							number={numbers.get(stop.id) ?? null}
+							selected={view.selectedStopId === stop.id}
+							{editable}
+							lookers={lookers.get(stop.id) ?? []}
+							onselect={() =&gt; view.select(view.selectedStopId === stop.id ? null : stop.id)}
+							onedit={() =&gt; onedit?.(stop)}
+							onremove={() =&gt; remove(stop)}
+						/&gt;
+					&lt;/li&gt;
+				{/each}
+				{#if group.stops.length === 0}
+					&lt;li class=&quot;day__empty muted&quot;&gt;{m.day_empty()}&lt;/li&gt;
+				{/if}
+			&lt;/ul&gt;
+		&lt;/section&gt;
+	{/each}
+	{#if editable}
+		&lt;p class=&quot;hint&quot;&gt;{m.stop_drag_hint()}&lt;/p&gt;
+	{/if}
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>animate:flip</code> on each <code>&lt;li&gt;</code> is what makes the other cards slide out of the way rather than jump; <code>flipDurationMs</code> on the zone tells svelte-dnd-action to expect it. <code>dropTargetStyle: {}</code> turns off the library’s inline outline in favour of a class from the tokens. The empty-day item is inside the list so a day with nothing on it is still a drop target.</p>
+<h3 id="card">The card</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { DotsSixVerticalIcon, PencilSimpleIcon, TrashIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Stop } from '#lib/server/db/schema.ts';
+	import { KIND_ICONS, KIND_LABELS } from './kinds.ts';
+
+	interface Props {
+		stop: Stop;
+		/** Position along the whole route, or `null` for an idea. */
+		number: number | null;
+		selected: boolean;
+		editable: boolean;
+		/** Names of companions whose pointer is on this stop. */
+		lookers: readonly string[];
+		onselect: () =&gt; void;
+		onedit?: () =&gt; void;
+		onremove?: () =&gt; void;
+	}
+
+	let { stop, number, selected, editable, lookers, onselect, onedit, onremove }: Props = $props();
+
+	const Icon = $derived(KIND_ICONS[stop.kind]);
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:25-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;article class=&quot;stop&quot; class:stop--selected={selected} data-kind={stop.kind} data-stop={stop.id}&gt;
+	{#if editable}
+		&lt;span class=&quot;stop__grip&quot; aria-hidden=&quot;true&quot;&gt;&lt;DotsSixVerticalIcon size={16} /&gt;&lt;/span&gt;
+	{/if}
+
+	&lt;span class=&quot;stop__number&quot; aria-hidden=&quot;true&quot;&gt;
+		{#if number !== null}{number}{:else}&lt;Icon size={14} /&gt;{/if}
+	&lt;/span&gt;
+
+	&lt;div class=&quot;stop__body&quot;&gt;
+		&lt;!-- The name is a button: selecting a stop highlights it on the map. --&gt;
+		&lt;button class=&quot;stop__name&quot; type=&quot;button&quot; aria-pressed={selected} onclick={onselect}&gt;
+			{stop.name}
+		&lt;/button&gt;
+		&lt;p class=&quot;stop__meta&quot;&gt;
+			&lt;span class=&quot;chip&quot;&gt;&lt;Icon size={12} aria-hidden=&quot;true&quot; /&gt; {KIND_LABELS[stop.kind]()}&lt;/span&gt;
+			{#each lookers as name (name)}
+				&lt;span class=&quot;chip chip--sea&quot;&gt;{name}&lt;/span&gt;
+			{/each}
+		&lt;/p&gt;
+		{#if stop.notes}
+			&lt;p class=&quot;stop__notes&quot;&gt;{stop.notes}&lt;/p&gt;
+		{/if}
+	&lt;/div&gt;
+
+	{#if editable}
+		&lt;div class=&quot;stop__actions&quot;&gt;
+			&lt;button
+				class=&quot;btn btn--icon btn--ghost btn--sm&quot;
+				type=&quot;button&quot;
+				title={m.stop_edit()}
+				aria-label={m.stop_edit()}
+				onclick={onedit}
+			&gt;
+				&lt;PencilSimpleIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+			&lt;/button&gt;
+			&lt;button
+				class=&quot;btn btn--icon btn--ghost btn--sm&quot;
+				type=&quot;button&quot;
+				title={m.stop_remove()}
+				aria-label={m.stop_remove()}
+				onclick={onremove}
+			&gt;
+				&lt;TrashIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+			&lt;/button&gt;
+		&lt;/div&gt;
+	{/if}
+&lt;/article&gt;</code></pre>
+</figure>
+<p>The name is a button with <code>aria-pressed</code>, because selecting a stop is a toggle that highlights it on the map. The number is the route position from <code>view.scheduled</code>, so the list agrees with the map’s pins. <code>lookers</code> are the companions whose pointer is on this stop, as chips — presence at the granularity of a card. <code>data-kind</code> sets the <code>--kind</code> custom property from <code>tokens.css</code> for the coloured border, so the six kinds of stop share one hue table with the map.</p>
+<h3 id="dialog">The dialog: assignable deriveds</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:15-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * ADD OR EDIT A STOP
+ * ==================
+ *
+ * One dialog for both, told apart by `mode`. Bits UI's `Dialog` supplies
+ * the focus trap, the Escape key, the scroll lock and the ARIA; the form
+ * inside is plain HTML bound to local state, and the save button calls a
+ * `command` — `addStop` or `updateStop` — because a dialog only exists
+ * once JavaScript is running, so there is nothing to enhance.
+ *
+ * A date change on an existing stop goes through `moveStop`, the same
+ * function a drag uses, so &quot;move to Thursday&quot; means one thing in the
+ * whole application.
+ */
+export type Mode =
+	| { kind: 'add'; date: string | null; point?: { lng: number; lat: number } }
+	| { kind: 'edit'; stop: Stop };
+
+interface Props {
+	mode: Mode | null;
+	tripId: string;
+	days: readonly string[];
+	onclose: () =&gt; void;
+	onsaved?: (stop: Stop) =&gt; void;
+}
+
+let { mode, tripId, days, onclose, onsaved }: Props = $props();
+
+const locale = getLocale();
+
+/*
+ * The draft is `$derived` from `mode`: opening the dialog for a different
+ * stop resets every field, and opening it for the same stop twice starts
+ * from the stored values, not from whatever was typed last time.
+ * Assignable deriveds — the fields are bound and edited — with the mode
+ * as the reset.
+ */
+let name = $derived(mode?.kind === 'edit' ? mode.stop.name : '');
+let kind: StopKind = $derived(mode?.kind === 'edit' ? mode.stop.kind : 'place');
+let date: string | null = $derived(
+	mode?.kind === 'edit' ? mode.stop.date : mode?.kind === 'add' ? mode.date : null
+);
+let notes = $derived(mode?.kind === 'edit' ? mode.stop.notes : '');
+let lng = $derived(mode?.kind === 'edit' ? mode.stop.lng : (mode?.point?.lng ?? 0));
+let lat = $derived(mode?.kind === 'edit' ? mode.stop.lat : (mode?.point?.lat ?? 0));
+let placeId: string | undefined = $derived(
+	mode?.kind === 'edit' ? (mode.stop.placeId ?? undefined) : undefined
+);</code></pre>
+</figure>
+<p>One dialog for adding and editing, told apart by <code>mode</code>, and the fields are <strong>assignable <code>$derived</code>s</strong>. Each starts from the stop being edited (or from the day and point the add came from) and is then bound and edited like state; when <code>mode</code> changes — a different stop, or the dialog reopens — every field resets to the new starting value. That is exactly the semantics a form in a dialog wants, and before assignable deriveds it took an effect that copied props into state and a bug when it ran at the wrong time.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:64-97</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	let saving = $state(false);
+
+	function fromPlace(place: Place) {
+		if (!name.trim()) name = place.name;
+		lng = place.lng;
+		lat = place.lat;
+		placeId = place.id;
+	}
+
+	async function save(event: SubmitEvent) {
+		event.preventDefault();
+		if (!mode || saving) return;
+		saving = true;
+		try {
+			if (mode.kind === 'add') {
+				const stop = await addStop({ tripId, name, kind, lng, lat, date, notes, placeId });
+				toast(m.stop_added());
+				onsaved?.(stop);
+			} else {
+				await updateStop({ id: mode.stop.id, name, kind, lng, lat, notes });
+				if (date !== mode.stop.date) {
+					await moveStop({ tripId, id: mode.stop.id, date, index: 10_000 });
+				}
+				toast(m.trip_saved());
+				onsaved?.({ ...mode.stop, name, kind, lng, lat, notes, date });
+			}
+			onclose();
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : String(error));
+		} finally {
+			saving = false;
+		}
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+<p>Bits UI’s <code>Dialog</code> supplies the focus trap, the Escape key, the scroll lock and the ARIA; the form inside is plain HTML. Saving calls <code>addStop</code> or <code>updateStop</code> — commands, because a dialog only exists once JavaScript is running — and a date change on an existing stop goes through <code>moveStop</code>, the same function a drag uses, so “move to Thursday” means one thing in the whole application.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:99-172</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
+	&lt;Dialog.Portal&gt;
+		&lt;Dialog.Overlay class=&quot;overlay&quot; /&gt;
+		&lt;Dialog.Content class=&quot;dialog&quot;&gt;
+			&lt;header class=&quot;dialog__header&quot;&gt;
+				&lt;Dialog.Title class=&quot;dialog__title&quot;&gt;
+					{mode?.kind === 'edit' ? m.stop_edit() : m.stop_new()}
+				&lt;/Dialog.Title&gt;
+				&lt;Dialog.Close class=&quot;btn btn--icon btn--ghost btn--sm&quot; aria-label={m.nav_menu()}&gt;
+					&lt;XIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+				&lt;/Dialog.Close&gt;
+			&lt;/header&gt;
+			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.stop_search()}&lt;/Dialog.Description&gt;
+
+			&lt;form class=&quot;stack&quot; onsubmit={save}&gt;
+				&lt;PlaceSearch onpick={fromPlace} /&gt;
+
+				&lt;label class=&quot;field&quot;&gt;
+					&lt;span class=&quot;label&quot;&gt;{m.stop_name()}&lt;/span&gt;
+					&lt;input class=&quot;input&quot; bind:value={name} maxlength=&quot;120&quot; required /&gt;
+				&lt;/label&gt;
+
+				&lt;div class=&quot;two&quot;&gt;
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;label&quot;&gt;{m.stop_kind()}&lt;/span&gt;
+						&lt;select class=&quot;select&quot; bind:value={kind}&gt;
+							{#each STOP_KINDS as k (k)}
+								&lt;option value={k}&gt;{KIND_LABELS[k]()}&lt;/option&gt;
+							{/each}
+						&lt;/select&gt;
+					&lt;/label&gt;
+
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;label&quot;&gt;{m.stop_day()}&lt;/span&gt;
+						&lt;select class=&quot;select&quot; bind:value={date}&gt;
+							&lt;option value={null}&gt;{m.day_ideas()}&lt;/option&gt;
+							{#each days as day (day)}
+								&lt;option value={day}&gt;{formatDate(day, locale, 'day')}&lt;/option&gt;
+							{/each}
+						&lt;/select&gt;
+					&lt;/label&gt;
+				&lt;/div&gt;
+
+				&lt;div class=&quot;two&quot;&gt;
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;label&quot;&gt;lng&lt;/span&gt;
+						&lt;input
+							class=&quot;input&quot;
+							type=&quot;number&quot;
+							step=&quot;0.0001&quot;
+							min=&quot;-180&quot;
+							max=&quot;180&quot;
+							bind:value={lng}
+						/&gt;
+					&lt;/label&gt;
+					&lt;label class=&quot;field&quot;&gt;
+						&lt;span class=&quot;label&quot;&gt;lat&lt;/span&gt;
+						&lt;input class=&quot;input&quot; type=&quot;number&quot; step=&quot;0.0001&quot; min=&quot;-90&quot; max=&quot;90&quot; bind:value={lat} /&gt;
+					&lt;/label&gt;
+				&lt;/div&gt;
+
+				&lt;label class=&quot;field&quot;&gt;
+					&lt;span class=&quot;label&quot;&gt;{m.stop_notes()}&lt;/span&gt;
+					&lt;textarea class=&quot;textarea&quot; bind:value={notes} maxlength=&quot;1000&quot;&gt;&lt;/textarea&gt;
+				&lt;/label&gt;
+
+				&lt;div class=&quot;cluster dialog__actions&quot;&gt;
+					&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={saving}&gt;{m.stop_save()}&lt;/button&gt;
+					&lt;Dialog.Close class=&quot;btn btn--ghost&quot;&gt;{m.stop_undo()}&lt;/Dialog.Close&gt;
+				&lt;/div&gt;
+			&lt;/form&gt;
+		&lt;/Dialog.Content&gt;
+	&lt;/Dialog.Portal&gt;
+&lt;/Dialog.Root&gt;</code></pre>
+</figure>
+<h3 id="search">A combobox over the gazetteer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { Combobox } from 'bits-ui';
+	import { MagnifyingGlassIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { places, type Place } from '#lib/remote/geo.remote.ts';
+
+	/**
+	 * A COMBOBOX OVER THE GAZETTEER
+	 * =============================
+	 *
+	 * Bits UI's `Combobox` is the accessible half: a text input with
+	 * `role=&quot;combobox&quot;`, a listbox that opens under it, arrow keys, Escape,
+	 * type-ahead, `aria-activedescendant` — everything a screen reader needs
+	 * and everything that is tedious to get right by hand. The other half is
+	 * ours: which places match, and what happens when one is picked.
+	 *
+	 * The places come from the `prerender` remote function: a static JSON
+	 * file, fetched once and cached by SvelteKit for the life of the page.
+	 * Filtering a hundred names on every keystroke does not need a server.
+	 */
+	interface Props {
+		onpick: (place: Place) =&gt; void;
+	}
+
+	let { onpick }: Props = $props();
+
+	// What has been typed, read from the input itself: the root's `inputValue`
+	// is a prop to set, not one to bind.
+	let query = $state('');
+	let value = $state('');
+
+	// The gazetteer, awaited once. `await` in a `$derived` is fine in async mode.
+	const all = $derived(await places());
+
+	const matches = $derived.by(() =&gt; {
+		const needle = query.trim().toLowerCase();
+		if (!needle) return all.slice(0, 8);
+		return all.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
+	});
+
+	function pick(id: string) {
+		const place = all.find((p) =&gt; p.id === id);
+		if (place) onpick(place);
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+<p>Bits UI’s <code>Combobox</code> is the accessible half — <code>role=&quot;combobox&quot;</code>, a listbox, arrow keys, Escape, type-ahead, <code>aria-activedescendant</code>. The other half is ours: <code>const all = $derived(await places())</code> awaits the prerendered gazetteer inside a derived, which async mode allows, and <code>matches</code> filters a hundred names on every keystroke without a server. <code>query</code> is read from the input’s own event because the root’s <code>inputValue</code> is a prop to set, not one to bind — the kind of detail a headless library’s docs say once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:47-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;Combobox.Root type=&quot;single&quot; bind:value onValueChange={pick}&gt;
+	&lt;div class=&quot;search&quot;&gt;
+		&lt;MagnifyingGlassIcon size={16} aria-hidden=&quot;true&quot; class=&quot;search__icon&quot; /&gt;
+		&lt;Combobox.Input
+			class=&quot;input search__input&quot;
+			placeholder={m.stop_search()}
+			aria-label={m.stop_search()}
+			oninput={(event) =&gt; (query = event.currentTarget.value)}
+		/&gt;
+	&lt;/div&gt;
+	&lt;Combobox.Portal&gt;
+		&lt;Combobox.Content class=&quot;search__list&quot; sideOffset={4}&gt;
+			&lt;Combobox.Viewport&gt;
+				{#each matches as place (place.id)}
+					&lt;Combobox.Item value={place.id} label={place.name} class=&quot;search__item&quot;&gt;
+						{#snippet children({ selected })}
+							&lt;span&gt;{place.name}&lt;/span&gt;
+							&lt;span class=&quot;muted&quot;&gt;{place.country}&lt;/span&gt;
+							{#if selected}&lt;span class=&quot;visually-hidden&quot;&gt;✓&lt;/span&gt;{/if}
+						{/snippet}
+					&lt;/Combobox.Item&gt;
+				{:else}
+					&lt;p class=&quot;search__empty muted&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
+				{/each}
+			&lt;/Combobox.Viewport&gt;
+		&lt;/Combobox.Content&gt;
+	&lt;/Combobox.Portal&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain the override, why it is derived, and what the version stamp compares against.</li><li>You can say which <code>finalize</code> sends the move and why the other one must not.</li><li>You can describe assignable deriveds in the dialog and what they replaced.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-trip-page.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The trip page: one await, one state object, one stream</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-command-palette.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The command palette</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

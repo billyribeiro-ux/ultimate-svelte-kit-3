@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Render to a file, and load one — Building Ostinato</title>
+<meta name="description" content="The same scheduling function through an `OfflineAudioContext` gives a WAV that sounds like the studio; forty-four bytes of header make it a file every editor opens; and a `SvelteMap` holds the samples people drop on a track.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">13 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 33.33333333333333%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html" aria-current="page"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 13</p>
+			<h1>Render to a file, and load one</h1>
+			<p class="lede">The same scheduling function through an <code>OfflineAudioContext</code> gives a WAV that sounds like the studio; forty-four bytes of header make it a file every editor opens; and a <code>SvelteMap</code> holds the samples people drop on a track.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Render audio offline, write a WAV without a library, and keep decoded samples in reactive state without proxying the buffers.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/render.ts<span class="code__lines">:1-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * RENDER A PATTERN TO A FILE
+ * ==========================
+ *
+ * `OfflineAudioContext` is the live context's twin: the same nodes, the same
+ * `scheduleStep`, but it runs as fast as the machine allows and hands back a
+ * buffer instead of playing. Two bars of a groove render in well under a
+ * second. The result goes through `encodeWav` and becomes a download.
+ *
+ * Because it is the *same* scheduling function as the live player, the file
+ * is the groove — not an approximation of it with slightly different swing.
+ */
+
+import { stepSeconds } from '#lib/music/time.ts';
+import { STEPS, type Pattern, type Track } from '#lib/pattern/model.ts';
+import { scheduleStep } from './schedule.ts';
+import { encodeWav } from './wav.ts';
+
+export interface RenderOptions {
+	bars?: number;
+	sampleRate?: number;
+	/** Decoded files for `sample` tracks, by track id. */
+	samples?: (trackId: string) =&gt; AudioBuffer | undefined;
+}
+
+export async function renderPattern(
+	pattern: Pattern,
+	options: RenderOptions = {}
+): Promise&lt;AudioBuffer&gt; {
+	const bars = options.bars ?? 2;
+	const sampleRate = options.sampleRate ?? 44100;
+	// Half a second of tail so the last hit's decay is not cut off.
+	const seconds = stepSeconds(pattern.bpm) * STEPS * bars + 0.5;
+
+	const ctx = new OfflineAudioContext(2, Math.ceil(seconds * sampleRate), sampleRate);
+
+	// Offline, a channel strip is a gain and a pan — the meters are not needed.
+	const strips = new Map&lt;string, GainNode&gt;();
+	const outputs = {
+		output(track: Track) {
+			let strip = strips.get(track.id);
+			if (!strip) {
+				strip = ctx.createGain();
+				strip.gain.value = track.gain;
+				const panner = ctx.createStereoPanner();
+				panner.pan.value = track.pan;
+				strip.connect(panner).connect(ctx.destination);
+				strips.set(track.id, strip);
+			}
+			return strip;
+		},
+		sample: (track: Track) =&gt; options.samples?.(track.id)
+	};
+
+	for (let bar = 0; bar &lt; bars; bar += 1) {
+		for (let step = 0; step &lt; STEPS; step += 1) {
+			scheduleStep(ctx, outputs, pattern, step, (bar * STEPS + step) * stepSeconds(pattern.bpm));
+		}
+	}
+
+	return ctx.startRendering();
+}</code></pre>
+</figure>
+<p><code>OfflineAudioContext</code> is the live context’s twin. Because <code>scheduleStep</code> is the same function, the file *is* the groove — not an approximation of it with slightly different swing. Offline, a channel strip is a gain and a pan; the meters are not needed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/wav.ts<span class="code__lines">:1-60</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WAV
+ * ===
+ *
+ * The oldest audio format still in daily use, and the simplest: a 44-byte
+ * header followed by the samples, interleaved, as 16-bit integers. Every
+ * editor opens it. No library is needed to write one, and none is used.
+ *
+ * Pure: arrays in, bytes out. `render.ts` is what turns an `AudioBuffer` into
+ * the arrays, and the test for this file needs no browser.
+ */
+
+/**
+ * @param channels one `Float32Array` of samples in `[-1, 1]` per channel
+ * @param sampleRate samples per second, e.g. 44100
+ */
+export function encodeWav(
+	channels: readonly Float32Array[],
+	sampleRate: number
+): Uint8Array&lt;ArrayBuffer&gt; {
+	const channelCount = channels.length;
+	const frames = channels[0]?.length ?? 0;
+	const bytesPerSample = 2;
+	const dataBytes = frames * channelCount * bytesPerSample;
+
+	const buffer = new ArrayBuffer(44 + dataBytes);
+	const view = new DataView(buffer);
+
+	const ascii = (offset: number, text: string) =&gt; {
+		for (let i = 0; i &lt; text.length; i += 1) view.setUint8(offset + i, text.charCodeAt(i));
+	};
+
+	// The RIFF header. Every number is little-endian, hence the `true`s.
+	ascii(0, 'RIFF');
+	view.setUint32(4, 36 + dataBytes, true);
+	ascii(8, 'WAVE');
+	ascii(12, 'fmt ');
+	view.setUint32(16, 16, true); // size of the fmt chunk
+	view.setUint16(20, 1, true); // 1 = PCM
+	view.setUint16(22, channelCount, true);
+	view.setUint32(24, sampleRate, true);
+	view.setUint32(28, sampleRate * channelCount * bytesPerSample, true); // bytes per second
+	view.setUint16(32, channelCount * bytesPerSample, true); // bytes per frame
+	view.setUint16(34, 8 * bytesPerSample, true); // bits per sample
+	ascii(36, 'data');
+	view.setUint32(40, dataBytes, true);
+
+	// Interleave: L R L R … and clamp, because a hot mix can exceed ±1 and a
+	// float that wraps around in 16 bits is the loudest possible click.
+	let offset = 44;
+	for (let frame = 0; frame &lt; frames; frame += 1) {
+		for (const channel of channels) {
+			const sample = Math.max(-1, Math.min(1, channel[frame] ?? 0));
+			view.setInt16(offset, Math.round(sample &lt; 0 ? sample * 0x8000 : sample * 0x7fff), true);
+			offset += bytesPerSample;
+		}
+	}
+
+	return new Uint8Array(buffer);
+}</code></pre>
+</figure>
+<p>The oldest audio format still in daily use, and the simplest: a 44-byte header and the samples as interleaved 16-bit integers. Every number is little-endian, hence the <code>true</code>s. The clamp matters: a hot mix can exceed ±1, and a float that wraps around in 16 bits is the loudest possible click. The function is pure — arrays in, bytes out — so its test needs no browser.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/wav.spec.ts<span class="code__lines">:25-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('encodeWav', () =&gt; {
+	it('writes a PCM header a player will accept', () =&gt; {
+		const bytes = encodeWav([new Float32Array(100), new Float32Array(100)], 44100);
+		const h = header(bytes);
+
+		expect(h.riff).toBe('RIFF');
+		expect(h.wave).toBe('WAVE');
+		expect(h.format).toBe(1);
+		expect(h.channels).toBe(2);
+		expect(h.sampleRate).toBe(44100);
+		expect(h.bitsPerSample).toBe(16);
+		expect(h.dataBytes).toBe(100 * 2 * 2);
+		expect(bytes.length).toBe(44 + 400);
+	});
+
+	it('interleaves channels and scales to 16-bit', () =&gt; {
+		const left = Float32Array.from([1, 0, -1]);
+		const right = Float32Array.from([0.5, 0, -0.5]);
+		const view = new DataView(encodeWav([left, right], 8000).buffer);
+
+		expect(view.getInt16(44, true)).toBe(0x7fff);
+		expect(view.getInt16(46, true)).toBe(Math.round(0.5 * 0x7fff));
+		expect(view.getInt16(48, true)).toBe(0);
+		expect(view.getInt16(52, true)).toBe(-0x8000);
+		expect(view.getInt16(54, true)).toBe(-0x4000);
+	});
+
+	it('clamps a hot mix instead of wrapping it', () =&gt; {
+		const view = new DataView(encodeWav([Float32Array.from([1.7, -2.3])], 8000).buffer);
+		expect(view.getInt16(44, true)).toBe(0x7fff);
+		expect(view.getInt16(46, true)).toBe(-0x8000);
+	});
+
+	it('handles silence and an empty buffer', () =&gt; {
+		expect(encodeWav([], 44100).length).toBe(44);
+		expect(header(encodeWav([new Float32Array(0)], 44100)).dataBytes).toBe(0);
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the test reads the header back with a DataView</h4>
+	<p>A WAV header is forty-four bytes of numbers that every player checks and nobody can read by eye. The test reads them back exactly the way a decoder would, so “the sample rate is at offset 24, little-endian, 32 bits” is asserted rather than assumed. When the encoder was first written it truncated instead of rounding; the interleave test caught a one-off in the very first run.</p>
+</aside>
+<h3 id="samples">Samples</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/samples.svelte.ts<span class="code__lines">:1-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SAMPLES
+ * =======
+ *
+ * The files somebody drops on a `sample` track, decoded once and kept by track
+ * id. A `SvelteMap`, because the grid reads `has(track.id)` to show whether a
+ * track has anything to play; the `AudioBuffer` values are left alone, as
+ * `SvelteMap` leaves all values alone.
+ */
+
+import { SvelteMap } from 'svelte/reactivity';
+import type { AudioEngine } from './engine.svelte.ts';
+
+export class SampleBank {
+	readonly buffers = new SvelteMap&lt;string, AudioBuffer&gt;();
+	readonly names = new SvelteMap&lt;string, string&gt;();
+	#engine: AudioEngine;
+
+	constructor(engine: AudioEngine) {
+		this.#engine = engine;
+	}
+
+	/**
+	 * Decode a file for a track. `decodeAudioData` needs a context, which is why
+	 * this lives near the engine rather than in the pattern model.
+	 *
+	 * Ten seconds is the cap. A sample track plays one hit per step; a
+	 * three-minute song on it is a mistake, and decoding it would hold thirty
+	 * megabytes of floats for the rest of the session.
+	 */
+	async load(trackId: string, file: File): Promise&lt;void&gt; {
+		const bytes = await file.arrayBuffer();
+		const buffer = await this.#engine.context.decodeAudioData(bytes);
+
+		if (buffer.duration &gt; 10) {
+			throw new RangeError(
+				`&quot;${file.name}&quot; is ${buffer.duration.toFixed(1)}s long; samples are capped at 10s`
+			);
+		}
+
+		this.buffers.set(trackId, buffer);
+		this.names.set(trackId, file.name);
+	}
+
+	clear(trackId: string): void {
+		this.buffers.delete(trackId);
+		this.names.delete(trackId);
+	}
+
+	get(trackId: string): AudioBuffer | undefined {
+		return this.buffers.get(trackId);
+	}
+}</code></pre>
+</figure>
+<p><code>SvelteMap</code> again, and again for a specific reader: the grid asks <code>has(track.id)</code> to show whether a track has anything to play. The <code>AudioBuffer</code> values are left alone — <code>SvelteMap</code> makes the *map* reactive, not what is in it — which is what you want for a buffer of a million floats. The ten-second cap is there because a sample track plays one hit per step, and a three-minute song on it is a mistake that would hold thirty megabytes for the rest of the session.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what an <code>OfflineAudioContext</code> shares with the live one and what it does not.</li><li>You can describe the WAV header well enough to write one.</li><li>You can explain what <code>SvelteMap</code> makes reactive and what it leaves alone.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="two-clocks.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Two clocks: the scheduler</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-session.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The session: a pattern and its history</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

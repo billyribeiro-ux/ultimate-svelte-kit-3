@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LTTB: keeping the shape — Building Sextant</title>
+<meta name="description" content="Why averaging a series to fit a chart destroys the thing you are looking for, and how largest-triangle-three-buckets keeps real samples.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 39.130434782608695%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html" aria-current="page"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>LTTB: keeping the shape</h1>
+			<p class="lede">Why averaging a series to fit a chart destroys the thing you are looking for, and how largest-triangle-three-buckets keeps real samples.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Reduce twenty thousand points to two thousand without losing a single spike.</p></aside>
+			<p>A metric query over a fortnight at one-minute resolution is twenty thousand points. A chart is a thousand pixels wide. Something has to give, and the obvious choice is the wrong one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/downsample.ts<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * DOWNSAMPLING — LARGEST TRIANGLE THREE BUCKETS
+ * ============================================
+ *
+ * A chart 900 pixels wide cannot usefully draw 100,000 points. Something has to
+ * choose which ones survive, and the choice is not cosmetic: it decides whether
+ * the spike that caused the incident is visible.
+ *
+ * WHAT THE OBVIOUS ANSWERS GET WRONG
+ * ----------------------------------
+ * **Take every nth point.** A spike lasting fewer than n samples is invisible
+ * with probability (n-1)/n. On a day of one-second data at 900 pixels, n is 96,
+ * so a 30-second outage disappears about 97% of the time. This is the default in
+ * more dashboards than anybody would like.
+ *
+ * **Average each bucket.** The spike survives, divided by the bucket size — a
+ * 5-second burst to 10s latency inside a 96-second bucket renders as 520ms,
+ * which looks like ordinary jitter. Averaging is *lossy in the direction that
+ * matters*: it always understates extremes, never overstates them.
+ *
+ * **Min and max per bucket.** Honest about extremes and doubles the point count,
+ * and the resulting shape is a band rather than a line — which is right for a
+ * range chart and wrong when somebody is trying to read one series' behaviour.
+ *
+ * WHAT LTTB DOES
+ * --------------
+ * Steinarsson's algorithm (2013). Divide into buckets, keep the first and last
+ * points, and from each bucket keep the single point forming the **largest
+ * triangle** with the previously kept point and the average of the next bucket.
+ * Area is a proxy for &quot;how much this point changes the shape&quot;, so points on a
+ * flat stretch score near zero and a lone spike scores enormously.
+ *
+ * The result has exactly the requested number of points, preserves visual shape,
+ * and — the property that matters here — **keeps every point that is a local
+ * extreme by a wide margin**, because a spike forms a large triangle with
+ * anything.
+ *
+ * WHAT IT DOES NOT DO
+ * -------------------
+ * It is not an average, so the y values are *real samples that really occurred*.
+ * That is a feature for reading a chart and a trap for reading a number off one:
+ * the crosshair in `MetricChart.svelte` reads from the full series rather than
+ * the drawn one, because otherwise the number under the pointer would be the
+ * nearest surviving sample rather than the value at that time.
+ */</code></pre>
+</figure>
+<p>Averaging every twenty points removes exactly the thing somebody is looking at a latency chart to find. A single 4-second spike among nineteen 40ms samples averages to 238ms — visible as a small bump, indistinguishable from ordinary noise, and completely wrong about what happened.</p>
+<h3 id="the-algorithm">Largest triangle, three buckets</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/downsample.ts<span class="code__lines">:52-74</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Reduce `points` to at most `threshold` points, preserving shape.
+ *
+ * Points must be sorted by `x`. They are, everywhere this is called, because
+ * they come from a bucketed query — and sorting here would hide a caller that
+ * has lost its ordering, which is a bug worth surfacing rather than papering
+ * over.
+ */
+export function lttb(points: readonly Point[], threshold: number): Point[] {
+	if (threshold &gt;= points.length || threshold &lt; 3) {
+		// Fewer points than asked for, or a threshold too small for the algorithm to
+		// mean anything (it always keeps the first and last, so below 3 there is
+		// nothing to choose). Returning a copy rather than the input keeps the
+		// return type honestly mutable.
+		return [...points];
+	}
+
+	const out: Point[] = [points[0]!];
+
+	// Every bucket except the first and last point, which are always kept.
+	const every = (points.length - 2) / (threshold - 2);
+
+	let previous = 0;</code></pre>
+</figure>
+<p>Split the series into as many buckets as you want output points. For each bucket, keep the <strong>one real sample</strong> that forms the largest triangle with the point already chosen and the average of the next bucket. Largest triangle means &quot;most visually significant&quot;, which turns out to be an excellent proxy for &quot;the bit you would have pointed at&quot;.</p>
+
+<aside class="callout callout--why">
+	<h4>The property that matters is that the samples are real</h4>
+	<p>Every point on the drawn line actually occurred, at the time it is drawn. That is what lets the crosshair say &quot;1.9s at 14:32&quot; and be telling the truth. An averaged series has no such property: every point is a number that never happened.</p>
+</aside>
+<h3 id="the-trap">The trap this leaves</h3>
+<p>Real samples at real times is a feature for *reading* a chart and a trap for *reading a number off* one. LTTB keeps a real sample, but it keeps a <strong>subset</strong> — so the point nearest the pointer in the drawn array is not necessarily the point nearest the pointer in the data.</p>
+<p>The chart in chapter 34 therefore reads its crosshair from the <strong>full</strong> series and draws its line from the downsampled one. The distinction matters exactly when it is hardest to notice: the drawn array is right most of the time and wrong on the spikes, which is where people put the pointer.</p>
+<h3 id="the-axis">And an axis with two opinions</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/series/downsample.ts<span class="code__lines">:155-177</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A y-axis range with a sensible floor and a little headroom.
+ *
+ * Two decisions worth stating. The axis starts at zero for a series that is
+ * always positive, because a latency chart auto-scaled to [198, 202] turns
+ * millisecond noise into a mountain range and people react to it. And a series
+ * that is entirely flat gets an artificial band, because a zero-height axis
+ * divides by zero and renders every point on the same pixel row — which looks
+ * like a broken chart rather than a stable metric.
+ */
+export function axisRange(points: readonly Point[]): { min: number; max: number } {
+	const bounds = extent(points);
+	if (!bounds) return { min: 0, max: 1 };
+
+	const min = bounds.min &gt;= 0 ? 0 : bounds.min;
+	const max = bounds.max;
+
+	if (max === min) return { min, max: min === 0 ? 1 : min * 1.5 };
+
+	// 5% headroom, so a line at the maximum is not drawn on the top border where
+	// it is indistinguishable from a clipped one.
+	return { min, max: max + (max - min) * 0.05 };
+}</code></pre>
+</figure>
+<p>A latency chart auto-scaled to [198, 202] turns millisecond noise into a mountain range, and people react to mountain ranges. Starting at zero for an always-positive series is a decision about how the chart will be *read*, not about the data.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Twenty thousand points reduce to two thousand with every spike still visible.</li><li>Every point in the output is a point that was in the input.</li><li>A flat series still gets a non-zero axis range.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="buckets-and-rollups.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Buckets, steps and rollups</span>
+			</a>
+			<a class="pager__link pager__link--next" href="assembling-a-trace.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Assembling a trace from spans that arrive in any order</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

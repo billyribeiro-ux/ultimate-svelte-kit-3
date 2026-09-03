@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The model and the projection — Building Tessera</title>
+<meta name="description" content="Two representations of one board, why they are not collapsed into one, and the listener bug that made undo work perfectly while nothing reached the network.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 31.818181818181817%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html" aria-current="page"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>The model and the projection</h1>
+			<p class="lede">Two representations of one board, why they are not collapsed into one, and the listener bug that made undo work perfectly while nothing reached the network.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand the split between an unreactive CRDT and the <code>$state</code> objects components render from.</p></aside>
+			<p>This is where Svelte finally appears, and the first decision is to keep most of the project away from it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE REACTIVE DOCUMENT
+ * =====================
+ *
+ * Two representations of the same board, kept in step by one function.
+ *
+ *   the CRDT      plain objects and Maps. Correct under any delivery order,
+ *                 mergeable, serialisable, and completely unaware of Svelte.
+ *   the views     `$state` objects the components render from.
+ *
+ * It is tempting to collapse them — make the CRDT itself reactive and render
+ * straight off it. Two reasons not to.
+ *
+ * The first is performance. Deep reactivity over a CRDT means a proxy around
+ * every tombstone, every add-stamp, every character of every label. Dragging one
+ * node touches structures that no component reads, and each touch costs a
+ * signal write. The projection is the working set; it is roughly a hundredth of
+ * the size.
+ *
+ * The second is that the CRDT's internals are *not* what a component wants. A
+ * component wants `node.x === 240`. The CRDT holds &quot;a last-write-wins register
+ * whose current winner is 240, and here are the two losing writes&quot;. Rendering
+ * from the model would put merge semantics into the markup.
+ *
+ * So: `apply()` mutates the model, works out what actually changed, and writes
+ * that much into the views. One node moving invalidates one number.</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The temptation, and the two reasons to resist it</h4>
+	<p>Making the CRDT itself reactive and rendering straight off it is genuinely tempting — one representation, no synchronisation code. The first cost is performance: deep reactivity over a CRDT means a proxy around every tombstone, every add-stamp, every character of every label, and dragging one node touches structures no component reads. The second cost is worse: the CRDT’s internals are not what a component wants. A component wants <code>node.x === 240</code>. The CRDT holds &quot;a register whose current winner is 240, and here are the two losing writes&quot;. Rendering from the model puts merge semantics into the markup.</p>
+</aside>
+<h3 id="the-views">The views</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * One node, as the renderer sees it.
+ *
+ * Every field is its own signal. That granularity is the point: a drag writes
+ * `x` and `y` sixty times a second, and nothing that reads only `fill` should
+ * re-run because of it.
+ */
+export class NodeView {
+	kind = $state&lt;NodeKind&gt;('service');
+	x = $state(0);
+	y = $state(0);
+	/*
+	 * Annotated `&lt;number&gt;` rather than inferred.
+	 *
+	 * `NODE_DEFAULTS` is `as const`, so the inferred type of `$state(168)` is the
+	 * literal `168` and the first resize is a type error complaining that `number`
+	 * is not assignable to `168`. Widening at the declaration is the fix; removing
+	 * `as const` would lose the literal types the operation schemas depend on.
+	 */
+	w = $state&lt;number&gt;(NODE_DEFAULTS.w);
+	h = $state&lt;number&gt;(NODE_DEFAULTS.h);
+	fill = $state&lt;Fill&gt;(NODE_DEFAULTS.fill);
+	order = $state&lt;OrderKey&gt;('V' as OrderKey);
+	parent = $state&lt;NodeId | null&gt;(null);
+	/** The materialised text of the label. The characters live in the CRDT. */
+	label = $state('');
+
+	constructor(readonly id: NodeId) {}
+
+	/** Bounds, as a plain object — handy for geometry that should not be reactive. */
+	get rect(): Rect {
+		return { x: this.x, y: this.y, w: this.w, h: this.h };
+	}
+}</code></pre>
+</figure>
+<p>Every field is its own signal. That granularity is the whole point: a drag writes <code>x</code> and <code>y</code> sixty times a second, and nothing that reads only <code>fill</code> should re-run because of it.</p>
+<aside class="callout callout--note"><p>The <code>$state&lt;number&gt;(NODE_DEFAULTS.w)</code> annotation is a small, real papercut worth knowing. <code>NODE_DEFAULTS</code> is <code>as const</code>, so the *inferred* type of <code>$state(168)</code> is the literal <code>168</code>, and the first resize is a type error saying <code>number</code> is not assignable to <code>168</code>. Widening at the declaration is the fix; removing <code>as const</code> would lose the literal types the operation schemas depend on.</p></aside>
+<h3 id="the-fields">The document’s fields</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class BoardDocument {
+	/* The model. Deliberately not reactive. */
+	readonly #nodes = new OrSet&lt;NodeId&gt;();
+	readonly #edges = new OrSet&lt;EdgeId&gt;();
+	readonly #nodeFields = new Map&lt;NodeId, Map&lt;NodeField, Lww&lt;unknown&gt;&gt;&gt;();
+	readonly #edgeFields = new Map&lt;EdgeId, Map&lt;EdgeField, Lww&lt;unknown&gt;&gt;&gt;();
+	/** Labels for nodes and edges alike — ids are unique across both. */
+	readonly #labels = new Map&lt;Stamp, RgaText&gt;();
+
+	/* The projection. */
+	readonly nodes = new SvelteMap&lt;NodeId, NodeView&gt;();
+	readonly edges = new SvelteMap&lt;EdgeId, EdgeView&gt;();
+
+	readonly #clock: Clock;
+	#version: VersionVector = emptyVersion();
+
+	/**
+	 * Called with every operation this replica creates.
+	 *
+	 * A set rather than a single slot. Two things listen — the sync engine, which
+	 * queues operations for the server, and the history stack, which records them
+	 * for undo — and the first version of this held one function, so whichever
+	 * subscribed second silently replaced the first. The symptom was undo working
+	 * perfectly and nothing ever reaching the network.
+	 */
+	readonly #listeners = new Set&lt;(operation: Operation) =&gt; void&gt;();
+
+	readonly actor: ActorId;
+
+	constructor(actor: ActorId, now: () =&gt; number = Date.now) {
+		this.actor = actor;
+		this.#clock = new Clock(actor, now);
+	}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>That listener set is a bug fixed. It held <strong>one function</strong> at first. Two things subscribe — the sync engine, which queues operations for the server, and the history stack, which records them for undo — so whichever subscribed second silently replaced the first. The symptom was undo working perfectly and nothing ever reaching the network. A <code>Set</code> costs nothing and makes the bug unrepresentable.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Nodes in painting order: bottom first.
+ *
+ * Never sorts on `order` alone — two replicas can mint the same fractional
+ * index concurrently, and `Array#sort` is only required to be stable, not to
+ * agree between engines. `compareOrder` breaks the tie with the id.
+ */
+painted(): NodeView[] {
+	return [...this.nodes.values()].sort((a, b) =&gt;
+		compareOrder({ key: a.order, id: a.id }, { key: b.order, id: b.id })
+	);
+}
+
+/* ---------------------------------------------------------------- */
+/* Applying                                                          */
+/* ---------------------------------------------------------------- */</code></pre>
+</figure>
+<p>And there is <code>compareOrder</code> from chapter 08, at the one place that matters: painting order. Never <code>order</code> alone.</p>
+<h3 id="apply">One way in</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Apply an operation from anywhere — this replica, the network, a replay.
+ *
+ * Safe in any order, any number of times. There is no &quot;have I seen this?&quot;
+ * check: every structure underneath is idempotent, and the fast path that
+ * looked like a free win silently dropped operations that arrived out of
+ * order. See `crdt/version.ts`.
+ */
+apply(operation: Operation): ApplyResult {
+	this.#clock.observe(operation.stamp);
+	this.#version = observeVersion(this.#version, operation.stamp);
+
+	let changed = false;
+
+	switch (operation.kind) {
+		case 'node.add': {
+			changed = this.#nodes.add(operation.id, operation.stamp);
+			// Seed the registers from the creating operation, stamped with it, so a
+			// concurrent edit made before this add arrived still wins if it is later.
+			for (const [field, value] of Object.entries(operation.fields)) {
+				changed =
+					this.#writeNodeField(operation.id, field as NodeField, value, operation.stamp) ||
+					changed;
+			}
+			if (changed) this.#reconcileNode(operation.id);
+			break;
+		}
+
+		case 'node.remove': {
+			changed = this.#nodes.remove(operation.target, operation.observed);
+			if (changed) this.#reconcileNode(operation.target);
+			break;
+		}
+
+		case 'node.set': {
+			changed = this.#writeNodeField(
+				operation.target,
+				operation.field,
+				operation.value,
+				operation.stamp
+			);
+			if (changed) this.#reconcileNodeField(operation.target, operation.field);
+			break;
+		}</code></pre>
+</figure>
+<p>The shape of every branch is the same: mutate the model, get back a boolean saying whether anything actually changed, and only then touch the projection. <code>write()</code> returning <code>undefined</code> from chapter 10 is what makes that boolean cheap and honest.</p>
+<p>Note the <code>node.add</code> branch seeds every register from the creating operation, stamped with it — so a concurrent edit made *before* this add arrived still wins if its stamp is later. That is a one-line detail that decides whether &quot;I renamed a box while it was still syncing&quot; works.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	case 'text.insert': {
+		changed = this.label(operation.target).insert({
+			// The operation's stamp is the character's identity. One stamp, two
+			// jobs, and no way for them to disagree.
+			id: operation.stamp,
+			after: operation.after,
+			value: operation.value,
+			deleted: false
+		});
+		if (changed) this.#reconcileLabel(operation.target);
+		break;
+	}
+
+	case 'text.delete': {
+		const text = this.label(operation.target);
+		for (const character of operation.chars) {
+			changed = text.delete(character) || changed;
+		}
+		if (changed) this.#reconcileLabel(operation.target);
+		break;
+	}
+}</code></pre>
+</figure>
+<p>The operation’s stamp *is* the character’s identity. One stamp, two jobs, and no way for them to disagree — the payoff from making stamps unique in chapter 06.</p>
+<h3 id="commit">Local first, in four lines</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Apply locally, then hand to the sync layer.
+ *
+ * The order matters and is the whole of &quot;local-first&quot;: the screen updates from
+ * the local apply, synchronously, in the same frame as the input event. The
+ * network is told afterwards and is allowed to take as long as it likes,
+ * including forever.
+ */
+#commit(operation: Operation): Operation {
+	this.apply(operation);
+	for (const listener of this.#listeners) listener(operation);
+	return operation;
+}</code></pre>
+</figure>
+<p>That is the entire architecture of chapter 02, expressed as four lines and an ordering. Apply, then notify. The screen updates synchronously, in the same frame as the input event. The network is told afterwards and is allowed to take as long as it likes, including forever.</p>
+<h3 id="commands">The commands</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Re-create a node that was removed, keeping its id and everything pointing at it. */
+restoreNode(id: NodeId, fields: NodeFields): void {
+	this.#commit({ kind: 'node.add', stamp: this.#clock.tick(), id, fields });
+}
+
+removeNode(id: NodeId): void {
+	/*
+	 * Edges first, and edges *incident to* this node, not just selected ones.
+	 *
+	 * Leaving them behind produces an edge pointing at nothing: it renders as an
+	 * arrow to the origin, or not at all, and it survives every subsequent merge
+	 * because nothing else has a reason to remove it.
+	 */
+	for (const edge of this.edges.values()) {
+		if (edge.from === id || edge.to === id) this.removeEdge(edge.id);
+	}
+
+	this.#commit({
+		kind: 'node.remove',
+		stamp: this.#clock.tick(),
+		target: id,
+		observed: this.#nodes.observedAdds(id)
+	});
+}
+
+setNode&lt;F extends NodeField&gt;(id: NodeId, field: F, value: NodeFields[F]): void {
+	this.#commit({
+		kind: 'node.set',
+		stamp: this.#clock.tick(),
+		target: id,
+		field,
+		value
+	} as Operation);
+}
+
+/** Move a node, as one gesture: two operations, so a concurrent resize survives. */
+moveNode(id: NodeId, x: number, y: number): void {
+	this.setNode(id, 'x', x);
+	this.setNode(id, 'y', y);
+}
+
+resizeNode(id: NodeId, rect: Rect): void {
+	const w = clamp(rect.w, MIN_SIZE, MAX_SIZE);
+	const h = clamp(rect.h, MIN_SIZE, MAX_SIZE);
+
+	this.setNode(id, 'x', rect.x);
+	this.setNode(id, 'y', rect.y);
+	this.setNode(id, 'w', w);
+	this.setNode(id, 'h', h);
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>removeNode</code> removes edges <strong>incident to</strong> the node, not just selected ones. Leave them and you get an edge pointing at nothing: it renders as an arrow to the origin, or not at all, and it survives every subsequent merge because nothing else has any reason to remove it. Dangling references are forever in an append-only system.</p></aside>
+<p>And <code>moveNode</code> is two operations rather than one. Two extra stamps, fifty-two bytes, and a concurrent resize survives your drag. That is chapter 10’s per-field rule, cashed in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/board/document.svelte.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Type `value` into a label at `offset`, one operation per character.
+ *
+ * Each character hangs off the previous one, so a paste is a chain rather than
+ * a fan — which is what makes it survive somebody else typing in the middle of
+ * it while it lands.
+ */
+insertText(target: Stamp, offset: number, value: string): void {
+	let after = this.label(target).idBefore(offset);
+
+	for (const character of [...value]) {
+		const stamp = this.#clock.tick();
+		this.#commit({ kind: 'text.insert', stamp, target, after, value: character });
+		after = stamp;
+	}
+}
+
+deleteText(target: Stamp, from: number, to: number): void {
+	const chars = this.label(target).idsBetween(from, to);
+	if (chars.length === 0) return;
+
+	this.#commit({ kind: 'text.delete', stamp: this.#clock.tick(), target, chars });
+}</code></pre>
+</figure>
+<p>Each character hangs off the previous one, so a paste is a <strong>chain</strong> rather than a fan. That is what makes it survive somebody typing in the middle of it while it lands.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the CRDT is not reactive and the projection is.</li><li>You can point at the four lines that make the application local-first.</li><li>You can say why a move is two operations and a delete is several.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="eight-operations.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Eight operations, and nothing else</span>
+			</a>
+			<a class="pager__link pager__link--next" href="reconciliation.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Keeping the projection honest</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

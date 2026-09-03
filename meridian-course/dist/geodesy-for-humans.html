@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geodesy for humans — Building Meridian</title>
+<meta name="description" content="Distances, bearings, destinations, great-circle interpolation, arcs that survive the date line, bounds and compass points — on a sphere, in metres, with conventions written down. Plain TypeScript with no Svelte in it, so anybody can use it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">05 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 11.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html" aria-current="page"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 05</p>
+			<h1>Geodesy for humans</h1>
+			<p class="lede">Distances, bearings, destinations, great-circle interpolation, arcs that survive the date line, bounds and compass points — on a sphere, in metres, with conventions written down. Plain TypeScript with no Svelte in it, so anybody can use it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Compute the distance and bearing between two places, draw the great circle between them without a leap across the Pacific, and know why longitude comes first.</p></aside>
+			<p>Every geographic bug I have ever shipped was a convention bug: latitude and longitude the wrong way round, a bearing in <code>[-180, 180]</code> compared against one in <code>[0, 360)</code>, a distance in kilometres added to one in metres. So the file starts by writing the conventions down, and the code keeps them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * GEODESY ON A SPHERE
+ * ===================
+ *
+ * Everything a trip planner needs to know about the shape of the Earth, and
+ * nothing it does not. The Earth is treated as a sphere of mean radius
+ * 6,371,008.8 m — the WGS84 mean — which puts every distance within 0.3 % of
+ * the ellipsoid answer. A route between two cities is planned to the nearest
+ * kilometre, not the nearest metre, and the ellipsoid formulas (Vincenty's)
+ * cost a page of iteration for a difference nobody would see on a map.
+ *
+ * Conventions, because they are where geo code goes wrong:
+ *
+ *   - A point is `{ lng, lat }`, in DEGREES, longitude first — the same order
+ *     as GeoJSON and MapLibre, and the opposite of the way people say it.
+ *     `toPosition` converts to the `[lng, lat]` tuple GeoJSON wants.
+ *   - A bearing is in degrees clockwise from north, in `[0, 360)`.
+ *   - A distance is in METRES. Formatting to kilometres or miles is the last
+ *     thing that happens, in `formatDistance`, and only for a person to read.
+ *
+ * Nothing here imports Svelte. The `./geo` subpath of the package is for
+ * anybody, in any framework, or in none.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:25-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A point on the sphere, in degrees. Longitude first, like GeoJSON. */
+export interface LngLat {
+	readonly lng: number;
+	readonly lat: number;
+}
+
+/** The same point as the tuple GeoJSON uses. */
+export type Position = readonly [lng: number, lat: number];
+
+/** A rectangle on the sphere, in degrees. */
+export interface Bounds {
+	readonly west: number;
+	readonly south: number;
+	readonly east: number;
+	readonly north: number;
+}
+
+/** WGS84 mean radius, in metres. */
+export const EARTH_RADIUS_M = 6_371_008.8;</code></pre>
+</figure>
+<p>Longitude first, because GeoJSON and MapLibre both say so and the library exists to feed them. A sphere, not an ellipsoid, because a trip is planned to the kilometre and the difference is under a third of a percent — the comment says so, and says what it would cost to do better, which is how a simplification should be recorded.</p>
+<h3 id="distance">Distance, the haversine way</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:66-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The great-circle distance between two points, in metres — the haversine
+ * formula, which stays accurate for points a metre apart where the plain
+ * spherical law of cosines loses every digit to rounding.
+ */
+export function distance(a: LngLat, b: LngLat): number {
+	const φ1 = a.lat * RAD;
+	const φ2 = b.lat * RAD;
+	const Δφ = (b.lat - a.lat) * RAD;
+	const Δλ = (b.lng - a.lng) * RAD;
+
+	const h =
+		Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+		Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+	// `min(1, …)` guards against a floating-point 1.0000000002, whose square
+	// root would hand `asin` a value it refuses.
+	return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** The sum of the distances along a path, in metres. */
+export function pathLength(points: readonly LngLat[]): number {
+	let total = 0;
+	for (let i = 1; i &lt; points.length; i += 1) {
+		total += distance(points[i - 1]!, points[i]!);
+	}
+	return total;
+}</code></pre>
+</figure>
+<p>The spherical law of cosines is one line and it fails for points a metre apart, where the cosine of a tiny angle rounds to exactly 1 and every digit of the answer is lost. Haversine works with half-angle sines instead, which stay meaningful at small distances, and the test in <code>geo.spec.ts</code> checks a point one metre away to three decimal places to prove it. The <code>Math.min(1, …)</code> is the kind of guard you write once you have seen <code>asin(1.0000000002)</code> return <code>NaN</code> in production.</p>
+<h3 id="bearing">Which way, and where you end up</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:95-130</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The initial bearing from `a` to `b`: the compass direction you set out on.
+ * A great circle curves, so the bearing changes along the way — London to
+ * New York starts out north-west and arrives heading south-west.
+ */
+export function bearing(a: LngLat, b: LngLat): number {
+	const φ1 = a.lat * RAD;
+	const φ2 = b.lat * RAD;
+	const Δλ = (b.lng - a.lng) * RAD;
+
+	const y = Math.sin(Δλ) * Math.cos(φ2);
+	const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+	return normalizeBearing(Math.atan2(y, x) * DEG);
+}
+
+/** The bearing you arrive on: the reverse of the initial bearing back. */
+export function finalBearing(a: LngLat, b: LngLat): number {
+	return normalizeBearing(bearing(b, a) + 180);
+}
+
+/** The point `meters` away from `from` along `bearingDeg`. */
+export function destination(from: LngLat, bearingDeg: number, meters: number): LngLat {
+	const δ = meters / EARTH_RADIUS_M;
+	const θ = bearingDeg * RAD;
+	const φ1 = from.lat * RAD;
+	const λ1 = from.lng * RAD;
+
+	const sinφ2 = Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ);
+	const φ2 = Math.asin(sinφ2);
+	const y = Math.sin(θ) * Math.sin(δ) * Math.cos(φ1);
+	const x = Math.cos(δ) - Math.sin(φ1) * sinφ2;
+	const λ2 = λ1 + Math.atan2(y, x);
+
+	return { lng: normalizeLng(λ2 * DEG), lat: φ2 * DEG };
+}</code></pre>
+</figure>
+<p>A bearing is the compass direction you set out on, and it changes along a great circle — London to New York leaves heading north of west and arrives heading south of west, and the test says exactly that. <code>destination</code> is the inverse question: start here, walk this far on this bearing, where are you? It is used by the tests to make a point a known distance away, and by nothing else; a library function that exists to test another is still worth having.</p>
+<h3 id="interpolate">The point halfway along</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:132-178</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The point a fraction `t` of the way from `a` to `b` along the great circle.
+ *
+ * Not a linear blend of latitudes and longitudes — that would draw a straight
+ * line on a flat map, which is the *long* way round. This blends the two
+ * points as unit vectors on the sphere (spherical linear interpolation), so
+ * `t = 0.5` is the true halfway point.
+ */
+export function interpolate(a: LngLat, b: LngLat, t: number): LngLat {
+	const d = distance(a, b) / EARTH_RADIUS_M;
+	if (d === 0) return { lng: a.lng, lat: a.lat };
+
+	const φ1 = a.lat * RAD;
+	const λ1 = a.lng * RAD;
+	const φ2 = b.lat * RAD;
+	const λ2 = b.lng * RAD;
+
+	const A = Math.sin((1 - t) * d) / Math.sin(d);
+	const B = Math.sin(t * d) / Math.sin(d);
+
+	const x = A * Math.cos(φ1) * Math.cos(λ1) + B * Math.cos(φ2) * Math.cos(λ2);
+	const y = A * Math.cos(φ1) * Math.sin(λ1) + B * Math.cos(φ2) * Math.sin(λ2);
+	const z = A * Math.sin(φ1) + B * Math.sin(φ2);
+
+	return {
+		lng: Math.atan2(y, x) * DEG,
+		lat: Math.atan2(z, Math.hypot(x, y)) * DEG
+	};
+}
+
+export function midpoint(a: LngLat, b: LngLat): LngLat {
+	return interpolate(a, b, 0.5);
+}
+
+/**
+ * The great circle from `a` to `b` as a polyline of `segments + 1` positions,
+ * with longitudes unwrapped so a line across the Pacific does not leap from
+ * +179 to −179 and draw itself across the whole map.
+ */
+export function arc(a: LngLat, b: LngLat, segments = 64): Position[] {
+	const points: Position[] = [];
+	for (let i = 0; i &lt;= segments; i += 1) {
+		const p = interpolate(a, b, i / segments);
+		points.push([p.lng, p.lat]);
+	}
+	return unwrap(points);
+}</code></pre>
+</figure>
+<p>This is the function the globe’s camera follows and the map’s route line is drawn from, and it is the one most people get wrong. Averaging two latitudes and two longitudes gives the midpoint of the straight line on a *flat map*, which on the sphere is nowhere near halfway. Spherical linear interpolation treats the two points as unit vectors and blends the vectors, so <code>t = 0.5</code> lands on the true great-circle midpoint. <code>arc</code> samples it sixty-five times and hands the result to <code>unwrap</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:180-209</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Make consecutive longitudes continuous across the antimeridian.
+ *
+ * A step of more than 180° between neighbours can only mean the path crossed
+ * the date line; adding or subtracting 360° from everything after it keeps
+ * the line whole. MapLibre draws longitudes beyond ±180 on the next copy of
+ * the world, which is exactly what a person expects to see.
+ */
+export function unwrap(points: readonly Position[]): Position[] {
+	const out: Position[] = [];
+	let offset = 0;
+	let previous: number | undefined;
+
+	for (const [lng, lat] of points) {
+		let l = lng + offset;
+		if (previous !== undefined) {
+			if (l - previous &gt; 180) {
+				offset -= 360;
+				l -= 360;
+			} else if (l - previous &lt; -180) {
+				offset += 360;
+				l += 360;
+			}
+		}
+		out.push([l, lat]);
+		previous = l;
+	}
+
+	return out;
+}</code></pre>
+</figure>
+<p>The date line is where route lines go to die. A path from Tokyo to San Francisco crosses longitude 180, and if the polyline steps from +179 to −179, MapLibre dutifully draws a line the whole way round the world the long way. <code>unwrap</code> notices any step of more than 180° between neighbours — which can only mean a crossing — and shifts everything after it by 360°, so the line stays continuous and MapLibre draws it on the next copy of the world, which is what a person expects to see.</p>
+<h3 id="bounds">Bounds, padding, and sixteen compass points</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:211-249</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The smallest rectangle around the points, or `null` for no points. */
+export function bounds(points: readonly LngLat[]): Bounds | null {
+	if (points.length === 0) return null;
+
+	let west = Infinity;
+	let south = Infinity;
+	let east = -Infinity;
+	let north = -Infinity;
+
+	for (const { lng, lat } of points) {
+		if (lng &lt; west) west = lng;
+		if (lng &gt; east) east = lng;
+		if (lat &lt; south) south = lat;
+		if (lat &gt; north) north = lat;
+	}
+
+	return { west, south, east, north };
+}
+
+/**
+ * A rectangle grown by a fraction of its own size on every side, and never
+ * smaller than `minimum` degrees across — so that a single stop still gets
+ * a view around it rather than a rectangle of zero width.
+ */
+export function pad(box: Bounds, fraction = 0.15, minimum = 0.05): Bounds {
+	const width = Math.max(box.east - box.west, minimum);
+	const height = Math.max(box.north - box.south, minimum);
+	const dx = width * fraction;
+	const dy = height * fraction;
+	const cx = (box.east + box.west) / 2;
+	const cy = (box.north + box.south) / 2;
+
+	return {
+		west: cx - width / 2 - dx,
+		east: cx + width / 2 + dx,
+		south: Math.max(-90, cy - height / 2 - dy),
+		north: Math.min(90, cy + height / 2 + dy)
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:251-277</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The sixteen points of the compass, clockwise from north. */
+export const COMPASS_POINTS = [
+	'N',
+	'NNE',
+	'NE',
+	'ENE',
+	'E',
+	'ESE',
+	'SE',
+	'SSE',
+	'S',
+	'SSW',
+	'SW',
+	'WSW',
+	'W',
+	'WNW',
+	'NW',
+	'NNW'
+] as const;
+
+export type CompassPoint = (typeof COMPASS_POINTS)[number];
+
+/** The nearest of the sixteen compass points to a bearing. */
+export function compassPoint(degrees: number): CompassPoint {
+	const index = Math.round(normalizeBearing(degrees) / 22.5) % 16;
+	return COMPASS_POINTS[index]!;
+}</code></pre>
+</figure>
+<p><code>pad</code> is what the map’s “fit the route” button calls: grow the rectangle by fifteen percent so the outermost pins are not on the edge, and never let it be smaller than a twentieth of a degree so a trip with one stop still has a view around it. <code>compassPoint</code> divides the circle into sixteen and rounds — the <code>% 16</code> is for a bearing of 359°, which rounds up to index 16 and must wrap to north.</p>
+<h3 id="formatting">A distance a person can read</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:279-326</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type DistanceUnit = 'metric' | 'imperial';
+
+const METERS_PER_MILE = 1609.344;
+const FEET_PER_METER = 3.280839895;
+
+/**
+ * A distance for a person to read, in their locale and their units.
+ *
+ * `Intl.NumberFormat` with `style: 'unit'` knows that German writes &quot;343 km&quot;
+ * with a space and that a mile is &quot;mi&quot; — so the library never carries a table
+ * of unit strings, and a locale it has never heard of still comes out right.
+ */
+export function formatDistance(
+	meters: number,
+	locale = 'en',
+	unit: DistanceUnit = 'metric'
+): string {
+	if (unit === 'imperial') {
+		const miles = meters / METERS_PER_MILE;
+		if (miles &lt; 0.1) {
+			return new Intl.NumberFormat(locale, {
+				style: 'unit',
+				unit: 'foot',
+				maximumFractionDigits: 0
+			}).format(meters * FEET_PER_METER);
+		}
+		return new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit: 'mile',
+			maximumFractionDigits: miles &lt; 10 ? 1 : 0
+		}).format(miles);
+	}
+
+	if (meters &lt; 1000) {
+		return new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit: 'meter',
+			maximumFractionDigits: 0
+		}).format(meters);
+	}
+
+	const km = meters / 1000;
+	return new Intl.NumberFormat(locale, {
+		style: 'unit',
+		unit: 'kilometer',
+		maximumFractionDigits: km &lt; 10 ? 1 : 0
+	}).format(km);
+}</code></pre>
+</figure>
+<p>The last thing that happens to a distance is formatting, and it happens with <code>Intl.NumberFormat</code> and <code>style: &quot;unit&quot;</code>. That is not a convenience; it is the only correct way to do it. German writes <code>343 km</code> with a non-breaking space, Portuguese writes <code>343 km</code> the same way, English writes <code>343 km</code> too but <code>2.5 mi</code> with a point where German uses a comma — and the library never carries a table of any of that. Chapter 21 makes the same argument for dates and money.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/waypoint/src/lib/geo/geo.spec.ts<span class="code__lines">:19-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const LONDON = { lng: -0.1278, lat: 51.5074 };
+const PARIS = { lng: 2.3522, lat: 48.8566 };
+const NEW_YORK = { lng: -74.006, lat: 40.7128 };
+const TOKYO = { lng: 139.6917, lat: 35.6895 };
+const SAN_FRANCISCO = { lng: -122.4194, lat: 37.7749 };
+
+describe('distance', () =&gt; {
+	it('London to Paris is about 344 km', () =&gt; {
+		expect(distance(LONDON, PARIS) / 1000).toBeCloseTo(343.5, 0);
+	});
+
+	it('is symmetric and zero to itself', () =&gt; {
+		expect(distance(LONDON, PARIS)).toBeCloseTo(distance(PARIS, LONDON), 6);
+		expect(distance(LONDON, LONDON)).toBe(0);
+	});
+
+	it('is accurate for points a metre apart', () =&gt; {
+		const near = destination(LONDON, 90, 1);
+		expect(distance(LONDON, near)).toBeCloseTo(1, 3);
+	});
+
+	it('sums along a path', () =&gt; {
+		expect(pathLength([LONDON, PARIS, LONDON])).toBeCloseTo(2 * distance(LONDON, PARIS), 6);
+		expect(pathLength([])).toBe(0);
+		expect(pathLength([LONDON])).toBe(0);
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the library has no Svelte in it</h4>
+	<p>The <code>./geo</code> entry point is plain functions. Anybody — a Node script, a React app, a worker — can import <code>@meridian/waypoint/geo</code> and pay for nothing they do not use. The Svelte parts live behind the package root, which has a <code>svelte</code> export condition; chapter 08 shows the <code>exports</code> map that draws the line. Keeping the pure part pure also makes it trivially testable: the <code>server</code> Vitest project runs these in plain Node in under a second.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why haversine and not the law of cosines, and what <code>Math.min(1, …)</code> prevents.</li><li>You can say what <code>unwrap</code> does and what a map draws without it.</li><li>You know why <code>formatDistance</code> reaches for <code>Intl</code> instead of a string template.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-map-of-features.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The map: every feature, every library, and where it lives</span>
+			</a>
+			<a class="pager__link pager__link--next" href="a-route-as-a-class.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">A route as a class, in a library</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

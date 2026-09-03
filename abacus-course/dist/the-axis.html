@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The axis: where row 40,000 starts — Building Abacus</title>
+<meta name="description" content="Rows have heights and a person may have changed a few of them. Where a row starts, which row is under a pixel, how tall the sheet is — all answered without an array of a million numbers, by storing only the exceptions with a running total.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">18 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 46.15384615384615%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html" aria-current="page"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 18</p>
+			<h1>The axis: where row 40,000 starts</h1>
+			<p class="lede">Rows have heights and a person may have changed a few of them. Where a row starts, which row is under a pixel, how tall the sheet is — all answered without an array of a million numbers, by storing only the exceptions with a running total.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand the prefix-sum trick that makes a virtualised grid with resizable rows cheap, and how a pixel becomes an index.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/axis.ts<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE AXIS OF A GRID
+ * ==================
+ *
+ * Rows have heights, columns have widths, and a person may have changed a
+ * few of them. Everything the grid needs to draw — where row 40,000 starts,
+ * which row is under the pointer, how tall the whole sheet is — is a
+ * question about those sizes, and this class answers it without an array of
+ * a million numbers.
+ *
+ * The trick is that almost every row is the default height. Only the
+ * exceptions are stored, sorted, with a running total of how much each one
+ * differs from the default; an offset is then `index × default + the deltas
+ * of the exceptions before it`, which is a binary search over a short list.
+ */
+
+export class Axis {
+	readonly #default: number;
+	/** Indexes with a custom size, ascending. */
+	readonly #indexes: number[];
+	/** `#deltas[i]` is the sum of (size − default) for the first `i + 1` custom indexes. */
+	readonly #deltas: number[];
+	readonly #sizes: Map&lt;number, number&gt;;
+
+	constructor(defaultSize: number, sizes: ReadonlyMap&lt;number, number&gt;) {
+		this.#default = defaultSize;
+		this.#sizes = new Map(sizes);
+		this.#indexes = [...sizes.keys()].sort((a, b) =&gt; a - b);
+		this.#deltas = [];
+		let running = 0;
+		for (const index of this.#indexes) {
+			running += sizes.get(index)! - defaultSize;
+			this.#deltas.push(running);
+		}
+	}</code></pre>
+</figure>
+<p>Almost every row is the default height. So the class stores only the exceptions, sorted, with a running total of how much each differs from the default. An offset is then <code>index × default + the deltas of the exceptions before it</code>, and “the exceptions before it” is a binary search over a short list. Ten custom heights in a million rows is ten entries.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/axis.ts<span class="code__lines">:37-53</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">size(index: number): number {
+	return this.#sizes.get(index) ?? this.#default;
+}
+
+/** Where an index starts, in pixels from the origin. */
+offset(index: number): number {
+	// How many custom indexes are strictly before `index`?
+	let lo = 0;
+	let hi = this.#indexes.length;
+	while (lo &lt; hi) {
+		const mid = (lo + hi) &gt;&gt; 1;
+		if (this.#indexes[mid]! &lt; index) lo = mid + 1;
+		else hi = mid;
+	}
+	const delta = lo === 0 ? 0 : this.#deltas[lo - 1]!;
+	return index * this.#default + delta;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/axis.ts<span class="code__lines">:55-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The index whose span contains a pixel position. */
+indexAt(px: number): number {
+	if (px &lt;= 0) return 0;
+	// Start from where a uniform axis would put it, then correct for the
+	// custom sizes before that point. Each correction moves at most a few
+	// indexes, and there are few custom sizes, so this converges at once
+	// in the common case.
+	let index = Math.floor(px / this.#default);
+	for (let guard = 0; guard &lt; 64; guard += 1) {
+		const start = this.offset(index);
+		if (px &lt; start) {
+			index -= 1;
+			continue;
+		}
+		if (px &gt;= start + this.size(index)) {
+			// Jump by the uniform estimate of the remaining distance, at least one.
+			index += Math.max(1, Math.floor((px - start - this.size(index)) / this.#default));
+			continue;
+		}
+		return index;
+	}
+	return index;
+}
+
+/** The pixel length of `count` indexes. */
+total(count: number): number {
+	return this.offset(count);
+}</code></pre>
+</figure>
+<p><code>indexAt</code> goes the other way: start from where a uniform axis would put the pixel, then correct for the custom sizes before that point. Each correction moves at most a few indexes and there are few custom sizes, so it converges at once in the common case; the guard is there for the case that is not common.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/axis.spec.ts<span class="code__lines">:4-40</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('an axis with custom sizes', () =&gt; {
+	const axis = new Axis(
+		28,
+		new Map([
+			[2, 60],
+			[5, 10],
+			[1000, 100]
+		])
+	);
+
+	it('offsets by the default plus the deltas before', () =&gt; {
+		expect(axis.offset(0)).toBe(0);
+		expect(axis.offset(2)).toBe(56);
+		expect(axis.offset(3)).toBe(56 + 60);
+		expect(axis.offset(5)).toBe(116 + 2 * 28);
+		expect(axis.offset(6)).toBe(172 + 10);
+		expect(axis.offset(1001)).toBe(1001 * 28 + 32 - 18 + 72);
+		expect(axis.total(3)).toBe(116);
+	});
+
+	it('finds the index under a pixel, in both directions of the estimate', () =&gt; {
+		for (let px = 0; px &lt; 2000; px += 7) {
+			const index = axis.indexAt(px);
+			expect(axis.offset(index) &lt;= px &amp;&amp; px &lt; axis.offset(index) + axis.size(index), `${px}`).toBe(
+				true
+			);
+		}
+		expect(axis.indexAt(-5)).toBe(0);
+		expect(axis.indexAt(axis.offset(1000) + 50)).toBe(1000);
+	});
+
+	it('is uniform with no custom sizes', () =&gt; {
+		const plain = new Axis(100, new Map());
+		expect(plain.offset(17)).toBe(1700);
+		expect(plain.indexAt(1750)).toBe(17);
+	});
+});</code></pre>
+</figure>
+<p>The second test is the one worth copying: for every pixel in a range, the index found must contain that pixel. A property stated as a loop, which is the cheapest kind.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can compute <code>offset(6)</code> by hand for the axis in the test.</li><li>You can say why <code>#deltas</code> is cumulative rather than per-index.</li><li>You can explain what happens in <code>indexAt</code> when the estimate lands past a tall row.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-reactivity-lesson.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The lesson: the same engine, out of $derived</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-grid.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The grid: a thousand cells out of a million</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

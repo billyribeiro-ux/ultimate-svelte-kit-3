@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What we are building — Building Sextant</title>
+<meta name="description" content="Sextant: a self-hosted observability platform — logs, traces, metrics, and a query language of our own to ask them questions.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">01 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 2.1739130434782608%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html" aria-current="page"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 01</p>
+			<h1>What we are building</h1>
+			<p class="lede">Sextant: a self-hosted observability platform — logs, traces, metrics, and a query language of our own to ask them questions.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Understand what the finished product does, and why each hard part of it is unavoidable rather than chosen.</p></aside>
+			<p>We are going to build <strong>Sextant</strong>: a self-hosted observability platform. It takes in log lines, distributed-tracing spans and metric samples; it stores them so they can be asked questions cheaply; and it answers those questions in a language we write ourselves, from the characters up.</p>
+<p>That last clause is the project. Everything else in the list is ordinary work — an HTTP endpoint, a table, a chart. The query language is what makes the rest of it coherent, and it is also the part most people would rather not do.</p>
+<h3 id="the-tour">The tour</h3>
+<ul><li><strong>SQF</strong>, a pipeline query language: a hand-written lexer, a Pratt parser with a real precedence table, a type checker that knows a duration is not a number, an evaluator, and a planner that pushes what it can into SQL and is honest about the rest.</li><li><strong>Ingest</strong> that survives a bad day: streamed rather than buffered, bounded, rate-limited per tenant, idempotent on retry, and with a cardinality limit that refuses loudly instead of quietly filling the disk.</li><li><strong>Mergeable sketches</strong> — DDSketch for percentiles and HyperLogLog for distinct counts — because you cannot store every sample and you cannot average percentiles.</li><li><strong>Trace assembly</strong>: spans arriving in any order, with parents missing and the occasional cycle, turned into one tree that renders.</li><li><strong>Alerts</strong> with a <code>for</code> duration, hysteresis, a state machine written as a pure function, and a transactional outbox so that &quot;it is firing&quot; and &quot;somebody was told&quot; cannot disagree.</li><li><strong>An interface dense enough to use at three in the morning</strong>: a virtualized log table, a flame graph, a waterfall, canvas charts, a query editor with completion and error underlines — and no editor library.</li><li><strong>A live tail</strong> with real backpressure, which counts what it dropped and says so.</li></ul>
+<p>Roughly fifteen thousand lines when it is finished. About four thousand of them are the query language, and we write those first, because nothing above them can be designed until they exist.</p>
+<h3 id="why-observability">Why an observability tool, specifically</h3>
+<p>Because it is the honest hard case for a *data* application, in the same way a collaborative canvas is the honest hard case for a *state* application. Three things are true of telemetry at once, and each one breaks the design you would reach for first.</p>
+<ol><li><strong>There is far too much of it.</strong> A modest service emits more log lines in an hour than a person will read in a career. Every screen has to be an aggregate, a sample, or a window — and each of those is a different piece of maths.</li><li><strong>The volume is worst exactly when it matters.</strong> Something breaks, error rates go up two orders of magnitude, and the tool people need in order to understand it is the tool now being asked to swallow a hundred times its usual load. Every limit in this project exists for that minute.</li><li><strong>The questions are not known in advance.</strong> A dashboard answers the questions somebody thought of last quarter. The question during an incident is always a new one, which is why a query language is not a luxury feature.</li></ol>
+
+<aside class="callout callout--why">
+	<h4>Why this is worth your time even if you never build a telemetry product</h4>
+	<p>A lexer, a Pratt parser and a type checker are the most transferable three hundred lines in software: config formats, spreadsheet formulas, search filters, template languages, feature-flag expressions, permission rules. Most of them are implemented with regular expressions and <code>eval</code> because &quot;writing a parser&quot; sounds like a month. It is an afternoon, and you will never fear one again.</p>
+</aside>
+<h3 id="the-shape">The shape of it</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>  collectors ──▶ POST /api/v1/ingest ──▶ ingest.ts ──▶ SQLite (WAL)
+                       (API key)          bounded,        │
+                                          streamed,       │
+                                          idempotent      │
+                                                          │
+   ┌──────────────────────── the browser ─────────────────┼─────────┐
+   │                                                      │         │
+   │   text ──▶ lexer ──▶ parser ──▶ checker ──▶ editor    │         │
+   │             │          │          │                  │         │
+   │             └──────────┴──────────┴── same three, on the server │
+   │                                            ▼                   │
+   │                                       storage.run              │
+   │                                     ┌──────┴──────┐            │
+   │                                     │ pushdown?   │            │
+   │                                     └──┬───────┬──┘            │
+   │                                        │       │               │
+   │                                     SQL WHERE  evaluator       │
+   │                                        └───┬───┘               │
+   │   table ◀── chart ◀── flame ◀── waterfall ◀┘                   │
+   └────────────────────────────────────────────────────────────────┘</code></pre>
+</figure>
+<p>The thing to notice is the line that says <strong>the same three, on the server</strong>. The lexer, parser and checker that draw a squiggle under a typo as somebody types are the same modules that reject a malformed query arriving in a URL. Not a port of them — the same files, imported twice.</p>
+<p>That is the payoff for writing the language rather than borrowing one, and it is why the editor in this project has no editor library in it. Highlighting comes from the real lexer, so it can never colour a pipe inside a string; the error underlines are the checker’s own spans; completion knows that an aggregate is illegal outside <code>summarize</code> because the checker knows it.</p>
+<h3 id="what-sqf-looks-like">What a question looks like</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>from logs
+| where level == &quot;error&quot; and service == &quot;checkout&quot;
+| summarize n = count() by service, bucket = bin(timestamp, 1m)
+| sort bucket asc</code></pre>
+</figure>
+<p>A pipeline, read top to bottom, each stage taking rows and producing rows. Not SQL: SQL is a superb language for a question you have finished thinking about, and a poor one for a question you are still forming, because you have to write the <code>SELECT</code> before you know what you want to select.</p>
+<p>It is also a language with an opinion. <code>duration &gt; 500</code> is a <strong>type error</strong> — a duration is not a number, and comparing one to a bare <code>500</code> is somebody who has not decided whether they meant milliseconds or seconds. <code>duration &gt; 500ms</code> is the query they meant. We will build the checker that says so, in chapter 11.</p>
+<h3 id="what-we-will-not-build">What we are deliberately not building</h3>
+<ul><li><strong>A clustered store.</strong> One SQLite file, in WAL mode. Everything about the query layer is the same at a thousand times the size; the storage engine is not, and swapping it is a chapter that teaches nothing about SvelteKit.</li><li><strong>A sampling pipeline.</strong> Head and tail sampling are essential above a certain volume and are entirely a story about the collector, which is somebody else’s process.</li><li><strong>A dashboard builder.</strong> Saved views exist and are four fields. A drag-and-drop dashboard is a fortnight of layout code and no new ideas.</li></ul>
+<aside class="callout callout--note"><p>Each of those is named rather than silently omitted. A course that quietly leaves out the hard third of a product teaches you to underestimate the next one.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say in one sentence what Sextant does and what it refuses to do.</li><li>You can explain why the query language comes first rather than last.</li><li>You understand why the same lexer runs in the browser and on the server.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<span class="pager__link pager__link--disabled"><span class="pager__dir">← Previous</span><span class="pager__title">You're at the start</span></span>
+			<a class="pager__link pager__link--next" href="why-a-query-language.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Why a query language, and what it must refuse</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

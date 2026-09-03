@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The itinerary as data — Building Meridian</title>
+<meta name="description" content="A stop has a day (or none) and a position within it. `groupByDay` turns the flat list into the days of the trip plus an ideas bucket; `place` moves one stop and returns exactly the rows that changed, for the server to write and the browser to apply first.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">11 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 24.444444444444443%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html" aria-current="page"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 11</p>
+			<h1>The itinerary as data</h1>
+			<p class="lede">A stop has a day (or none) and a position within it. <code>groupByDay</code> turns the flat list into the days of the trip plus an ideas bucket; <code>place</code> moves one stop and returns exactly the rows that changed, for the server to write and the browser to apply first.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Model an ordered list inside a set of days with plain integers, and write a move function whose output is a list of changes rather than a new list.</p></aside>
+			<p>Drag a stop from Tuesday to Thursday and three things change: the stop’s day, its position on Thursday, and the positions of everything after it on Tuesday. The question is what shape the “move” function should have, and the answer decides how the optimistic update and the server write stay in step.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/itinerary.ts<span class="code__lines">:1-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHERE A STOP SITS
+ * =================
+ *
+ * A stop has a `date` — or `null`, for an idea that has not been given a
+ * day yet — and a `position` within that date. Positions are small integers,
+ * renumbered from zero whenever a day changes, rather than fractional keys:
+ * an itinerary day has a dozen stops, not a million, and integers are what a
+ * person expects to see when they look at the database.
+ *
+ * `place` is the one function that moves a stop. It returns the *changes*,
+ * not the new list, because the changes are what the server writes and what
+ * `withOverride` applies optimistically before the server answers.
+ */
+
+export interface Placed {
+	readonly id: string;
+	readonly date: string | null;
+	readonly position: number;
+}
+
+export interface DayGroup&lt;T extends Placed&gt; {
+	/** `null` is the &quot;ideas&quot; bucket: stops with no day yet. */
+	readonly date: string | null;
+	readonly stops: T[];
+}
+
+export function byPosition&lt;T extends Placed&gt;(a: T, b: T): number {
+	return a.position - b.position || (a.id &lt; b.id ? -1 : 1);
+}</code></pre>
+</figure>
+<p>Integers, renumbered from zero, rather than fractional keys. Fractional indexing is the right tool when a list is long and edited concurrently by many people — project 4 used it for that. An itinerary day has a dozen stops, one person drags at a time, and an integer is what a person expects to see in the database. <code>byPosition</code> breaks ties on id so a sort is stable across machines, which the live query relies on: two browsers sorting the same rows must draw them in the same order.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/itinerary.ts<span class="code__lines">:32-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * One group per day of the trip, in order, empty days included — a day with
+ * nothing planned is still a day on the page — and one last group for the
+ * ideas. A stop dated outside the trip (the trip was shortened) lands with
+ * the ideas rather than vanishing.
+ */
+export function groupByDay&lt;T extends Placed&gt;(
+	stops: readonly T[],
+	days: readonly string[]
+): DayGroup&lt;T&gt;[] {
+	const known = new Set(days);
+	const groups = new Map&lt;string | null, T[]&gt;(days.map((date) =&gt; [date, []]));
+	groups.set(null, []);
+
+	for (const stop of stops) {
+		const key = stop.date !== null &amp;&amp; known.has(stop.date) ? stop.date : null;
+		groups.get(key)!.push(stop);
+	}
+
+	return [...groups].map(([date, list]) =&gt; ({ date, stops: list.sort(byPosition) }));
+}</code></pre>
+</figure>
+<p><code>groupByDay</code> builds one group per day of the trip — empty days included, because a day with nothing planned is still a day on the page — plus one group keyed <code>null</code> for the ideas. A stop whose date is outside the trip (the trip was shortened after it was planned) lands with the ideas rather than vanishing, which is the kind of edge a real product has and a demo does not.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/itinerary.ts<span class="code__lines">:54-95</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export interface Placement {
+	readonly id: string;
+	readonly date: string | null;
+	readonly position: number;
+}
+
+/**
+ * Move stop `id` to `date` at `index` within that day. Returns the placements
+ * that changed — the moved stop, plus any neighbours whose positions shifted.
+ * Throws for an unknown stop; a move onto its own spot returns `[]`.
+ */
+export function place&lt;T extends Placed&gt;(
+	stops: readonly T[],
+	id: string,
+	date: string | null,
+	index: number
+): Placement[] {
+	const moving = stops.find((s) =&gt; s.id === id);
+	if (!moving) throw new RangeError(`no stop ${id}`);
+
+	const source = stops.filter((s) =&gt; s.date === moving.date &amp;&amp; s.id !== id).sort(byPosition);
+	const target =
+		date === moving.date ? source : stops.filter((s) =&gt; s.date === date).sort(byPosition);
+
+	const at = Math.max(0, Math.min(index, target.length));
+	const reordered: Placed[] = [...target.slice(0, at), { ...moving, date }, ...target.slice(at)];
+
+	const changes: Placement[] = [];
+	const renumber = (list: readonly Placed[], listDate: string | null) =&gt; {
+		list.forEach((stop, position) =&gt; {
+			const before = stop.id === id ? moving : stop;
+			if (before.position !== position || before.date !== listDate) {
+				changes.push({ id: stop.id, date: listDate, position });
+			}
+		});
+	};
+
+	renumber(reordered, date);
+	if (date !== moving.date) renumber(source, moving.date);
+
+	return changes;
+}</code></pre>
+</figure>
+<p>The shape of <code>place</code> is the lesson. It returns <strong>the placements that changed</strong>, not the new list. On the server, <code>moveStop</code> writes exactly those rows in one transaction and nothing else. In the browser, chapter 25 applies the same list optimistically before the server answers, so the card lands where it was dropped and lands in the same spot when the answer arrives — because both sides ran this function on the same input. A move onto its own spot returns <code>[]</code> and nothing is written, which the itinerary relies on when a drag ends where it began.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/itinerary.ts<span class="code__lines">:97-102</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Where a new stop goes: after the last one on that day. */
+export function nextPosition(stops: readonly Placed[], date: string | null): number {
+	let max = -1;
+	for (const stop of stops) if (stop.date === date &amp;&amp; stop.position &gt; max) max = stop.position;
+	return max + 1;
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Read <code>renumber</code> twice. It compares each stop’s *new* position and day against its *old* ones and records only the differences — the moved stop’s old values are looked up from <code>moving</code>, because in <code>reordered</code> it already carries the new date. That comparison is what keeps the change list minimal.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why positions are integers here and when fractional keys would be right instead.</li><li>You can explain why <code>place</code> returns changes and how that keeps the optimistic update and the server write identical.</li><li>You know where a stop dated outside the trip ends up.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="splitting-fairly.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Splitting fairly, to the cent</span>
+			</a>
+			<a class="pager__link pager__link--next" href="schemas-with-valibot.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Schemas with valibot, and who may do what</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing an evaluator against a reference — Building Sextant</title>
+<meta name="description" content="Differential testing: a naive implementation nobody would ship, used as an oracle for the one we do.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 30.434782608695656%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html" aria-current="page"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>Testing an evaluator against a reference</h1>
+			<p class="lede">Differential testing: a naive implementation nobody would ship, used as an oracle for the one we do.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Get real confidence in an evaluator without writing a thousand assertions by hand.</p></aside>
+			<p>The hard part of testing an evaluator is that the interesting bugs are in the *combinations*: a filter after a summarize, a sort on a computed column, a group key that is null. Writing an assertion per combination is a losing race.</p>
+<p>The technique that wins is <strong>differential testing</strong>: write a second implementation that is obviously correct and far too slow, then assert the two agree on generated input. The slow one is the specification, and it is much easier to believe.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.spec.ts<span class="code__lines">:341-361</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('differential against a naive reference', () =&gt; {
+	/**
+	 * A second implementation of `where` + `sort` + `take`, written as directly as
+	 * possible with no shared code.
+	 *
+	 * The point is not that this one is better — it is deliberately naive. It is
+	 * that two implementations written from the same spec disagree in exactly the
+	 * places where the spec was ambiguous or one of them was clever, and randomly
+	 * generated inputs find those places far faster than a person thinking of
+	 * cases does.
+	 */
+	function reference(rows: readonly Row[], level: string, minTs: number, limit: number): Row[] {
+		const kept: Row[] = [];
+		for (const row of rows) {
+			if (row.level !== level) continue;
+			if (typeof row.timestamp !== 'number' || !(row.timestamp &gt; minTs)) continue;
+			kept.push(row);
+		}
+		kept.sort((a, b) =&gt; Number(b.timestamp) - Number(a.timestamp));
+		return kept.slice(0, limit);
+	}</code></pre>
+</figure>
+<p>It is allowed to be naive, to allocate freely, and to share no code at all with the implementation. That last constraint is the important one: two implementations that share a helper agree about the helper’s bugs.</p>
+<h3 id="the-property">One property, two hundred seeded inputs</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.spec.ts<span class="code__lines">:363-392</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('agrees with the reference on hundreds of random inputs', () =&gt; {
+	for (let seed = 1; seed &lt;= 200; seed += 1) {
+		const random = seeded(seed);
+		const levels = ['debug', 'info', 'warn', 'error'];
+
+		const rows: Row[] = Array.from({ length: 60 }, (_, i) =&gt; ({
+			timestamp: Math.floor(random() * 10_000),
+			service: `svc-${Math.floor(random() * 4)}`,
+			level: levels[Math.floor(random() * levels.length)]!,
+			i
+		}));
+
+		const level = levels[Math.floor(random() * levels.length)]!;
+		const minTs = Math.floor(random() * 10_000);
+		const limit = 1 + Math.floor(random() * 20);
+
+		const expected = reference(rows, level, minTs, limit);
+		const actual = run(
+			`from logs | where level == &quot;${level}&quot; and timestamp &gt; ${minTs} | sort by timestamp desc | take ${limit}`,
+			rows
+		).rows;
+
+		// `i` rather than the whole row, so a failure names which rows differ
+		// rather than printing sixty objects.
+		expect(
+			actual.map((row) =&gt; row.i),
+			`seed ${seed}`
+		).toEqual(expected.map((row) =&gt; row.i));
+	}
+});</code></pre>
+</figure>
+<p>Note the last assertion: it compares <code>i</code> rather than whole rows, so a failure names *which* rows differ instead of printing sixty objects into the terminal. A differential test that fails unreadably is a test people delete.</p>
+<p>And a second property for grouping, where the oracle is a <code>Map</code> and the extra assertion is the one a spot check always misses — that every input row is accounted for. A grouping that silently loses rows produces perfectly plausible counts.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sqf/eval.spec.ts<span class="code__lines">:394-419</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('agrees on grouped counts', () =&gt; {
+	for (let seed = 1; seed &lt;= 100; seed += 1) {
+		const random = seeded(seed * 7);
+		const rows: Row[] = Array.from({ length: 200 }, () =&gt; ({
+			service: `svc-${Math.floor(random() * 5)}`
+		}));
+
+		const expected = new Map&lt;string, number&gt;();
+		for (const row of rows) {
+			const key = String(row.service);
+			expected.set(key, (expected.get(key) ?? 0) + 1);
+		}
+
+		const actual = run('from logs | summarize n = count() by service', rows).rows;
+
+		expect(actual.length, `seed ${seed}`).toBe(expected.size);
+		for (const row of actual) {
+			expect(row.n, `seed ${seed} ${String(row.service)}`).toBe(
+				expected.get(String(row.service))
+			);
+		}
+		// Every row is accounted for — a grouping that loses rows is the failure
+		// mode a spot check misses.
+		expect(actual.reduce((total, row) =&gt; total + Number(row.n), 0)).toBe(rows.length);
+	}
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why this beats a hundred hand-written assertions</h4>
+	<p>Because a hand-written assertion encodes what you *thought* the answer was. When the two implementations disagree, one of them is wrong and you have to work out which — and about a third of the time it is the oracle, which means you have just discovered that you did not understand your own semantics. That is the most valuable outcome a test can have.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You have a reference evaluator that is obviously correct and much too slow.</li><li>Your generated rows include nulls, numeric strings and duplicate keys.</li><li>You can explain why a disagreement is interesting even when the oracle is at fault.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-evaluator.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The evaluator</span>
+			</a>
+			<a class="pager__link pager__link--next" href="ddsketch.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">DDSketch: percentiles you are allowed to merge</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

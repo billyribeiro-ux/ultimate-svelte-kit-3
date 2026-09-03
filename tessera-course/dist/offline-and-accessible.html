@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starting offline, and using it without a mouse — Building Tessera</title>
+<meta name="description" content="A service worker with one job, the three cache rules, `role=&quot;application&quot;` and the obligation that comes with it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">40 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 90.9090909090909%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html" aria-current="page"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 40</p>
+			<h1>Starting offline, and using it without a mouse</h1>
+			<p class="lede">A service worker with one job, the three cache rules, <code>role=&quot;application&quot;</code> and the obligation that comes with it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Open the application with no network, and do everything on the canvas from the keyboard.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SERVICE WORKER
+ * ==================
+ *
+ * Tessera already works offline: the document lives in IndexedDB and edits queue
+ * in an outbox. What it *cannot* do without this file is start while offline —
+ * the browser has no HTML, no JavaScript and no CSS to run any of that with.
+ *
+ * So this worker has exactly one job: make the application shell available with
+ * no network. Everything about the *data* is somebody else's problem, and
+ * deliberately so; a worker that also cached API responses would become a third
+ * cache with its own idea of the truth, alongside IndexedDB and the server.
+ *
+ * THREE RULES
+ * -----------
+ *   `immutable`, `assets`  cache-first, forever. Vite's output carries a content
+ *                          hash in the URL, so a changed file is a *different*
+ *                          file and a cached one can never be stale.
+ *   navigations            network first, shell from cache on failure. The other
+ *                          order serves yesterday's HTML to somebody who is
+ *                          online, which is the classic way a deployed fix
+ *                          appears not to have deployed.
+ *   everything else        straight to the network, never cached. That is the
+ *                          rule that keeps the operation stream and the remote
+ *                          functions out of here.
+ *
+ * WHERE THESE LISTS COME FROM
+ * ---------------------------
+ * SvelteKit 3 split the old `$service-worker` module apart: the build manifest
+ * is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build
+ * id is `version` from `$app/env`, and `$app/service-worker` now exports only a
+ * correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four
+ * &quot;has no exported member&quot; errors at once, which at least says so plainly.
+ */</code></pre>
+</figure>
+<p>Tessera already works offline — the document is in IndexedDB and edits queue in an outbox. What it cannot do without this file is <strong>start</strong> while offline: the browser has no HTML, no JavaScript and no CSS to run any of that with.</p>
+
+<aside class="callout callout--why">
+	<h4>One job, and the discipline to keep it</h4>
+	<p>A worker that also cached API responses would become a <strong>third cache</strong> with its own idea of the truth, alongside IndexedDB and the server. The three rules are what keep it out: hashed assets cache-first forever, navigations network-first, and everything else straight through. That last rule is what keeps the operation stream and the remote functions out of here entirely.</p>
+</aside>
+<aside class="callout callout--warn"><p>SvelteKit 3 split the old <code>$service-worker</code> module apart. The build manifest is <code>$app/manifest</code> (<code>immutable</code>, <code>assets</code>, <code>prerendered</code>, <code>routes</code>), the build id is <code>version</code> from <code>$app/env</code>, and <code>$app/service-worker</code> now exports only a correctly-typed <code>self</code>. Bringing the SvelteKit 2 import forward gives four &quot;has no exported member&quot; errors at once, which at least says so plainly.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * `version` is unique per build, so a new deployment gets a new cache and the
+ * old one is deleted on activate. Naming the cache anything stable is how a
+ * service worker ends up serving an application from two releases ago with no
+ * way to clear it short of asking people to open devtools.
+ */
+const CACHE = `tessera-${version}`;
+
+/**
+ * Everything the shell needs, known at build time.
+ *
+ * `immutable` is Vite's hashed output; `assets` is whatever is in `static/`,
+ * which for this application is the two font files. Both arrive as
+ * `{ path }` objects rather than bare strings.
+ */
+const PRECACHE = [...immutable, ...assets].map((entry) =&gt; entry.path);
+
+self.addEventListener('install', (event) =&gt; {
+	event.waitUntil(
+		caches
+			.open(CACHE)
+			.then((cache) =&gt; cache.addAll(PRECACHE))
+			// Activate immediately rather than waiting for every tab to close. The
+			// alternative leaves somebody on an old shell for as long as they keep a
+			// tab open, which for a tool people leave open all day is forever.
+			.then(() =&gt; self.skipWaiting())
+	);
+});
+
+self.addEventListener('activate', (event) =&gt; {
+	event.waitUntil(
+		caches
+			.keys()
+			.then((keys) =&gt;
+				Promise.all(keys.filter((key) =&gt; key !== CACHE).map((key) =&gt; caches.delete(key)))
+			)
+			.then(() =&gt; self.clients.claim())
+	);
+});</code></pre>
+</figure>
+<p>The cache is named after <code>version</code>, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">async function respond(request: Request, url: URL): Promise&lt;Response&gt; {
+	const cache = await caches.open(CACHE);
+
+	// Hashed assets: cache first, and never revalidate.
+	if (PRECACHE.includes(url.pathname)) {
+		const hit = await cache.match(url.pathname);
+		if (hit) return hit;
+	}
+
+	try {
+		const response = await fetch(request);
+
+		/*
+		 * `response.status === 200` and nothing else.
+		 *
+		 * A redirect, a 206 range response or an opaque cross-origin response all
+		 * break `cache.put` in ways that surface much later as a blank page. This
+		 * is one of the few places where being conservative costs nothing.
+		 */
+		if (response.status === 200 &amp;&amp; request.mode === 'navigate') {
+			cache.put(request, response.clone());
+		}
+
+		return response;
+	} catch (thrown) {
+		const hit = await cache.match(request);
+		if (hit) return hit;
+
+		// A navigation with nothing cached: fall back to the root shell, which the
+		// client router can take over from.
+		if (request.mode === 'navigate') {
+			const shell = await cache.match('/');
+			if (shell) return shell;
+		}
+
+		throw thrown;</code></pre>
+</figure>
+<p><code>response.status === 200</code> and nothing else. A redirect, a 206 range response or an opaque cross-origin response all break <code>cache.put</code> in ways that surface much later as a blank page. This is one of the few places where being conservative costs nothing at all.</p>
+<h3 id="application-role">The strongest claim in ARIA</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Board.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	A11Y NOTE, and the two suppressions below
+	=========================================
+
+	`role=&quot;application&quot;` tells a screen reader to stop interpreting keystrokes
+	itself and pass them through, which is required for a canvas whose entire
+	interface is keys. It is a strong claim, and the obligation that comes with it
+	is to offer the same capabilities another way: `Outline.svelte` is that — a
+	real tree of real buttons over the same document, where a screen reader's own
+	navigation works normally.
+
+	The two rules being suppressed are correct in general and wrong here. This
+	element *is* the interactive control, and it has to be focusable for any of its
+	shortcuts to reach it.
+
+	Note the comma in the directive. In runes mode the compiler reads codes
+	separated by commas and treats everything after the first gap as prose, so a
+	space-separated list silently suppresses only the first warning. And the
+	directive carries codes and nothing else: `eslint-plugin-svelte` reads every
+	word after `svelte-ignore` as a code and reports each one it cannot match, so
+	prose belongs in a comment of its own — this one.
+--&gt;
+&lt;!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions --&gt;
+&lt;div
+	bind:this={surface}
+	class=&quot;board&quot;
+	class:board--connecting={editor.tool === 'connect'}
+	data-canvas
+	role=&quot;application&quot;
+	aria-label={t.a11y.canvas}
+	tabindex=&quot;0&quot;
+	{@attach attachViewport}
+	{@attach attachPanZoom}
+	onpointerdown={onPointerDown}
+	onpointermove={onPointerMove}
+	onpointerup={onPointerUp}
+	onpointercancel={onPointerUp}
+	ondblclick={onDoubleClick}
+	onkeydown={onKeyDown}
+	onpointerleave={() =&gt; announce(null)}
+&gt;
+	&lt;div class=&quot;board__grid&quot; style={gridStyle} aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>What <code>role=&quot;application&quot;</code> obliges you to do</h4>
+	<p>It tells a screen reader to <strong>stop interpreting keystrokes itself</strong> and pass them through, which a canvas whose entire interface is keys genuinely needs. It is also the strongest claim in ARIA: you have taken away the navigation somebody relies on everywhere else. The obligation that comes with it is to offer the same capabilities another way — and if you cannot, you should not use the role.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Outline.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE BOARD, AS A TREE
+ * ====================
+ *
+ * This is not a summary of the canvas. It is the same document, rendered as
+ * something a screen reader and a keyboard can already use, and every action
+ * available here is available there.
+ *
+ * That is what makes `role=&quot;application&quot;` on the canvas an honest claim rather
+ * than an excuse. Declaring that role tells assistive technology to stop
+ * interpreting keys and hand them over — which is only defensible if there is
+ * a path through the same content where it does not have to.
+ *
+ * It is also genuinely useful with a mouse, which is the sign the design is
+ * right: a list of every shape, grouped, that scrolls to and selects one.
+ */
+const roots = $derived(editor.ordered.filter((node) =&gt; node.parent === null));
+
+function childrenOf(parent: NodeView): NodeView[] {
+	return editor.ordered.filter((node) =&gt; node.parent === parent.id);
+}
+
+function focus(node: NodeView) {
+	editor.selectOnly([node.id]);
+	void editor.camera.centreOn({ x: node.x + node.w / 2, y: node.y + node.h / 2 });
+}</code></pre>
+</figure>
+<p>The outline is not a summary of the canvas. It is the <strong>same document</strong>, rendered as a real tree of real buttons that a screen reader’s own navigation works on normally, and every action available there is available here. That is what makes the <code>application</code> role an honest claim rather than an excuse.</p>
+<aside class="callout callout--note"><p>It is also genuinely useful with a mouse — a list of every shape, grouped, that scrolls to and selects one. That is usually the sign an accessibility design is right rather than bolted on: it makes the tool better for everybody.</p></aside>
+<h3 id="svelte-ignore">Two suppressions, and a comma</h3>
+<aside class="callout callout--warn"><p>In runes mode the compiler reads <code>svelte-ignore</code> codes separated by <strong>commas</strong>, and treats everything after the first gap as prose — so a space-separated list silently suppresses only the first warning. And <code>eslint-plugin-svelte</code> reads every word after <code>svelte-ignore</code> as a code and reports each one it cannot match, so explanatory prose belongs in a comment of its own. Both of those are five-minute puzzles that look like tooling being broken.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Load the app, go offline, reload: it still opens.</li><li>A deployed fix appears immediately rather than after closing every tab.</li><li>You can add, name, select and move a shape without touching the mouse.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-custom-element.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A board on somebody else’s page</span>
+			</a>
+			<a class="pager__link pager__link--next" href="mobile.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The phone</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

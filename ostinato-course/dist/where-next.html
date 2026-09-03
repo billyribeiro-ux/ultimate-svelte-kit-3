@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where next, and the tools that helped — Building Ostinato</title>
+<meta name="description" content="The `sv` add-on that wrote `AGENTS.md` and the Claude settings, the Svelte MCP server that caught a compile error before the compiler did, `#lib` imports, the `verify` script that gates a commit — and five directions the project could go.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Ostinato</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">39 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 100%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: everything the framework has to offer</span></a></li><li><a href="a-note-is-a-class.html"><span class="toc__num">04</span><span>A note is a class</span></a></li><li><a href="musical-time.html"><span class="toc__num">05</span><span>Musical time, in seconds</span></a></li><li><a href="the-pattern.html"><span class="toc__num">06</span><span>The pattern</span></a></li><li><a href="a-pattern-in-a-url.html"><span class="toc__num">07</span><span>A pattern in a URL</span></a></li><li><a href="stored-and-preset.html"><span class="toc__num">08</span><span>Stored patterns and presets</span></a></li><li><a href="the-instruments.html"><span class="toc__num">09</span><span>The instruments</span></a></li><li><a href="one-step-scheduled.html"><span class="toc__num">10</span><span>One step, scheduled</span></a></li><li><a href="the-engine.html"><span class="toc__num">11</span><span>The engine: where the audio graph meets reactivity</span></a></li><li><a href="two-clocks.html"><span class="toc__num">12</span><span>Two clocks: the scheduler</span></a></li><li><a href="render-to-a-file.html"><span class="toc__num">13</span><span>Render to a file, and load one</span></a></li><li><a href="the-session.html"><span class="toc__num">14</span><span>The session: a pattern and its history</span></a></li><li><a href="a-knob.html"><span class="toc__num">15</span><span>A knob</span></a></li><li><a href="pads-and-the-grid.html"><span class="toc__num">16</span><span>Pads and the grid</span></a></li><li><a href="transport-and-mixer.html"><span class="toc__num">17</span><span>The transport and the mixer</span></a></li><li><a href="panels-as-history.html"><span class="toc__num">18</span><span>Panels that are history entries</span></a></li><li><a href="the-studio-page.html"><span class="toc__num">19</span><span>The studio page</span></a></li><li><a href="sound-and-share.html"><span class="toc__num">20</span><span>Sound in, patterns out</span></a></li><li><a href="the-schema.html"><span class="toc__num">21</span><span>The schema, and the environment</span></a></li><li><a href="identity-without-passwords.html"><span class="toc__num">22</span><span>Identity without passwords</span></a></li><li><a href="reads.html"><span class="toc__num">23</span><span>Reads: query, batch and prerender</span></a></li><li><a href="writes.html"><span class="toc__num">24</span><span>Writes: command and form</span></a></li><li><a href="live-jam.html"><span class="toc__num">25</span><span>A live query: the jam room</span></a></li><li><a href="hooks.html"><span class="toc__num">26</span><span>Hooks: around every request</span></a></li><li><a href="layouts-and-groups.html"><span class="toc__num">27</span><span>Two layouts and a group</span></a></li><li><a href="the-landing-page.html"><span class="toc__num">28</span><span>The landing page is a file</span></a></li><li><a href="the-pattern-page.html"><span class="toc__num">29</span><span>The pattern page and its share card</span></a></li><li><a href="the-gallery.html"><span class="toc__num">30</span><span>The gallery</span></a></li><li><a href="the-jam-page.html"><span class="toc__num">31</span><span>The jam room</span></a></li><li><a href="diagnostics-and-the-api.html"><span class="toc__num">32</span><span>Diagnostics, tracing and the API</span></a></li><li><a href="a-custom-element-built-twice.html"><span class="toc__num">33</span><span>A custom element, built twice</span></a></li><li><a href="an-adapter-from-scratch.html"><span class="toc__num">34</span><span>An adapter, from scratch</span></a></li><li><a href="the-service-worker.html"><span class="toc__num">35</span><span>The service worker</span></a></li><li><a href="the-security-posture.html"><span class="toc__num">36</span><span>The security posture</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">37</span><span>Unit tests, and tests in a real browser</span></a></li><li><a href="end-to-end-and-what-it-found.html"><span class="toc__num">38</span><span>End to end, and what it found</span></a></li><li><a href="where-next.html" aria-current="page"><span class="toc__num">39</span><span>Where next, and the tools that helped</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 39</p>
+			<h1>Where next, and the tools that helped</h1>
+			<p class="lede">The <code>sv</code> add-on that wrote <code>AGENTS.md</code> and the Claude settings, the Svelte MCP server that caught a compile error before the compiler did, <code>#lib</code> imports, the <code>verify</code> script that gates a commit — and five directions the project could go.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know how the project was scaffolded and checked, and leave with a list of things worth building next.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">AGENTS.md<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+
+## Available Svelte MCP Tools:
+
+### 1. list-sections
+
+Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
+When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+
+### 2. get-documentation
+
+Retrieves full documentation content for specific sections. Accepts single or multiple sections.
+After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+
+### 3. svelte-autofixer
+
+Analyzes Svelte code and returns issues and suggestions.
+You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+
+### 4. playground-link
+
+Generates a Svelte Playground link with the provided code.
+After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.claude/settings.json<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;extraKnownMarketplaces&quot;: {
+		&quot;svelte&quot;: {
+			&quot;source&quot;: {
+				&quot;source&quot;: &quot;github&quot;,
+				&quot;repo&quot;: &quot;sveltejs/ai-tools&quot;
+			}
+		}
+	},
+	&quot;enabledPlugins&quot;: {
+		&quot;svelte@svelte&quot;: true
+	}
+}</code></pre>
+</figure>
+<p><code>sv create</code> with the <code>ai-tools</code> add-on wrote both files. <code>AGENTS.md</code> tells an AI assistant how to use the Svelte MCP server — the official documentation and an autofixer — and the settings file enables the Svelte plugin for Claude Code. The autofixer earned its place while writing this project: it flagged the <code>{const}</code> declarations placed before an <code>animate:</code> element in the grid (ch. 16), which the compiler would also have refused, a step later and with a worse message.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:11-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	&quot;dev&quot;: &quot;npm run build:embed &amp;&amp; vite dev&quot;,
+	&quot;build&quot;: &quot;npm run build:embed &amp;&amp; vite build&quot;,
+	&quot;preview&quot;: &quot;vite preview&quot;,
+	&quot;start&quot;: &quot;node build/index.js&quot;,
+	&quot;prepare&quot;: &quot;svelte-kit sync || echo ''&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot; &amp;&amp; tsc --noEmit -p tsconfig.service-worker.json&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;format&quot;: &quot;prettier --write .&quot;,
+	&quot;test:unit&quot;: &quot;vitest&quot;,
+	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test:e2e&quot;: &quot;playwright test&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
+	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
+	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
+	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
+	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;,
+	&quot;build:embed&quot;: &quot;vite build --config vite.embed.config.ts&quot;
+},</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:70-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;imports&quot;: {
+	&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
+	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
+}</code></pre>
+</figure>
+<p><code>#lib/*</code> is a Node subpath import, declared in <code>package.json</code> and understood by Vite, TypeScript and Node alike — which is why <code>scripts/seed.ts</code> can import the presets the same way a component does. <code>verify</code> is the gate: type-check the app and the worker, lint, unit and browser tests, build with the adapter, and the end-to-end suite on both profiles. Everything in this course passed it.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run verify
+  check     svelte-check: 0 errors, 0 warnings · tsc (service worker): clean
+  lint      prettier + eslint: clean
+  test:unit 58 passed  (server: node · client: chromium)
+  build     adapter-ostinato · pages: 7 routes · api: 4 routes · 3 prerendered
+  test:e2e  66 passed  (33 scenarios × desktop, phone)
+</code></pre>
+</figure>
+<h3 id="five-directions">Five directions</h3>
+<ol><li><strong>A shared channel for jam rooms.</strong> The broadcaster is in-process (ch. 25). Postgres <code>NOTIFY</code> or a Redis stream makes it work across instances, and the <code>Latest</code> mailbox stays exactly as it is.</li><li><strong>Real accounts.</strong> The signed cookie is enough for a groovebox and would not be for money. The <code>Artist</code> shape and <code>requireArtist()</code> are the seam; a Better Auth session would slot in behind them (project 2 shows how).</li><li><strong>Samples that survive.</strong> Uploaded samples live in memory. A <code>command</code> that stores the file and a <code>sample</code> track that references it by id would make a sample pattern publishable.</li><li><strong>MIDI in.</strong> The Web MIDI API delivers note messages; <code>Note</code> already speaks MIDI numbers. A <code>$effect</code> that subscribes to an input port and calls <code>session.paint</code> is most of a feature.</li><li><strong>A second adapter target.</strong> <code>adapters/ostinato</code> is a Node process. The same <code>partition</code> and <code>applyReroute</code> hand-off would deploy to a platform with real functions, and the manifest-per-function split is already there.</li></ol>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can run <code>pnpm run verify</code> from a fresh clone and get green.</li><li>You can point at the file where each of the five directions would start.</li><li>You have opened every file this course quoted, and one it did not.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="end-to-end-and-what-it-found.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">End to end, and what it found</span>
+			</a>
+			<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

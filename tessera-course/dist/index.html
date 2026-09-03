@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Tessera — a SvelteKit 3 course</title>
+<meta name="description" content="Build a real-time collaborative canvas with SvelteKit 3 — conflict-free data types written from scratch, local-first storage, live presence, and an editor that keeps working with the network unplugged.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body class="is-home">
+
+<main class="home">
+	<p class="eyebrow">A build-along course</p>
+	<h1>Building Tessera</h1>
+	<p class="home__lede">A collaborative canvas. Two people draw on the same board at the same
+		moment and both edits survive. One of them goes through a tunnel, keeps
+		working, and everything they did arrives intact when the signal comes back.
+		No server decides who wins, because no server is asked. Built from an empty
+		folder, with every bug found along the way written down.</p>
+
+	<div class="home__meta">
+		<span>44 chapters</span>
+		<span>SvelteKit 3</span><span>Svelte 5 runes</span><span>CRDTs from scratch</span><span>Local-first</span>
+	</div>
+
+	<a class="home__start" href="what-we-are-building.html">Start chapter 01 →</a>
+
+	<h2 class="home__heading">Everything we'll cover</h2>
+	<ol class="cards">
+		<li>
+			<a class="card" href="what-we-are-building.html">
+				<span class="card__num">01</span>
+				<span class="card__body">
+					<span class="card__title">What we are building</span>
+					<span class="card__summary">Tessera: a collaborative canvas for system diagrams that keeps working with the network off, and merges everything back without asking anybody to choose.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="who-decides.html">
+				<span class="card__num">02</span>
+				<span class="card__body">
+					<span class="card__title">Who decides who wins</span>
+					<span class="card__summary">Three designs for two people editing one thing, why the first two are the ones everybody builds, and what a conflict-free type actually promises.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="setting-up.html">
+				<span class="card__num">03</span>
+				<span class="card__body">
+					<span class="card__title">Setting up: a SvelteKit 3 project</span>
+					<span class="card__summary">Node, pnpm, the folder, and the single biggest change in SvelteKit 3 — there is no svelte.config.js any more.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-environment.html">
+				<span class="card__num">04</span>
+				<span class="card__body">
+					<span class="card__title">Environment variables that cannot be wrong</span>
+					<span class="card__summary">`src/env.ts` and `defineEnvVars` — declaring every variable once, validating at boot, and making a secret in the browser something you have to type on purpose.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-map.html">
+				<span class="card__num">05</span>
+				<span class="card__body">
+					<span class="card__title">The map of the project</span>
+					<span class="card__summary">Every folder, what lives in it, and the rule that decides which folder a new file goes in.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="hybrid-logical-clocks.html">
+				<span class="card__num">06</span>
+				<span class="card__body">
+					<span class="card__title">Time that cannot go backwards</span>
+					<span class="card__summary">Why `Date.now()` cannot decide who wins, what a hybrid logical clock is, and the drift guard that was in the wrong tier for a fortnight.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="version-vectors.html">
+				<span class="card__num">07</span>
+				<span class="card__body">
+					<span class="card__title">What have I already seen?</span>
+					<span class="card__summary">A four-line version vector, made possible by the last chapter — and the afternoon lost to using it for the wrong job.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="fractional-indexing.html">
+				<span class="card__num">08</span>
+				<span class="card__body">
+					<span class="card__title">Room between any two things</span>
+					<span class="card__summary">Stacking order without renumbering: base-62 keys that always have a gap, and the tiebreak that stops two replicas rendering the same data differently.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="observed-remove-sets.html">
+				<span class="card__num">09</span>
+				<span class="card__body">
+					<span class="card__title">Which shapes exist</span>
+					<span class="card__summary">The resurrection bug, why a tombstone is not the fix, and why &quot;add wins&quot; is the forgiving direction.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="last-write-wins-registers.html">
+				<span class="card__num">10</span>
+				<span class="card__body">
+					<span class="card__title">The fields on a shape</span>
+					<span class="card__summary">Twenty-two lines of actual code, one rule of thumb for when to use them, and a return value that turns out to matter.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="collaborative-text.html">
+				<span class="card__num">11</span>
+				<span class="card__body">
+					<span class="card__title">Two people typing in one label</span>
+					<span class="card__summary">RGA — an identity per character, a tree rather than the famous scan, and the counterexample that shows why.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="proving-convergence.html">
+				<span class="card__num">12</span>
+				<span class="card__body">
+					<span class="card__title">Proving it, as far as it can be proved</span>
+					<span class="card__summary">A property test that builds a few hundred thousand hostile delivery schedules — and the two real bugs it found within a dozen seeds.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="eight-operations.html">
+				<span class="card__num">13</span>
+				<span class="card__body">
+					<span class="card__title">Eight operations, and nothing else</span>
+					<span class="card__summary">The vocabulary of a board, the operation algebra every change goes through, and why validation matters more in a CRDT than anywhere else.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-reactive-document.html">
+				<span class="card__num">14</span>
+				<span class="card__body">
+					<span class="card__title">The model and the projection</span>
+					<span class="card__summary">Two representations of one board, why they are not collapsed into one, and the listener bug that made undo work perfectly while nothing reached the network.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="reconciliation.html">
+				<span class="card__num">15</span>
+				<span class="card__body">
+					<span class="card__title">Keeping the projection honest</span>
+					<span class="card__summary">Model to view: writing the smallest possible amount into `$state`, and the ordering detail that stops a half-built node reaching a component.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="snapshots-and-compaction.html">
+				<span class="card__num">16</span>
+				<span class="card__body">
+					<span class="card__title">Snapshots, and what may never be forgotten</span>
+					<span class="card__summary">Writing a document out deterministically, the clock bug that only appeared after a refresh, and the tombstones that can never be collected.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-log.html">
+				<span class="card__num">17</span>
+				<span class="card__body">
+					<span class="card__title">A database that stores operations</span>
+					<span class="card__summary">Tenancy, boards, and an append-only log whose primary key is the server’s total order — plus the unique index that makes a retry free.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="permissions.html">
+				<span class="card__num">18</span>
+				<span class="card__body">
+					<span class="card__title">Four roles, checked per operation</span>
+					<span class="card__summary">Why a single check at connection time is a suggestion rather than a permission system, and the 404 that stops a board id being an oracle.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="ingestion.html">
+				<span class="card__num">19</span>
+				<span class="card__body">
+					<span class="card__title">The only way in</span>
+					<span class="card__summary">Four gates in order, one transaction, and the broadcast slice that assumed duplicates arrive as a prefix.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="fan-out.html">
+				<span class="card__num">20</span>
+				<span class="card__body">
+					<span class="card__title">Telling everybody else</span>
+					<span class="card__summary">An in-memory hub that is explicitly not a delivery guarantee, and a server-sent event stream that subscribes before it reads.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="identity-and-the-wire.html">
+				<span class="card__num">21</span>
+				<span class="card__body">
+					<span class="card__title">A tab’s identity, and what crosses the network</span>
+					<span class="card__summary">One actor per tab and why that is a requirement rather than a simplification — plus two channels with opposite guarantees.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-outbox.html">
+				<span class="card__num">22</span>
+				<span class="card__body">
+					<span class="card__title">The outbox</span>
+					<span class="card__summary">Sixty lines of IndexedDB wrapper, one compound key, and the `oncomplete` that is the difference between &quot;saved&quot; being true and being a message.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-sync-engine.html">
+				<span class="card__num">23</span>
+				<span class="card__body">
+					<span class="card__title">The sync engine</span>
+					<span class="card__summary">Three steps in order, four honest states, a stream with real backoff, and a flush with a lock.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="four-bugs.html">
+				<span class="card__num">24</span>
+				<span class="card__body">
+					<span class="card__title">Four bugs in one file</span>
+					<span class="card__summary">A stranded flush, a bad slice, a watermark from the wrong place, and an echo filter — all the same mistake, seen four times.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-camera.html">
+				<span class="card__num">25</span>
+				<span class="card__body">
+					<span class="card__title">The camera</span>
+					<span class="card__summary">One `Tween` holding both instant and animated movement, the transform order that matters, and a fit that zoomed a one-shape board to 4× and hid a collaborator.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="gestures.html">
+				<span class="card__num">26</span>
+				<span class="card__body">
+					<span class="card__title">Pointers, wheels and one strange standard</span>
+					<span class="card__summary">Attachments rather than actions, pointer capture, `deltaMode`, and the blur listener that stops the canvas freezing.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="geometry.html">
+				<span class="card__num">27</span>
+				<span class="card__body">
+					<span class="card__title">Geometry that is only numbers</span>
+					<span class="card__summary">Hit testing, bounds, elbow routing, and a routing decision that had to stay deterministic because the document is shared.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="snapping.html">
+				<span class="card__num">28</span>
+				<span class="card__body">
+					<span class="card__title">Snapping that helps rather than fights</span>
+					<span class="card__summary">Two rules — screen-space thresholds and nearest-only — and why alignment beats the grid when both apply.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-editor.html">
+				<span class="card__num">29</span>
+				<span class="card__body">
+					<span class="card__title">The editor</span>
+					<span class="card__summary">Selection, tools and commands as one testable class — plus the throttle that decides how often a drag writes to a shared document.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="remote-functions.html">
+				<span class="card__num">30</span>
+				<span class="card__body">
+					<span class="card__title">Remote functions</span>
+					<span class="card__summary">`query`, `command` and `form` from `$app/server` — what replaces most of an API, and the one job left for a real endpoint.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="live-queries-and-forms.html">
+				<span class="card__num">31</span>
+				<span class="card__body">
+					<span class="card__title">Live queries, and forms that work without JavaScript</span>
+					<span class="card__summary">`query.live` as an async generator, `form()` versus `command()`, and the asymmetry that keeps the person who pressed the button fast.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="hooks-and-routing.html">
+				<span class="card__num">32</span>
+				<span class="card__body">
+					<span class="card__title">The hooks, and a URL that is three things</span>
+					<span class="card__summary">`reroute` on both sides, `params.ts` with Standard Schema matchers, `+page@.svelte`, and a three-letter route segment that broke every board.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="i18n.html">
+				<span class="card__num">33</span>
+				<span class="card__body">
+					<span class="card__title">Three languages, no library</span>
+					<span class="card__summary">A catalogue is an object, a message is a value or a function, and the one keyword that would collapse the whole scheme.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="presence.html">
+				<span class="card__num">34</span>
+				<span class="card__body">
+					<span class="card__title">Seeing each other</span>
+					<span class="card__summary">Cursors, selections and viewports on a channel with no guarantees at all — and the one place in this project where losing data is correct.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="collaborative-text-in-place.html">
+				<span class="card__num">35</span>
+				<span class="card__body">
+					<span class="card__title">Typing into a shape somebody else is typing into</span>
+					<span class="card__summary">A textarea over an RGA: the prefix/suffix diff, the caret anchored to a character, and the IME rule that stops other replicas watching you think.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="comments.html">
+				<span class="card__num">36</span>
+				<span class="card__body">
+					<span class="card__title">Comments</span>
+					<span class="card__summary">The feature that deliberately does not use the CRDT, and the form instance per thread that stops one failure from decorating every thread.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="version-history.html">
+				<span class="card__num">37</span>
+				<span class="card__body">
+					<span class="card__title">Version history, where restore is an edit</span>
+					<span class="card__summary">A fold over the log, a diff between two documents, and why a rewind would be a lie the moment somebody reconnects.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="export-in-a-worker.html">
+				<span class="card__num">38</span>
+				<span class="card__body">
+					<span class="card__title">Export, off the main thread</span>
+					<span class="card__summary">SVG on the main thread because strings are cheap, PNG in a worker because rasterising is not — and the `new URL` form Vite needs.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-custom-element.html">
+				<span class="card__num">39</span>
+				<span class="card__body">
+					<span class="card__title">A board on somebody else’s page</span>
+					<span class="card__summary">`&lt;svelte:options customElement&gt;`, one file compiled differently from the other sixty, and a `svelte-check` warning that means &quot;your element does not exist&quot;.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="offline-and-accessible.html">
+				<span class="card__num">40</span>
+				<span class="card__body">
+					<span class="card__title">Starting offline, and using it without a mouse</span>
+					<span class="card__summary">A service worker with one job, the three cache rules, `role=&quot;application&quot;` and the obligation that comes with it.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="mobile.html">
+				<span class="card__num">41</span>
+				<span class="card__body">
+					<span class="card__title">The phone</span>
+					<span class="card__summary">Mobile-first with `min-width` only, a bottom sheet that becomes a sidebar, and a missing `flex-direction` that made the board 200 pixels wide.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="testing-collaboration.html">
+				<span class="card__num">42</span>
+				<span class="card__body">
+					<span class="card__title">The test the project exists to pass</span>
+					<span class="card__summary">Two browser contexts, why two tabs would prove nothing, and the fixture discipline that stops one suite rewriting another’s data.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-gate.html">
+				<span class="card__num">43</span>
+				<span class="card__body">
+					<span class="card__title">The gate</span>
+					<span class="card__summary">One command that has to pass, what each step in it catches, and the two things it deliberately does not check.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="running-it.html">
+				<span class="card__num">44</span>
+				<span class="card__body">
+					<span class="card__title">Running it, and what to take away</span>
+					<span class="card__summary">Deploying a single-instance local-first app, the seam where it stops being single-instance, and the six ideas worth keeping.</span>
+				</span>
+			</a>
+		</li></ol>
+
+	<footer class="home__footer">
+		<p>Every chapter shows the real code from the finished project in
+		<code>tessera</code>. Type it out rather than pasting where you can — the
+		errors you make and fix are the part that sticks. A dozen chapters end with a
+		bug that was genuinely in this codebase, what it looked like from the
+		outside, and how it was cornered.</p>
+	</footer>
+</main>
+
+</body>
+</html>

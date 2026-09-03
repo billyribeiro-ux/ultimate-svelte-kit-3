@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Version history, where restore is an edit — Building Tessera</title>
+<meta name="description" content="A fold over the log, a diff between two documents, and why a rewind would be a lie the moment somebody reconnects.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Tessera</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">37 / 44</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 84.0909090909091%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="who-decides.html"><span class="toc__num">02</span><span>Who decides who wins</span></a></li><li><a href="setting-up.html"><span class="toc__num">03</span><span>Setting up: a SvelteKit 3 project</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>Environment variables that cannot be wrong</span></a></li><li><a href="the-map.html"><span class="toc__num">05</span><span>The map of the project</span></a></li><li><a href="hybrid-logical-clocks.html"><span class="toc__num">06</span><span>Time that cannot go backwards</span></a></li><li><a href="version-vectors.html"><span class="toc__num">07</span><span>What have I already seen?</span></a></li><li><a href="fractional-indexing.html"><span class="toc__num">08</span><span>Room between any two things</span></a></li><li><a href="observed-remove-sets.html"><span class="toc__num">09</span><span>Which shapes exist</span></a></li><li><a href="last-write-wins-registers.html"><span class="toc__num">10</span><span>The fields on a shape</span></a></li><li><a href="collaborative-text.html"><span class="toc__num">11</span><span>Two people typing in one label</span></a></li><li><a href="proving-convergence.html"><span class="toc__num">12</span><span>Proving it, as far as it can be proved</span></a></li><li><a href="eight-operations.html"><span class="toc__num">13</span><span>Eight operations, and nothing else</span></a></li><li><a href="the-reactive-document.html"><span class="toc__num">14</span><span>The model and the projection</span></a></li><li><a href="reconciliation.html"><span class="toc__num">15</span><span>Keeping the projection honest</span></a></li><li><a href="snapshots-and-compaction.html"><span class="toc__num">16</span><span>Snapshots, and what may never be forgotten</span></a></li><li><a href="the-log.html"><span class="toc__num">17</span><span>A database that stores operations</span></a></li><li><a href="permissions.html"><span class="toc__num">18</span><span>Four roles, checked per operation</span></a></li><li><a href="ingestion.html"><span class="toc__num">19</span><span>The only way in</span></a></li><li><a href="fan-out.html"><span class="toc__num">20</span><span>Telling everybody else</span></a></li><li><a href="identity-and-the-wire.html"><span class="toc__num">21</span><span>A tab’s identity, and what crosses the network</span></a></li><li><a href="the-outbox.html"><span class="toc__num">22</span><span>The outbox</span></a></li><li><a href="the-sync-engine.html"><span class="toc__num">23</span><span>The sync engine</span></a></li><li><a href="four-bugs.html"><span class="toc__num">24</span><span>Four bugs in one file</span></a></li><li><a href="the-camera.html"><span class="toc__num">25</span><span>The camera</span></a></li><li><a href="gestures.html"><span class="toc__num">26</span><span>Pointers, wheels and one strange standard</span></a></li><li><a href="geometry.html"><span class="toc__num">27</span><span>Geometry that is only numbers</span></a></li><li><a href="snapping.html"><span class="toc__num">28</span><span>Snapping that helps rather than fights</span></a></li><li><a href="the-editor.html"><span class="toc__num">29</span><span>The editor</span></a></li><li><a href="remote-functions.html"><span class="toc__num">30</span><span>Remote functions</span></a></li><li><a href="live-queries-and-forms.html"><span class="toc__num">31</span><span>Live queries, and forms that work without JavaScript</span></a></li><li><a href="hooks-and-routing.html"><span class="toc__num">32</span><span>The hooks, and a URL that is three things</span></a></li><li><a href="i18n.html"><span class="toc__num">33</span><span>Three languages, no library</span></a></li><li><a href="presence.html"><span class="toc__num">34</span><span>Seeing each other</span></a></li><li><a href="collaborative-text-in-place.html"><span class="toc__num">35</span><span>Typing into a shape somebody else is typing into</span></a></li><li><a href="comments.html"><span class="toc__num">36</span><span>Comments</span></a></li><li><a href="version-history.html" aria-current="page"><span class="toc__num">37</span><span>Version history, where restore is an edit</span></a></li><li><a href="export-in-a-worker.html"><span class="toc__num">38</span><span>Export, off the main thread</span></a></li><li><a href="the-custom-element.html"><span class="toc__num">39</span><span>A board on somebody else’s page</span></a></li><li><a href="offline-and-accessible.html"><span class="toc__num">40</span><span>Starting offline, and using it without a mouse</span></a></li><li><a href="mobile.html"><span class="toc__num">41</span><span>The phone</span></a></li><li><a href="testing-collaboration.html"><span class="toc__num">42</span><span>The test the project exists to pass</span></a></li><li><a href="the-gate.html"><span class="toc__num">43</span><span>The gate</span></a></li><li><a href="running-it.html"><span class="toc__num">44</span><span>Running it, and what to take away</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 37</p>
+			<h1>Version history, where restore is an edit</h1>
+			<p class="lede">A fold over the log, a diff between two documents, and why a rewind would be a lie the moment somebody reconnects.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Put a board back the way it was, collaboratively, without deleting anything.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/history.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * TIME TRAVEL
+ * ===========
+ *
+ * Replaying a board to a point in its log, and working out what would have to
+ * happen for the present to look like the past.
+ *
+ * RESTORE IS AN EDIT, NOT A REWIND
+ * --------------------------------
+ * Nothing here deletes an operation. &quot;Restore to Tuesday&quot; computes the
+ * difference between now and Tuesday and appends it as ordinary operations —
+ * so the restore is itself in the history, can itself be undone, and merges with
+ * whatever a colleague is doing at the same moment like any other edit.
+ *
+ * A rewind cannot do any of that. It would also be a lie the moment somebody
+ * else's replica, which still holds the operations you deleted, reconnects.
+ *
+ * WHY THIS RUNS ON THE SERVER
+ * ---------------------------
+ * The rest of the system keeps the server out of the document's business. This
+ * is the deliberate exception: a restore has to compare two full states, one of
+ * which the client does not have, and it is an explicit administrative action
+ * rather than something that happens sixty times a second. It is authored under
+ * the requesting user's id and lands in the log like any other batch.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a rewind is not an option</h4>
+	<p>Deleting operations would make the restore invisible in the history, impossible to undo, and unable to merge with what a colleague is doing at that moment. Worse, it would be <strong>a lie</strong>: somebody else’s replica still holds the operations you deleted, and the moment they reconnect they push them back. An append-only log cannot be rewound by one participant, and a restore is one participant’s decision.</p>
+</aside>
+<p>This is also the one place the server is allowed an opinion about the document, and the comment says so out loud. A restore has to compare two full states, one of which the client does not have, and it is an explicit administrative action rather than something happening sixty times a second.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/history.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Replay a board up to and including `seq`. Pass `Infinity` for the present. */
+export async function documentAt(boardId: string, seq: number): Promise&lt;BoardDocument&gt; {
+	const rows = await db
+		.select({ snapshot: board.snapshot, snapshotSeq: board.snapshotSeq })
+		.from(board)
+		.where(eq(board.id, boardId))
+		.limit(1);
+
+	const found = rows[0];
+	if (!found) throw new Error(`No such board: ${boardId}`);
+
+	/*
+	 * The stored snapshot is only usable when it is not already past the point we
+	 * are aiming for. Compaction moves it forward, so a board compacted this
+	 * morning cannot be used to reconstruct last week — that replay starts from
+	 * nothing, which is slower and correct.
+	 */
+	const usable = found.snapshot &amp;&amp; found.snapshotSeq &lt;= seq;
+
+	const document = BoardDocument.fromSnapshot(
+		newActorId(),
+		usable ? parseSnapshot(JSON.parse(found.snapshot!)) : emptySnapshot()
+	);
+
+	let cursor = usable ? found.snapshotSeq : 0;
+
+	for (;;) {
+		const page = await db
+			.select({ seq: operation.seq, payload: operation.payload })
+			.from(operation)
+			.where(
+				and(
+					eq(operation.boardId, boardId),
+					gt(operation.seq, cursor),
+					Number.isFinite(seq) ? lte(operation.seq, seq) : undefined
+				)
+			)
+			.orderBy(operation.seq)
+			.limit(1_000);
+
+		if (page.length === 0) break;
+
+		document.applyAll(page.map((row) =&gt; JSON.parse(row.payload) as Operation));
+		cursor = page.at(-1)!.seq;
+
+		if (page.length &lt; 1_000) break;
+	}
+
+	return document;
+}</code></pre>
+</figure>
+<p>The snapshot is only usable when it is <strong>not already past</strong> the point being aimed for. Compaction moves it forward, so a board compacted this morning cannot be used to reconstruct last week — that replay starts from nothing, which is slower and correct. One boolean, and getting it backwards would produce a &quot;restore&quot; that silently returned the present.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/history.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The operations that would make `present` look like `past`.
+ *
+ * Written against the reactive projections rather than the CRDT internals,
+ * because what a person means by &quot;restore&quot; is &quot;the picture I had&quot;, not &quot;the
+ * merge history I had&quot;.
+ */
+export function diffToward(
+	present: BoardDocument,
+	past: BoardDocument,
+	actor: ActorId,
+	clock: Clock
+): Operation[] {
+	const ops: Operation[] = [];
+
+	/* Nodes that exist now and did not exist then: remove them. */
+	for (const node of present.nodes.values()) {
+		if (past.nodes.has(node.id)) continue;
+		ops.push({
+			kind: 'node.remove',
+			stamp: clock.tick(),
+			target: node.id,
+			observed: present.observedNodeAdds(node.id)
+		});
+	}
+
+	for (const wanted of past.nodes.values()) {
+		const current = present.nodes.get(wanted.id);
+		const fields: NodeFields = {
+			kind: wanted.kind,
+			x: wanted.x,
+			y: wanted.y,
+			w: wanted.w,
+			h: wanted.h,
+			fill: wanted.fill,
+			order: wanted.order,
+			parent: wanted.parent
+		};
+
+		if (!current) {
+			// Gone since: bring it back with the same id, so every edge that pointed
+			// at it points at it again.
+			ops.push({ kind: 'node.add', stamp: clock.tick(), id: wanted.id, fields });
+			ops.push(...textOps(clock, wanted.id, '', wanted.label));
+			continue;
+		}</code></pre>
+</figure>
+<p>Written against the <strong>reactive projections</strong> rather than the CRDT internals, because what a person means by &quot;restore&quot; is &quot;the picture I had&quot;, not &quot;the merge history I had&quot;. And a node that has been deleted since comes back with the *same id*, so every edge that pointed at it points at it again.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/history.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Replace a label wholesale.
+ *
+ * Deliberately not a character diff. A restore is a coarse action — &quot;put it back
+ * how it was&quot; — and a minimal edit script would interleave with whatever
+ * somebody is typing right now in a way nobody could predict. Deleting the
+ * current text and inserting the old text is blunt, obvious, and produces the
+ * result the button promises.
+ */
+function textOps(
+	clock: Clock,
+	target: string,
+	from: string,
+	to: string,
+	present?: BoardDocument
+): Operation[] {</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Deliberately not a character diff. A restore is a coarse action — &quot;put it back how it was&quot; — and a minimal edit script would interleave with whatever somebody is typing *right now* in a way nobody could predict. Deleting the current text and inserting the old text is blunt, obvious, and produces the result the button promises.</p></aside>
+<h3 id="the-commands">The remote functions</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/history.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const saveCheckpoint = form(
+	v.object({ boardId, label: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80)) }),
+	async ({ boardId: id, label }) =&gt; {
+		const user = requireUser();
+		await requireAccess(id, user.id, 'editor').catch(rethrow);
+
+		await db.insert(checkpoint).values({
+			id: crypto.randomUUID(),
+			boardId: id,
+			label,
+			// The board's current sequence. Recorded rather than computed later,
+			// because &quot;the checkpoint I saved at 3pm&quot; must not drift as the board does.
+			seq: await watermarkOf(id),
+			authorId: user.id
+		});
+
+		await revisions(id).refresh();
+	}
+);
+
+/**
+ * Put the board back the way it was, by writing the difference as new operations.
+ *
+ * The log is never rewound. A restore is an ordinary batch of edits that happens
+ * to undo a lot at once, so it appears in the history, can itself be restored
+ * past, and merges with whatever somebody else is doing at that moment.
+ */
+export const restoreTo = command(
+	v.object({ boardId, seq: v.pipe(v.number(), v.integer(), v.minValue(0)) }),
+	async ({ boardId: id, seq }) =&gt; {
+		const user = requireUser();
+		const access = await requireAccess(id, user.id, 'editor').catch(rethrow);
+
+		const [present, past] = await Promise.all([documentAt(id, Infinity), documentAt(id, seq)]);
+
+		const { actor, clock } = serverClock();
+		const ops = diffToward(present, past, actor, clock);
+
+		if (ops.length === 0) return { applied: 0 };
+
+		await ingest({ boardId: id, userId: user.id, role: access.role, actor, ops });
+		await revisions(id).refresh();
+
+		return { applied: ops.length };
+	}
+);</code></pre>
+</figure>
+<p>A checkpoint records the board’s sequence <strong>at the moment it is saved</strong> rather than computing it later, because &quot;the checkpoint I saved at 3pm&quot; must not drift as the board does.</p>
+<p>And the restore goes through <code>ingest</code> — the same function every client’s edits go through, with the same per-operation permission check and the same broadcast. That is what makes a restore arrive on everybody else’s screen as an ordinary batch of edits, live, while they are working.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>[features] version history › restores a board to a checkpoint
+
+  draw &quot;Before&quot;          → checkpoint &quot;Just the one box&quot;
+  draw &quot;After&quot;           → two shapes
+  restore                → &quot;After&quot; disappears, &quot;Before&quot; remains
+  reload the page        → still one shape
+
+  the restore is in the log, not in this tab's memory</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A restore appears on a colleague’s screen as it happens.</li><li>A restore survives a reload.</li><li>A restore can itself be restored past.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="comments.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Comments</span>
+			</a>
+			<a class="pager__link pager__link--next" href="export-in-a-worker.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Export, off the main thread</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building Ostinato — a Svelte 5 and SvelteKit 3 course</title>
+<meta name="description" content="Build a groovebox in the browser with Svelte 5 and SvelteKit 3 — a step sequencer with a real audio scheduler, synthesised drums and bass, shareable patterns, a gallery with vanity addresses, live jam rooms, an embeddable custom element and an adapter written from scratch.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body class="is-home">
+
+<main class="home">
+	<p class="eyebrow">A build-along course</p>
+	<h1>Building Ostinato</h1>
+	<p class="home__lede">A step sequencer, a synthesiser, a gallery, a jam room, an embeddable
+		player and the adapter that deploys it — built from an empty folder, using
+		every part of Svelte 5 and SvelteKit 3 that earns its place, including
+		everything the September 2026 releases added. Every feature is used for
+		something, explained from first principles, and tested end to end.</p>
+
+	<div class="home__meta">
+		<span>39 chapters</span>
+		<span>Svelte 5.57</span><span>SvelteKit 3</span><span>Web Audio</span><span>A custom adapter</span>
+	</div>
+
+	<a class="home__start" href="what-we-are-building.html">Start chapter 01 →</a>
+
+	<h2 class="home__heading">Everything we'll cover</h2>
+	<ol class="cards">
+		<li>
+			<a class="card" href="what-we-are-building.html">
+				<span class="card__num">01</span>
+				<span class="card__body">
+					<span class="card__title">What we are building</span>
+					<span class="card__summary">Ostinato: a groovebox in the browser — a step sequencer with synthesised drums and bass, shareable patterns, a gallery, live jam rooms and an embeddable player.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-config.html">
+				<span class="card__num">02</span>
+				<span class="card__body">
+					<span class="card__title">One file to configure everything</span>
+					<span class="card__summary">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: what each option does, what it costs, and what was removed since SvelteKit 2.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-map.html">
+				<span class="card__num">03</span>
+				<span class="card__body">
+					<span class="card__title">The map: everything the framework has to offer</span>
+					<span class="card__summary">Every Svelte 5 and SvelteKit 3 feature this project uses, and the file it lives in — including every item from the September 2026 releases.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-note-is-a-class.html">
+				<span class="card__num">04</span>
+				<span class="card__body">
+					<span class="card__title">A note is a class</span>
+					<span class="card__summary">One number — the MIDI note — and everything a sequencer needs derived from it. Why it is a class, why it is immutable, and why that combination is exactly what `$state` wants.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="musical-time.html">
+				<span class="card__num">05</span>
+				<span class="card__body">
+					<span class="card__title">Musical time, in seconds</span>
+					<span class="card__summary">The conversions between steps and seconds — tempo, swing, velocity — kept apart from both the scheduler and the pattern so they can be tested with a calculator.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-pattern.html">
+				<span class="card__num">06</span>
+				<span class="card__body">
+					<span class="card__title">The pattern</span>
+					<span class="card__summary">Everything the sequencer plays, as plain data — a deliberate choice about what `$state` can and cannot see — plus the valibot schemas that check a pattern arriving from anywhere.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-pattern-in-a-url.html">
+				<span class="card__num">07</span>
+				<span class="card__body">
+					<span class="card__title">A pattern in a URL</span>
+					<span class="card__summary">A link is a save. The codec packs a pattern into about two hundred characters of base64url, versioned, with tests for every way a link can be damaged.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="stored-and-preset.html">
+				<span class="card__num">08</span>
+				<span class="card__body">
+					<span class="card__title">Stored patterns and presets</span>
+					<span class="card__summary">The DTO — the pattern as JSON without a `Note` in it — and three presets written as strings you can read like a drum machine.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-instruments.html">
+				<span class="card__num">09</span>
+				<span class="card__body">
+					<span class="card__title">The instruments</span>
+					<span class="card__summary">A kick, a snare, a hi-hat, a clap, a bass and a lead, each built from oscillators, noise and a filter at the moment it is needed. No samples, and a recipe you can read.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="one-step-scheduled.html">
+				<span class="card__num">10</span>
+				<span class="card__body">
+					<span class="card__title">One step, scheduled</span>
+					<span class="card__summary">The function both players share: given a pattern, a step index and a time, schedule every hit. Sharing it is what makes “the file sounds like the studio” a property rather than a hope.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-engine.html">
+				<span class="card__num">11</span>
+				<span class="card__body">
+					<span class="card__title">The engine: where the audio graph meets reactivity</span>
+					<span class="card__summary">One `AudioContext`, created lazily, a master fader, and a channel strip per track built on first request with `getOrInsertComputed`. The `state` getter is the bridge between a browser event and Svelte, built on `createSubscriber`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="two-clocks.html">
+				<span class="card__num">12</span>
+				<span class="card__body">
+					<span class="card__title">Two clocks: the scheduler</span>
+					<span class="card__summary">The heart of the instrument. Why `setInterval` cannot keep time, how a look-ahead timer and the audio clock together can, and why the playhead is a third clock.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="render-to-a-file.html">
+				<span class="card__num">13</span>
+				<span class="card__body">
+					<span class="card__title">Render to a file, and load one</span>
+					<span class="card__summary">The same scheduling function through an `OfflineAudioContext` gives a WAV that sounds like the studio; forty-four bytes of header make it a file every editor opens; and a `SvelteMap` holds the samples people drop on a track.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-session.html">
+				<span class="card__num">14</span>
+				<span class="card__body">
+					<span class="card__title">The session: a pattern and its history</span>
+					<span class="card__summary">A class in a `.svelte.ts` file holds the pattern as deep `$state`, keeps undo as snapshots, autosaves with a root effect, and can be tested without a component.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-knob.html">
+				<span class="card__num">15</span>
+				<span class="card__body">
+					<span class="card__title">A knob</span>
+					<span class="card__summary">A control the web does not have: drag, scroll and arrow keys, a `$bindable` value, a spring on the pointer, `$props.id()` for the label, and a wheel listener that must not be passive.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="pads-and-the-grid.html">
+				<span class="card__num">16</span>
+				<span class="card__body">
+					<span class="card__title">Pads and the grid</span>
+					<span class="card__summary">One pad is a button with a class list; the grid is a keyed `{#each}` with `animate:flip`, `bind:group` for the brush, a function binding for the row checkbox, `bind:indeterminate`, and a `contenteditable` name.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="transport-and-mixer.html">
+				<span class="card__num">17</span>
+				<span class="card__body">
+					<span class="card__title">The transport and the mixer</span>
+					<span class="card__summary">Play, tempo, swing and volume; a strip per track with level, pan, mute, solo and a meter drawn by an attachment at sixty frames a second; and `$inspect.trace` in the one effect most likely to re-run for the wrong reason.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="panels-as-history.html">
+				<span class="card__num">18</span>
+				<span class="card__body">
+					<span class="card__title">Panels that are history entries</span>
+					<span class="card__summary">A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is `pushState`, closing it is the back button: shallow routing.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-studio-page.html">
+				<span class="card__num">19</span>
+				<span class="card__body">
+					<span class="card__title">The studio page</span>
+					<span class="card__summary">A universal `load` decides where the pattern comes from; the page builds the instrument, provides it through context, restores after hydration, snapshots across navigation, and wires the keyboard, the window and the body.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="sound-and-share.html">
+				<span class="card__num">20</span>
+				<span class="card__body">
+					<span class="card__title">Sound in, patterns out</span>
+					<span class="card__summary">The sound panel: `bind:files`, a `DataTransfer` to clear it, a waveform drawn by an attachment factory. The share panel: a link, a WAV rendered speculatively with `fork`, `$effect.pending()`, media bindings, and a form with preflight validation.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-schema.html">
+				<span class="card__num">21</span>
+				<span class="card__body">
+					<span class="card__title">The schema, and the environment</span>
+					<span class="card__summary">Four tables in Drizzle, a pattern as one JSON column, relations for the query builder, one libSQL client with WAL, and every environment variable declared once with a valibot schema.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="identity-without-passwords.html">
+				<span class="card__num">22</span>
+				<span class="card__body">
+					<span class="card__title">Identity without passwords</span>
+					<span class="card__summary">A signed cookie says which handle this browser is. HMAC-SHA256 with `crypto.subtle`, one `null` for every failure, `getRequestEvent()` inside helpers, and a shared handle schema that the server enforces and the form preflights.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="reads.html">
+				<span class="card__num">23</span>
+				<span class="card__body">
+					<span class="card__title">Reads: query, batch and prerender</span>
+					<span class="card__summary">The store returns `Published` records with real patterns inside; the `.remote.ts` file turns them into `query`, `query.batch` for thirty cards in one request, and `prerender` for the featured strip computed at build time.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="writes.html">
+				<span class="card__num">24</span>
+				<span class="card__body">
+					<span class="card__title">Writes: command and form</span>
+					<span class="card__summary">Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from inside `enhance`, and a per-card delete form with `remove.for(id)`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="live-jam.html">
+				<span class="card__num">25</span>
+				<span class="card__body">
+					<span class="card__title">A live query: the jam room</span>
+					<span class="card__summary">One pattern many browsers edit. An in-memory broadcaster, `query.live` as an async generator with `finally` for leaving, a one-value mailbox so slow browsers get the latest, and commands that refresh nothing because the stream already did.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="hooks.html">
+				<span class="card__num">26</span>
+				<span class="card__body">
+					<span class="card__title">Hooks: around every request</span>
+					<span class="card__summary">`handle` as a sequence — identity, then security with a font preload filter; `handleFetch` with the one same-origin case that must not be in-process; `handleError` by `kind`; `init`; and the two universal hooks, `transport` and `reroute`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="layouts-and-groups.html">
+				<span class="card__num">27</span>
+				<span class="card__body">
+					<span class="card__title">Two layouts and a group</span>
+					<span class="card__summary">A root layout with view transitions and a progress bar; an `(app)` group layout with the header, `$state.eager` for the current link, the new-version banner, and the artist’s name from a remote query; plus the small pieces every page uses.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-landing-page.html">
+				<span class="card__num">28</span>
+				<span class="card__body">
+					<span class="card__title">The landing page is a file</span>
+					<span class="card__summary">Prerendered, with a `prerender` remote function baked in, `hydratable` for random numbers that must agree with themselves, a GSAP entrance loaded only for people who will see it, and a demo grid that plays in pure CSS.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-pattern-page.html">
+				<span class="card__num">29</span>
+				<span class="card__body">
+					<span class="card__title">The pattern page and its share card</span>
+					<span class="card__summary">`RouteParams` from `$app/types` with the layout group in the id, an optimistic love count with `withOverride`, a `Player` that provides a studio only if none exists, and a share card rendered by `svelte/server` with a CSP built from the hashes it returns.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-gallery.html">
+				<span class="card__num">30</span>
+				<span class="card__body">
+					<span class="card__title">The gallery</span>
+					<span class="card__summary">The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and `pushState` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-jam-page.html">
+				<span class="card__num">31</span>
+				<span class="card__body">
+					<span class="card__title">The jam room</span>
+					<span class="card__summary">The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="diagnostics-and-the-api.html">
+				<span class="card__num">32</span>
+				<span class="card__body">
+					<span class="card__title">Diagnostics, tracing and the API</span>
+					<span class="card__summary">An in-memory span exporter and the instrumentation file that registers it; a page that reads the adapter’s virtual module, `event.platform`, `updated.check()` and `$state.snapshot`; and three endpoints — the resolver the reroute hook asks, a `QUERY` search with a co-located test, and the plain JSON the embed fetches.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="a-custom-element-built-twice.html">
+				<span class="card__num">33</span>
+				<span class="card__body">
+					<span class="card__title">A custom element, built twice</span>
+					<span class="card__summary">`&lt;ostinato-player&gt;`: compiled as a custom element for one folder only through `dynamicCompileOptions`, and again as one standalone file by a second Vite config. `$host()` for events, `extend` for methods that exist before the component mounts, `document.currentScript` for where it came from.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="an-adapter-from-scratch.html">
+				<span class="card__num">34</span>
+				<span class="card__body">
+					<span class="card__title">An adapter, from scratch</span>
+					<span class="card__summary">What an adapter is: `writeClient`, `writePrerendered`, `generateManifest` per function, a runtime bundled with rolldown, `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-service-worker.html">
+				<span class="card__num">35</span>
+				<span class="card__body">
+					<span class="card__title">The service worker</span>
+					<span class="card__summary">The application shell cached on install from `$app/manifest`, versioned by `version` from `$app/env`, typed through `$app/service-worker` and its own tsconfig — and the two paths it must never cache, with the reason.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="the-security-posture.html">
+				<span class="card__num">36</span>
+				<span class="card__body">
+					<span class="card__title">The security posture</span>
+					<span class="card__summary">One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, and two tests that prove the policy covers every inline script.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="unit-and-browser-tests.html">
+				<span class="card__num">37</span>
+				<span class="card__body">
+					<span class="card__title">Unit tests, and tests in a real browser</span>
+					<span class="card__summary">Two Vitest projects: pure logic in Node, `$state` and audio in Chromium. Round-trips for the codec, headers read back with a `DataView`, a forged cookie, a route partition, and a `Session` tested with `flushSync` and no component.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="end-to-end-and-what-it-found.html">
+				<span class="card__num">38</span>
+				<span class="card__body">
+					<span class="card__title">End to end, and what it found</span>
+					<span class="card__summary">Thirty-three scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.</span>
+				</span>
+			</a>
+		</li>
+		<li>
+			<a class="card" href="where-next.html">
+				<span class="card__num">39</span>
+				<span class="card__body">
+					<span class="card__title">Where next, and the tools that helped</span>
+					<span class="card__summary">The `sv` add-on that wrote `AGENTS.md` and the Claude settings, the Svelte MCP server that caught a compile error before the compiler did, `#lib` imports, the `verify` script that gates a commit — and five directions the project could go.</span>
+				</span>
+			</a>
+		</li></ol>
+
+	<footer class="home__footer">
+		<p>Every code block in this course is read out of the finished project
+		in <code>ostinato</code> at build time — file and line numbers included — so
+		it cannot drift from what the code actually says. Type it out rather than
+		pasting where you can: the errors you make and fix are the part that sticks.
+		Where the project made a decision, the chapter says what the alternative
+		was and why it lost.</p>
+	</footer>
+</main>
+
+</body>
+</html>

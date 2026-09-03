@@ -1,0 +1,38 @@
+node_modules
+/build
+/.svelte-kit
+.env
+
+# Databases. `*.db` covers `local.db` and the throwaway `e2e.db`; the `-shm` and
+# `-wal` siblings exist because the connection runs in WAL mode.
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# End-to-end artefacts.
+/test-results
+/playwright-report
+
+# Paraglide compiles `messages/` into here on every build; the source of truth
+# is the JSON.
+/src/lib/paraglide
+/project.inlang/cache
+
+# The library is built by `svelte-package` on install (see `prepare`); what is
+# committed is `packages/waypoint/src`.
+/packages/*/dist
+/packages/*/.svelte-kit
+/packages/*/node_modules
+*.tgz
+
+# The standalone custom element, built by `pnpm run build:element` before
+# every build and dev server; `src/lib/embed` is the source.
+/static/embed
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# The inlang SDK writes this beside the settings on every compile.
+/project.inlang/.meta.json

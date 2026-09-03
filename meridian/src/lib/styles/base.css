@@ -1,0 +1,328 @@
+/*
+ * BASE
+ * ====
+ *
+ * Typography, links, and the handful of shared classes that every page
+ * uses: buttons, inputs, cards, chips, badges. Each is small and boring on
+ * purpose — a component library's job is to be predictable.
+ */
+
+body {
+	font-family: var(--font-body);
+	font-size: var(--text-md);
+	color: var(--ink);
+	background: var(--paper);
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 500;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	font-variation-settings: 'opsz' 96;
+}
+
+h1 {
+	font-size: var(--text-2xl);
+}
+h2 {
+	font-size: var(--text-xl);
+}
+h3 {
+	font-size: var(--text-lg);
+}
+h4 {
+	font-size: var(--text-md);
+	font-weight: 600;
+}
+
+small,
+.muted {
+	color: var(--ink-2);
+	font-size: var(--text-sm);
+}
+
+code,
+kbd {
+	font-family: var(--font-mono);
+	font-size: 0.9em;
+}
+
+kbd {
+	padding: 0.05em 0.4em;
+	border: 1px solid var(--line-2);
+	border-bottom-width: 2px;
+	border-radius: var(--radius-sm);
+	background: var(--paper-2);
+}
+
+a:not([class]) {
+	color: var(--sea);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+a:not([class]):hover {
+	color: var(--sea-2);
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid var(--line);
+	margin-block: var(--space-5);
+}
+
+/* ------------------------------------------------------------------ */
+/* Buttons                                                             */
+/* ------------------------------------------------------------------ */
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	min-height: 2.5rem;
+	padding: 0.5rem 1rem;
+	border-radius: var(--radius);
+	border: 1px solid var(--line-2);
+	background: var(--paper-2);
+	color: var(--ink);
+	font-weight: 500;
+	font-size: var(--text-sm);
+	line-height: 1.2;
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		background-color var(--dur-fast) var(--ease-out),
+		border-color var(--dur-fast) var(--ease-out),
+		transform var(--dur-fast) var(--ease-out);
+}
+.btn:hover {
+	background: var(--paper-3);
+}
+.btn:active {
+	transform: translateY(1px);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+	opacity: 0.55;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.btn--primary {
+	background: var(--sea);
+	border-color: var(--sea);
+	color: light-dark(#ffffff, #052926);
+}
+.btn--primary:hover {
+	background: var(--sea-2);
+	border-color: var(--sea-2);
+}
+
+.btn--danger {
+	color: var(--coral);
+	border-color: var(--coral-soft);
+	background: var(--coral-soft);
+}
+
+.btn--ghost {
+	border-color: transparent;
+	background: transparent;
+}
+.btn--ghost:hover {
+	background: var(--paper-3);
+}
+
+.btn--sm {
+	min-height: 2rem;
+	padding: 0.25rem 0.7rem;
+	font-size: var(--text-xs);
+}
+
+.btn--icon {
+	width: 2.5rem;
+	padding: 0;
+}
+.btn--icon.btn--sm {
+	width: 2rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Forms                                                               */
+/* ------------------------------------------------------------------ */
+
+.field {
+	display: grid;
+	gap: var(--space-1);
+}
+
+.label {
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--ink-2);
+}
+
+.input,
+.select,
+.textarea {
+	width: 100%;
+	min-height: 2.5rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--line-2);
+	border-radius: var(--radius);
+	background: var(--paper-2);
+	color: var(--ink);
+	transition: border-color var(--dur-fast) var(--ease-out);
+}
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+	outline: none;
+	border-color: var(--focus);
+	box-shadow: 0 0 0 3px light-dark(rgb(37 99 235 / 0.18), rgb(147 197 253 / 0.25));
+}
+.input[aria-invalid='true'],
+.select[aria-invalid='true'] {
+	border-color: var(--coral);
+}
+.textarea {
+	min-height: 6rem;
+	resize: vertical;
+}
+
+.issue {
+	color: var(--coral);
+	font-size: var(--text-sm);
+}
+
+.hint {
+	color: var(--ink-3);
+	font-size: var(--text-xs);
+}
+
+/* ------------------------------------------------------------------ */
+/* Surfaces                                                            */
+/* ------------------------------------------------------------------ */
+
+.card {
+	background: var(--paper-2);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-1);
+}
+
+.card--pad {
+	padding: var(--space-5);
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-1);
+	padding: 0.15rem 0.6rem;
+	border-radius: var(--radius-pill);
+	background: var(--paper-3);
+	color: var(--ink-2);
+	font-size: var(--text-xs);
+	font-weight: 500;
+	line-height: 1.6;
+}
+
+.chip--sea {
+	background: var(--sea-soft);
+	color: var(--sea);
+}
+.chip--sun {
+	background: var(--sun-soft);
+	color: var(--sun);
+}
+.chip--coral {
+	background: var(--coral-soft);
+	color: var(--coral);
+}
+
+.kind-dot {
+	display: inline-block;
+	width: 0.6em;
+	height: 0.6em;
+	border-radius: 50%;
+	background: var(--kind, var(--ink-3));
+}
+
+/* Stop kinds set `--kind` from a data attribute, so one rule serves the map, the list and the legend. */
+[data-kind='place'] {
+	--kind: var(--kind-place);
+}
+[data-kind='lodging'] {
+	--kind: var(--kind-lodging);
+}
+[data-kind='food'] {
+	--kind: var(--kind-food);
+}
+[data-kind='transport'] {
+	--kind: var(--kind-transport);
+}
+[data-kind='activity'] {
+	--kind: var(--kind-activity);
+}
+[data-kind='idea'] {
+	--kind: var(--kind-idea);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tables                                                              */
+/* ------------------------------------------------------------------ */
+
+.table-wrap {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-lg);
+	background: var(--paper-2);
+}
+
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--text-sm);
+}
+.table th,
+.table td {
+	padding: 0.6rem 0.75rem;
+	text-align: start;
+	border-bottom: 1px solid var(--line);
+	white-space: nowrap;
+}
+.table th {
+	font-weight: 600;
+	color: var(--ink-2);
+	font-size: var(--text-xs);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	background: var(--paper-3);
+	position: sticky;
+	top: 0;
+}
+.table tbody tr:last-child td {
+	border-bottom: 0;
+}
+.table .num {
+	text-align: end;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Print                                                               */
+/* ------------------------------------------------------------------ */
+
+@media print {
+	body {
+		background: #fff;
+		color: #000;
+	}
+	.no-print {
+		display: none !important;
+	}
+}

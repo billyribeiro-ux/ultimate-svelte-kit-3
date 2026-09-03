@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>`getAbortSignal`, and a streaming fetch — Building Sextant</title>
+<meta name="description" content="Two abort signals for two layers, why `EventSource` is the wrong tool here, and the bookkeeping a signal removes.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">38 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 82.6086956521739%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html" aria-current="page"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 38</p>
+			<h1>`getAbortSignal`, and a streaming fetch</h1>
+			<p class="lede">Two abort signals for two layers, why <code>EventSource</code> is the wrong tool here, and the bookkeeping a signal removes.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Consume server-sent events with <code>fetch</code>, and cancel cleanly when the query changes.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:6-48</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE LIVE TAIL
+ * =============
+ *
+ * A streaming fetch, consumed as it arrives, cancelled the instant the query
+ * changes underneath it.
+ *
+ * WHY `fetch` AND NOT `EventSource`
+ * ---------------------------------
+ * `EventSource` is the purpose-built API for server-sent events and it has two
+ * limitations that matter here. It cannot send headers — so it cannot carry an
+ * `Accept`, and on an API that authenticated by header it could not
+ * authenticate at all — and it takes no `AbortSignal`, so cancelling means
+ * calling `.close()` from a teardown that has to be wired by hand. It also
+ * reconnects on its own schedule, which sounds helpful and means a tail that
+ * was deliberately stopped comes back.
+ *
+ * A streaming `fetch` gives all three: headers, a signal, and no reconnection
+ * that was not asked for. The cost is parsing the wire format by hand, which
+ * is about fifteen lines because SSE is a genuinely simple format.
+ *
+ * WHY `getAbortSignal()` AND NOT AN `AbortController`
+ * ---------------------------------------------------
+ * The manual version is: create a controller, start the stream, return a
+ * teardown from the effect that aborts it, and remember that the teardown runs
+ * both on unmount *and* on every re-run. That is four things to keep in step,
+ * and the failure mode of getting it wrong is invisible — an orphaned stream
+ * that keeps its server-side subscription alive, one per query edit, until the
+ * tab is closed.
+ *
+ * `getAbortSignal()` is the same thing with none of the bookkeeping: it hands
+ * back a signal tied to *this run of this effect*, and Svelte aborts it when
+ * the effect re-runs or is destroyed. Change the query and the old stream is
+ * already cancelled by the time the new one starts.
+ */
+interface Props {
+	tenant: string;
+	/** The SQF text. Changing it tears the stream down and opens a new one. */
+	q: string;
+	/** Rows arriving from the stream. Newest first — see below. */
+	rows: Row[];
+	paused?: boolean;
+}</code></pre>
+</figure>
+<p><code>EventSource</code> is the purpose-built API and has two limitations that matter. It cannot send headers, and it takes no <code>AbortSignal</code> — so cancelling means calling <code>.close()</code> from a teardown wired by hand. It also reconnects on its own schedule, which sounds helpful and means a tail that was deliberately stopped comes back.</p>
+<h3 id="the-signal">What <code>getAbortSignal()</code> removes</h3>
+<p>The manual version is: create a controller, start the stream, return a teardown from the effect that aborts it, and remember that the teardown runs both on unmount <strong>and</strong> on every re-run. That is four things to keep in step, and the failure mode of getting it wrong is invisible — an orphaned stream that keeps its server-side subscription alive, one per query edit, until the tab is closed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:68-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">$effect(() =&gt; {
+	// Read every dependency *before* the first await, so Svelte records them.
+	// After an await the effect is no longer tracking, and a dependency read
+	// later would silently never trigger a re-run.
+	const url = `/api/tail?tenant=${encodeURIComponent(tenant)}&amp;q=${encodeURIComponent(q)}`;
+	if (paused) {
+		status = 'idle';
+		return;
+	}
+
+	const signal = getAbortSignal();
+	status = 'connecting';
+	message = null;
+
+	void consume(url, signal);
+});</code></pre>
+</figure>
+<aside class="callout callout--note"><p>Read every dependency *before* the first <code>await</code>. After an await the effect is no longer tracking, and a dependency read later silently never triggers a re-run. That is the one rule of async effects and it is easy to break by moving a line.</p></aside>
+<h3 id="two-signals">Two signals, opposite halves of one problem</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/query.remote.ts<span class="code__lines">:58-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * TWO ABORT SIGNALS, FOR TWO DIFFERENT LAYERS
+ *
+ * This is the *request's* signal, from `getRequestEvent()`. adapter-node
+ * aborts it when the client disconnects, so a query whose caller has gone away
+ * stops before it reaches the database rather than running to completion for
+ * nobody.
+ *
+ * The other one is `getAbortSignal()` from `svelte`, which is a **client**
+ * API: it lives inside a `$derived` or an `$effect` and is aborted when that
+ * reaction re-runs or is destroyed. `LiveTail.svelte` uses it to tear down the
+ * streaming fetch the moment the query changes underneath it.
+ *
+ * They are easy to confuse and they solve opposite halves of the same problem.
+ * The client one stops the browser waiting for an answer it no longer wants;
+ * this one stops the server computing it. Editing a query while a tail is open
+ * needs *both* — otherwise the browser drops a stream the server is still
+ * happily filling, one abandoned subscription per keystroke.
+ */
+const result = await run(parsed.query, {
+	tenantId: access.tenantId,
+	from: window.from,
+	to: window.to,
+	signal: getRequestEvent().request.signal
+});</code></pre>
+</figure>
+<p>The client signal stops the browser waiting for an answer it no longer wants. The request signal — <code>getRequestEvent().request.signal</code>, which adapter-node aborts when the client disconnects — stops the *server computing it*. Editing a query while a tail is open needs both, or the browser drops a stream the server is still happily filling.</p>
+<h3 id="sse-by-hand">Parsing SSE, which is fifteen lines</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:106-128</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	/*
+	 * `stream: true` is the whole reason this is correct on a slow network.
+	 *
+	 * A chunk boundary can fall in the middle of a UTF-8 sequence — which
+	 * happens the moment a log line contains an emoji or an accent — and a
+	 * decoder without it emits a replacement character for the split byte
+	 * and another for its partner. The bug looks like corrupt data from the
+	 * server.
+	 */
+	buffer += decoder.decode(value, { stream: true });
+
+	// SSE frames are separated by a blank line. Anything after the last one
+	// is an incomplete frame and stays in the buffer.
+	const frames = buffer.split('\n\n');
+	buffer = frames.pop() ?? '';
+
+	for (const frame of frames) handle(frame);
+}
+
+// The server closed. Not an error — a deploy, or a proxy timing out — but
+// it must be visible, because a tail that has silently stopped looks
+// exactly like a system that has gone quiet.
+status = 'idle';</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><code>decode(value, { stream: true })</code> is the part that is correct on a slow network and wrong without it. A chunk boundary can fall in the middle of a UTF-8 sequence — which happens the moment a log line contains an emoji or an accent — and a decoder without it emits a replacement character for the split byte and another for its partner. The bug looks like corrupt data from the server.</p></aside>
+<p>And an abort is the *normal* way this ends: the query changed, or the component unmounted. Reporting it as a failure would put a red error on the screen every time somebody edits their query.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Editing the query tears down the old stream before the new one starts.</li><li>A log line with an emoji arrives intact across a chunk boundary.</li><li>Stopping the tail does not produce an error.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="streamed-loads.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Streamed loads: await what paints, stream what waits</span>
+			</a>
+			<a class="pager__link pager__link--next" href="remote-functions.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Remote functions: query, batch, form and command</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

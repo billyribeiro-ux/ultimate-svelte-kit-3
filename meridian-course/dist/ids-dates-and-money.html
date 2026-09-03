@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ids, dates and money — Building Meridian</title>
+<meta name="description" content="Three small modules that decide three things most apps get wrong: an unguessable slug you can read aloud, a date that is a date and not an instant, and an amount that is an integer of minor units formatted by `Intl`.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">09 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 20%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html" aria-current="page"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 09</p>
+			<h1>Ids, dates and money</h1>
+			<p class="lede">Three small modules that decide three things most apps get wrong: an unguessable slug you can read aloud, a date that is a date and not an instant, and an amount that is an integer of minor units formatted by <code>Intl</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Choose the representation for an identifier, a calendar date and an amount of money, and say what goes wrong with the obvious alternatives.</p></aside>
+			<p>The domain layer starts with representations. Get them right and every later file is shorter; get them wrong and every later file carries a workaround. These three are short enough to read whole.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/ids.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Two kinds of identifier, for two audiences.
+ *
+ * `newId()` is a UUID: for rows, never shown to a person, never typed.
+ * `newSlug()` is ten characters from an alphabet with no `0`/`o`, `1`/`l`/`i`
+ * confusions, because a trip's slug is read out loud across a table
+ * (&quot;meridian.app/t/kx7m4p2q9w&quot;) and typed from a photo.
+ */
+
+const SLUG_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+export function newId(): string {
+	return crypto.randomUUID();
+}
+
+/**
+ * Ten random characters is ~49 bits — nobody guesses one. The `% 31` has a
+ * bias of one part in 256 per character, which matters for a password and
+ * not for a share link.
+ */
+export function newSlug(length = 10): string {
+	const bytes = crypto.getRandomValues(new Uint8Array(length));
+	let out = '';
+	for (const byte of bytes) out += SLUG_ALPHABET[byte % SLUG_ALPHABET.length];
+	return out;
+}
+
+/** What `src/params/slug.ts` and the schemas accept. */
+export const SLUG = /^[a-z2-9]{6,32}$/;</code></pre>
+</figure>
+<p>Two kinds of id for two audiences. A row id is a UUID and nobody ever sees it. A *slug* is what goes in the share link — <code>meridian.app/t/kx7m4p2q9w</code> — and it is read aloud across a table and typed from a photo, so its alphabet drops the characters people confuse: no <code>0</code> and <code>o</code>, no <code>1</code>, <code>l</code> and <code>i</code>. Ten characters from thirty-one is about forty-nine bits, which nobody guesses; the comment is honest that <code>% 31</code> has a tiny bias, and honest that a share link is not a password. <code>SLUG</code> is the regular expression the route matcher and the schema both use, so there is one definition of “looks like one of ours”.</p>
+<h3 id="dates">A date is not an instant</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/dates.ts<span class="code__lines">:1-17</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * DATES WITHOUT TIMES
+ * ===================
+ *
+ * A trip runs from the 10th to the 17th. Not from 00:00 on the 10th in
+ * Lisbon to 23:59 on the 17th in Tokyo — the *dates*, wherever you happen to
+ * be reading them. `Date` cannot say that: it is an instant, and an instant
+ * has a time zone the moment you format it, which is how a trip that starts
+ * on the 10th is shown starting on the 9th to somebody in California.
+ *
+ * So a trip date is a string, `YYYY-MM-DD`, in the database and on the wire,
+ * and a `CalendarDate` from `@internationalized/date` when arithmetic is
+ * needed. The same library drives Bits UI's date pickers, so the value a
+ * person picks is the value that is stored, with no conversion in between.
+ * `src/hooks.ts` teaches SvelteKit to carry a `CalendarDate` across the wire
+ * intact (`transport`), for the one place that sends one.
+ */</code></pre>
+</figure>
+<p>This is the paragraph to reread before any project with dates in it. A trip runs from the 10th to the 17th — the *dates*, not midnight in one time zone to midnight in another. JavaScript’s <code>Date</code> is an instant, and the moment you format an instant you have a time zone, which is how a trip that starts on the 10th shows as the 9th to somebody reading it in California. So a trip date is a <code>YYYY-MM-DD</code> string in the database and on the wire, and a <code>CalendarDate</code> from <code>@internationalized/date</code> when it needs arithmetic — the same library Bits UI’s pickers speak, so the value a person picks is the value that is stored.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/dates.ts<span class="code__lines">:27-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A real calendar date, not just four-two-two digits. */
+export function isIsoDate(value: string): boolean {
+	if (!ISO_DATE.test(value)) return false;
+	try {
+		parseDate(value);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export function fromIso(value: string): CalendarDate {
+	return parseDate(value);
+}
+
+export function toIso(date: CalendarDate): string {
+	return date.toString();
+}
+
+/** Today, where this code is running. Only the seed and the &quot;new trip&quot; default use it. */
+export function todayIso(): string {
+	return today(getLocalTimeZone()).toString();
+}
+
+/** Inclusive: the 10th to the 10th is one day. */
+export function dayCount(start: string, end: string): number {
+	return Math.max(0, fromIso(end).compare(fromIso(start)) + 1);
+}
+
+/** Every date from `start` to `end`, inclusive, in order. */
+export function eachDay(start: string, end: string): string[] {
+	const days: string[] = [];
+	const last = fromIso(end);
+	for (let day = fromIso(start); day.compare(last) &lt;= 0; day = day.add({ days: 1 })) {
+		days.push(day.toString());
+	}
+	return days;
+}
+
+export function isWithin(date: string, start: string, end: string): boolean {
+	const d = fromIso(date);
+	return d.compare(fromIso(start)) &gt;= 0 &amp;&amp; d.compare(fromIso(end)) &lt;= 0;
+}
+
+/** Strings sort the way dates do, which is the point of the ISO format. */
+export function compareIso(a: string, b: string): number {
+	return a &lt; b ? -1 : a &gt; b ? 1 : 0;
+}</code></pre>
+</figure>
+<p>The helpers are what the itinerary needs: <code>eachDay</code> produces the days of the trip in order, <code>dayCount</code> is inclusive because the 10th to the 10th is one day, and <code>compareIso</code> is the reminder that ISO strings sort like dates — which is the whole reason for the format. <code>isIsoDate</code> checks the shape *and* parses it, because <code>2026-02-30</code> is four-two-two digits and not a date.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/dates.ts<span class="code__lines">:78-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * FORMATTING, CACHED
+ * ------------------
+ * An `Intl.DateTimeFormat` costs a few hundred microseconds to build — it
+ * loads locale data — and an itinerary formats forty dates per render. The
+ * cache key includes the locale, because project 5 once cached by options
+ * alone and served German dates to an English page.
+ */
+const formatters = new Map&lt;string, DateFormatter&gt;();
+
+function formatter(locale: string, options: Intl.DateTimeFormatOptions): DateFormatter {
+	const key = `${locale}|${JSON.stringify(options)}`;
+	let f = formatters.get(key);
+	if (!f) {
+		f = new DateFormatter(locale, { ...options, timeZone: 'UTC' });
+		formatters.set(key, f);
+	}
+	return f;
+}
+
+export type DateStyle = 'day' | 'short' | 'long';
+
+const STYLES: Record&lt;DateStyle, Intl.DateTimeFormatOptions&gt; = {
+	day: { weekday: 'short', day: 'numeric' },
+	short: { day: 'numeric', month: 'short' },
+	long: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+};
+
+/**
+ * `toDate('UTC')` plus a UTC formatter: the calendar date becomes midnight
+ * UTC and is formatted in UTC, so it comes back out as the same date
+ * wherever the formatting happens.
+ */
+export function formatDate(date: string, locale: string, style: DateStyle = 'short'): string {
+	return formatter(locale, STYLES[style]).format(fromIso(date).toDate('UTC'));
+}
+
+/** &quot;10 – 17 May 2026&quot;, collapsing what the two ends share. */
+export function formatRange(start: string, end: string, locale: string): string {
+	return formatter(locale, { day: 'numeric', month: 'short', year: 'numeric' }).formatRange(
+		fromIso(start).toDate('UTC'),
+		fromIso(end).toDate('UTC')
+	);
+}</code></pre>
+</figure>
+<p>Two decisions in the formatting. First, formatters are cached by locale *and* options, because building an <code>Intl.DateTimeFormat</code> loads locale data and an itinerary formats forty dates a render; the comment records a bug from project 5 where caching by options alone served German dates to an English page. Second, <code>toDate(&quot;UTC&quot;)</code> and a UTC formatter together: the calendar date becomes midnight UTC and is formatted as UTC, so it comes out as the same date wherever the code runs — on the server in one time zone, in the browser in another. <code>formatRange</code> is the <code>Intl</code> method most people have not met: it collapses the shared parts, so May 10–17 is “10 – 17 May 2026” rather than the month twice.</p>
+<h3 id="money">Money is an integer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * MONEY IS AN INTEGER
+ * ===================
+ *
+ * An amount is stored in *minor units* — cents, pence, centavos — as an
+ * integer, and a currency code. `0.1 + 0.2` is not `0.3` in floating point,
+ * and a settle-up that is a cent off is a settle-up nobody trusts. The only
+ * places a decimal number exists are the input box and the screen, and both
+ * go through `Intl`, which knows that yen have no cents and that Germans
+ * write a comma.
+ */
+
+export const CURRENCIES = ['EUR', 'USD', 'GBP', 'BRL', 'JPY', 'CHF', 'CAD', 'AUD', 'MXN'] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+const digitsByCurrency = new Map&lt;string, number&gt;();
+
+/** How many decimal places the currency has — 2 for most, 0 for JPY. Asked of `Intl`, not a table. */
+export function fractionDigits(currency: string): number {
+	let digits = digitsByCurrency.get(currency);
+	if (digits === undefined) {
+		// `maximumFractionDigits` is optional in the type; every real currency has one.
+		digits =
+			new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
+				.maximumFractionDigits ?? 2;
+		digitsByCurrency.set(currency, digits);
+	}
+	return digits;
+}
+
+export function toMinor(amount: number, currency: string): number {
+	return Math.round(amount * 10 ** fractionDigits(currency));
+}
+
+export function fromMinor(minor: number, currency: string): number {
+	return minor / 10 ** fractionDigits(currency);
+}</code></pre>
+</figure>
+<p><code>0.1 + 0.2</code> is not <code>0.3</code>, and a settle-up that is a cent off is a settle-up nobody trusts. So an amount is an integer of minor units and a currency code, and the only places a decimal exists are the input box and the screen. The trick worth stealing is <code>fractionDigits</code>: rather than a table saying that yen have no cents and dinars have three, it asks <code>Intl.NumberFormat</code> for the currency’s <code>maximumFractionDigits</code> and caches the answer. A currency the code has never heard of still comes out right.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const formatters = new Map&lt;string, Intl.NumberFormat&gt;();
+
+export function formatMoney(minor: number, currency: string, locale: string): string {
+	const key = `${locale}|${currency}`;
+	let f = formatters.get(key);
+	if (!f) {
+		f = new Intl.NumberFormat(locale, { style: 'currency', currency });
+		formatters.set(key, f);
+	}
+	return f.format(fromMinor(minor, currency));
+}
+
+/**
+ * A typed amount in the person's own notation, as a number, or `null`.
+ *
+ * The separators are *discovered* by formatting a known number with the
+ * locale and reading the parts back, so &quot;1.234,50&quot; parses in German and
+ * &quot;1,234.50&quot; in English without a table of locales in the code. Anything
+ * that is not a digit or one of those separators — a currency sign, a
+ * space, a stray letter — is dropped before parsing.
+ */
+export function parseAmount(text: string, locale: string): number | null {
+	const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
+	const group = parts.find((p) =&gt; p.type === 'group')?.value ?? ',';
+	const decimal = parts.find((p) =&gt; p.type === 'decimal')?.value ?? '.';
+
+	let s = text.trim();
+	s = s.split(group).join('');
+	s = s.split(decimal).join('.');
+	s = s.replace(/[^\d.-]/g, '');
+
+	if (!/^-?\d+(\.\d+)?$|^-?\.\d+$/.test(s)) return null;
+	const n = Number(s);
+	return Number.isFinite(n) ? n : null;
+}</code></pre>
+</figure>
+<p><code>parseAmount</code> is the other direction, and it is the part that usually gets a regular expression and a bug report from Germany. The separators are *discovered* by formatting a known number in the locale and reading the parts back — <code>formatToParts</code> says which character is the group separator and which the decimal — so <code>1.234,50</code> parses in German and <code>1,234.50</code> in English with no table of locales. Chapter 21 shows both directions in the interface.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>Intl</code> and not a library</h4>
+	<p>Because <code>Intl</code> is the library, and it is already in every browser and every Node. It knows more locales than any package you could install, it is maintained by the people who maintain the locale data, and it costs zero bytes. Every earlier project reached for it somewhere; this one uses it for dates, ranges, distances, currencies, units and country names, and the only string table in the whole app is the translated interface text in <code>messages/</code>.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why a trip date is a string and what goes wrong with a <code>Date</code>.</li><li>You can explain the two decisions in <code>formatDate</code> — the cache key and the UTC round trip.</li><li>You know where <code>fractionDigits</code> gets its answer and why that beats a table.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="packaging-and-proving.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Packaging a Svelte library, and proving it</span>
+			</a>
+			<a class="pager__link pager__link--next" href="splitting-fairly.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Splitting fairly, to the cent</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

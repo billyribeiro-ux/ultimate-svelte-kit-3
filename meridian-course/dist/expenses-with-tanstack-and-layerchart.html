@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expenses: a headless table, two charts, and the settle-up — Building Meridian</title>
+<meta name="description" content="TanStack Table v9 with opt-in features and a typed column-meta slot, a `get data()` getter so the table follows the live document, a small render helper instead of `FlexRender`, `aria-sort` on the header; LayerChart for a bar and a pie; the domain’s `balances()` and `settle()`; and a remote form whose fields carry their types.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">29 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 64.44444444444444%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html" aria-current="page"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 29</p>
+			<h1>Expenses: a headless table, two charts, and the settle-up</h1>
+			<p class="lede">TanStack Table v9 with opt-in features and a typed column-meta slot, a <code>get data()</code> getter so the table follows the live document, a small render helper instead of <code>FlexRender</code>, <code>aria-sort</code> on the header; LayerChart for a bar and a pie; the domain’s <code>balances()</code> and <code>settle()</code>; and a remote form whose fields carry their types.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use a headless data-table library the Svelte 5 way, chart the same rows, and let a form submit numbers and arrays to a schema that expects them.</p></aside>
+			<p>Three views of the same rows: a sortable table, two charts, and the settle-up. The table is TanStack Table, which is headless in the strictest sense — it sorts, groups and paginates, and renders nothing — and v9 is the first version whose Svelte adapter is written for runes.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:23-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * WHO PAID, WHO OWES
+ * ==================
+ *
+ * Three views of the same rows: a sortable table (TanStack Table), two
+ * charts (LayerChart), and the settle-up — which is the domain's
+ * `balances()` and `settle()` on the raw minor units, so the cents on
+ * screen are the cents the server would compute.
+ *
+ * TanStack Table is *headless*: it sorts, groups and paginates, and
+ * renders nothing. The markup below is a plain `&lt;table&gt;` in our own CSS,
+ * and the library's job is the header click that sorts and the row model
+ * that comes back sorted. In v9 the features are opt-in — `tableFeatures`
+ * names the ones this table uses — so the bundle carries sorting and not
+ * the twelve other things a data grid can do.
+ */
+interface Props {
+	view: TripState;
+	editable: boolean;
+	viewerId: string | null;
+}
+
+let { view, editable, viewerId }: Props = $props();
+
+const locale = getLocale();
+const currency = $derived(view.trip.currency);
+const names = $derived(new Map(view.document.members.map((c) =&gt; [c.userId, c.name])));
+const nameOf = (id: string) =&gt; names.get(id) ?? '…';
+
+const categoryLabels: Record&lt;ExpenseCategory, () =&gt; string&gt; = {
+	food: m.category_food,
+	lodging: m.category_lodging,
+	transport: m.category_transport,
+	activity: m.category_activity,
+	other: m.category_other
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:60-80</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">interface Row {
+	readonly id: string;
+	readonly date: string;
+	readonly title: string;
+	readonly category: ExpenseCategory;
+	readonly payer: string;
+	readonly amountMinor: number;
+	readonly sharedWith: number;
+}
+
+const rows: Row[] = $derived(
+	view.document.expenses.map((e) =&gt; ({
+		id: e.id,
+		date: e.date,
+		title: e.title,
+		category: e.category,
+		payer: nameOf(e.paidBy),
+		amountMinor: e.amountMinor,
+		sharedWith: e.shares.length
+	}))
+);</code></pre>
+</figure>
+<p>Rows are derived from the live document with the payer’s name already looked up, so the table never sees an id. The category labels are message functions — the table shows “Food” in English and “Essen” in German through the same column definition.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:82-131</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/* ------------------------------------------------------------------ */
+/* The table                                                           */
+/* ------------------------------------------------------------------ */
+
+const features = tableFeatures({
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: { alphanumeric: sortFn_alphanumeric, basic: sortFn_basic },
+	// A type-only slot: `meta.align` on a column is now typed, with no global declaration merging.
+	columnMeta: {} as { align?: 'end' }
+});
+
+const helper = createColumnHelper&lt;typeof features, Row&gt;();
+
+const columns = helper.columns([
+	helper.accessor('date', {
+		header: () =&gt; m.expenses_date(),
+		cell: ({ getValue }) =&gt; formatDate(getValue(), locale, 'short')
+	}),
+	helper.accessor('title', { header: () =&gt; m.expenses_what() }),
+	helper.accessor('category', {
+		header: () =&gt; m.expenses_category(),
+		cell: ({ getValue }) =&gt; categoryLabels[getValue()]()
+	}),
+	helper.accessor('payer', { header: () =&gt; m.expenses_paid_by() }),
+	helper.accessor('sharedWith', {
+		header: () =&gt; m.expenses_shared_by(),
+		meta: { align: 'end' }
+	}),
+	helper.accessor('amountMinor', {
+		header: () =&gt; m.expenses_amount(),
+		cell: ({ getValue }) =&gt; formatMoney(getValue(), currency, locale),
+		meta: { align: 'end' }
+	})
+]);
+
+/*
+ * `get data()` is a getter, so the table sees the latest rows whenever the
+ * live document changes, without being re-created. The adapter syncs
+ * options in `$effect.pre`, before the rows below are read.
+ */
+const table = createTable({
+	features,
+	columns,
+	get data() {
+		return rows;
+	},
+	getRowId: (row) =&gt; row.id,
+	initialState: { sorting: [{ id: 'date', desc: false }] }
+});</code></pre>
+</figure>
+<p>Three v9 idioms. <code>tableFeatures</code> names the features this table uses — sorting, and nothing else — so the bundle carries sorting and not the twelve other things a data grid can do. <code>columnMeta: {} as { align?: &quot;end&quot; }</code> is a *type-only slot*: <code>meta.align</code> on a column is now typed, with no global declaration merging, which is how v8 did it. And <code>get data() { return rows }</code> is a getter, so the table sees the latest rows whenever the live document changes without being re-created; the adapter syncs options in <code>$effect.pre</code>, before the rows below are read.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:137-151</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Header and cell templates are functions that return strings (or plain
+ * strings). TanStack's own `FlexRender` also renders components; this
+ * table only needs text, so two small helpers call the templates with the
+ * context the library provides and keep the markup a plain &lt;table&gt;.
+ */
+type Template&lt;C&gt; = string | ((context: C) =&gt; unknown) | undefined;
+const render = &lt;C,&gt;(template: Template&lt;C&gt;, context: C, fallback: string) =&gt;
+	typeof template === 'function'
+		? String(template(context) ?? '')
+		: typeof template === 'string'
+			? template
+			: fallback;
+
+const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:240-300</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;table-wrap&quot;&gt;
+	&lt;table class=&quot;table&quot;&gt;
+		&lt;thead&gt;
+			{#each table.getHeaderGroups() as group (group.id)}
+				&lt;tr&gt;
+					{#each group.headers as header (header.id)}
+						{@const sorted = header.column.getIsSorted()}
+						&lt;th
+							class:num={header.column.columnDef.meta?.align === 'end'}
+							aria-sort={sorted === 'asc'
+								? 'ascending'
+								: sorted === 'desc'
+									? 'descending'
+									: 'none'}
+						&gt;
+							&lt;button
+								class=&quot;sort&quot;
+								type=&quot;button&quot;
+								onclick={header.column.getToggleSortingHandler()}
+							&gt;
+								{render(header.column.columnDef.header, header.getContext(), header.column.id)}
+								{#if sorted === 'asc'}&lt;CaretUpIcon size={12} aria-hidden=&quot;true&quot; /&gt;
+								{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;{/if}
+							&lt;/button&gt;
+						&lt;/th&gt;
+					{/each}
+					{#if editable}&lt;th&gt;&lt;/th&gt;{/if}
+				&lt;/tr&gt;
+			{/each}
+		&lt;/thead&gt;
+		&lt;tbody&gt;
+			{#each table.getRowModel().rows as row (row.id)}
+				&lt;tr&gt;
+					{#each row.getAllCells() as cell (cell.id)}
+						&lt;td class:num={cell.column.columnDef.meta?.align === 'end'}&gt;
+							{render(
+								cell.column.columnDef.cell,
+								cell.getContext(),
+								String(cell.getValue() ?? '')
+							)}
+						&lt;/td&gt;
+					{/each}
+					{#if editable}
+						&lt;td class=&quot;num&quot;&gt;
+							&lt;button
+								class=&quot;btn btn--icon btn--ghost btn--sm&quot;
+								type=&quot;button&quot;
+								title={m.expenses_remove()}
+								aria-label={m.expenses_remove()}
+								onclick={() =&gt; remove(row.original.id)}
+							&gt;
+								&lt;TrashIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+							&lt;/button&gt;
+						&lt;/td&gt;
+					{/if}
+				&lt;/tr&gt;
+			{/each}
+		&lt;/tbody&gt;
+	&lt;/table&gt;
+&lt;/div&gt;
+&lt;p class=&quot;hint&quot;&gt;{m.expenses_sort_hint()}&lt;/p&gt;</code></pre>
+</figure>
+<p>The markup is a plain <code>&lt;table&gt;</code> in our own CSS. Header and cell templates in TanStack are functions that return strings, or strings; the library’s own <code>FlexRender</code> also renders components, and this table only needs text, so a ten-line <code>render</code> helper calls the template with the context the library provides. <code>aria-sort</code> goes on the <code>&lt;th&gt;</code>, not the button inside it — the attribute belongs to the column header — and <code>getToggleSortingHandler()</code> is the whole of the sorting interaction.</p>
+<h3 id="charts">Two charts</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:153-186</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const byDay = $derived.by(() =&gt; {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation, never mutated after
+	const map = new Map&lt;string, number&gt;();
+	for (const r of rows) map.set(r.date, (map.get(r.date) ?? 0) + r.amountMinor);
+	return [...map]
+		.sort(([a], [b]) =&gt; (a &lt; b ? -1 : 1))
+		.map(([date, minor]) =&gt; ({
+			date,
+			label: formatDate(date, locale, 'day'),
+			total: minor / 100
+		}));
+});
+
+const byCategory = $derived.by(() =&gt; {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation, never mutated after
+	const map = new Map&lt;ExpenseCategory, number&gt;();
+	for (const r of rows) map.set(r.category, (map.get(r.category) ?? 0) + r.amountMinor);
+	return [...map].map(([category, minor]) =&gt; ({
+		category,
+		label: categoryLabels[category](),
+		total: minor / 100
+	}));
+});
+
+const ledger = $derived(
+	balances(
+		view.document.expenses.map((e) =&gt; ({
+			amountMinor: e.amountMinor,
+			paidBy: e.paidBy,
+			shares: e.shares.map((s) =&gt; ({ userId: s.userId, weight: s.weight }))
+		}))
+	)
+);
+const transfers = $derived(settle(ledger));</code></pre>
+</figure>
+<p>LayerChart is components over d3 scales: <code>&lt;BarChart data x y&gt;</code> and <code>&lt;PieChart data key value&gt;</code> draw with sensible defaults and take the same tokens for colour through a class. The data for both is derived from the rows into small arrays of <code>{ label, total }</code>, and the <code>Map</code> inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a <code>SvelteMap</code> that signals on every insert for nobody. The settle-up is the domain’s <code>balances()</code> and <code>settle()</code> on the raw minor units: the cents on screen are the cents the server would compute.</p>
+<h3 id="the-form">A form that submits numbers and arrays</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:329-417</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if editable}
+	&lt;!--
+		A remote `form`. Every field is rendered through `fields.x.as(...)`,
+		which encodes the field's type into its name so the server can
+		coerce it — the amount arrives as a number, the checked companions
+		as an array — and works with JavaScript off.
+	--&gt;
+	&lt;form class=&quot;card card--pad stack&quot; {...addExpense}&gt;
+		&lt;h3&gt;{m.expenses_add()}&lt;/h3&gt;
+		&lt;input {...addExpense.fields.tripId.as('hidden', view.trip.id)} /&gt;
+
+		&lt;div class=&quot;two&quot;&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.expenses_what()}&lt;/span&gt;
+				&lt;input class=&quot;input&quot; {...addExpense.fields.title.as('text')} required maxlength=&quot;120&quot; /&gt;
+				{#each addExpense.fields.title.issues() ?? [] as issue (issue.message)}
+					&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+				{/each}
+			&lt;/label&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()} ({currency})&lt;/span&gt;
+				&lt;input
+					class=&quot;input&quot;
+					{...addExpense.fields.amount.as('number')}
+					step=&quot;0.01&quot;
+					min=&quot;0.01&quot;
+					inputmode=&quot;decimal&quot;
+					required
+				/&gt;
+				{#each addExpense.fields.amount.issues() ?? [] as issue (issue.message)}
+					&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+				{/each}
+			&lt;/label&gt;
+		&lt;/div&gt;
+
+		&lt;div class=&quot;two&quot;&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.expenses_category()}&lt;/span&gt;
+				&lt;select class=&quot;select&quot; {...addExpense.fields.category.as('select')}&gt;
+					{#each EXPENSE_CATEGORIES as category (category)}
+						&lt;option value={category}&gt;{categoryLabels[category]()}&lt;/option&gt;
+					{/each}
+				&lt;/select&gt;
+			&lt;/label&gt;
+			&lt;label class=&quot;field&quot;&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.expenses_date()}&lt;/span&gt;
+				&lt;input
+					class=&quot;input&quot;
+					{...addExpense.fields.date.as('date')}
+					min={view.trip.startDate}
+					max={view.trip.endDate}
+					required
+				/&gt;
+			&lt;/label&gt;
+		&lt;/div&gt;
+
+		&lt;label class=&quot;field&quot;&gt;
+			&lt;span class=&quot;label&quot;&gt;{m.expenses_paid_by()}&lt;/span&gt;
+			&lt;select class=&quot;select&quot; {...addExpense.fields.paidBy.as('select')}&gt;
+				{#each view.document.members as member (member.userId)}
+					&lt;option value={member.userId} selected={member.userId === viewerId}
+						&gt;{member.name}&lt;/option
+					&gt;
+				{/each}
+			&lt;/select&gt;
+		&lt;/label&gt;
+
+		&lt;fieldset class=&quot;field&quot;&gt;
+			&lt;legend class=&quot;label&quot;&gt;{m.expenses_shared_by()}&lt;/legend&gt;
+			&lt;div class=&quot;cluster&quot;&gt;
+				{#each view.document.members as member (member.userId)}
+					&lt;label class=&quot;check&quot;&gt;
+						&lt;input {...addExpense.fields.participants.as('checkbox', member.userId)} checked /&gt;
+						{member.name}
+					&lt;/label&gt;
+				{/each}
+			&lt;/div&gt;
+			{#each addExpense.fields.participants.issues() ?? [] as issue (issue.message)}
+				&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			{/each}
+		&lt;/fieldset&gt;
+
+		&lt;div&gt;
+			&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={addExpense.pending &gt; 0}&gt;
+				{m.expenses_add()}
+			&lt;/button&gt;
+		&lt;/div&gt;
+	&lt;/form&gt;
+{/if}</code></pre>
+</figure>
+<p>Every field is rendered through <code>fields.x.as(...)</code>, which encodes the field’s type into its name so the server can coerce it: <code>as(&quot;number&quot;)</code> gives the schema a number, <code>as(&quot;checkbox&quot;, member.userId)</code> for each companion gives it a <code>string[]</code>, <code>as(&quot;select&quot;)</code> a string, <code>as(&quot;hidden&quot;, value)</code> a fixed value. Chapter 17 showed the schema these arrive at; the compile-time check runs both ways, so a checkbox for a field the schema calls a number does not build. <code>issues()</code> under each field are the messages the schema or <code>invalid()</code> produced, and <code>pending</code> disables the button while a submission is in flight. With JavaScript off, the same form posts and the page re-renders with the same issues.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the three v9 idioms and say what each replaced.</li><li>You can explain why <code>aria-sort</code> is on the <code>&lt;th&gt;</code> and what <code>render</code> does instead of <code>FlexRender</code>.</li><li>You can say how a checkbox array and a number reach the schema with the right types.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-globe.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The globe: Threlte, on demand</span>
+			</a>
+			<a class="pager__link pager__link--next" href="notes-with-tiptap-through-an-attachment.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Notes: Tiptap through an attachment</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploying: a container that migrates, listens and stops — Building Abacus</title>
+<meta name="description" content="A three-stage Dockerfile that bakes the origin in, runs as `node`, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">38 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 97.43589743589743%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html" aria-current="page"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 38</p>
+			<h1>Deploying: a container that migrates, listens and stops</h1>
+			<p class="lede">A three-stage Dockerfile that bakes the origin in, runs as <code>node</code>, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Ship a SvelteKit app with adapter-node the way it is actually deployed, and prove the image works in CI rather than assuming it.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># syntax=docker/dockerfile:1.7
+#
+# ABACUS IN A CONTAINER
+# =====================
+#
+# Three stages, so that the image that runs holds only what running needs:
+#
+#   deps     every dependency, for the build
+#   build    the SvelteKit build — `node build` output plus the migrations
+#   runtime  production dependencies, the build, a non-root user
+#
+# The origin is a BUILD argument, not a runtime variable: SvelteKit bakes
+# `paths.origin` into the server (see `vite.config.ts`), and the passkey
+# relying-party id is derived from it. Build one image per origin.
+#
+#   docker build --build-arg PUBLIC_ORIGIN=https://abacus.example.com -t abacus .
+#   docker run -e SESSION_SECRET=… -e DATABASE_URL=file:/data/abacus.db \
+#              -v abacus-data:/data -p 3000:3000 abacus
+
+ARG NODE_VERSION=24.20.0
+
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-slim AS deps
+WORKDIR /app
+
+# pnpm through corepack, pinned by `packageManager` in package.json.
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# The lockfile is the contract: `--frozen-lockfile` fails the build if it
+# disagrees with package.json instead of silently resolving something newer.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile</code></pre>
+</figure>
+<p>Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:35-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># ---------------------------------------------------------------------------
+FROM deps AS build
+ARG PUBLIC_ORIGIN
+ENV PUBLIC_ORIGIN=${PUBLIC_ORIGIN}
+# The build needs *a* value for every variable in `src/env.ts`; these two are
+# never read at build time and never make it into the image.
+ENV DATABASE_URL=file:build-time-unused.db
+ENV SESSION_SECRET=build-time-only-value-that-is-never-used-at-runtime
+
+COPY . .
+RUN test -n &quot;$PUBLIC_ORIGIN&quot; || (echo &quot;PUBLIC_ORIGIN build argument is required&quot; &amp;&amp; exit 1)
+RUN pnpm run build
+
+# Production dependencies only, for the runtime stage. `--prod` drops
+# everything under devDependencies: the compiler, the test runners, drizzle-kit.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm prune --prod</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">Dockerfile<span class="code__lines">:53-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# The `node` user ships with the base image. Nothing here needs root, so
+# nothing here runs as root.
+RUN mkdir -p /data &amp;&amp; chown node:node /data
+USER node
+
+COPY --from=build --chown=node:node /app/package.json ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/build ./build
+COPY --from=build --chown=node:node /app/drizzle ./drizzle
+COPY --from=build --chown=node:node /app/scripts/migrate.ts ./scripts/migrate.ts
+
+# adapter-node reads these. `HOST=0.0.0.0` so the container's port is
+# reachable; a graceful shutdown that outlasts the orchestrator's grace period
+# is a SIGKILL anyway, so it is shorter than the default of thirty seconds.
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV SHUTDOWN_TIMEOUT=10
+ENV BODY_SIZE_LIMIT=8M
+ENV DATABASE_URL=file:/data/abacus.db
+
+VOLUME [&quot;/data&quot;]
+EXPOSE 3000
+
+# The same question a load balancer asks, so `docker ps` shows the truth.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e &quot;fetch('http://127.0.0.1:3000/healthz').then(r =&gt; process.exit(r.ok ? 0 : 1), () =&gt; process.exit(1))&quot;
+
+# SIGTERM is what adapter-node listens for; it stops accepting connections,
+# lets in-flight requests finish, and exits. `node` is PID 1 so it receives
+# the signal directly — no shell in between to swallow it.
+STOPSIGNAL SIGTERM
+
+# Migrate, then serve, in one process: `--import` runs the migration module to
+# completion before the server's entry point starts listening.
+CMD [&quot;node&quot;, &quot;--import&quot;, &quot;./scripts/migrate.ts&quot;, &quot;build&quot;]</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the command is node --import ./scripts/migrate.ts build</h4>
+	<p>The migration must run before the server listens, and the server must be PID 1 so that SIGTERM reaches it. A shell script would do the first and break the second — <code>sh -c &quot;migrate &amp;&amp; serve&quot;</code> makes <code>sh</code> PID 1 and it does not forward the signal. <code>--import</code> runs the migration module to completion before the entry point starts, in one process, and Node 24 runs the TypeScript file directly. <code>SHUTDOWN_TIMEOUT</code> is what adapter-node gives in-flight requests after the signal; <code>HEALTHCHECK</code> asks the same question a load balancer would.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">compose.yaml<span class="code__lines">:1-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># The whole deployment on one machine: the app, a volume for its database,
+# and the secret it needs from the environment.
+#
+#   PUBLIC_ORIGIN=http://localhost:3000 SESSION_SECRET=$(openssl rand -base64 32) docker compose up --build
+#
+# Behind a reverse proxy that terminates TLS, set PUBLIC_ORIGIN to the public
+# https address — it is baked into the image at build time — and have the
+# proxy forward to port 3000.
+
+services:
+  abacus:
+    build:
+      context: .
+      args:
+        PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET to at least thirty-two random characters}
+      DATABASE_URL: file:/data/abacus.db
+      CELL_LIMIT: '200000'
+    ports:
+      - '3000:3000'
+    volumes:
+      - abacus-data:/data
+    restart: unless-stopped
+    # The Dockerfile's HEALTHCHECK does the probing; this makes `depends_on`
+    # in a larger compose file wait for a healthy app rather than a started one.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          &quot;fetch('http://127.0.0.1:3000/healthz').then(r =&gt; process.exit(r.ok ? 0 : 1), () =&gt; process.exit(1))&quot;
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    # Stop by SIGTERM and give in-flight requests the same ten seconds the
+    # server gives them.
+    stop_grace_period: 15s
+
+volumes:
+  abacus-data:</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.dockerignore<span class="code__lines">:1-22</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># Everything the build does not need, so the context is small and a stray
+# local database or secret can never end up in a layer.
+node_modules
+build
+.svelte-kit
+test-results
+playwright-report
+coverage
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+.git
+.github
+.claude
+e2e
+*.md
+Dockerfile
+compose.yaml
+.dockerignore</code></pre>
+</figure>
+<h3 id="ci">The workflow</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/abacus.yml<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># Project 7 — Abacus, and its course.
+#
+# `verify` runs exactly what a developer runs before pushing: `pnpm run verify`
+# — type-check (app and worker), prettier + eslint, unit and browser tests, the
+# production build, and the end-to-end suite on a desktop and a phone profile
+# against `node build/index.js`, with real passkey ceremonies on a virtual
+# authenticator.
+#
+# `image` builds the Dockerfile and starts the container the way a deployment
+# would, then asks the health endpoint whether the migration ran and the
+# database answers. A Dockerfile that is never built is documentation.
+#
+# `course` proves the course: every quoted range is a whole thing in a real
+# file (`verify.js`), the pages build, and the built pages pass the reader-side
+# checks in `tools/check-dist.js`.
+#
+# Path filters keep this from running for the other six projects; they are
+# verified the same way from their own folders.
+
+name: abacus
+
+on:
+  push:
+    paths:
+      - 'abacus/**'
+      - 'abacus-course/**'
+      - '.github/workflows/abacus.yml'
+  pull_request:
+    paths:
+      - 'abacus/**'
+      - 'abacus-course/**'
+      - '.github/workflows/abacus.yml'
+
+concurrency:
+  group: abacus-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: abacus</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/abacus.yml<span class="code__lines">:45-87</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the unit tests and the build.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      SESSION_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      CELL_LIMIT: '50000'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: abacus/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: abacus/.nvmrc
+          cache: pnpm
+          cache-dependency-path: abacus/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # The unit tests that touch the database need one with the schema in it;
+      # the end-to-end suite builds its own again, from nothing, both times.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: abacus/test-results
+          if-no-files-found: ignore</code></pre>
+</figure>
+<p><code>verify</code> runs exactly what a developer runs before pushing. The database for the unit tests is prepared with the migrations, Chromium is installed once for both Vitest and Playwright, and the traces are uploaded on failure.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/abacus.yml<span class="code__lines">:89-127</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">  image:
+    name: image (build · run · health)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: abacus
+          build-args: PUBLIC_ORIGIN=http://localhost:3000
+          tags: abacus:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Start it the way compose does, wait for the health check, and ask.
+      - name: run the container and probe /healthz
+        run: |
+          docker run -d --name abacus -p 3000:3000 \
+            -e SESSION_SECRET=ci-only-secret-of-at-least-thirty-two-characters \
+            abacus:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/healthz; then echo; echo &quot;healthy after ${i}s&quot;; exit 0; fi
+            sleep 1
+          done
+          echo &quot;the container never became healthy&quot;; docker logs abacus; exit 1
+
+      - name: the container stops cleanly on SIGTERM
+        run: |
+          docker stop -t 15 abacus
+          code=$(docker inspect abacus --format '{{.State.ExitCode}}')
+          echo &quot;exit code $code&quot;
+          test &quot;$code&quot; = &quot;0&quot;
+
+      - if: failure()
+        run: docker logs abacus || true</code></pre>
+</figure>
+<p>The <code>image</code> job builds the Dockerfile, starts the container the way compose does, waits for the health check, and then *stops it with SIGTERM and checks the exit code*. A Dockerfile that is never built is documentation; a graceful shutdown that is never exercised is a hope.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">../.github/workflows/abacus.yml<span class="code__lines">:129-156</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">  course:
+    name: course (verify ranges · build · check pages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: abacus/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: abacus/.nvmrc
+          cache: pnpm
+          cache-dependency-path: abacus/pnpm-lock.yaml
+
+      # The course quotes the project and its page checker borrows the
+      # project's Playwright, so the project's dependencies are installed.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: node ../abacus-course/verify.js
+      - run: node ../abacus-course/build.js
+      - run: node ../abacus-course/tools/check-dist.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- abacus-course/dist</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>PUBLIC_ORIGIN</code> is a build argument and <code>SESSION_SECRET</code> is not.</li><li>You can explain what <code>--import</code> buys over a shell script.</li><li>You can name the three things the <code>image</code> job proves.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="end-to-end.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">End to end: two profiles, real passkeys, two browsers on one sheet</span>
+			</a>
+			<a class="pager__link pager__link--next" href="where-next.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Where next</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

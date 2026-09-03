@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End to end: two profiles, real passkeys, two browsers on one sheet — Building Abacus</title>
+<meta name="description" content="Playwright against the adapter’s own server on its own database, on a desktop and a phone profile. A virtual authenticator for the passkey ceremonies, two contexts for collaboration, and what the suite found.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">37 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 94.87179487179486%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html" aria-current="page"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 37</p>
+			<h1>End to end: two profiles, real passkeys, two browsers on one sheet</h1>
+			<p class="lede">Playwright against the adapter’s own server on its own database, on a desktop and a phone profile. A virtual authenticator for the passkey ceremonies, two contexts for collaboration, and what the suite found.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run an end-to-end suite the way a deployment runs, test WebAuthn without a device, and read a failing test as a bug report.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineConfig, devices } from '@playwright/test';
+
+/**
+ * END-TO-END CONFIGURATION
+ * ========================
+ *
+ * Against the **adapter's own output**, on its own database, in two viewports.
+ *
+ * WHY THE BUILT SERVER AND NOT `vite preview`
+ * -------------------------------------------
+ * `vite preview` serves the build through SvelteKit's preview server. That
+ * is fine for most projects and not enough for this one: the Docker image
+ * runs `node build`, the health endpoint and graceful shutdown belong to the
+ * adapter, and the Content Security Policy is applied by the built server.
+ * `node build/index.js` is what a deployment runs, so it is what the suite
+ * runs.
+ *
+ * WHY TWO VIEWPORTS AND NOT A RESPONSIVE ASSERTION
+ * ------------------------------------------------
+ * Because the sheet genuinely renders different DOM at different widths: the
+ * toolbar collapses into a menu on a phone, the formula bar stacks, and the
+ * grid shows fewer columns. Those are the parts most likely to break and the
+ * parts nobody looks at, so they run as their own project rather than as a
+ * resize inside a test.
+ *
+ * PASSKEYS IN A TEST
+ * ------------------
+ * No real authenticator is attached to a test browser. Chromium's DevTools
+ * protocol can add a virtual one — `e2e/passkeys.ts` does — and both projects
+ * below run on Chromium, so sign-up and sign-in are exercised for real, with
+ * real signatures, on a device that only exists for the length of the test.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:33-87</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export default defineConfig({
+	testDir: 'e2e',
+	testMatch: /.*\.e2e\.ts/,
+
+	/*
+	 * Serial, deliberately. One SQLite file, one writer, and tests that create
+	 * accounts and sheets and then expect to find them. A couple of minutes of
+	 * wall clock buys a suite that fails only when something is broken.
+	 */
+	fullyParallel: false,
+	workers: 1,
+
+	retries: 0,
+	forbidOnly: Boolean(process.env.CI),
+
+	reporter: process.env.CI ? [['github'], ['list']] : [['list']],
+
+	use: {
+		baseURL: 'http://localhost:4173',
+		trace: 'retain-on-failure',
+		screenshot: 'only-on-failure'
+	},
+
+	projects: [
+		{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+		{
+			// A real phone profile, not a resized desktop: it brings a touch pointer
+			// and a device pixel ratio with it, and both change what the grid does.
+			name: 'phone',
+			use: { ...devices['Pixel 7'] }
+		}
+	],
+
+	webServer: {
+		/*
+		 * Prepare the database, build everything, run the adapter's server.
+		 *
+		 * `PUBLIC_ORIGIN` must be identical here and in the build, because it is
+		 * baked into the bundle at build time — `paths.origin` — and compared
+		 * against the request origin at run time. A mismatch is a 403 on every
+		 * form submission, and the passkey relying-party id comes from it too.
+		 */
+		command: 'node scripts/prepare-e2e-db.js &amp;&amp; npm run build &amp;&amp; node build/index.js',
+		port: 4173,
+		reuseExistingServer: !process.env.CI,
+		timeout: 240_000,
+		env: {
+			DATABASE_URL: 'file:e2e.db',
+			PUBLIC_ORIGIN: 'http://localhost:4173',
+			SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
+			CELL_LIMIT: '50000',
+			PORT: '4173'
+		}
+	}
+});</code></pre>
+</figure>
+<p>Against <code>node build/index.js</code>, not <code>vite preview</code>, because the health endpoint, graceful shutdown and the Content Security Policy belong to the built server. Two projects, because the toolbar and the grid render differently at phone widths. One worker and no retries, because one SQLite file has one writer and a suite that passes on retry is a suite that hides races. <code>PUBLIC_ORIGIN</code> is identical in the build and in the server’s environment, and the config says why.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:19-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export async function attachAuthenticator(page: Page) {
+	const cdp = await page.context().newCDPSession(page);
+	await cdp.send('WebAuthn.enable');
+	const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+		options: {
+			protocol: 'ctap2',
+			transport: 'internal',
+			hasResidentKey: true,
+			hasUserVerification: true,
+			isUserVerified: true,
+			automaticPresenceSimulation: true
+		}
+	});
+	return {
+		id: authenticatorId,
+		/** The credentials the device holds — one per registration. */
+		async credentials() {
+			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
+			return credentials;
+		},
+		async detach() {
+			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+			await cdp.detach();
+		}
+	};
+}
+
+/** Register a new account through the sign-in page. Leaves the page on `next`. */
+export async function register(page: Page, name: string, next = '/sheets') {
+	await page.goto(`/signin?next=${encodeURIComponent(next)}`);
+	await page.getByLabel('What should we call you?').fill(name);
+	await page.getByRole('button', { name: 'Create a passkey' }).click();
+	await page.waitForURL((url) =&gt; url.pathname === next);
+}</code></pre>
+</figure>
+<h3 id="the-tests">The tests</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:27-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('typing, formulas and recalculation', async ({ page }) =&gt; {
+	await enter(page, 0, 0, '12');
+	await enter(page, 1, 0, '30');
+	await enter(page, 2, 0, '=SUM(A1:A2)*2');
+	await expect(cell(page, 2, 0)).toHaveText('84');
+
+	// Change a precedent; the dependent follows without being touched.
+	await enter(page, 0, 0, '20');
+	await expect(cell(page, 2, 0)).toHaveText('100');
+
+	// The formula bar shows the formula of the active cell, and where it is.
+	await cell(page, 2, 0).click();
+	await expect(page.getByRole('combobox', { name: 'Formula' })).toHaveValue('=SUM(A1:A2)*2');
+	await expect(page.getByLabel('Active cell', { exact: true })).toHaveText('A3');
+
+	// Once something is saved, the chip says so.
+	await expect(page.getByText('Saved in this browser')).toBeVisible();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:122-156</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('imports a CSV through the worker and exports it back', async ({ page }) =&gt; {
+	await cell(page, 0, 0).click();
+	await page.getByLabel('Import a CSV file').setInputFiles({
+		name: 'people.csv',
+		mimeType: 'text/csv',
+		buffer: Buffer.from('name,age\nAda,36\n&quot;Hopper, Grace&quot;,45\n')
+	});
+	await expect(page.getByText('Imported 3 rows')).toBeVisible();
+	await expect(cell(page, 0, 0)).toHaveText('name');
+	await expect(cell(page, 2, 0)).toHaveText('Hopper, Grace');
+	await expect(cell(page, 2, 1)).toHaveText('45');
+
+	// A formula over the imported numbers, then the whole thing as a file.
+	await enter(page, 3, 1, '=AVERAGE(B2:B3)');
+	await expect(cell(page, 3, 1)).toHaveText('40.5');
+
+	const download = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Export CSV' }).click();
+	const file = await download;
+	expect(file.suggestedFilename()).toMatch(/\.csv$/);
+	const text = await new Promise&lt;string&gt;((resolve, reject) =&gt; {
+		const chunks: Buffer[] = [];
+		file
+			.createReadStream()
+			.then((stream) =&gt; {
+				stream.on('data', (chunk: Buffer) =&gt; chunks.push(chunk));
+				stream.on('end', () =&gt; resolve(Buffer.concat(chunks).toString('utf8')));
+				stream.on('error', reject);
+			})
+			.catch(reject);
+	});
+	expect(text).toContain('Ada,36');
+	expect(text).toContain('&quot;Hopper, Grace&quot;,45');
+	expect(text).toContain('40.5');
+});</code></pre>
+</figure>
+<p>The local sheet tests drive the grid the way a person does — click a cell, type, press Enter — and read back the cells, which is the only thing a person can read. The import test hands a file to the hidden input with <code>setInputFiles</code>, waits for the toast, and reads the exported file back through Playwright’s download API.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:25-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a stored sheet is protected, saved as it is typed, and listed', async ({ page }) =&gt; {
+	// Nobody signed in: sent to sign in, and brought back afterwards.
+	await page.goto('/sheets');
+	await expect(page).toHaveURL(/\/signin\?next=%2Fsheets/);
+
+	const device = await attachAuthenticator(page);
+	await register(page, 'Ada');
+	await expect(page.getByRole('link', { name: 'Ada' })).toBeVisible();
+	expect(await device.credentials()).toHaveLength(1);
+
+	const id = await createSheet(page, 'Trip');
+	await expect(page.getByLabel('Sheet title')).toHaveText('Trip');
+
+	await cell(page, 0, 0).click();
+	await page.keyboard.type('=2*21');
+	await page.keyboard.press('Enter');
+	await expect(cell(page, 0, 0)).toHaveText('42');
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+	// It came back from the database, not from memory.
+	await page.reload();
+	await expect(cell(page, 0, 0)).toHaveText('42');
+
+	await page.goto('/sheets');
+	await expect(page.getByRole('link', { name: 'Trip' })).toHaveAttribute('href', `/sheet/${id}`);
+
+	// Another browser with no session cannot open it by its address.
+	const stranger = await page.context().browser()!.newContext();
+	const other = await stranger.newPage();
+	await other.goto(`/sheet/${id}`);
+	await expect(other).toHaveURL(/\/signin/);
+	await stranger.close();
+
+	await device.detach();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:107-146</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('settings: rename, a second passkey, sign out and back in', async ({ page }) =&gt; {
+	const first = await attachAuthenticator(page);
+	await register(page, 'Linus', '/settings');
+	await expect(page.getByRole('heading', { name: 'Linus' })).toBeVisible();
+	await expect(page.locator('.key')).toHaveCount(1);
+
+	await page.getByLabel('Name').fill('Linus Torvalds');
+	await page.getByRole('button', { name: 'Save' }).click();
+	await expect(page.getByRole('link', { name: 'Linus Torvalds' })).toBeVisible();
+
+	// The same device again is refused: the server lists the credentials it
+	// already holds, and the authenticator declines to make a second one.
+	await page.getByRole('button', { name: 'Add a passkey on this device' }).click();
+	await expect(page.getByText('This device already has a passkey for that account.')).toBeVisible();
+
+	// A second device — a phone, say — can.
+	await first.detach();
+	const second = await attachAuthenticator(page);
+	await page.getByRole('button', { name: 'Add a passkey on this device' }).click();
+	await expect(page.locator('.key')).toHaveCount(2);
+
+	// Removing one leaves the other; the account survives a lost device.
+	await page
+		.getByRole('button', { name: /^Remove / })
+		.first()
+		.click();
+	await expect(page.getByText('Passkey removed')).toBeVisible();
+	await expect(page.locator('.key')).toHaveCount(1);
+
+	await page.getByRole('button', { name: 'Sign out' }).click();
+	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+
+	// Back in with the remaining device — no name typed, the browser finds the account.
+	await page.goto('/signin');
+	await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
+	await page.waitForURL(/\/sheets$/);
+	await expect(page.getByRole('link', { name: 'Linus Torvalds' })).toBeVisible();
+
+	await second.detach();
+});</code></pre>
+</figure>
+<p>A real registration, a stored sheet that survives a reload, a stranger who cannot open it. Then settings: the same device refused for a second passkey, a second device accepted, one removed, sign out, and sign in again with nothing typed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:23-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('edits and presence flow both ways', async ({ browser, contextOptions }) =&gt; {
+	const contextA = await browser.newContext(contextOptions);
+	const contextB = await browser.newContext(contextOptions);
+	const ada = await contextA.newPage();
+	const bob = await contextB.newPage();
+	const deviceA = await attachAuthenticator(ada);
+	const deviceB = await attachAuthenticator(bob);
+
+	// Ada makes a sheet and opens it to anybody signed in with the link.
+	await register(ada, 'Ada');
+	await ada.getByLabel('Title').fill('Shared');
+	await ada.getByRole('button', { name: 'New sheet' }).click();
+	await ada.waitForURL(/\/sheet\/[a-z0-9]{8}$/);
+	const path = new URL(ada.url()).pathname;
+
+	await ada.getByRole('button', { name: 'Share' }).click();
+	const link = ada.getByLabel('Anyone signed in with the link can edit');
+	await link.check();
+	await expect(link).toBeChecked();
+	// The setting is a form: it is on the server before the page says so.
+	await ada.reload();
+	await ada.getByRole('button', { name: 'Share' }).click();
+	await expect(ada.getByLabel('Anyone signed in with the link can edit')).toBeChecked();
+	await ada.keyboard.press('Escape');
+
+	// Bob signs up and lands on the sheet.
+	await register(bob, 'Bob', path);
+	await expect(bob.getByLabel('Sheet title')).toHaveText('Shared');
+
+	// Each sees the other in the room: a chip in the header with the name.
+	const present = (page: Page, name: string) =&gt; page.locator('header .chip', { hasText: name });
+	await expect(present(ada, 'Bob')).toBeVisible();
+	await expect(present(bob, 'Ada')).toBeVisible();
+
+	// A cell typed on one side appears on the other, and a formula over it computes there.
+	await type(ada, 0, 0, 'hello');
+	await expect(cell(bob, 0, 0)).toHaveText('hello');
+
+	await type(bob, 0, 1, '=LEN(A1)&amp;&quot; letters&quot;');
+	await expect(cell(ada, 0, 1)).toHaveText('5 letters');
+
+	// Where Ada is, Bob can see: her name sits on the cell she selected.
+	await cell(ada, 2, 0).click();
+	await expect(cell(bob, 2, 0).locator('.cursor-name')).toHaveText('Ada');
+
+	// A rename is an operation like any other.
+	const title = ada.getByLabel('Sheet title');
+	await title.fill('Shared and renamed');
+	await title.press('Enter');
+	await expect(bob.getByLabel('Sheet title')).toHaveText('Shared and renamed');
+
+	// Leaving is noticed.
+	await bob.close();
+	await expect(present(ada, 'Bob')).toHaveCount(0);
+
+	await deviceA.detach();
+	await deviceB.detach().catch(() =&gt; {});
+	await contextA.close();
+	await contextB.close();
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>What the suite found</h4>
+	<p>Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s <code>cellAt</code> now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:45-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a published sheet is plain HTML: no script, a table, a CSV', async ({ page, request }) =&gt; {
+	const response = await page.goto('/s/seedbudget');
+	expect(response?.status()).toBe(200);
+	await expect(page.getByRole('heading', { level: 1, name: 'Monthly budget' })).toBeVisible();
+	await expect(page.getByText('by Abacus')).toBeVisible();
+	await expect(page.locator('script')).toHaveCount(0);
+	await expect(page.getByRole('table')).toContainText('Left over');
+
+	const headers = response!.headers();
+	expect(headers['content-security-policy']).toContain(&quot;frame-ancestors 'none'&quot;);
+	expect(headers['x-content-type-options']).toBe('nosniff');
+	expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+	expect(headers['vary']).toContain('Cookie');
+
+	const csv = await request.get('/api/sheets/seedbudget/export.csv');
+	expect(csv.ok()).toBe(true);
+	expect(csv.headers()['content-type']).toContain('text/csv');
+	expect(csv.headers()['content-disposition']).toContain('Monthly budget.csv');
+	const text = await csv.text();
+	expect(text.split(/\r?\n/)[0]).toBe('Category,Budgeted,Actual,Difference,Share of spend');
+	// Values travel formatted, as a person would read them; a comma inside is quoted.
+	expect(text).toContain('Groceries,$450.00,$512.40,-$62.40,17.4%');
+	expect(text).toContain('Rent,&quot;$1,400.00&quot;,&quot;$1,400.00&quot;,$0.00,');
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec playwright test
+Running 46 tests using 1 worker
+  ✓ [desktop] account · collab · lesson · local · platform  (23)
+  ✓ [phone]   account · collab · lesson · local · platform  (23)
+  46 passed</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say what a virtual authenticator does and does not fake.</li><li>You can explain why the suite runs against the built server.</li><li>You can pick one of the five bugs and say which assertion caught it.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="unit-and-browser-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Unit and browser tests</span>
+			</a>
+			<a class="pager__link pager__link--next" href="deploying.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Deploying: a container that migrates, listens and stops</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

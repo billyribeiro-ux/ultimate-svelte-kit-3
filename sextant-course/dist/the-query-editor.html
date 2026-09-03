@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A query editor with no editor library — Building Sextant</title>
+<meta name="description" content="Three layers in one grid cell, highlighting from the real lexer, and a caret measured from the mirror that already exists.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">32 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 69.56521739130434%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html" aria-current="page"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 32</p>
+			<h1>A query editor with no editor library</h1>
+			<p class="lede">Three layers in one grid cell, highlighting from the real lexer, and a caret measured from the mirror that already exists.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build syntax highlighting, error underlines and a completion popup out of a textarea.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:9-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * THE QUERY EDITOR
+ * ================
+ *
+ * A textarea with syntax highlighting, completion and error underlines, and no
+ * editor library.
+ *
+ * WHY NOT CODEMIRROR
+ * ------------------
+ * Because the thing that makes an editor good for a query language is not the
+ * editing — it is that the highlighting, the completion and the errors all come
+ * from the *same* front end that will run the query. Wiring a general-purpose
+ * editor to a language means writing a grammar for its highlighter, a source
+ * for its completion and a linter for its diagnostics: three adapters, each
+ * able to drift from the compiler. Here there are no adapters, because there is
+ * only one lexer, one parser and one checker, and this file calls them.
+ *
+ * The cost is real and worth naming: no multi-cursor, no bracket matching, no
+ * code folding, no undo beyond the browser's own. For a one-line pipeline —
+ * which is what every SQF query is — that list is entirely things nobody would
+ * use.
+ *
+ * HOW THE OVERLAY WORKS
+ * ---------------------
+ * Three layers in one grid cell, all with identical text metrics:
+ *
+ *   1. the error underlay — the source in transparent text with a wavy
+ *      underline under the bad parts;
+ *   2. the highlight layer — the source in coloured spans;
+ *   3. the textarea — transparent text, visible caret, all the interaction.
+ *
+ * The grid cell sizes to the tallest, which is the `&lt;pre&gt;`, so the editor grows
+ * with the query and never scrolls independently of its own highlighting. The
+ * one rule that must never be broken is that every layer renders the *exact*
+ * same characters with the *exact* same font, size, padding and wrapping —
+ * because a single missing space shifts every character after it and the
+ * illusion collapses.</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why not CodeMirror</h4>
+	<p>Because the thing that makes an editor good for *your* language is not the editing — it is that the highlighting, the completion and the errors all come from the same front end that will run the query. Wiring a general-purpose editor to a language means a grammar for its highlighter, a source for its completion and a linter for its diagnostics: three adapters, each able to drift from the compiler. Here there are no adapters, because there is one lexer, one parser and one checker, and this file calls them.</p>
+</aside>
+<p>The cost is real and worth naming: no multi-cursor, no bracket matching, no code folding, no undo beyond the browser’s own. For a one-line pipeline — which is what every SQF query is — that list is entirely things nobody would use.</p>
+<h3 id="highlighting">Highlighting from the real lexer</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/highlight.ts<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SYNTAX HIGHLIGHTING, FROM THE REAL LEXER
+ * ========================================
+ *
+ * Every editor on the web highlights with a pile of regular expressions, and
+ * every one of them is subtly wrong: `&quot;a | b&quot;` gets a pipe coloured inside a
+ * string, `1e-5` becomes a number and a minus, `contains` inside an identifier
+ * lights up as a keyword. Those are not bugs to fix one at a time — they are
+ * what happens when the highlighter and the parser disagree about the language.
+ *
+ * There is a lexer four files away that is already correct, already tested, and
+ * already produces a `Span` for every token. Using it means the highlighting is
+ * *by construction* the same tokenisation the query will be parsed with, and it
+ * means adding a keyword to the language highlights it with no further work.
+ *
+ * The one thing the lexer does not emit is whitespace and unrecognised text,
+ * because a parser has no use for either. This file fills the gaps, so the
+ * output covers the source exactly — which it must, since it is rendered
+ * underneath a transparent textarea and any missing character shifts every
+ * character after it.
+ */</code></pre>
+</figure>
+<p>Every editor on the web highlights with a pile of regular expressions, and every one of them is subtly wrong: <code>&quot;a | b&quot;</code> gets a pipe coloured inside a string, <code>1e-5</code> becomes a number and a minus, <code>contains</code> inside an identifier lights up as a keyword. Those are not bugs to fix one at a time — they are what happens when the highlighter and the parser disagree about the language.</p>
+<p>There is a lexer four files away that is already correct, already tested, and already produces a span for every token. Using it means the highlighting is *by construction* the same tokenisation the query will be parsed with — and adding a keyword to the language highlights it with no further work.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/highlight.ts<span class="code__lines">:61-98</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The source, split into coloured runs that concatenate back to the source.
+ *
+ * That last property is the whole contract and is worth a test: the overlay is
+ * positioned by nothing but the text itself, so a dropped space puts the
+ * highlighting one character out of step with what somebody is typing.
+ */
+export function highlight(source: string): Chunk[] {
+	const { tokens } = lex(source);
+	const chunks: Chunk[] = [];
+	let at = 0;
+
+	for (const token of tokens) {
+		if (token.kind === 'eof') break;
+
+		// Whitespace, comments and anything the lexer skipped.
+		if (token.span.start &gt; at) {
+			chunks.push({ text: source.slice(at, token.span.start), category: 'plain' });
+		}
+
+		chunks.push({
+			text: source.slice(token.span.start, token.span.end),
+			category: categorise(token.kind, token.text)
+		});
+		at = token.span.end;
+	}
+
+	/*
+	 * Everything after the last token.
+	 *
+	 * Not an edge case — it is the *normal* case while somebody is typing, because
+	 * an unterminated string produces a lexer error and no token, and the text
+	 * still has to be drawn or the caret and the characters part company.
+	 */
+	if (at &lt; source.length) chunks.push({ text: source.slice(at), category: 'plain' });
+
+	return chunks;
+}</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The gap-filling is the part that is easy to skip and impossible to omit. The lexer emits nothing for whitespace, because a parser has no use for it — and the overlay is positioned by nothing but the text itself, so a single dropped space shifts every character after it out of step with the caret. There is a test for exactly that: the chunks must concatenate back to the source, byte for byte.</p></aside>
+<h3 id="three-layers">Three layers, one grid cell</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:258-276</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">		&gt;{/each}&lt;span class=&quot;anchor&quot; bind:this={anchor}&gt;&lt;/span&gt;{#each parts[1] as chunk, i (i)}&lt;span
+			class=&quot;tok tok--{chunk.category}&quot;&gt;{chunk.text}&lt;/span
+		&gt;{/each}&lt;br /&gt;&lt;/pre&gt;
+
+&lt;!--
+	Layer 3: the real control.
+
+	`role=&quot;combobox&quot;` with `aria-expanded`, `aria-controls` and
+	`aria-activedescendant` is the ARIA pattern for exactly this: an input whose
+	suggestions live in a listbox that never takes focus. Focus staying in the
+	textarea is not a detail — it is what lets somebody keep typing while the
+	list narrows, and it is why `aria-activedescendant` exists rather than
+	moving focus into the list.
+--&gt;
+&lt;textarea
+	bind:this={textarea}
+	bind:value
+	class=&quot;layer layer--input&quot;
+	spellcheck=&quot;false&quot;</code></pre>
+</figure>
+<p>An error underlay in transparent text with a wavy underline, the highlighted source, and a transparent textarea with a visible caret. The grid cell sizes to the tallest — which is the <code>&lt;pre&gt;</code> — so the editor grows with the query and never scrolls independently of its own highlighting. No <code>scrollHeight</code> read per keystroke, no resize effect.</p>
+<aside class="callout callout--warn"><p>Every metric must match in all three layers: font, size, line height, letter spacing, padding, wrapping, tab size. A single mismatch and the highlighting drifts from the caret by a fraction of a character per line, which looks like a browser bug and is not. They are declared once on a shared selector for exactly that reason.</p></aside>
+<h3 id="the-caret">Measuring the caret without a hidden mirror</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/editor/highlight.ts<span class="code__lines">:98-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}
+
+function categorise(kind: TokenKind, text: string): Category {
+	if (kind === 'string') return 'string';
+	if (kind === 'number') return 'number';
+	if (kind === 'duration') return 'duration';
+	if (OPERATORS.has(kind)) return 'operator';
+	if (PUNCTUATION.has(kind)) return 'punctuation';
+	// A keyword kind is any kind whose spelling is in the keyword table — which
+	// covers `where` and `contains` alike without listing them twice.
+	if (text in KEYWORDS) return 'keyword';
+	// `avg` is an identifier to the lexer and a function to a reader. Colouring it
+	// differently is the cheapest possible &quot;this name means something&quot;.
+	if (kind === 'ident' &amp;&amp; functionFor(text)) return 'function';
+	if (kind === 'ident') return 'ident';
+	return 'plain';
+}
+
+/**
+ * Split a chunk list at a source offset.
+ *
+ * Used to place a zero-width anchor element at the caret inside the highlight
+ * layer. The layer is already a character-perfect mirror of the textarea, so
+ * measuring an element inside it gives the caret's pixel position for free —
+ * which is otherwise a famously fiddly thing to compute, involving a second
+ * hidden mirror div built solely to be measured.
+ *
+ * Reusing the mirror that has to exist anyway is the whole trick.
+ */
+export function splitAt(chunks: readonly Chunk[], offset: number): [Chunk[], Chunk[]] {
+	const before: Chunk[] = [];
+	const after: Chunk[] = [];</code></pre>
+</figure>
+<p>Placing a completion popup at the caret is famously fiddly, and the standard solution is a second hidden div that mirrors the textarea purely to be measured. This project already has a character-perfect mirror — the highlight layer — so the caret position is a zero-width <code>&lt;span&gt;</code> rendered into it, and <code>offsetLeft</code> is the answer.</p>
+<p>That works with proportional fonts, with wrapped lines, and with no arithmetic at all. Reusing the mirror that has to exist anyway is the whole trick.</p>
+<h3 id="no-debounce">And no debounce</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:77-104</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Parse and check on every keystroke.
+ *
+ * The whole front end runs in well under a millisecond on a query of this size
+ * — it is a few hundred characters — so there is no debounce and no worker. A
+ * debounce would be the reflex, and it would make the underline appear a
+ * quarter of a second after the mistake, which is exactly long enough to have
+ * started typing the next thing.
+ *
+ * This is not premature: the alternative was measured. Debouncing is for work
+ * that is slow, and hiding a fast thing behind a timer makes it feel slow.
+ */
+const problems = $derived.by((): readonly SqfError[] =&gt; {
+	if (value.trim() === '') return [];
+
+	const parsed = parse(value);
+	if (parsed.errors.length &gt; 0) return parsed.errors;
+	if (!parsed.query) return [];
+
+	return check(parsed.query).errors;
+});
+
+const underlines = $derived(
+	marks(
+		value,
+		problems.map((problem) =&gt; problem.span)
+	)
+);</code></pre>
+</figure>
+<p>Parse and check run on every keystroke. The whole front end takes well under a millisecond on a few hundred characters, so a debounce would make the underline appear a quarter of a second after the mistake — which is exactly long enough to have started typing the next thing. Hiding a fast thing behind a timer makes it feel slow.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A pipe inside a string is not coloured as an operator.</li><li>The caret and the highlighted text never drift, at any width.</li><li>An error is underlined as you type, with the message beside the editor.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-waterfall.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The waterfall</span>
+			</a>
+			<a class="pager__link pager__link--next" href="completion.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Completion that knows where the caret is</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The lexer: characters into tokens — Building Abacus</title>
+<meta name="description" content="`SUM(A1:B2)*1.1` becomes a name, a paren, a reference, a colon, a reference, a paren, an operator, a number. Each token remembers where it started, so an error can point at a character.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Abacus</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">06 / 39</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 15.384615384615385%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-config.html"><span class="toc__num">02</span><span>One file to configure everything</span></a></li><li><a href="the-map.html"><span class="toc__num">03</span><span>The map: every feature, and where it earns its place</span></a></li><li><a href="addresses.html"><span class="toc__num">04</span><span>Addresses: where a cell is</span></a></li><li><a href="values.html"><span class="toc__num">05</span><span>Values: what a cell can hold</span></a></li><li><a href="the-lexer.html" aria-current="page"><span class="toc__num">06</span><span>The lexer: characters into tokens</span></a></li><li><a href="the-parser.html"><span class="toc__num">07</span><span>The parser: a Pratt parser in a hundred lines</span></a></li><li><a href="evaluation-and-functions.html"><span class="toc__num">08</span><span>Evaluation and the function library</span></a></li><li><a href="the-dependency-graph.html"><span class="toc__num">09</span><span>The dependency graph</span></a></li><li><a href="cycles.html"><span class="toc__num">10</span><span>Cycles: an error that is a value</span></a></li><li><a href="moving-references.html"><span class="toc__num">11</span><span>Moving references: insert, delete, copy</span></a></li><li><a href="proving-the-engine.html"><span class="toc__num">12</span><span>Proving the engine: a from-scratch evaluator and ten thousand random edits</span></a></li><li><a href="locale.html"><span class="toc__num">13</span><span>What a person typed, in their language</span></a></li><li><a href="the-document.html"><span class="toc__num">14</span><span>The document, the operations, and the templates</span></a></li><li><a href="the-sheet-class.html"><span class="toc__num">15</span><span>The Sheet class, and where the reactivity line is</span></a></li><li><a href="commands-with-inverses.html"><span class="toc__num">16</span><span>Commands with inverses: undo, structure, clipboard, fill, sort</span></a></li><li><a href="the-reactivity-lesson.html"><span class="toc__num">17</span><span>The lesson: the same engine, out of $derived</span></a></li><li><a href="the-axis.html"><span class="toc__num">18</span><span>The axis: where row 40,000 starts</span></a></li><li><a href="the-grid.html"><span class="toc__num">19</span><span>The grid: a thousand cells out of a million</span></a></li><li><a href="keyboard-and-pointer.html"><span class="toc__num">20</span><span>Keyboard, pointer, clipboard</span></a></li><li><a href="the-cell-editor-and-formula-bar.html"><span class="toc__num">21</span><span>The cell editor and the formula bar</span></a></li><li><a href="toolbar-find-and-workbench.html"><span class="toc__num">22</span><span>The toolbar, find and replace, and the workbench</span></a></li><li><a href="csv-in-a-worker.html"><span class="toc__num">23</span><span>CSV: a streaming parser in a worker, and a streamed export</span></a></li><li><a href="the-schema.html"><span class="toc__num">24</span><span>The schema, and migrations instead of push</span></a></li><li><a href="identity.html"><span class="toc__num">25</span><span>Identity: a signed cookie</span></a></li><li><a href="passkeys.html"><span class="toc__num">26</span><span>Passkeys: signing in without a password</span></a></li><li><a href="sheets-over-the-wire.html"><span class="toc__num">27</span><span>Sheets over the wire: queries, forms, commands</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">28</span><span>Live collaboration: a live query, a mailbox, and numbered operations</span></a></li><li><a href="hooks.html"><span class="toc__num">29</span><span>Hooks: identity, headers, one framed route, errors by kind</span></a></li><li><a href="the-shell.html"><span class="toc__num">30</span><span>The shell: layouts, tokens, toasts</span></a></li><li><a href="the-landing-and-templates.html"><span class="toc__num">31</span><span>The landing page and the prerendered templates</span></a></li><li><a href="the-local-sheet.html"><span class="toc__num">32</span><span>The local sheet: OPFS and a BroadcastChannel</span></a></li><li><a href="the-stored-sheet.html"><span class="toc__num">33</span><span>The stored sheet: a universal load, a live query, a query in the component</span></a></li><li><a href="workspace-signin-settings.html"><span class="toc__num">34</span><span>The workspace, sign-in and settings</span></a></li><li><a href="published-and-embed.html"><span class="toc__num">35</span><span>Published sheets, the embed, the API and the health check</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">36</span><span>Unit and browser tests</span></a></li><li><a href="end-to-end.html"><span class="toc__num">37</span><span>End to end: two profiles, real passkeys, two browsers on one sheet</span></a></li><li><a href="deploying.html"><span class="toc__num">38</span><span>Deploying: a container that migrates, listens and stops</span></a></li><li><a href="where-next.html"><span class="toc__num">39</span><span>Where next</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 06</p>
+			<h1>The lexer: characters into tokens</h1>
+			<p class="lede"><code>SUM(A1:B2)*1.1</code> becomes a name, a paren, a reference, a colon, a reference, a paren, an operator, a number. Each token remembers where it started, so an error can point at a character.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Write a hand-rolled lexer for a small language and understand the one rule that tells <code>A1</code> from <code>SUM</code> from <code>SUM1</code>.</p></aside>
+			
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE LEXER
+ * =========
+ *
+ * Turns `SUM(A1:B2)*1.1` into tokens: a name, a paren, a reference, a colon,
+ * a reference, a paren, an operator, a number. Each token remembers where it
+ * started and ended, so a syntax error can point at a character and the
+ * formula bar can colour a reference.
+ *
+ * WHAT IS A REFERENCE AND WHAT IS A NAME
+ * --------------------------------------
+ * `A1` is a cell; `SUM` is a function; `TRUE` is a boolean; `SUM1` is a cell
+ * (column SUM, row 1 — a real column, since columns run to XFD). The rule is
+ * the one spreadsheets use: letters-then-digits with at most three letters is
+ * a reference, and everything else that starts with a letter is a name.
+ *
+ * Numbers use `.` for the decimal point and functions use `,` between
+ * arguments, whatever the person's locale — the formula language is the
+ * same everywhere, and it is *values typed into cells* that are localised
+ * (see `src/lib/sheet/locale.ts`).
+ */</code></pre>
+</figure>
+<p>Two decisions live in this comment. First, what is a reference: letters-then-digits with at most three letters, which is the spreadsheet rule and the reason <code>SUM1</code> is a cell (column SUM, row 1) rather than a typo. Second, the formula language is <strong>the same everywhere</strong>: numbers use <code>.</code> and arguments use <code>,</code> whatever the person’s locale. It is *values typed into cells* that are localised, and that is a different file (ch. 13). Mixing the two is how a formula that works in Berlin breaks in Boston.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:23-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export type TokenType =
+	| 'number'
+	| 'string'
+	| 'boolean'
+	| 'error'
+	| 'ref'
+	| 'name'
+	| 'op'
+	| 'lparen'
+	| 'rparen'
+	| 'comma'
+	| 'colon'
+	| 'eof';
+
+export interface Token {
+	type: TokenType;
+	text: string;
+	start: number;
+	end: number;
+}
+
+export class FormulaSyntaxError extends Error {
+	constructor(
+		message: string,
+		readonly position: number
+	) {
+		super(message);
+		this.name = 'FormulaSyntaxError';
+	}
+}</code></pre>
+</figure>
+<p>A token is a type, its text, and where it was. <code>FormulaSyntaxError</code> carries a <code>position</code>, and the formula bar turns that into “at character 7” under the input. That number is the most useful thing a formula language can say when it is confused.</p>
+<h3 id="the-loop">The loop</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:54-76</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const REF = /^\$?[A-Za-z]{1,3}\$?\d{1,7}$/;
+const ERROR_LITERALS = [
+	'#DIV/0!',
+	'#REF!',
+	'#NAME?',
+	'#VALUE!',
+	'#CYCLE!',
+	'#N/A',
+	'#NUM!',
+	'#ERROR!'
+];
+const TWO_CHAR_OPS = ['&lt;&gt;', '&lt;=', '&gt;='];
+const ONE_CHAR_OPS = '+-*/^&amp;=&lt;&gt;%';
+
+export function tokenize(source: string): Token[] {
+	const tokens: Token[] = [];
+	let i = 0;
+
+	const push = (type: TokenType, start: number, end: number) =&gt;
+		tokens.push({ type, text: source.slice(start, end), start, end });
+
+	while (i &lt; source.length) {
+		const ch = source[i]!;</code></pre>
+</figure>
+<p>The shape is the classic one: look at the current character, decide what kind of token starts here, consume it, push it, repeat. <code>push</code> records the slice so no token has to be assembled character by character.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:78-102</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+	i += 1;
+	continue;
+}
+
+// A number: digits, an optional fraction, an optional exponent. `.5` is
+// allowed; `5.` is allowed; `1e3` is allowed. `1.2.3` is two tokens and a
+// syntax error at the parser, which is where it can say so clearly.
+if (/[0-9]/.test(ch) || (ch === '.' &amp;&amp; /[0-9]/.test(source[i + 1] ?? ''))) {
+	const start = i;
+	while (i &lt; source.length &amp;&amp; /[0-9]/.test(source[i]!)) i += 1;
+	if (source[i] === '.') {
+		i += 1;
+		while (i &lt; source.length &amp;&amp; /[0-9]/.test(source[i]!)) i += 1;
+	}
+	if ((source[i] === 'e' || source[i] === 'E') &amp;&amp; /[0-9+-]/.test(source[i + 1] ?? '')) {
+		i += 1;
+		if (source[i] === '+' || source[i] === '-') i += 1;
+		if (!/[0-9]/.test(source[i] ?? ''))
+			throw new FormulaSyntaxError('Expected digits after the exponent', i);
+		while (i &lt; source.length &amp;&amp; /[0-9]/.test(source[i]!)) i += 1;
+	}
+	push('number', start, i);
+	continue;
+}</code></pre>
+</figure>
+<p>Numbers: digits, an optional fraction, an optional exponent. <code>.5</code> is a number, <code>5.</code> is a number, <code>1e3</code> is a number. <code>1.2.3</code> is deliberately *two* tokens and a syntax error at the parser — which is where the message can say something clear, rather than the lexer guessing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:102-130</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}
+
+// A string: double quotes, with `&quot;&quot;` for a literal quote.
+if (ch === '&quot;') {
+	const start = i;
+	i += 1;
+	for (;;) {
+		if (i &gt;= source.length) throw new FormulaSyntaxError('Unterminated string', start);
+		if (source[i] === '&quot;') {
+			if (source[i + 1] === '&quot;') {
+				i += 2;
+				continue;
+			}
+			i += 1;
+			break;
+		}
+		i += 1;
+	}
+	push('string', start, i);
+	continue;
+}
+
+// An error literal, typed as a value: `=#N/A` or `=IFERROR(#REF!, 0)`.
+if (ch === '#') {
+	const literal = ERROR_LITERALS.find((e) =&gt; source.startsWith(e, i));
+	if (!literal) throw new FormulaSyntaxError('Unknown error value', i);
+	push('error', i, i + literal.length);
+	i += literal.length;
+	continue;</code></pre>
+</figure>
+<p>Strings use <code>&quot;&quot;</code> for a literal quote, as spreadsheets do. Error literals are tokens too, so <code>=IFERROR(#REF!, 0)</code> parses, and an unknown <code>#…</code> is refused at once.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:133-143</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// A reference, a boolean or a name.
+if (ch === '$' || /[A-Za-z_]/.test(ch)) {
+	const start = i;
+	while (i &lt; source.length &amp;&amp; /[A-Za-z0-9_$.]/.test(source[i]!)) i += 1;
+	const text = source.slice(start, i);
+	const upper = text.toUpperCase();
+	if (upper === 'TRUE' || upper === 'FALSE') push('boolean', start, i);
+	else if (REF.test(text)) push('ref', start, i);
+	else push('name', start, i);
+	continue;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the reference test is a regular expression on the whole word</h4>
+	<p>The lexer reads a run of letters, digits, underscores and dollars first, then decides what it was. <code>$A$1</code> matches the reference pattern; <code>TRUE</code> is a boolean; anything else is a name and will have to be followed by <code>(</code> or the parser will say so. Deciding *after* reading the whole word is what keeps <code>SUM1</code> a reference and <code>SUM</code> a function without special cases.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:145-182</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">		const two = source.slice(i, i + 2);
+		if (TWO_CHAR_OPS.includes(two)) {
+			push('op', i, i + 2);
+			i += 2;
+			continue;
+		}
+		if (ONE_CHAR_OPS.includes(ch)) {
+			push('op', i, i + 1);
+			i += 1;
+			continue;
+		}
+		if (ch === '(') {
+			push('lparen', i, i + 1);
+			i += 1;
+			continue;
+		}
+		if (ch === ')') {
+			push('rparen', i, i + 1);
+			i += 1;
+			continue;
+		}
+		if (ch === ',') {
+			push('comma', i, i + 1);
+			i += 1;
+			continue;
+		}
+		if (ch === ':') {
+			push('colon', i, i + 1);
+			i += 1;
+			continue;
+		}
+
+		throw new FormulaSyntaxError(`Unexpected character &quot;${ch}&quot;`, i);
+	}
+
+	tokens.push({ type: 'eof', text: '', start: source.length, end: source.length });
+	return tokens;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can list the tokens for <code>=IF(A1&gt;10, &quot;big&quot;, B2*2)</code>.</li><li>You can say why <code>1.2.3</code> is not rejected by the lexer.</li><li>You know why the decimal point is always <code>.</code> in a formula and where locales are handled instead.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="values.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Values: what a cell can hold</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-parser.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The parser: a Pratt parser in a hundred lines</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

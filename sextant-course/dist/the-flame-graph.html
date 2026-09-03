@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A flame graph that renders itself — Building Sextant</title>
+<meta name="description" content="The one shape a component system is traditionally bad at, and the Svelte 5 feature that makes it four lines.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Sextant</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">30 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 65.21739130434783%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="why-a-query-language.html"><span class="toc__num">02</span><span>Why a query language, and what it must refuse</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain, and one config file</span></a></li><li><a href="the-environment.html"><span class="toc__num">04</span><span>The environment, declared once</span></a></li><li><a href="tokens.html"><span class="toc__num">05</span><span>Tokens, and why every one carries a position</span></a></li><li><a href="the-lexer.html"><span class="toc__num">06</span><span>The lexer</span></a></li><li><a href="the-ast.html"><span class="toc__num">07</span><span>The syntax tree</span></a></li><li><a href="the-pratt-parser.html"><span class="toc__num">08</span><span>The Pratt parser</span></a></li><li><a href="errors-that-point.html"><span class="toc__num">09</span><span>Errors that point at something</span></a></li><li><a href="the-schema.html"><span class="toc__num">10</span><span>The schema: what a column is, and what a function promises</span></a></li><li><a href="the-type-checker.html"><span class="toc__num">11</span><span>The type checker</span></a></li><li><a href="three-valued-logic.html"><span class="toc__num">12</span><span>Values, and three-valued logic</span></a></li><li><a href="the-evaluator.html"><span class="toc__num">13</span><span>The evaluator</span></a></li><li><a href="testing-an-evaluator.html"><span class="toc__num">14</span><span>Testing an evaluator against a reference</span></a></li><li><a href="ddsketch.html"><span class="toc__num">15</span><span>DDSketch: percentiles you are allowed to merge</span></a></li><li><a href="hyperloglog.html"><span class="toc__num">16</span><span>HyperLogLog: counting things you cannot hold</span></a></li><li><a href="buckets-and-rollups.html"><span class="toc__num">17</span><span>Buckets, steps and rollups</span></a></li><li><a href="lttb.html"><span class="toc__num">18</span><span>LTTB: keeping the shape</span></a></li><li><a href="assembling-a-trace.html"><span class="toc__num">19</span><span>Assembling a trace from spans that arrive in any order</span></a></li><li><a href="the-alert-machine.html"><span class="toc__num">20</span><span>The alert state machine</span></a></li><li><a href="the-storage-schema.html"><span class="toc__num">21</span><span>The schema, and the indexes that decide everything</span></a></li><li><a href="ingest.html"><span class="toc__num">22</span><span>Ingest: streamed, bounded, idempotent</span></a></li><li><a href="cardinality-and-the-nul-byte.html"><span class="toc__num">23</span><span>Cardinality, and the NUL byte that ate every series</span></a></li><li><a href="pushdown.html"><span class="toc__num">24</span><span>Storage: pushdown, and the rule for when not to</span></a></li><li><a href="sessions-and-keys.html"><span class="toc__num">25</span><span>Sessions for people, keys for machines</span></a></li><li><a href="live-tail.html"><span class="toc__num">26</span><span>Live tail: backpressure as a feature</span></a></li><li><a href="design-tokens.html"><span class="toc__num">27</span><span>Design tokens for a tool used at three in the morning</span></a></li><li><a href="the-virtualizer.html"><span class="toc__num">28</span><span>A virtualizer for variable-height rows, and `flushSync`</span></a></li><li><a href="the-results-table.html"><span class="toc__num">29</span><span>The results table</span></a></li><li><a href="the-flame-graph.html" aria-current="page"><span class="toc__num">30</span><span>A flame graph that renders itself</span></a></li><li><a href="the-waterfall.html"><span class="toc__num">31</span><span>The waterfall</span></a></li><li><a href="the-query-editor.html"><span class="toc__num">32</span><span>A query editor with no editor library</span></a></li><li><a href="completion.html"><span class="toc__num">33</span><span>Completion that knows where the caret is</span></a></li><li><a href="canvas-charts.html"><span class="toc__num">34</span><span>Canvas charts, and a worker that earns its keep</span></a></li><li><a href="the-url-is-the-state.html"><span class="toc__num">35</span><span>The URL is the state</span></a></li><li><a href="shallow-routing.html"><span class="toc__num">36</span><span>Shallow routing, and a drawer the back button closes</span></a></li><li><a href="streamed-loads.html"><span class="toc__num">37</span><span>Streamed loads: await what paints, stream what waits</span></a></li><li><a href="abort-signals.html"><span class="toc__num">38</span><span>`getAbortSignal`, and a streaming fetch</span></a></li><li><a href="remote-functions.html"><span class="toc__num">39</span><span>Remote functions: query, batch, form and command</span></a></li><li><a href="the-read-api.html"><span class="toc__num">40</span><span>The read API, and the HTTP method almost nobody uses</span></a></li><li><a href="hooks.html"><span class="toc__num">41</span><span>Hooks: auth, security, `handleFetch`, `handleError` and `init`</span></a></li><li><a href="the-transactional-outbox.html"><span class="toc__num">42</span><span>Alerts end to end: the transactional outbox</span></a></li><li><a href="keys-and-views.html"><span class="toc__num">43</span><span>Settings: keys you can never read back</span></a></li><li><a href="the-seed.html"><span class="toc__num">44</span><span>The seed, and why the data tells a story</span></a></li><li><a href="the-csp.html"><span class="toc__num">45</span><span>A content security policy, and the test that wrote it</span></a></li><li><a href="verifying-it.html"><span class="toc__num">46</span><span>Verifying it, and the six bugs the tests found</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 30</p>
+			<h1>A flame graph that renders itself</h1>
+			<p class="lede">The one shape a component system is traditionally bad at, and the Svelte 5 feature that makes it four lines.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Render a tree without a component that imports itself.</p></aside>
+			<p>A trace is a tree, and a tree is the one shape a component system is traditionally bad at. Rendering it means a component that imports itself — which works and produces a module cycle — or a separate <code>&lt;svelte:self&gt;</code> dialect, or a flattening pass that throws away the structure and rebuilds it with <code>padding-left</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:34-62</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A FLAME GRAPH, BY A SNIPPET THAT RENDERS ITSELF
+ * ===============================================
+ *
+ * A trace is a tree, and a tree is the one shape a component system is
+ * traditionally bad at: rendering it means a component that imports itself,
+ * which works and produces a module cycle, a separate `&lt;svelte:self&gt;` dialect,
+ * or a flattening pass that throws away the structure and rebuilds it with
+ * `padding-left`.
+ *
+ * Svelte 5 snippets can recurse. `{@render flame(child, ...)}` inside the
+ * definition of `flame` is legal, terminates on the base case like any other
+ * recursion, and needs no second file. That is the single tidiest thing in
+ * this project, and it is why a flame graph is here rather than a bar chart.
+ *
+ * THE LAYOUT
+ * ----------
+ * Each row is a depth. A span's width is its share of the *root's* duration,
+ * and its offset is where it started — so the picture is time on the x axis
+ * and call depth on the y, which is what makes &quot;this one span is the whole
+ * request&quot; visible at a glance rather than derivable from a table.
+ *
+ * WHAT IS DELIBERATELY NOT HERE
+ * -----------------------------
+ * No zoom-on-click, no aggregation of sibling spans with the same name, no
+ * colour-by-self-time. Each is a good feature and each hides the thing this
+ * view exists for, which is the shape of one request exactly as it happened.
+ * The waterfall next to it is where the detail goes.
+ */</code></pre>
+</figure>
+<p>Svelte 5 snippets can recurse. <code>{@render flame(child, depth + 1)}</code> <strong>inside the definition of <code>flame</code></strong> is legal, terminates on the base case like any other recursion, and needs no second file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:105-135</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#snippet flame(node: SpanNode, depth: number)}
+	{#if depth &lt;= MAX_DEPTH}
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;bar&quot;
+			class:bar--error={node.status === 'error'}
+			class:bar--selected={selected === node.spanId}
+			class:bar--synthetic={node.synthetic}
+			style:left=&quot;{offsetOf(node)}%&quot;
+			style:width=&quot;{widthOf(node)}%&quot;
+			style:top=&quot;{depth * 20}px&quot;
+			style:--hue={hueFor(node.service)}
+			onclick={() =&gt; onselect?.(node.spanId)}
+			title=&quot;{node.service} · {node.name} · {formatDuration(node.duration)}&quot;
+		&gt;
+			&lt;!--
+				The label is inside the bar and clipped by it.
+
+				A label that overflows its bar would be the only readable thing about a
+				0.3% span, and would overlap its neighbours — so a narrow bar shows
+				nothing, which is correct: the tooltip and the waterfall are where its
+				name is.
+			--&gt;
+			&lt;span class=&quot;bar__label truncate&quot;&gt;{node.name}&lt;/span&gt;
+		&lt;/button&gt;
+
+		{#each node.children as child (child.spanId)}
+			{@render flame(child, depth + 1)}
+		{/each}
+	{/if}
+{/snippet}</code></pre>
+</figure>
+<h3 id="the-depth-guard">The guard, and where it lives</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script module lang=&quot;ts&quot;&gt;
+	import type { SpanNode as Node } from '#lib/trace/assemble.ts';
+
+	/**
+	 * How deep the tree goes.
+	 *
+	 * In the module script because it is a pure function of its argument and has
+	 * no business being recreated per instance. Iterative rather than recursive
+	 * for the reason everything else that walks a span tree is: a service retrying
+	 * in a loop produces a chain thousands deep, and that trace is the bug report.
+	 */
+	function depthOf(root: Node, from: number): number {
+		let deepest = from;
+		const stack: { node: Node; depth: number }[] = [{ node: root, depth: from }];
+
+		while (stack.length &gt; 0) {
+			const { node, depth } = stack.pop()!;
+			if (depth &gt; deepest) deepest = depth;
+			// Bounded, so a pathological trace does not spend a second here measuring
+			// something that will be truncated anyway.
+			if (depth &gt; 200) break;
+			for (const child of node.children) stack.push({ node: child, depth: depth + 1 });
+		}
+
+		return deepest;
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+<p><code>depthOf</code> is in a <code>&lt;script module&gt;</code> block because it is a pure function of its argument and has no business being recreated per instance — and it is <strong>iterative</strong>, for the same reason everything else that walks a span tree is: a service retrying in a loop produces a chain thousands deep, and that trace is the bug report.</p>
+<h3 id="truncation">Truncating honestly</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:83-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * How deep to render.
+ *
+ * A flame graph past about twenty levels is a solid block: each bar is two
+ * pixels tall and none of them can be read or clicked. Truncating with a
+ * visible marker is more honest than rendering something unusable, and the
+ * waterfall — which is a list and scrolls — has no such limit.
+ */
+const MAX_DEPTH = 20;</code></pre>
+</figure>
+<p>A flame graph past about twenty levels is a solid block: each bar is two pixels tall and none of them can be read or clicked. Truncating with a visible marker is more honest than rendering something unusable — and the waterfall next to it, which is a list and scrolls, has no such limit.</p>
+<h3 id="colour">A colour per service, derived rather than assigned</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trace/colour.ts<span class="code__lines">:1-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A COLOUR PER SERVICE
+ * ====================
+ *
+ * Derived from the name, never assigned from a pool.
+ *
+ * Assigning from a pool is the obvious implementation and it is wrong in a way
+ * that only shows up in use: the same service is teal in one trace and amber in
+ * the next, because the pool is handed out in whatever order the spans happened
+ * to arrive. &quot;The teal one&quot; then stops being a way to refer to anything, and
+ * comparing two traces side by side — which is most of what anybody does with a
+ * trace viewer — means re-reading every label.
+ *
+ * Hashing the name fixes that for free and across page loads, machines and
+ * people. The cost is collisions: two services can land on the same hue. That
+ * is a real cost and it is smaller than the alternative, because a collision
+ * makes two rows look similar while an unstable palette makes *every* row
+ * unrecognisable.
+ */</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a pool is the wrong answer</h4>
+	<p>Assigning colours from a pool means the same service is teal in one trace and amber in the next, because the pool is handed out in whatever order the spans happened to arrive. &quot;The teal one&quot; then stops being a way to refer to anything, and comparing two traces side by side — which is most of what anybody does with a trace viewer — means re-reading every label. Hashing costs a collision now and then, which makes two rows look similar; an unstable palette makes every row unrecognisable.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trace/colour.ts<span class="code__lines">:21-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * FNV-1a, 32-bit.
+ *
+ * A hash, not a cryptographic one — the requirement is that small changes in the
+ * input scatter, which FNV does, and that it produces the same number in every
+ * JavaScript engine, which `Math.imul` guarantees by forcing 32-bit
+ * multiplication. Without `imul`, the multiply goes through a double and loses
+ * the low bits, so the &quot;hash&quot; degenerates and half the services get the same
+ * colour.
+ */
+export function hueFor(service: string): number {
+	let hash = 2166136261;
+	for (let i = 0; i &lt; service.length; i += 1) {
+		hash ^= service.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
+	return (hash &gt;&gt;&gt; 0) % 360;
+}</code></pre>
+</figure>
+<p>And the bars are <code>oklch</code>, not <code>hsl</code>. In HSL, yellow at 50% lightness is far brighter than blue at 50% — the number means &quot;halfway between black and full colour&quot;, which is a different amount of light for every hue. A palette built from it has bars whose white label is unreadable and bars that glare. <code>oklch</code> lightness is perceptual, so one lightness value gives every hue the same apparent brightness and one contrast decision holds for all 360.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>A trace renders as nested bars with no second component file.</li><li>A trace two hundred levels deep renders twenty and says so.</li><li>The same service is the same colour in every trace, on every machine.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-results-table.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The results table</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-waterfall.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The waterfall</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

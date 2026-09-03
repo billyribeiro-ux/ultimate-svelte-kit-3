@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End to end: the built server, two viewports, two people — Building Meridian</title>
+<meta name="description" content="Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile. Five suites cover a stranger, an account, one trip’s every tab, two browsers on one trip, and invites plus the embed. How the suite is kept honest, the three mobile-only failures it found, and what each one taught.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">42 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 93.33333333333333%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html" aria-current="page"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 42</p>
+			<h1>End to end: the built server, two viewports, two people</h1>
+			<p class="lede">Playwright runs against <code>node build/index.js</code> — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile. Five suites cover a stranger, an account, one trip’s every tab, two browsers on one trip, and invites plus the embed. How the suite is kept honest, the three mobile-only failures it found, and what each one taught.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run the end-to-end suite locally, read a failure’s call log and trace, and write a new test that signs in, does one thing, and cleans up after itself.</p></aside>
+			<p>An end-to-end test is the only kind that can fail because of a <strong>seam</strong>: a cookie the hook did not read, a header the adapter did not send, a prerendered page that baked the wrong user in, a form the CSRF check refused. Those are exactly the failures that unit tests cannot see and that real people hit first. So the suite runs against the *built* application — the adapter’s output, its server, its database — and not against the dev server, and the configuration says why at length.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:34-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export default defineConfig({
+	testDir: 'e2e',
+	testMatch: /.*\.e2e\.ts/,
+
+	/*
+	 * Serial, deliberately. One SQLite file, one writer, and tests that create
+	 * trips and stops and then expect to find them. A couple of minutes of
+	 * wall clock buys a suite that fails only when something is broken.
+	 */
+	fullyParallel: false,
+	workers: 1,
+
+	retries: 0,
+	forbidOnly: Boolean(process.env.CI),
+
+	reporter: process.env.CI ? [['github'], ['list']] : [['list']],
+
+	use: {
+		baseURL: 'http://localhost:4173',
+		trace: 'retain-on-failure',
+		screenshot: 'only-on-failure'
+	},
+
+	projects: [
+		{ name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+		{
+			// A real phone profile, not a resized desktop: it brings a touch pointer
+			// and a device pixel ratio with it, and both change what the map does.
+			name: 'phone',
+			use: { ...devices['Pixel 7'] }
+		}
+	],
+
+	webServer: {
+		/*
+		 * Prepare the database, build everything, run the adapter's server.
+		 *
+		 * `PUBLIC_ORIGIN` must be identical here and in the build, because it is
+		 * baked into the bundle at build time — `paths.origin` — and compared
+		 * against the request origin at run time. A mismatch is a 403 on every
+		 * form submission, and Better Auth's cookies are scoped to it too.
+		 */
+		command: 'node scripts/prepare-e2e-db.js &amp;&amp; pnpm run build &amp;&amp; node build/index.js',
+		port: 4173,
+		reuseExistingServer: !process.env.CI,
+		timeout: 300_000,
+		env: {
+			DATABASE_URL: 'file:e2e.db',
+			PUBLIC_ORIGIN: 'http://localhost:4173',
+			BETTER_AUTH_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
+			STOP_LIMIT: '200',
+			PORT: '4173'
+		}
+	}
+});</code></pre>
+</figure>
+<p>Read the <code>webServer</code> block as a recipe: rebuild the database from the migrations and the seed, build the app, start the adapter’s server on port 4173. Playwright waits for the port, runs the suite, and stops the process. <code>reuseExistingServer</code> is on outside CI, so a developer who already has the built server running skips the three-minute build — and in CI it is off, so the pipeline always tests what it just built. The environment block matters more than it looks: <code>PUBLIC_ORIGIN</code> is <strong>baked into the bundle</strong> at build time (chapter 03), and the server compares it with each request’s origin; if the build said 5173 and the test hits 4173, every form submission is a 403. It took an afternoon to learn that the same value has to be present in both places, which is why the comment is there.</p>
+<p><code>workers: 1</code> and <code>fullyParallel: false</code> are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs about a minute and a half of wall clock for thirty-six tests across both profiles — plus the build, the first time — and buys a suite whose failures are always real.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/prepare-e2e-db.js<span class="code__lines">:18-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { execFileSync } from 'node:child_process';
+import { existsSync, rmSync } from 'node:fs';
+
+const DB = 'e2e.db';
+
+const env = {
+	...process.env,
+	DATABASE_URL: `file:${DB}`,
+	PUBLIC_ORIGIN: 'http://localhost:4173',
+	BETTER_AUTH_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
+	STOP_LIMIT: '200'
+};
+
+for (const suffix of ['', '-shm', '-wal']) {
+	const path = `${DB}${suffix}`;
+	if (existsSync(path)) rmSync(path);
+}
+
+/**
+ * @param {string} command
+ * @param {readonly string[]} args
+ */
+function run(command, args) {
+	execFileSync(command, args, { stdio: 'inherit', env });
+}
+
+run('node', ['scripts/migrate.ts']);
+run('node', ['scripts/seed.ts']);
+
+console.info(`\nReady: ${DB}\n`);</code></pre>
+</figure>
+<p>The database is deleted and rebuilt before every run — the file and its <code>-wal</code> and <code>-shm</code> sidecars — through the *migrations*, not <code>drizzle-kit push</code>. That is a small act of discipline with a large payoff: a schema change that was made in <code>schema.ts</code> and never turned into a migration fails here, on a developer’s machine, instead of in the container in chapter 44. The seed (chapter 13) then creates three people and two trips, and every test knows their names.</p>
+<h3 id="helpers">The helpers: what every test needs</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/helpers.ts<span class="code__lines">:27-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Sign in through the form, and land where the app sends people afterwards. */
+export async function signIn(page: Page, email: string, redirectTo = '/trips'): Promise&lt;void&gt; {
+	await page.goto(`/signin?redirectTo=${encodeURIComponent(redirectTo)}`);
+	await page.getByLabel('Email').fill(email);
+	await page.getByLabel('Password').fill(PASSWORD);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.waitForURL((url) =&gt; !url.pathname.includes('/signin'));
+}
+
+/**
+ * On a phone the header's links are behind a menu button; on a desktop they
+ * are simply there. Open the menu when it exists, so a test can click a
+ * header link in either project without knowing which one it is in.
+ */
+export async function openMenu(page: Page): Promise&lt;void&gt; {
+	// The menu button needs JavaScript; the root layout marks the document once
+	// it has hydrated. Clicking earlier is a click nobody is listening to.
+	await page.locator('html[data-hydrated]').waitFor();
+	const menu = page.getByRole('button', { name: 'Menu' });
+	if ((await menu.count()) &gt; 0 &amp;&amp; (await menu.isVisible())) {
+		const expanded = await menu.getAttribute('aria-expanded');
+		if (expanded !== 'true') await menu.click();
+	}
+}
+
+/** The trip page's tab strip. */
+export async function openTab(page: Page, name: string): Promise&lt;void&gt; {
+	await page
+		.getByRole('navigation', { name: 'Meridian' })
+		.getByRole('link', { name, exact: true })
+		.click();
+	await expect(page).toHaveURL(new RegExp(`tab=${name.toLowerCase()}`));
+}</code></pre>
+</figure>
+<p><code>signIn</code> goes through the real form, not through an API call and a hand-made cookie: the test then exercises the sign-in remote form, the redirect guard and the session cookie’s attributes for free. <code>openMenu</code> is the phone-versus-desktop seam made explicit — the header’s links are behind a menu button under 48em — so a test written once runs unchanged in both projects. It waits for the root layout’s <code>data-hydrated</code> attribute first, because the menu button needs JavaScript and a click before hydration is a click nobody is listening to; the language-switch test found that one, about one run in twenty. <code>openTab</code> finds the tab strip by its accessible name and asserts the URL afterwards, because the tab *is* a URL (<code>?tab=expenses</code>) and a test that clicked a tab and moved on would not notice if the click had been swallowed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/helpers.ts<span class="code__lines">:61-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Type a date into one of the picker's two inputs. The picker is Bits UI's
+ * DateRangePicker: three editable segments per date, in the locale's order —
+ * month, day, year for English.
+ */
+export async function typeDate(
+	page: Page,
+	which: 'start' | 'end',
+	date: { year: number; month: number; day: number }
+): Promise&lt;void&gt; {
+	const input = page.locator('.range__input').nth(which === 'start' ? 0 : 1);
+	await input.locator('[data-segment=&quot;month&quot;]').click();
+	await page.keyboard.type(String(date.month).padStart(2, '0'));
+	await input.locator('[data-segment=&quot;day&quot;]').click();
+	await page.keyboard.type(String(date.day).padStart(2, '0'));
+	await input.locator('[data-segment=&quot;year&quot;]').click();
+	await page.keyboard.type(String(date.year));
+}</code></pre>
+</figure>
+<p><code>typeDate</code> exists because Bits UI’s date picker is not an <code>&lt;input type=&quot;date&quot;&gt;</code>; it is three editable segments per date, in the locale’s order, and Playwright’s <code>fill()</code> has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.</p>
+<h3 id="suites">Five suites</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:14-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the guides are prerendered, translated and shipped without JavaScript', async ({ page }) =&gt; {
+	await page.goto('/guides');
+	await expect(page.getByRole('heading', { level: 1, name: 'Guides' })).toBeVisible();
+	await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+	// `csr = false`: not one script file. The only &lt;script&gt; is the theme boot in app.html.
+	expect(await page.locator('script[src]').count()).toBe(0);
+
+	await page.getByRole('link', { name: 'Lisbon in three days' }).click();
+	await expect(page).toHaveURL(/\/guides\/lisbon-in-three-days$/);
+	// A component inside the Markdown, computed at build time by the geodesy library.
+	await expect(page.getByText('Lisbon → Sintra')).toBeVisible();
+	await expect(page.getByText(/2\d km · W/)).toBeVisible();
+
+	await page.goto('/de/guides');
+	await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+	await expect(page.getByText('Min. Lesezeit').first()).toBeVisible();
+
+	await page.goto('/pt-br/guides/kyoto-on-two-wheels');
+	await expect(page.locator('html')).toHaveAttribute('lang', 'pt-br');
+	await expect(page.getByText('min de leitura')).toBeVisible();
+});</code></pre>
+</figure>
+<p>The stranger’s suite asserts things that are easy to break and hard to notice. That the guides page ships <strong>no script at all</strong> is the whole point of <code>csr = false</code> (chapter 34), and <code>script[src]</code> count zero is the only assertion that proves it. That <code>/de/guides</code> has <code>lang=&quot;de&quot;</code> proves the reroute hook, the prerender entries and the <code>%paraglide.lang%</code> replacement all agree for a page that was built at compile time, with no request to consult. That the text inside a guide is <code>Lisbon → Sintra</code> with a distance proves a Svelte component inside Markdown ran the geodesy library at build time.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:71-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('health, the route API and the embed frame answer for machines', async ({ page, request }) =&gt; {
+	const health = await request.get('/healthz');
+	expect(health.ok()).toBeTruthy();
+	expect((await health.json()).ok).toBe(true);
+
+	const route = await request.get(`/api/route/${TRIPS.japan}.json`);
+	expect(route.headers()['access-control-allow-origin']).toBe('*');
+	const body = await route.json();
+	expect(body.name).toBe('Japan in autumn');
+	expect(body.stops.length).toBeGreaterThan(2);
+
+	const hidden = await request.get(`/api/route/${TRIPS.iberia}.json`);
+	expect(hidden.status()).toBe(404);
+
+	const frame = await page.goto(`/embed/${TRIPS.japan}`);
+	expect(frame?.headers()['content-security-policy']).toContain('frame-ancestors *');
+	await expect(page.getByRole('link', { name: 'Planned with Meridian' })).toBeVisible();
+	expect(await page.locator('script[src]').count()).toBe(0);
+
+	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
+	expect(framedPrivate?.status()).toBe(404);
+});</code></pre>
+</figure>
+<p>The machine-facing test uses <code>request</code> — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains <code>frame-ancestors *</code> — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:13-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('signing up, signing out and signing in', async ({ page }) =&gt; {
+	// Nobody signed in: sent to sign in, and told where to come back to.
+	await page.goto('/trips');
+	await expect(page).toHaveURL(/\/signin\?redirectTo=%2Ftrips$/);
+
+	await page.getByRole('link', { name: 'Create an account' }).click();
+	const email = `dee-${Date.now()}@meridian.test`;
+	await page.getByLabel('Your name').fill('Dee Okonkwo');
+	await page.getByLabel('Email').fill(email);
+	await page.getByLabel('Password').fill(PASSWORD);
+	await page.getByRole('button', { name: 'Create an account' }).click();
+
+	await expect(page).toHaveURL(/\/trips$/);
+	await expect(page.getByText('No trips yet.')).toBeVisible();
+
+	await openMenu(page);
+	await page.getByRole('button', { name: 'Sign out' }).click();
+	await openMenu(page);
+	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+
+	// The account exists: the same email and password sign in.
+	await signIn(page, email);
+	await expect(page.getByRole('heading', { name: 'Your trips' })).toBeVisible();
+});</code></pre>
+</figure>
+<p>A fresh account with a unique email per run, so the test can run twice against the same database. It walks the whole loop — refused at <code>/trips</code>, sent to sign in with <code>redirectTo</code> remembered, creates the account, lands on an empty trips page, signs out, signs back in — and the <code>openMenu</code> calls are the phone project earning its keep.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/trip.e2e.ts<span class="code__lines">:14-30</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test.beforeEach(async ({ page }) =&gt; {
+	await signIn(page, USERS.ana, `/t/${TRIPS.iberia}`);
+	await expect(page.getByRole('heading', { level: 1, name: 'Iberia by rail' })).toBeVisible();
+});
+
+test('the itinerary shows the seeded days and the palette jumps between tabs', async ({ page }) =&gt; {
+	await expect(page.getByRole('button', { name: 'Alfama' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Train to Porto' })).toBeVisible();
+	await expect(page.getByText('Live')).toBeVisible();
+
+	await page.keyboard.press('ControlOrMeta+k');
+	const palette = page.getByRole('dialog');
+	await palette.getByPlaceholder('Jump to a stop or an action…').fill('Expen');
+	await palette.getByRole('option', { name: 'Expenses' }).click();
+	await expect(page).toHaveURL(/tab=expenses/);
+	await expect(page.getByRole('heading', { name: 'Expenses' })).toBeVisible();
+});</code></pre>
+</figure>
+<p><code>beforeEach</code> signs Ana in straight to her trip, and the first test presses <code>ControlOrMeta+k</code> — Playwright’s name for “Control on Linux and Windows, Command on a Mac” — to open the command palette and jump to a tab by typing part of its name. A keyboard shortcut is a feature people rely on and never think to report when it breaks.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/trip.e2e.ts<span class="code__lines">:60-78</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('an expense is added and the settle-up follows', async ({ page }) =&gt; {
+	await openTab(page, 'Expenses');
+	await expect(page.getByRole('heading', { name: 'Settle up' })).toBeVisible();
+
+	await page.getByLabel('What for').fill('Pastéis de nata');
+	await page.getByLabel(/Amount/).fill('12.60');
+	await page.getByLabel('Date').fill('2026-05-10');
+	await page.getByRole('button', { name: 'Add an expense' }).click();
+
+	await expect(page.getByRole('cell', { name: 'Pastéis de nata' })).toBeVisible();
+	// Paid by Ana, shared three ways: the others owe her.
+	await expect(page.getByText(/Ben Okafor pays Ana Ribeiro/)).toBeVisible();
+
+	await page
+		.getByRole('row', { name: /Pastéis de nata/ })
+		.getByRole('button', { name: 'Remove' })
+		.click();
+	await expect(page.getByRole('cell', { name: 'Pastéis de nata' })).toHaveCount(0);
+});</code></pre>
+</figure>
+<p>The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:14-60</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a change by one person reaches the other through the live query', async ({ browser }) =&gt; {
+	const anaContext = await browser.newContext();
+	const benContext = await browser.newContext();
+	const ana = await anaContext.newPage();
+	const ben = await benContext.newPage();
+
+	await signIn(ana, USERS.ana, `/t/${TRIPS.iberia}`);
+	await signIn(ben, USERS.ben, `/t/${TRIPS.iberia}`);
+	await expect(ana.getByText('Live')).toBeVisible();
+	await expect(ben.getByText('Live')).toBeVisible();
+
+	// Ben is here: the presence chip on Ana's page says so.
+	await expect(ana.getByRole('list', { name: 'here now' })).toContainText('Ben Okafor', {
+		timeout: 20_000
+	});
+
+	await ben.getByRole('button', { name: 'Add a stop' }).first().click();
+	const dialog = ben.getByRole('dialog');
+	await dialog.getByPlaceholder('Search a place').pressSequentially('Faro');
+	await ben.getByRole('option', { name: 'Faro' }).click();
+	await dialog.getByRole('button', { name: 'Save stop' }).click();
+	await expect(ben.getByText('Stop added')).toBeVisible();
+
+	// No reload on Ana's side.
+	await expect(ana.getByRole('button', { name: 'Faro' })).toBeVisible({ timeout: 15_000 });
+
+	// Saving a stop selects it, so Ana already sees Ben looking at Faro. Then
+	// Ben looks at Alfama instead, and the chip on Ana's page moves with him.
+	await expect(ana.locator('article.stop', { hasText: 'Faro' })).toContainText('Ben', {
+		timeout: 20_000
+	});
+	await ben.getByRole('button', { name: 'Alfama', exact: true }).click();
+	await expect(ana.locator('article.stop', { hasText: 'Alfama' })).toContainText('Ben', {
+		timeout: 20_000
+	});
+	await expect(ana.locator('article.stop', { hasText: 'Faro' })).not.toContainText('Ben');
+
+	// Tidy up, so the other suites start from the seed.
+	await ana
+		.locator('article.stop', { hasText: 'Faro' })
+		.getByRole('button', { name: 'Remove' })
+		.click();
+	await expect(ben.getByRole('button', { name: 'Faro' })).toHaveCount(0, { timeout: 15_000 });
+
+	await anaContext.close();
+	await benContext.close();
+});</code></pre>
+</figure>
+<p>This is the test the project was built to pass. <code>browser.newContext()</code> twice gives two independent browser profiles — two cookie jars, two sessions — in one test. Ana and Ben sign in separately, and everything after that is a statement about the live query (chapter 18): Ben adds a stop and *Ana’s page* shows it, without a reload, because both pages hold the same <code>query.live</code> open and the server publishes to the room when the trip changes. The presence assertions ride on the same stream — Ana sees Ben arrive, and sees which stop he is looking at. The timeouts are longer than the default, deliberately: the presence heartbeat is fifteen seconds apart, and a test that asserts within five would be asserting on luck.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/invite.e2e.ts<span class="code__lines">:63-93</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('visibility by link switches the embed on, and the custom element renders the trip', async ({
+	page,
+	request
+}) =&gt; {
+	await signIn(page, USERS.ana, `/t/${TRIPS.iberia}/settings`);
+	await expect(page.getByText('Only a trip visible by link can be embedded.')).toBeVisible();
+
+	try {
+		await page.getByLabel('Anyone with the link').check();
+		await page.getByRole('button', { name: 'Save', exact: true }).click();
+		await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+		await expect(page.getByRole('heading', { name: 'As a custom element' })).toBeVisible();
+		// The element fetches the route API and draws inside its shadow root;
+		// Playwright's locators pierce shadow DOM.
+		await expect(page.locator('meridian-route').getByText('Iberia by rail')).toBeVisible({
+			timeout: 15_000
+		});
+		await expect(page.locator('meridian-route').getByText('Alfama')).toBeVisible();
+
+		const api = await request.get(`/api/route/${TRIPS.iberia}.json`);
+		expect(api.ok()).toBeTruthy();
+	} finally {
+		// Back to private whatever happened above, so the public suite still finds a 404.
+		await page.getByLabel('Companions only').check();
+		await page.getByRole('button', { name: 'Save', exact: true }).click();
+		await expect(page.getByText('Only a trip visible by link can be embedded.')).toBeVisible();
+	}
+	const closed = await request.get(`/api/route/${TRIPS.iberia}.json`);
+	expect(closed.status()).toBe(404);
+});</code></pre>
+</figure>
+<p>The settings test has a shape worth copying: <code>try … finally</code>. It flips the trip to visible-by-link, checks that the embed section appears and that the custom element inside it renders the trip *through the route API* — Playwright locators pierce shadow DOM, so <code>page.locator('meridian-route').getByText(…)</code> reaches inside — and then, whatever happened, flips it back. Without the <code>finally</code>, one failure in the middle would leave the seeded trip public, and the stranger’s suite in the next run would fail on a 200 where it expects a 404, two files away from the cause.</p>
+<h3 id="found">What the suite found</h3>
+<p>A suite is worth what it catches. Before it went green this one caught six bugs that no unit test could have — one of them only in the phone project, one only in about one run in ten, and one that had been hiding behind a <code>.catch(() =&gt; {})</code>, which is the argument for a phone project and for never dismissing a flaky test in one paragraph.</p>
+<ol><li><strong>The trip page was a 500 for signed-in members.</strong> An <code>$effect</code> that sent the presence heartbeat read the heartbeat command’s own <code>pending</code> state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with <code>effect_update_depth_exceeded</code>. The fix is in chapter 31: read the trip id once, and wrap the command call in <code>untrack</code>. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.</li><li><strong>The place search never searched.</strong> Bits UI’s <code>Combobox.Input</code> is a controlled input; binding its value is not the same as listening to it, and the <code>query</code> the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. <code>pressSequentially</code> in the test — typing a character at a time, as a person does — found it.</li><li><strong>The settings page did not update after Save.</strong> The command used <code>.updates(tripBySlug(slug))</code> so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template <code>await</code>, which resolves once. Reading <code>query.current</code> in a <code>$derived</code> is the reactive way, and chapter 31 explains the difference.</li><li><strong>Text typed before the page had hydrated vanished.</strong> One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is <code>keepTyped()</code> in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with <code>page.route</code>, types, releases it, and waits for a <code>data-hydrated</code> attribute the root layout sets in <code>onMount</code> before asserting the text is still there.</li><li><strong>The seed’s ids were not ids.</strong> Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — <code>00000000-0000-4000-8000-0000000a001</code> — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the <code>IdSchema</code> check on the server, and the client’s <code>.catch(() =&gt; {})</code> on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: <code>seedId()</code> builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.</li><li><strong>On a phone, the Add-an-expense button could not be clicked.</strong> Playwright’s call log said <code>&lt;h3&gt; intercepts pointer events</code> — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly <code>auto</code>, and an <code>auto</code> track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. <code>grid-template-columns: minmax(0, 1fr)</code> on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.</li></ol>
+<p>The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code> on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run test:e2e
+
+Running 36 tests using 1 worker
+
+  ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
+  ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
+  …
+  ✓  [phone] › trip.e2e.ts › an expense is added and the settle-up follows
+  ✓  [phone] › invite.e2e.ts › visibility by link switches the embed on, and the custom element renders the trip
+
+  36 passed (1.4m)</code></pre>
+</figure>
+<aside class="callout callout--note"><p>When a test fails, <code>test-results/&lt;test&gt;/</code> holds a screenshot, an <code>error-context.md</code> with the accessibility tree at the moment of failure, and a <code>trace.zip</code> — open it with <code>pnpm exec playwright show-trace &lt;file&gt;</code> for a timeline with every action, every network request and a DOM snapshot at each step. The trace is almost always faster than a debugger.</p></aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can explain why the suite runs against <code>node build/index.js</code> and what <code>PUBLIC_ORIGIN</code> has to do with a 403.</li><li>You can write a two-context test and say which assertion in it proves the live query rather than a reload.</li><li>You can read a Playwright call log that says “intercepts pointer events” and name the first thing to measure.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="unit-and-browser-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Unit and browser tests: two Vitest projects, one command</span>
+			</a>
+			<a class="pager__link pager__link--next" href="security-headers-and-csp.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Security: the policy, the headers, the redirect and the one framed route</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"sourceMap": true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		"strict": true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`.
+		//
+		// This project is one long sequence of array indexing: a lexer walking
+		// characters, a parser peeking at the next token, an evaluator reading a
+		// column out of a row, a downsampler looking at three buckets at a time.
+		// Every one of those has an off-by-one that this flag catches at the moment
+		// it is typed, and that would otherwise surface as `undefined` reaching a
+		// comparison and quietly returning `false`.
+		"noUncheckedIndexedAccess": true,
+
+		// An overriding method must say `override`.
+		"noImplicitOverride": true,
+
+		// A `case` that falls through to the next must be deliberate. The evaluator
+		// and the planner are both large switches over an AST, and a missing `break`
+		// there evaluates two node kinds for one expression.
+		"noFallthroughCasesInSwitch": true,
+
+		// Every path through a value-returning function must return. In a recursive
+		// descent parser, a branch that forgets to return produces `undefined` where
+		// an AST node belongs, twenty frames from where you are looking.
+		"noImplicitReturns": true,
+
+		// Unused locals and parameters are errors. In a compiler, a variable nobody
+		// reads is usually half of a case somebody stopped writing.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors.
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"e2e/**/*.ts",
+		"scripts/**/*.js",
+		"scripts/**/*.ts",
+		"*.config.ts",
+		"*.config.js"
+	],
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle"]
+}

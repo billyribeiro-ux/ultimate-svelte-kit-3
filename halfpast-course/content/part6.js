@@ -726,7 +726,7 @@ test('cannot see another studio s diary', async ({ page }) => {
 
 			{
 				type: 'checkpoint',
-				text: '`pnpm test:e2e` runs 80 tests across desktop and Pixel 7 and passes. Run it twice in a row and it passes twice — the second run is the one that catches shared state.'
+				text: '`pnpm test:e2e` runs 82 tests across desktop and Pixel 7 and passes. Run it twice in a row and it passes twice — the second run is the one that catches shared state.'
 			}
 		]
 	},

@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environment and hooks — Building Meridian</title>
+<meta name="description" content="`src/env.ts` declares every variable with a schema; `hooks.server.ts` composes three handlers with `sequence` — locale, identity, security — and adds `handleFetch`, `handleError` told apart by `kind`, and `init`; `hooks.ts` carries `reroute` and `transport` to the browser; `params.ts` matches the slug.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">14 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 31.11111111111111%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html" aria-current="page"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 14</p>
+			<h1>Environment and hooks</h1>
+			<p class="lede"><code>src/env.ts</code> declares every variable with a schema; <code>hooks.server.ts</code> composes three handlers with <code>sequence</code> — locale, identity, security — and adds <code>handleFetch</code>, <code>handleError</code> told apart by <code>kind</code>, and <code>init</code>; <code>hooks.ts</code> carries <code>reroute</code> and <code>transport</code> to the browser; <code>params.ts</code> matches the slug.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a request’s whole path through SvelteKit 3 — from environment validation at boot to the response headers — and know which hook owns which decision.</p></aside>
+			<p>SvelteKit 3 replaced the <code>$env/*</code> magic modules with a file you write. A variable not declared in it cannot be imported, <code>public</code> is a word you have to type, and the schema runs once at boot against the real environment — so a missing secret is a process that refuses to start, not an <code>undefined</code> three weeks later.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:1-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every environment variable this app reads, declared once.
+ *
+ * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * declared here cannot be imported — a type error at build time rather than an
+ * `undefined` that surfaces in production three weeks later — and `public: true`
+ * is something you have to type, so a secret cannot reach the browser by
+ * accident.
+ *
+ * The schemas are valibot. They run once, at boot, against the real environment.
+ */
+import { defineEnvVars } from '@sveltejs/kit/env';
+import * as v from 'valibot';
+
+const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+export const variables = defineEnvVars({
+	DATABASE_URL: {
+		description: 'libSQL connection string. `file:local.db` in development.',
+		schema: required
+	},
+
+	PUBLIC_ORIGIN: {
+		description:
+			'Where the app is served from, with no trailing slash. The CSRF origin and Better Auth’s base URL.',
+		public: true,
+
+		/*
+		 * `static: true` means the value is inlined at build time rather than read
+		 * from the environment at runtime. It has to be: `paths.origin` in
+		 * `vite.config.ts` reads the same variable during the build, and a value
+		 * that could differ between build and run would make the CSRF check compare
+		 * two different origins.
+		 */
+		static: true,
+		schema: v.pipe(
+			required,
+			v.url('Must be an absolute URL'),
+			v.transform((value) =&gt; value.replace(/\/+$/, ''))
+		)
+	},
+
+	BETTER_AUTH_SECRET: {
+		description: 'Signs the session cookie. Generate with `openssl rand -base64 32`.',
+		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+	},</code></pre>
+</figure>
+<p><code>PUBLIC_ORIGIN</code> is the interesting one: <code>public</code>, so the browser may see it, and <code>static</code>, so it is inlined at build time. It has to be static, because <code>vite.config.ts</code> reads the same variable for <code>paths.origin</code> during the build, and a value that could differ between build and run would make the CSRF check compare two different origins. Better Auth reads it too, as its base URL, and the Dockerfile in chapter 44 takes it as a build argument for the same reason.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/env.ts<span class="code__lines">:48-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	STOP_LIMIT: {
+		description: 'The most stops one trip may hold.',
+		/*
+		 * A string in, a number out. Environment variables are always strings, and
+		 * the place to turn one into a number is here — once — rather than in every
+		 * file that reads it with a `Number()` and a hopeful default.
+		 */
+		schema: v.optional(
+			v.pipe(
+				v.string(),
+				v.transform(Number),
+				v.number(),
+				v.integer(),
+				v.minValue(10, 'Ten stops is the smallest useful trip'),
+				v.maxValue(10_000, 'Ten thousand stops is a dataset, not a trip')
+			),
+			'500'
+		)
+	}
+});</code></pre>
+</figure>
+<p><code>STOP_LIMIT</code> shows the other thing the schema is for: environment variables are strings, and the place to turn one into a number — once, with bounds — is here. Every file that imports <code>STOP_LIMIT</code> from <code>$app/env/private</code> gets a <code>number</code> between ten and ten thousand, and none of them has a <code>Number()</code> with a hopeful default.</p>
+<h3 id="the-sequence">Three handlers, in order</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * SERVER HOOKS
+ * ============
+ *
+ * Handlers composed with `sequence`, in an order that matters:
+ *
+ *   1. paraglide — works out the locale for this request and strips the
+ *      `/de` prefix off the URL SvelteKit routes on
+ *   2. auth      — reads the session into `locals.user`, and answers the
+ *      `/api/auth/*` routes that Better Auth owns
+ *   3. security  — headers, which fonts to preload, and the one route that
+ *      may be framed
+ *
+ * plus `handleFetch`, `handleError` and `init`. The universal hooks —
+ * `reroute` and `transport` — live in `src/hooks.ts` because the browser
+ * needs them too.
+ */
+
+import { building } from '$app/env';
+/*
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
+ * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
+ * is not an error, so the file keeps working and every parameter silently loses
+ * its type.
+ */
+import {
+	sequence,
+	type Handle,
+	type HandleFetch,
+	type HandleServerError,
+	type ServerInit
+} from '@sveltejs/kit/hooks';
+import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { getTextDirection } from '#lib/paraglide/runtime.js';
+import { paraglideMiddleware } from '#lib/paraglide/server.js';
+import { auth } from '#lib/server/auth.ts';</code></pre>
+</figure>
+<p>The types come from <code>@sveltejs/kit/hooks</code>, and the comment says why it matters: importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for every destructured argument, which is not an error, so the file keeps working and every parameter silently loses its type. That is a SvelteKit 3 change worth knowing by heart.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:38-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Paraglide's middleware does three things around `resolve`: it decides the
+ * locale from the URL, the cookie or `Accept-Language` (in the order
+ * `vite.config.ts` gave it); it stores that locale in an `AsyncLocalStorage`
+ * so `m.some_message()` anywhere in this request — a remote function, a
+ * `load`, a component — speaks the right language without being told; and
+ * it hands back a request whose URL has had the `/de` prefix removed.
+ *
+ * The middleware also offers a request whose URL has had the `/de` prefix
+ * removed. It is not used: `event.request` is read-only in SvelteKit 3,
+ * and the routing half of the job belongs to `reroute` in `src/hooks.ts`,
+ * which the browser runs too. Two mechanisms for the same rewrite is how a
+ * redirect loop starts, and Paraglide's own docs say so.
+ *
+ * The two placeholders in `app.html` are filled here, once, so every page
+ * says `&lt;html lang=&quot;de&quot;&gt;` without a layout having to know. `replaceAll`,
+ * not `replace`: with a string pattern `replace` swaps the *first* match,
+ * and the first match was the one in the comment above the `&lt;html&gt;` tag —
+ * a bug that shipped a page that looked right and said `lang=&quot;%paraglide.lang%&quot;`.
+ */
+const handleParaglide: Handle = ({ event, resolve }) =&gt;
+	paraglideMiddleware(event.request, ({ locale }) =&gt; {
+		return resolve(event, {
+			transformPageChunk: ({ html }) =&gt;
+				html
+					.replaceAll('%paraglide.lang%', locale)
+					.replaceAll('%paraglide.dir%', getTextDirection(locale))
+		});
+	});</code></pre>
+</figure>
+<p>Paraglide first, because everything after it — a redirect message, an error page, a remote function — may speak. The middleware decides the locale from the URL, the cookie or <code>Accept-Language</code> in the order the config gave, stores it in an <code>AsyncLocalStorage</code> so <code>m.some_message()</code> anywhere in this request speaks the right language, and fills the two placeholders in <code>app.html</code> through <code>transformPageChunk</code>. The comment about <code>replaceAll</code> records a real bug: with a string pattern, <code>replace</code> swaps the first match, and the first match was in a comment above the <code>&lt;html&gt;</code> tag.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:68-85</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Who is making this request, once, on `locals`, so no page has to ask —
+ * and, more importantly, no page has to *remember* to ask.
+ *
+ * `svelteKitHandler` wraps `resolve` because Better Auth owns the
+ * `/api/auth/*` routes — sign-in, sign-out, session refresh — and they are
+ * not SvelteKit routes. It answers those and passes everything else on.
+ */
+const handleAuth: Handle = async ({ event, resolve }) =&gt; {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+
+	if (session) {
+		event.locals.session = session.session;
+		event.locals.user = session.user;
+	}
+
+	return svelteKitHandler({ event, resolve, auth, building });
+};</code></pre>
+</figure>
+<p>Identity second: read the session once onto <code>locals</code>, so no page has to ask and — more importantly — no page has to remember to ask. <code>svelteKitHandler</code> wraps <code>resolve</code> because Better Auth owns <code>/api/auth/*</code>; those are not SvelteKit routes, and the handler answers them and passes everything else on. <code>building</code> is passed so it stays quiet during prerendering.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:87-150</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The latin subsets, and only those. Both fonts ship several; the
+ * `unicode-range` on each `@font-face` means the browser fetches only what
+ * a page needs, and for this interface that is latin.
+ */
+const PRELOAD_FONTS = [
+	'@fontsource-variable/fraunces/files/fraunces-latin-standard-normal.woff2',
+	'@fontsource-variable/inter/files/inter-latin-wght-normal.woff2'
+];
+
+const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
+	const response = await resolve(event, {
+		/*
+		 * Preload the two fonts the first paint needs, by source filename.
+		 *
+		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
+		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * source path, before hashing — so this can name the exact file rather than
+		 * guessing at a hashed URL.
+		 */
+		preload: (input) =&gt; {
+			if (input.type === 'js' || input.type === 'css') return true;
+			if (input.type !== 'font') return false;
+			return PRELOAD_FONTS.some((font) =&gt; input.filename.endsWith(font));
+		}
+	});
+
+	response.headers.set('x-content-type-options', 'nosniff');
+	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
+	// Geolocation is the one capability this app asks for: &quot;where am I&quot; on the map.
+	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=(self)');
+
+	/*
+	 * THE ONE ROUTE THAT MAY BE FRAMED
+	 * --------------------------------
+	 * `vite.config.ts` says `frame-ancestors 'none'` for the whole app, which
+	 * is right: a trip planner inside somebody else's iframe is a clickjacking
+	 * target. `/embed/&lt;slug&gt;` exists to be framed — it is the read-only route
+	 * summary the custom element loads — so for that route, and only that
+	 * route, the directive is replaced after SvelteKit has built the policy.
+	 */
+	if (event.url.pathname.startsWith('/embed/')) {
+		const policy = response.headers.get('content-security-policy');
+		if (policy) {
+			response.headers.set(
+				'content-security-policy',
+				policy.replace(/frame-ancestors [^;]*/, 'frame-ancestors *')
+			);
+		}
+	}
+
+	/*
+	 * `Vary: Cookie` on the pages, because the header shows the person's name
+	 * and the locale cookie changes the language, and a shared cache must not
+	 * serve one person's page to another.
+	 */
+	if (!event.url.pathname.startsWith('/api/') &amp;&amp; !event.url.pathname.startsWith('/_app/')) {
+		response.headers.append('vary', 'Cookie');
+	}
+
+	return response;
+};
+
+export const handle: Handle = sequence(handleParaglide, handleAuth, handleSecurity);</code></pre>
+</figure>
+<p>Security last, because it acts on the *response*. The <code>preload</code> callback is the one new to SvelteKit 3.0.0-next.24: a <code>font</code> input carries its source <code>filename</code>, so the two latin subsets the first paint needs can be named exactly, rather than guessed at from a hashed URL. Then the headers, and the one route that may be framed: <code>/embed/&lt;slug&gt;</code> gets <code>frame-ancestors *</code> by replacing the directive SvelteKit built, because the CSP in the config is the right default for every other page. <code>Vary: Cookie</code> is there because the header shows a name and the locale cookie changes the language, and a shared cache must not serve one person’s page to another.</p>
+<h3 id="fetch-errors-init">Fetch, errors, boot</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:152-204</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * `handleFetch` sees every `fetch` made with the event's `fetch`. A same-origin
+ * call is left to SvelteKit, which answers it in-process; anything else gets a
+ * ten second timeout and a `User-Agent` that says who is calling.
+ */
+export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
+	if (new URL(request.url).origin === event.url.origin) return fetch(request);
+	return fetch(
+		new Request(request, {
+			signal: AbortSignal.timeout(10_000),
+			headers: new Headers([...request.headers, ['user-agent', 'Meridian/1.0']])
+		})
+	);
+};
+
+/**
+ * Every error the server catches, in one place, told apart by `kind`.
+ *
+ *   `app`         a deliberate `error(404, …)` — already says what it means
+ *   `framework`   SvelteKit's own: a 404 for a missing route, a bad request
+ *   `validation`  a remote function argument that failed its schema
+ *   `unknown`     something genuinely broken — the only one worth an id
+ *
+ * Returning nothing keeps SvelteKit's defaults — the status and the safe
+ * message — which is right for `app` and `framework` errors.
+ */
+export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
+	if (kind === 'validation') {
+		const first = issues[0];
+		const path = first?.path
+			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
+			.join('.');
+		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
+		return { message: 'That request did not make sense.' };
+	}
+
+	if (kind !== 'unknown') return;
+
+	const id = crypto.randomUUID();
+	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
+	return { message: 'Something went wrong on our side.', id };
+};
+
+/**
+ * Runs once, before the first request. Reaching the database here turns &quot;the
+ * deploy is broken&quot; into a process that never claims to be healthy — which is
+ * what a load balancer needs in order to keep the old version serving.
+ */
+export const init: ServerInit = async () =&gt; {
+	if (building) return;
+	const { client } = await import('#lib/server/db/index.ts');
+	await client.execute('select 1');
+};</code></pre>
+</figure>
+<p><code>handleError</code> is told apart by <code>kind</code>, which SvelteKit 3 added: <code>app</code> is a deliberate <code>error(404)</code>, <code>framework</code> is SvelteKit’s own, <code>validation</code> is a remote function argument that failed its schema — with the <code>issues</code> handed over, so the log can say which field — and <code>unknown</code> is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. <code>init</code> runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:1-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * UNIVERSAL HOOKS
+ * ===============
+ *
+ * `src/hooks.ts` runs on **both** the server and the client. Two hooks live
+ * here, because the browser has to agree with the server about both.
+ *
+ * `reroute` is the other half of internationalised URLs. Paraglide's
+ * middleware (server) decides the locale from `/de/trips`; this tells
+ * SvelteKit's router — on the server for the first request, in the browser
+ * for every navigation after it — that `/de/trips` is served by
+ * `src/routes/trips`. There is one `trips` route, not three.
+ *
+ * `transport` teaches SvelteKit's serialiser about `CalendarDate`. Load
+ * results and remote function arguments cross the wire through devalue,
+ * which knows `Map`, `Set`, `Date` and typed arrays and nothing about a
+ * class from `@internationalized/date`. With this, the date range the
+ * picker produces arrives on the server as a `CalendarDate` — `.compare()`
+ * works, `.add()` works — instead of a string somebody has to remember to
+ * parse.
+ */
+
+import type { Reroute, Transport } from '@sveltejs/kit/hooks';
+import { CalendarDate, parseDate } from '@internationalized/date';
+import { deLocalizeUrl } from '#lib/paraglide/runtime.js';
+
+export const reroute: Reroute = ({ url }) =&gt; deLocalizeUrl(url).pathname;
+
+export const transport: Transport = {
+	CalendarDate: {
+		// Something falsy for &quot;not mine&quot; is how devalue asks &quot;is this yours?&quot;.
+		encode: (value) =&gt; value instanceof CalendarDate &amp;&amp; value.toString(),
+		decode: (iso: string) =&gt; parseDate(iso)
+	}
+};</code></pre>
+</figure>
+<p>The universal hooks run in the browser too, and both of these have to. <code>reroute</code> tells the router that <code>/de/trips</code> is served by <code>src/routes/trips</code> — on the server for the first request, in the browser for every navigation after it. <code>transport</code> teaches devalue about <code>CalendarDate</code>, so a date range that leaves the picker as a <code>CalendarDate</code> arrives on the server as one; chapter 21 shows the value crossing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/params.ts<span class="code__lines">:1-21</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { defineParams } from '@sveltejs/kit/params';
+import * as v from 'valibot';
+import { SLUG } from '#lib/domain/ids.ts';
+
+/**
+ * PARAMETER MATCHERS
+ * ==================
+ *
+ * One file, not a folder. SvelteKit 2 had `src/params/slug.js` exporting
+ * `match(param)`; SvelteKit 3 has this single `src/params.ts` exporting
+ * `params` from `defineParams`, and each entry is a Standard Schema — so a
+ * matcher can *transform* as well as accept, and the route's `params.slug`
+ * arrives typed by the schema rather than as `string`.
+ *
+ * `/t/[slug=slug]`: a trip's share link. Anything that does not look like
+ * one of ours — an uppercase letter, a `0`, a thirty-three-character string
+ * — is a 404 before any route code runs, and before the database is asked.
+ */
+export const params = defineParams({
+	slug: v.pipe(v.string(), v.regex(SLUG))
+});</code></pre>
+</figure>
+<p>One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and <code>params.slug</code> arrives typed. Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why <code>PUBLIC_ORIGIN</code> is both <code>public</code> and <code>static</code>, and what breaks if it were not.</li><li>You can give the order of the three handlers and one reason for each position.</li><li>You can name the four <code>kind</code>s in <code>handleError</code> and say which one gets an id.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-database.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The database: seven tables and Better Auth’s four</span>
+			</a>
+			<a class="pager__link pager__link--next" href="identity-with-better-auth.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Identity with Better Auth</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

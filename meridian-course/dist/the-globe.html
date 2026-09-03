@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The globe: Threlte, on demand — Building Meridian</title>
+<meta name="description" content="three.js through Threlte — `&lt;T.Mesh&gt;` is a mesh, children attach — with coastlines from the same atlas, arcs lifted off the surface, clickable markers, a `useTask` flyover that follows the library’s great-circle interpolation, a `MediaQuery` that holds it still, and a dynamic import so three.js reaches only the people who ask for it.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">28 / 45</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 62.22222222222222%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html" aria-current="page"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 28</p>
+			<h1>The globe: Threlte, on demand</h1>
+			<p class="lede">three.js through Threlte — <code>&lt;T.Mesh&gt;</code> is a mesh, children attach — with coastlines from the same atlas, arcs lifted off the surface, clickable markers, a <code>useTask</code> flyover that follows the library’s great-circle interpolation, a <code>MediaQuery</code> that holds it still, and a dynamic import so three.js reaches only the people who ask for it.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Add a 3D scene to a SvelteKit page declaratively, animate it per frame without an effect loop, respect reduced motion, and load it lazily behind a boundary.</p></aside>
+			<p>Threlte is Svelte for three.js. <code>&lt;T.Mesh&gt;</code> is a <code>THREE.Mesh</code>; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:217-250</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{:else if tab === 'globe'}
+	&lt;!--
+		THE GLOBE, WHEN ASKED FOR
+		-------------------------
+		three.js and Threlte are the largest dependency in the project, and
+		most visits never open this tab. `import()` in markup loads them on
+		demand; the boundary shows the pending snippet until the chunk is
+		here, and the failed snippet if the network is not. `browser`
+		guards it because a WebGL scene has no server-rendered form.
+	--&gt;
+	&lt;div class=&quot;full-map&quot;&gt;
+		{#if browser}
+			&lt;svelte:boundary&gt;
+				{#snippet pending()}
+					&lt;p class=&quot;muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+				{/snippet}
+				{#snippet failed(error, reset)}
+					&lt;p class=&quot;issue&quot;&gt;
+						{error instanceof Error ? error.message : m.error_title()}
+						&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button
+						&gt;
+					&lt;/p&gt;
+				{/snippet}
+				{const { default: Globe } = await import('#lib/globe/Globe.svelte')}
+				&lt;Globe
+					stops={view.scheduled}
+					selected={view.selectedStopId}
+					onselect={(id) =&gt; view.select(id)}
+				/&gt;
+			&lt;/svelte:boundary&gt;
+		{:else}
+			&lt;p class=&quot;muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+		{/if}
+	&lt;/div&gt;</code></pre>
+</figure>
+<p>Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: <code>{const { default: Globe } = await import(...)}</code>. The <code>pending</code> snippet shows until the chunk arrives and the <code>failed</code> snippet if the network does not deliver it, with a <code>reset</code> that tries again. <code>browser</code> guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { Canvas } from '@threlte/core';
+	import { MediaQuery } from 'svelte/reactivity';
+	import type { FeatureCollection, Geometry } from 'geojson';
+	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Scene, { type GlobeStop } from './Scene.svelte';
+
+	/**
+	 * THE GLOBE
+	 * =========
+	 *
+	 * The frame around the scene: it loads the coastlines, holds the two
+	 * bits of state the scene does not own — is the camera flying, does this
+	 * person prefer reduced motion — and draws the buttons.
+	 *
+	 * This component is imported with a dynamic `import()` from the trip
+	 * page, in the browser only. Three.js is the largest dependency in the
+	 * project by a distance, and a person who never opens the globe tab
+	 * never downloads it.
+	 */
+	interface Props {
+		stops: readonly GlobeStop[];
+		selected: string | null;
+		onselect: (id: string) =&gt; void;
+	}
+
+	let { stops, selected, onselect }: Props = $props();
+
+	/*
+	 * `MediaQuery` from `svelte/reactivity`: a media query as a reactive
+	 * value. When the operating system setting changes, `current` changes,
+	 * and the scene stops animating without a reload.
+	 */
+	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
+
+	let flying = $state(false);
+
+	/* The coastlines: the same prerendered file the map reads. */
+	async function loadWorld(): Promise&lt;FeatureCollection&lt;Geometry&gt;&gt; {
+		const response = await fetch('/api/world.json');
+		if (!response.ok) throw new Error(`world.json answered ${response.status}`);
+		return (await response.json()) as FeatureCollection&lt;Geometry&gt;;
+	}
+&lt;/script&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:47-99</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;globe&quot;&gt;
+	&lt;svelte:boundary&gt;
+		{#snippet pending()}
+			&lt;p class=&quot;globe__status muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+		{/snippet}
+		{#snippet failed(error, reset)}
+			&lt;p class=&quot;globe__status issue&quot;&gt;
+				{error instanceof Error ? error.message : m.error_title()}
+				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button&gt;
+			&lt;/p&gt;
+		{/snippet}
+
+		{const world = await loadWorld()}
+
+		&lt;div class=&quot;globe__canvas&quot;&gt;
+			&lt;Canvas&gt;
+				&lt;Scene
+					{stops}
+					{selected}
+					{world}
+					{flying}
+					reduced={reducedMotion.current}
+					{onselect}
+					onlanded={() =&gt; (flying = false)}
+				/&gt;
+			&lt;/Canvas&gt;
+		&lt;/div&gt;
+	&lt;/svelte:boundary&gt;
+
+	&lt;div class=&quot;globe__controls cluster cluster--between no-print&quot;&gt;
+		{#if reducedMotion.current}
+			&lt;p class=&quot;hint&quot;&gt;{m.globe_static()}&lt;/p&gt;
+		{:else if stops.length &gt; 1}
+			&lt;button
+				class=&quot;btn btn--primary btn--sm&quot;
+				type=&quot;button&quot;
+				aria-pressed={flying}
+				onclick={() =&gt; (flying = !flying)}
+			&gt;
+				{#if flying}
+					&lt;PauseIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+					{m.globe_stop()}
+				{:else}
+					&lt;PlayIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+					{m.globe_fly()}
+				{/if}
+			&lt;/button&gt;
+		{:else}
+			&lt;p class=&quot;hint&quot;&gt;{m.route_none()}&lt;/p&gt;
+		{/if}
+		&lt;p class=&quot;hint&quot;&gt;{m.globe_hint()}&lt;/p&gt;
+	&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the two bits of state the scene does not own: whether the camera is flying, and whether this person prefers reduced motion. <code>MediaQuery</code> makes the second one live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded.</p>
+<h3 id="the-scene">The scene</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:32-67</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">export interface GlobeStop {
+	readonly id: string;
+	readonly name: string;
+	readonly lng: number;
+	readonly lat: number;
+}
+
+interface Props {
+	stops: readonly GlobeStop[];
+	selected: string | null;
+	world: FeatureCollection&lt;Geometry&gt;;
+	flying: boolean;
+	reduced: boolean;
+	onselect: (id: string) =&gt; void;
+	onlanded: () =&gt; void;
+}
+
+let { stops, selected, world, flying, reduced, onselect, onlanded }: Props = $props();
+
+interactivity();
+
+const RADIUS = 1;
+const FLIGHT_ALTITUDE = 2.3;
+
+/** Longitude and latitude to a point on the sphere. 0°E faces the default camera. */
+function toVector(point: LngLat, radius = RADIUS): Vector3 {
+	const lat = (point.lat * Math.PI) / 180;
+	const lng = (point.lng * Math.PI) / 180;
+	return new Vector3(
+		radius * Math.cos(lat) * Math.sin(lng),
+		radius * Math.sin(lat),
+		radius * Math.cos(lat) * Math.cos(lng)
+	);
+}
+
+const asLngLat = ([lng = 0, lat = 0]: readonly number[]): LngLat =&gt; ({ lng, lat });</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:69-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/* Coastlines: every ring of every polygon becomes pairs of points. */
+const outlines = $derived.by(() =&gt; {
+	const positions: number[] = [];
+	const push = (ring: Position[]) =&gt; {
+		for (let i = 0; i + 1 &lt; ring.length; i += 1) {
+			const a = ring[i];
+			const b = ring[i + 1];
+			if (!a || !b) continue;
+			const va = toVector(asLngLat(a), RADIUS + 0.002);
+			const vb = toVector(asLngLat(b), RADIUS + 0.002);
+			positions.push(va.x, va.y, va.z, vb.x, vb.y, vb.z);
+		}
+	};
+	for (const feature of world.features) {
+		const geometry = feature.geometry;
+		if (geometry.type === 'Polygon') geometry.coordinates.forEach(push);
+		else if (geometry.type === 'MultiPolygon') {
+			for (const polygon of geometry.coordinates) polygon.forEach(push);
+		}
+	}
+	const geometry = new BufferGeometry();
+	geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+	return geometry;
+});</code></pre>
+</figure>
+<p>A latitude and longitude become a point on the unit sphere, with 0°E facing the default camera. The coastlines become a <code>BufferGeometry</code> of line segments — every ring of every polygon, pairs of consecutive points — which is twenty thousand vertices and one draw call. <code>interactivity()</code> from <code>@threlte/extras</code> is what makes <code>onclick</code> on a mesh work: it raycasts from the pointer into the scene.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:94-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">interface Leg {
+	readonly a: GlobeStop;
+	readonly b: GlobeStop;
+	readonly seconds: number;
+}
+
+const legs: Leg[] = $derived(
+	stops.slice(1).flatMap((b, i) =&gt; {
+		const a = stops[i];
+		if (!a) return [];
+		// Fifteen hundred kilometres a second, between one and a half and four seconds.
+		const seconds = Math.min(4, Math.max(1.5, distance(a, b) / 1_500_000));
+		return [{ a, b, seconds }];
+	})
+);
+
+/* One arc per leg, lifted off the surface in proportion to its length. */
+const arcs = $derived(
+	legs.map(({ a, b }) =&gt; {
+		const lift = Math.min(0.12, distance(a, b) / 40_000_000);
+		const points = arc(a, b, 48).map((position, index, all) =&gt; {
+			const t = index / (all.length - 1);
+			return toVector(asLngLat(position), RADIUS + 0.004 + lift * Math.sin(Math.PI * t));
+		});
+		const geometry = new BufferGeometry().setFromPoints(points);
+		return geometry;
+	})
+);
+
+// Buffers are GPU memory; dispose the previous set when the legs change.
+$effect(() =&gt; {
+	const current = [outlines, ...arcs];
+	return () =&gt; current.forEach((geometry) =&gt; geometry.dispose());
+});
+
+const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADIUS + 0.006) })));</code></pre>
+</figure>
+<p>Each leg gets an arc from the library’s <code>arc()</code>, lifted off the surface by an amount that grows with the leg’s length so a long flight visibly arcs and a short hop hugs the ground. The geometries are built in <code>$derived</code>, so a change to the stops rebuilds exactly the arcs, and the <code>$effect</code> with a cleanup disposes the previous set — buffers are GPU memory, and a globe that leaks one per drag would not survive a planning session.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:131-184</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	let camera = $state&lt;PerspectiveCamera&gt;();
+
+	/* Flight state: plain variables, advanced by the task and never rendered. */
+	let leg = 0;
+	let progress = 0;
+
+	$effect(() =&gt; {
+		if (flying) {
+			leg = 0;
+			progress = 0;
+		}
+	});
+
+	const selectedStop = $derived(stops.find((stop) =&gt; stop.id === selected) ?? null);
+	const target = $derived(selectedStop ? toVector(selectedStop, FLIGHT_ALTITUDE) : null);
+
+	/* Reduced motion: a change of selection is a cut, not an ease. */
+	$effect(() =&gt; {
+		if (!reduced || !camera || !target) return;
+		camera.position.copy(target);
+		camera.lookAt(0, 0, 0);
+	});
+
+	useTask((delta) =&gt; {
+		if (!camera) return;
+
+		if (flying) {
+			const current = legs[leg];
+			if (!current) {
+				onlanded();
+				return;
+			}
+			progress += delta / current.seconds;
+			if (progress &gt;= 1) {
+				progress = 0;
+				leg += 1;
+				if (leg &gt;= legs.length) {
+					onlanded();
+					return;
+				}
+			}
+			const point = interpolate(current.a, current.b, Math.min(progress, 1));
+			camera.position.copy(toVector(point, FLIGHT_ALTITUDE));
+			camera.lookAt(0, 0, 0);
+			return;
+		}
+
+		if (target &amp;&amp; !reduced &amp;&amp; camera.position.distanceTo(target) &gt; 0.003) {
+			// Frame-rate independent ease: cover 99.9% of the way per second.
+			camera.position.lerp(target, 1 - Math.pow(0.001, delta));
+			camera.lookAt(0, 0, 0);
+		}
+	});
+&lt;/script&gt;</code></pre>
+</figure>
+<p>The flyover. <code>useTask</code> runs a function every frame with the time since the last one, and the function advances along the current leg by <code>delta / seconds</code>, puts the camera above <code>interpolate(a, b, progress)</code> — the library’s great-circle interpolation, so the camera follows the line it draws — and looks at the centre. The flight variables are plain <code>let</code>s, not <code>$state</code>: they change sixty times a second and nothing renders them, so making them reactive would only schedule work. Reduced motion means a change of selection is a cut, not an ease, and the flight button does not exist.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:186-242</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;T.PerspectiveCamera
+	makeDefault
+	fov={42}
+	position={[0, 0.7, 2.7]}
+	bind:ref={camera}
+	oncreate={(ref) =&gt; ref.lookAt(0, 0, 0)}
+&gt;
+	&lt;OrbitControls
+		enabled={!flying}
+		enablePan={false}
+		enableDamping={false}
+		minDistance={1.4}
+		maxDistance={4}
+		rotateSpeed={0.5}
+	/&gt;
+&lt;/T.PerspectiveCamera&gt;
+
+&lt;T.AmbientLight intensity={0.7} /&gt;
+&lt;T.DirectionalLight position={[3, 2, 4]} intensity={1.3} /&gt;
+
+&lt;Stars count={1200} depth={30} factor={2} speed={reduced ? 0 : 0.4} fade /&gt;
+
+&lt;!-- The globe --&gt;
+&lt;T.Mesh&gt;
+	&lt;T.SphereGeometry args={[RADIUS, 64, 64]} /&gt;
+	&lt;T.MeshStandardMaterial color=&quot;#10273f&quot; roughness={0.9} metalness={0} /&gt;
+&lt;/T.Mesh&gt;
+
+&lt;!-- A faint atmosphere: a slightly larger shell drawn from the inside. --&gt;
+&lt;T.Mesh scale={1.04}&gt;
+	&lt;T.SphereGeometry args={[RADIUS, 48, 48]} /&gt;
+	&lt;T.MeshBasicMaterial color=&quot;#7fb8d8&quot; transparent opacity={0.09} side={BackSide} /&gt;
+&lt;/T.Mesh&gt;
+
+&lt;!-- Coastlines --&gt;
+&lt;T.LineSegments geometry={outlines}&gt;
+	&lt;T.LineBasicMaterial color=&quot;#9cc4dc&quot; transparent opacity={0.55} /&gt;
+&lt;/T.LineSegments&gt;
+
+&lt;!-- The route --&gt;
+{#each arcs as geometry, index (index)}
+	&lt;T.Line {geometry}&gt;
+		&lt;T.LineBasicMaterial color=&quot;#f2a65a&quot; linewidth={2} /&gt;
+	&lt;/T.Line&gt;
+{/each}
+
+&lt;!-- The stops --&gt;
+{#each markers as { stop, at } (stop.id)}
+	&lt;T.Mesh
+		position={[at.x, at.y, at.z]}
+		scale={stop.id === selected ? 1.8 : 1}
+		onclick={() =&gt; onselect(stop.id)}
+	&gt;
+		&lt;T.SphereGeometry args={[0.011, 16, 16]} /&gt;
+		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#ff6b57'} /&gt;
+	&lt;/T.Mesh&gt;
+{/each}</code></pre>
+</figure>
+<p>The markup. A camera with <code>OrbitControls</code> from extras, disabled while flying so the two do not fight; two lights; <code>Stars</code> for a restrained bit of cinema, with <code>speed={0}</code> under reduced motion; the sphere; a slightly larger back-facing shell for an atmosphere; the coastlines; the arcs; and one small mesh per stop, scaled up when selected and clickable. <code>bind:ref={camera}</code> hands the three.js camera to the task. Every colour here is a literal, like the map’s, because WebGL does not read the cascade.</p>
+
+<aside class="callout callout--why">
+	<h4>Why Threlte and not three.js in an attachment</h4>
+	<p>The same line as the map. A scene is a tree — camera, lights, meshes, materials — and a template is a tree; Threlte maps one onto the other and <code>{#each markers}</code> gives you a mesh per stop for free, with disposal handled when the each block shrinks. An attachment would be the right shape for a single canvas that an imperative renderer owns end to end, and there is one of those in project 5. Here, three quarters of the scene is declarative and Threlte lets it stay that way.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say why the globe is a dynamic import in markup and what the boundary’s two snippets do.</li><li>You can explain what <code>useTask</code> is and why the flight variables are not <code>$state</code>.</li><li>You know where reduced motion is honoured in this component, and by what mechanism.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-map.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The map with no tile server</span>
+			</a>
+			<a class="pager__link pager__link--next" href="expenses-with-tanstack-and-layerchart.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">Expenses: a headless table, two charts, and the settle-up</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
