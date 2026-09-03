@@ -67,7 +67,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">Dockerfile<span class="code__lines">:41-59</span></span>
+		<span class="code__file">Dockerfile<span class="code__lines">:41-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">FROM deps AS build
@@ -87,14 +87,16 @@ RUN pnpm run package &amp;&amp; pnpm run i18n &amp;&amp; pnpm exec svelte-kit sy
 
 # Production dependencies only, for the runtime stage. `--prod` drops
 # everything under devDependencies: the compilers, the test runners, drizzle-kit.
+# `CI=true` because pnpm 11 asks before it purges a modules directory and, with
+# no terminal to ask on, aborts instead — the first CI run of this file found that.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm prune --prod --ignore-scripts</code></pre>
+    CI=true pnpm prune --prod --ignore-scripts</code></pre>
 </figure>
-<p>The <code>build</code> stage is <code>prepare</code> spelled out: package the library, compile the messages, sync the types, then build the element and the app. <code>PUBLIC_ORIGIN</code> is a <strong>build argument</strong>, and the stage refuses to continue without it, because SvelteKit bakes <code>paths.origin</code> into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — <code>src/env.ts</code> validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. <code>pnpm prune --prod</code> then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of <code>node_modules</code>.</p>
+<p>The <code>build</code> stage is <code>prepare</code> spelled out: package the library, compile the messages, sync the types, then build the element and the app. <code>PUBLIC_ORIGIN</code> is a <strong>build argument</strong>, and the stage refuses to continue without it, because SvelteKit bakes <code>paths.origin</code> into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — <code>src/env.ts</code> validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. <code>pnpm prune --prod</code> then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of <code>node_modules</code>. The <code>CI=true</code> in front of it is a scar from the first pipeline run: pnpm 11 asks for confirmation before it purges a modules directory, and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">Dockerfile<span class="code__lines">:62-100</span></span>
+		<span class="code__file">Dockerfile<span class="code__lines">:64-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">FROM node:${NODE_VERSION}-slim AS runtime
