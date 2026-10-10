@@ -7,8 +7,9 @@ updates every open browser when somebody books, honest time zone handling, and
 a database schema that makes double-booking impossible to write rather than
 merely unlikely.
 
-Requires **Node 24.20.0** (the current LTS, pinned in `.nvmrc` and `engines`)
-and **pnpm 11+**.
+Requires **Node 24.21.0** (the current LTS, pinned in `.nvmrc` and `engines`)
+and **pnpm 12.10.1** (pinned in `packageManager`, so Corepack picks it for you).
+Built on SvelteKit 3.0.1, Svelte 5.57, Vite 8 and Vitest 5.
 
 ## Quick start
 
@@ -50,6 +51,21 @@ pnpm run check      # svelte-check across the project
 pnpm test           # unit suite, then the Playwright e2e suite
 pnpm run db:studio  # poke at the database in a browser
 ```
+
+`pnpm run build` needs `PUBLIC_ORIGIN` and `PUBLIC_DEFAULT_TIME_ZONE` in the
+environment — from `.env` locally, from the job's `env:` in CI. They are declared
+`static: true` in `src/env.ts`, so SvelteKit inlines them at build time and
+refuses to build without them (`SvelteKit error: env_invalid`) rather than ship a
+bundle with `undefined` baked in. The e2e suite supplies its own values in
+`playwright.config.ts`, which is why it never notices a missing `.env`.
+
+## Toolchain notes
+
+- `pnpm install` is clean except for one widened peer: `better-auth` still
+  declares `@sveltejs/kit ^2`. The reason it is safe, and the rule that widens
+  it, are both in `pnpm-workspace.yaml`.
+- pnpm 12 holds back packages younger than a day; the three it excluded when the
+  toolchain was pinned are listed in `pnpm-workspace.yaml` with the same note.
 
 ## Provenance
 

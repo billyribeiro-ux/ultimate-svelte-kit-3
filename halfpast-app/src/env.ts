@@ -76,7 +76,7 @@ export const variables = defineEnvVars({
 
 	ORIGIN: {
 		description:
-			'The absolute origin the server believes it is serving from, e.g. `http://localhost:5173`. Better Auth signs cookies against this and adapter-node uses it to build absolute URLs.',
+			'The absolute origin the server believes it is serving from, e.g. `http://localhost:5173`. Better Auth signs cookies against this. adapter-node 6 no longer reads it: the origin SvelteKit trusts for CSRF is `paths.origin` in vite.config.ts, fed from `PUBLIC_ORIGIN` at build time.',
 		schema: origin
 	},
 

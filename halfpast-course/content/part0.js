@@ -109,8 +109,8 @@ if (clash.length === 0) {
 			{
 				type: 'ul',
 				items: [
-					'**Node 24.20.0** or newer — the current LTS. Chapter 3 covers installing it.',
-					'**pnpm 11** — installed with `npm i -g pnpm`.',
+					'**Node 24.21.0** or newer — the current LTS. Chapter 3 covers installing it.',
+					'**pnpm 12** — installed with `npm i -g pnpm`.',
 					'A terminal, an editor, and a browser. No database server: SQLite lives in a file.'
 				]
 			},
@@ -226,7 +226,7 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'p',
-				text: 'This project targets **Node 24.20.0**, codename Krypton, the active LTS line. Check what you have:'
+				text: 'This project targets **Node 24.21.0**, codename Krypton, the active LTS line. Check what you have:'
 			},
 			{ type: 'terminal', code: 'node --version' },
 			{
@@ -235,9 +235,9 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'terminal',
-				code: `nvm install 24.20.0
-nvm use 24.20.0
-node --version   # v24.20.0`
+				code: `nvm install 24.21.0
+nvm use 24.21.0
+node --version   # v24.21.0`
 			},
 			{
 				type: 'note',
@@ -256,7 +256,7 @@ node --version   # v24.20.0`
 				code: `
 {
 	"engines": {
-		"node": ">=24.20.0"
+		"node": ">=24.21.0"
 	}
 }`
 			},
@@ -268,11 +268,11 @@ node --version   # v24.20.0`
 			},
 			{
 				type: 'p',
-				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 11** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22 and you get:'
+				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 12** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22 and you get:'
 			},
 			{
 				type: 'terminal',
-				code: ` WARN  Unsupported engine: wanted: {"node":">=24.20.0"} (current: {"node":"v22.11.0","pnpm":"11.24.0"})`
+				code: ` WARN  Unsupported engine: wanted: {"node":">=24.21.0"} (current: {"node":"v22.11.0","pnpm":"12.10.1"})`
 			},
 			{
 				type: 'p',
@@ -287,7 +287,7 @@ node --version   # v24.20.0`
 				type: 'p',
 				text: 'Add an `.nvmrc` too, so `nvm use` in the project folder picks the right one with no arguments:'
 			},
-			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.20.0' },
+			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.21.0' },
 
 			{ type: 'h3', id: 'icu', text: 'A version really can change behaviour' },
 			{
@@ -319,10 +319,10 @@ new Intl.NumberFormat('en-US', {
 			},
 
 			{ type: 'h3', id: 'pnpm', text: 'pnpm' },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 11.x' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 12.x' },
 			{
 				type: 'checkpoint',
-				text: '`node --version` reports 24.20.0 or newer, and `pnpm --version` reports 11 or newer.'
+				text: '`node --version` reports 24.21.0 or newer, and `pnpm --version` reports 12 or newer.'
 			}
 		]
 	},

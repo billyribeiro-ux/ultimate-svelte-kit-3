@@ -35,7 +35,7 @@ const COURSE = {
 	lede: `A booking platform that tells the truth: which times are free, in whose
 		time zone, and what happens when two people tap the same eleven o'clock at
 		the same moment. Built from an empty folder to a tested, deployable app.`,
-	badges: ['SvelteKit 3 RC', 'Svelte 5 async', 'Node 24 LTS', 'Drizzle + libSQL'],
+	badges: ['SvelteKit 3.0', 'Svelte 5 async', 'Node 24 LTS', 'Drizzle + libSQL'],
 	closing: `Every chapter shows the real code from the finished project in
 		<code>halfpast-app</code>. Type it out rather than pasting where you can — the
 		errors you make and fix are the part that sticks.`

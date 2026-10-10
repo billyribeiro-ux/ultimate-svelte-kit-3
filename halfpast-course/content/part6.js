@@ -979,9 +979,9 @@ sveltekit({
 				code: `
 "dependencies": {
 	…
-	"@libsql/client": "^0.17.4",
-	"better-auth": "^1.7.2",
-	"drizzle-orm": "^0.45.2",
+	"@libsql/client": "^0.18.0",
+	"better-auth": "^1.7.7",
+	"drizzle-orm": "^0.45.4",
 	…
 }`
 			},
@@ -1007,15 +1007,15 @@ ssr: {
 				lang: 'json',
 				code: `
 "engines": {
-	"node": ">=24.20.0"
+	"node": ">=24.21.0"
 },
-"packageManager": "pnpm@11.24.0",`
+"packageManager": "pnpm@12.10.1",`
 			},
 			{
 				type: 'code',
 				file: '.nvmrc',
 				lang: 'text',
-				code: '24.20.0'
+				code: '24.21.0'
 			},
 			{
 				type: 'p',

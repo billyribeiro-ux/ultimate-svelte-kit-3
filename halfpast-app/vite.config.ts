@@ -124,7 +124,12 @@ export default defineConfig(({ mode }) => {
 					// Component tests — a real Chromium, not a DOM emulator. jsdom quietly
 					// lies about layout, focus and `matchMedia`, which are exactly the things
 					// a booking UI needs to get right.
-					extends: './vite.config.ts',
+					//
+					// No `extends` here. Since Vitest 5 an inline project inherits the config
+					// file that declares it — plugins, `ssr.external`, the lot — so pointing
+					// it back at this very file (the Vitest 4 idiom) is redundant, and now
+					// draws a warning about plugins being applied twice. `extends: false` is
+					// the opt-out, for a project that genuinely wants a blank slate.
 					test: {
 						name: 'client',
 						browser: {
@@ -139,7 +144,7 @@ export default defineConfig(({ mode }) => {
 				{
 					// Pure logic — plain Node, no browser, fast. The time engine and the
 					// booking rules live here, and they are the tests that matter most.
-					extends: './vite.config.ts',
+					// Inherits this file too, for the same reason as above.
 					test: {
 						name: 'server',
 						environment: 'node',

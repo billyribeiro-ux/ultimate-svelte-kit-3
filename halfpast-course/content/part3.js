@@ -3,7 +3,7 @@
  *
  * Configuration, identity, authorisation, and the module that actually takes a
  * booking. This is where SvelteKit 3's differences from Kit 2 show up most
- * sharply: no `svelte.config.js`, no `$env` magic modules, and hooks that get
+ * sharply: no `svelte.config.js`, `$env` magic modules deprecated, and hooks that get
  * told what kind of error they are looking at.
  */
 
@@ -12,12 +12,12 @@ export const part3 = [
 		slug: 'configuration-without-magic',
 		title: 'Configuration without magic',
 		summary:
-			'SvelteKit 3 deleted `svelte.config.js` and the `$env` modules. What replaced them is better, and stricter.',
+			'SvelteKit 3 deleted `svelte.config.js` and deprecated the `$env` modules. What replaced them is better, and stricter.',
 		goal: 'Every environment variable declared, validated and typed — and an app that refuses to start with a bad one.',
 		blocks: [
 			{
 				type: 'p',
-				text: 'Two things you may have muscle memory for no longer exist in SvelteKit 3.'
+				text: 'Two things you may have muscle memory for have changed in SvelteKit 3: one is gone, the other is on its way out.'
 			},
 
 			{ type: 'h3', id: 'no-config-file', text: 'One config file, not two' },
@@ -101,7 +101,7 @@ export default defineConfig(({ mode }) => {
 			{ type: 'h3', id: 'env', text: 'Environment variables, declared' },
 			{
 				type: 'p',
-				text: 'The `$env/static/private` and `$env/dynamic/private` modules are gone. In their place: a file you write, listing every variable the app reads.'
+				text: 'The `$env/static/private` and `$env/dynamic/private` modules are deprecated — they still resolve, with a warning, but SvelteKit 3 points you at `$app/env/private` and `$app/env/public` instead, and this app never imports the old ones. Behind the new modules: a file you write, listing every variable the app reads.'
 			},
 			{
 				type: 'code',

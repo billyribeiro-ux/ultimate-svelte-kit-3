@@ -15,7 +15,6 @@
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { hashPassword } from 'better-auth/crypto';
-import { createLocalAccountIssuer } from 'better-auth/db';
 import {
 	account,
 	availabilityRule,
@@ -126,6 +125,11 @@ console.log('· staff accounts');
  * itself rather than reimplemented — the hash format is its business, and a
  * hand-rolled scrypt call that is subtly different produces a user who cannot
  * log in and no error message explaining why.
+ *
+ * Sign-in finds this row by `(providerId, accountId)`, with `accountId` equal
+ * to the user's id — Better Auth 1.7.3 went back to that after a brief detour
+ * through an `issuer` column (see `auth.schema.ts`). Write exactly the fields
+ * the library itself writes, and nothing it no longer knows about.
  */
 async function createStaffUser(name: string, email: string) {
 	const userId = newId();
@@ -136,9 +140,6 @@ async function createStaffUser(name: string, email: string) {
 		id: newId(),
 		accountId: userId,
 		providerId: 'credential',
-		// Better Auth 1.7 filters sign-ins on the issuer as well as the provider,
-		// and asks its own helper for the value rather than guessing the format.
-		issuer: createLocalAccountIssuer('credential'),
 		userId,
 		password: await hashPassword(DEMO_PASSWORD)
 	});

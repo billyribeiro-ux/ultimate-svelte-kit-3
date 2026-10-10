@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
@@ -44,19 +44,17 @@ export const account = sqliteTable(
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
 		/*
-		 * Who vouches for this account, added as a required column in Better Auth
-		 * 1.7. OAuth accounts store the provider's issuer URL; password accounts
-		 * store the synthetic `local:credential`. Sign-in filters on it, so a row
-		 * without it is a user who exists and can never log in.
+		 * No `issuer` column, and there is a migration that removes one.
+		 *
+		 * Better Auth 1.7.0–1.7.2 made `issuer` a required column here and filtered
+		 * sign-ins on it; migration 0001 added it so that sign-in kept working.
+		 * 1.7.3 then restored the 1.6 schema — accounts are identified by
+		 * (providerId, accountId) again — and the `createLocalAccountIssuer` helper
+		 * the seed used vanished from `better-auth/db`. Migration 0002 drops the
+		 * column and its unique index, so the table once more matches what
+		 * `pnpm run auth:schema` generates. Two migrations that cancel out are the
+		 * honest record of tracking a dependency through a bad week.
 		 */
-		/*
-		 * The default exists for the migration, not for the application. SQLite
-		 * refuses to ADD a NOT NULL column without one, and every account that
-		 * predates the column is a password account, for which 'local:credential'
-		 * is the correct value. Better Auth always writes issuer explicitly, so
-		 * the default never fires on a new row.
-		 */
-		issuer: text('issuer').notNull().default('local:credential'),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -78,12 +76,7 @@ export const account = sqliteTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull()
 	},
-	(table) => [
-		index('account_userId_idx').on(table.userId),
-		// Mirrors the unique constraint Better Auth 1.7 declares for this table:
-		// one account per (issuer, accountId) pair.
-		uniqueIndex('account_issuer_accountId_idx').on(table.issuer, table.accountId)
-	]
+	(table) => [index('account_userId_idx').on(table.userId)]
 );
 
 export const verification = sqliteTable(

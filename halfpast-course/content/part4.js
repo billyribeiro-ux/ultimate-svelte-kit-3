@@ -156,15 +156,25 @@ export const addHours = command(hoursSchema, async (data) => {
 			},
 			{
 				type: 'code',
-				file: 'the client-side spelling of the same idea',
+				file: 'the client-side spelling of the same idea — both halves',
 				lang: 'ts',
 				code: `
-// When the component knows better than the server which queries to update:
-await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));`
+// In the component, when it knows better than the server which query
+// instances are on screen:
+await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));
+
+// …and in the command handler, which must *accept* that request. Since
+// SvelteKit 3.0 an unhandled client-requested refresh is an error: the query
+// lands in an error state in the browser. \`requested\` comes from '$app/server';
+// the second argument caps how many instances one request may ask for.
+for (const { query } of requested(getServices, 1)) {
+	void query.refresh();
+}
+// Shorthand for the same loop: await requested(getServices, 1).refreshAll();`
 			},
 			{
 				type: 'p',
-				text: 'This app never actually writes that line — its commands call `.refresh()` on the server, the way `addHours` does above, so every caller gets the fresh data without asking. `.updates()` is for the day only the calling component knows which queries are on screen.'
+				text: 'This app never actually writes those lines — its commands call `.refresh()` on the server, the way `addHours` does above, so every caller gets the fresh data without asking. `.updates()` is for the day only the calling component knows which queries are on screen — a filtered list, say — and it is a two-sided contract: the server must refresh, `set` or deliberately `ignore()` every instance the client asked for (`refreshAll()` and `ignoreAll()` are the bulk spellings), or that query errors on the client. The `limit` argument is not optional because the list comes from the browser, and each entry costs the server a validation and a re-fetch; an unbounded one would be a denial-of-service lever.'
 			},
 
 			{ type: 'h3', id: 'errors', text: 'One trap on the way back' },

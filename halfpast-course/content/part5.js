@@ -214,14 +214,21 @@ const serviceSlug = $derived(page.url.searchParams.get('service'));
 
 function pickService(slug: string | null) {
 	/*
+	 * Built with \`resolve()\`, not by copying and editing \`page.url\`.
+	 *
 	 * \`page.url\` is a \`ReadonlyURL\` in SvelteKit 3 — its \`searchParams\` has no
 	 * \`set\` or \`delete\`, and assigning to \`pathname\` throws. That is a good
 	 * change: mutating the page's URL object never did anything useful and
-	 * silently looked like it might. Copy it through \`href\` to get a real one.
+	 * silently looked like it might. The habit it breaks — copy the URL, poke
+	 * the query string, hand the copy to \`goto\` — has a better replacement
+	 * anyway: \`resolve\` accepts a route ID with the query string attached, so
+	 * the destination is typed, base-path-aware, and the same shape as every
+	 * other link in the app. \`svelte/no-navigation-without-resolve\` checks for
+	 * exactly that, and a raw \`URL\` can never satisfy it.
 	 */
-	const url = new URL(page.url.href);
-	if (slug) url.searchParams.set('service', slug);
-	else url.searchParams.delete('service');
+	const target = slug
+		? resolve(\`/book/[slug]?service=\${slug}\`, { slug: data.slug })
+		: resolve('/book/[slug]', { slug: data.slug });
 
 	/*
 	 * \`reset: false\` keeps the scroll position and the focused element.
@@ -230,7 +237,7 @@ function pickService(slug: string | null) {
 	 * mistake — a page that stays put but throws focus to \`<body>\` strands a
 	 * keyboard user in a place they cannot see.
 	 */
-	void goto(url, { reset: false });
+	void goto(target, { reset: false });
 }`
 			},
 			{
@@ -239,7 +246,7 @@ function pickService(slug: string | null) {
 			},
 			{
 				type: 'note',
-				text: 'Two SvelteKit 3 changes are visible in those twenty lines, and the comments explain both. Read them rather than skimming: `ReadonlyURL` and the merged `reset` option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.'
+				text: 'Two SvelteKit 3 changes are visible in those lines, and the comments explain both. Read them rather than skimming: `ReadonlyURL` — which retires the copy-and-mutate habit in favour of `resolve()` with a query string on the route ID — and the merged `reset` option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.'
 			},
 
 			{ type: 'h3', id: 'progressive', text: 'Revealing the form at the right moment' },

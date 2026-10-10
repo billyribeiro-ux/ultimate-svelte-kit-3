@@ -1,2 +1,20 @@
 allowBuilds:
   esbuild: true
+
+# pnpm 12 holds back any package published less than a day ago (`minimumReleaseAge`,
+# default 1440 minutes) as a supply-chain precaution. These three were younger than
+# that when the toolchain was pinned on 2026-10-09, so pnpm wrote them here itself.
+# Safe to delete once the versions are a day old.
+minimumReleaseAgeExclude:
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1
+
+# better-auth 1.7.7 (the latest) still declares `@sveltejs/kit: ^2` as a peer. Its
+# SvelteKit integration — `svelteKitHandler` in `src/hooks.server.ts` — only touches
+# `event`, `resolve` and `building`, none of which changed in Kit 3, and the sign-in
+# e2e tests exercise it against the real build. Widen the peer for that one dependent
+# rather than silence the warning globally; remove when better-auth lists Kit 3.
+peerDependencyRules:
+  allowedVersions:
+    'better-auth>@sveltejs/kit': '^3'

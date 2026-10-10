@@ -43,7 +43,14 @@
 	const serviceSlug = $derived(page.url.searchParams.get('service'));
 
 	/**
-	 * This page's own address, computed once and guarded.
+	 * A link to this page with a service chosen — built by `resolve()`, and guarded.
+	 *
+	 * `resolve` takes a route ID with a query string attached: `[slug]` is still
+	 * filled in from the params, and `?service=…` rides along. That keeps every
+	 * internal link on this page typed and base-path-aware, which is what the
+	 * `svelte/no-navigation-without-resolve` lint rule insists on — and it is
+	 * right to: a hand-assembled `href` is the one that breaks the day the app is
+	 * deployed under a sub-path.
 	 *
 	 * The guard is not defensive padding — without it this page intermittently
 	 * destroys itself, and the failure is thoroughly misleading.
@@ -60,9 +67,16 @@
 	 * empty server log because the server was never involved.
 	 *
 	 * The general rule: inside a template, any expression that reads route data
-	 * *and can throw* must tolerate that data being momentarily absent.
+	 * *and can throw* must tolerate that data being momentarily absent. Returning
+	 * `undefined` renders a link with no `href` for that one frame, which is
+	 * harmless; returning `''` would widen the type to a plain string and lose the
+	 * connection to `resolve()` that the linter checks for.
 	 */
-	const shopHref = $derived(data.slug ? resolve('/book/[slug]', { slug: data.slug }) : '');
+	function serviceHref(serviceSlug: string) {
+		return data.slug
+			? resolve(`/book/[slug]?service=${serviceSlug}`, { slug: data.slug })
+			: undefined;
+	}
 
 	/**
 	 * The viewer's own time zone.
@@ -239,14 +253,21 @@
 
 	function pickService(slug: string | null) {
 		/*
+		 * Built with `resolve()`, not by copying and editing `page.url`.
+		 *
 		 * `page.url` is a `ReadonlyURL` in SvelteKit 3 — its `searchParams` has no
 		 * `set` or `delete`, and assigning to `pathname` throws. That is a good
 		 * change: mutating the page's URL object never did anything useful and
-		 * silently looked like it might. Copy it through `href` to get a real one.
+		 * silently looked like it might. The habit it breaks — copy the URL, poke
+		 * the query string, hand the copy to `goto` — has a better replacement
+		 * anyway: `resolve` accepts a route ID with the query string attached, so
+		 * the destination is typed, base-path-aware, and the same shape as every
+		 * other link in the app. `svelte/no-navigation-without-resolve` checks for
+		 * exactly that, and a raw `URL` can never satisfy it.
 		 */
-		const url = new URL(page.url.href);
-		if (slug) url.searchParams.set('service', slug);
-		else url.searchParams.delete('service');
+		const target = slug
+			? resolve(`/book/[slug]?service=${slug}`, { slug: data.slug })
+			: resolve('/book/[slug]', { slug: data.slug });
 
 		/*
 		 * `reset: false` keeps the scroll position and the focused element.
@@ -255,7 +276,7 @@
 		 * mistake — a page that stays put but throws focus to `<body>` strands a
 		 * keyboard user in a place they cannot see.
 		 */
-		void goto(url, { reset: false });
+		void goto(target, { reset: false });
 	}
 
 	const countFor = (day: IsoDate) => slotsByDay.get(day)?.length ?? 0;
@@ -289,7 +310,7 @@
 			<ul class="services" role="list">
 				{#each shop.services as entry (entry.id)}
 					<li>
-						<a class="service" href="{shopHref}?service={entry.slug}">
+						<a class="service" href={serviceHref(entry.slug)}>
 							<span class="service-main">
 								<span class="service-name">{entry.name}</span>
 								{#if entry.description}

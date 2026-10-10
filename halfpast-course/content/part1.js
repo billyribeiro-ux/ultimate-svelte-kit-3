@@ -682,7 +682,12 @@ test: {
 			// Component tests — a real Chromium, not a DOM emulator. jsdom quietly
 			// lies about layout, focus and \`matchMedia\`, which are exactly the things
 			// a booking UI needs to get right.
-			extends: './vite.config.ts',
+			//
+			// No \`extends\` here. Since Vitest 5 an inline project inherits the config
+			// file that declares it — plugins, \`ssr.external\`, the lot — so pointing
+			// it back at this very file (the Vitest 4 idiom) is redundant, and now
+			// draws a warning about plugins being applied twice. \`extends: false\` is
+			// the opt-out, for a project that genuinely wants a blank slate.
 			test: {
 				name: 'client',
 				browser: {
@@ -697,7 +702,7 @@ test: {
 		{
 			// Pure logic — plain Node, no browser, fast. The time engine and the
 			// booking rules live here, and they are the tests that matter most.
-			extends: './vite.config.ts',
+			// Inherits this file too, for the same reason as above.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -713,6 +718,7 @@ test: {
 				items: [
 					'The **client** project runs in a real, headless Chromium — `provider: playwright()`, a function imported from `@vitest/browser-playwright` — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.',
 					'The **server** project is plain Node and starts instantly. All our time tests live here.',
+					'Neither project says `extends`. Vitest 5 makes an inline project inherit the file that declares it — the SvelteKit plugin, the `ssr.external` list, everything — so the Vitest 4 habit of pointing each project back at `./vite.config.ts` is gone, and repeating it earns a warning about plugins applied twice.',
 					'The naming convention does the routing: `foo.svelte.spec.ts` is a component test, `foo.spec.ts` is a server one.'
 				]
 			},

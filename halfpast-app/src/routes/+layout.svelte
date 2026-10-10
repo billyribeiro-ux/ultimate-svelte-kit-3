@@ -35,6 +35,19 @@
 			<nav class="nav" aria-label="Main">
 				<ThemeToggle />
 
+				<!--
+					Every link goes through `resolve()`, and always with a *route ID* — the
+					spelling with the leading slash. SvelteKit 3 also accepts a bare pathname
+					(`resolve('manage')`), and `sv migrate` rewrites parameterless links to
+					that form. Both spellings are type-checked against the generated
+					`$app/types`, and both fail svelte-check the moment `/manage` is renamed,
+					so that is not the reason to prefer one. We keep the route ID everywhere
+					because it is the one spelling that stays strict for every link: a
+					parameterised link is `resolve('/manage/[slug]', { slug })`, with `slug`
+					a required, typed param, whereas the pathname form only types it as
+					"manage/" followed by any string, and would accept a hand-built path with
+					the parameter missing. One spelling for all links, and the strictest one.
+				-->
 				{#if data.user}
 					<a
 						class="nav-link"

@@ -139,13 +139,23 @@ const timeZoneSchema = v.pipe(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">the client-side spelling of the same idea</span>
+		<span class="code__file">the client-side spelling of the same idea — both halves</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// When the component knows better than the server which queries to update:
-await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));</code></pre>
+	<pre><code class="lang-ts">// In the component, when it knows better than the server which query
+// instances are on screen:
+await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));
+
+// …and in the command handler, which must *accept* that request. Since
+// SvelteKit 3.0 an unhandled client-requested refresh is an error: the query
+// lands in an error state in the browser. `requested` comes from '$app/server';
+// the second argument caps how many instances one request may ask for.
+for (const { query } of requested(getServices, 1)) {
+	void query.refresh();
+}
+// Shorthand for the same loop: await requested(getServices, 1).refreshAll();</code></pre>
 </figure>
-<p>This app never actually writes that line — its commands call <code>.refresh()</code> on the server, the way <code>addHours</code> does above, so every caller gets the fresh data without asking. <code>.updates()</code> is for the day only the calling component knows which queries are on screen.</p>
+<p>This app never actually writes those lines — its commands call <code>.refresh()</code> on the server, the way <code>addHours</code> does above, so every caller gets the fresh data without asking. <code>.updates()</code> is for the day only the calling component knows which queries are on screen — a filtered list, say — and it is a two-sided contract: the server must refresh, <code>set</code> or deliberately <code>ignore()</code> every instance the client asked for (<code>refreshAll()</code> and <code>ignoreAll()</code> are the bulk spellings), or that query errors on the client. The <code>limit</code> argument is not optional because the list comes from the browser, and each entry costs the server a validation and a re-fetch; an unbounded one would be a denial-of-service lever.</p>
 <h3 id="errors">One trap on the way back</h3>
 <p>When a command calls <code>error(400, 'A shift has to end after it starts.')</code>, the browser sees SvelteKit's <code>HttpError</code>. And <code>HttpError</code> <strong>does not extend <code>Error</code></strong>.</p>
 
