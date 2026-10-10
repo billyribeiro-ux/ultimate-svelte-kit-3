@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Configuration without magic — Building Halfpast</title>
-<meta name="description" content="SvelteKit 3 deleted `svelte.config.js` and deprecated the `$env` modules. What replaced them is better, and stricter.">
+<meta name="description" content="SvelteKit 3 no longer supports svelte.config.js, and it deprecates the $env modules. What replaced them is better, and stricter.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,11 +33,11 @@
 		<article>
 			<p class="eyebrow">Chapter 15</p>
 			<h1>Configuration without magic</h1>
-			<p class="lede">SvelteKit 3 deleted <code>svelte.config.js</code> and deprecated the <code>$env</code> modules. What replaced them is better, and stricter.</p>
+			<p class="lede">SvelteKit 3 no longer supports <code>svelte.config.js</code>, and it deprecates the <code>$env</code> modules. What replaced them is better, and stricter.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Every environment variable declared, validated and typed — and an app that refuses to start with a bad one.</p></aside>
 			<p>Two things you may have muscle memory for have changed in SvelteKit 3: one is gone, the other is on its way out.</p>
 <h3 id="no-config-file">One config file, not two</h3>
-<p>There is no <code>svelte.config.js</code>. Everything that used to live in it now goes inside the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>.</p>
+<p>There is no <code>svelte.config.js</code>, because SvelteKit 3 no longer supports one. Everything that lived in it in SvelteKit 2 now goes inside the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>, and the options that used to sit under <code>kit</code> are top-level plugin options now, side by side with <code>compilerOptions</code>.</p>
 
 <figure class="code">
 	<figcaption>
@@ -95,14 +95,14 @@
 });</code></pre>
 </figure>
 <p>Three details in there are worth knowing before they cost you an evening:</p>
-<ul><li>The config is a <strong>function</strong>, so it can call <code>loadEnv</code>. It has to be, because <code>paths.origin</code> needs a value from <code>.env</code> and Vite has not loaded those when a plain object literal is evaluated. Note <code>...process.env</code> last — a real environment variable must win over a checked-in <code>.env</code> file.</li><li><code>sveltePhosphorOptimize()</code> comes <strong>after</strong> <code>sveltekit()</code>. Icon plugins rewrite imports that SvelteKit has to see first; reverse them and you get a build that succeeds and ships every icon in the library.</li><li><code>ssr.external</code> tells Vite not to bundle the native libSQL binary. Together with keeping it in <code>dependencies</code>, this is what stops the runtime <code>Cannot find module</code> we met in chapter 10.</li></ul>
+<ul><li>The config is a <strong>function</strong>, so it can call <code>loadEnv</code>. It has to be, because <code>paths.origin</code> needs a value from <code>.env</code> and Vite has not loaded those when a plain object literal is evaluated. Note <code>...process.env</code> last — a real environment variable must win over a checked-in <code>.env</code> file.</li><li><code>sveltePhosphorOptimize()</code> comes <strong>after</strong> <code>sveltekit()</code>. It rewrites <code>import { CalendarIcon } from 'phosphor-svelte'</code> into a deep import, so the dev server does not crawl thousands of icon components on a cold start, and it parses its input as JavaScript. Vite runs <code>transform</code> hooks in array order, so put it first and it is handed raw <code>.svelte</code> source and dies on the first <code>&lt;h1&gt;</code>. A loud failure, at least.</li><li><code>ssr.external</code> tells Vite not to bundle the native libSQL binary. Together with keeping it in <code>dependencies</code>, this is what stops the runtime <code>Cannot find module</code> we met in chapter 10.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>paths.origin — new in 3.0, and not optional here</h4>
-	<p>It is the origin SvelteKit trusts for cross-site request checks. <code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime; the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. A plain-HTTP preview server therefore computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and *every* form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
+	<p>It is the origin SvelteKit trusts for cross-site request checks. Up to v5, <code>@sveltejs/adapter-node</code> read that origin from an <code>ORIGIN</code> environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. (This app still declares an <code>ORIGIN</code> of its own in <code>src/env.ts</code>, for Better Auth in the next chapter; the adapter no longer looks at it.) A plain-HTTP preview server therefore computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and <em>every</em> form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
 </aside>
 <h3 id="env">Environment variables, declared</h3>
-<p>The <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules are deprecated — they still resolve, with a warning, but SvelteKit 3 points you at <code>$app/env/private</code> and <code>$app/env/public</code> instead, and this app never imports the old ones. Behind the new modules: a file you write, listing every variable the app reads.</p>
+<p>In SvelteKit 2, environment variables came from the <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules. SvelteKit 3 deprecates them, and SvelteKit 4 will remove them, in favour of <code>$app/env/private</code> and <code>$app/env/public</code>; this app never imports the old ones. Behind the new modules: a file you write, listing every variable the app reads.</p>
 
 <figure class="code">
 	<figcaption>
@@ -153,7 +153,7 @@ export const variables = defineEnvVars({
 	// …
 });</code></pre>
 </figure>
-<ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a *type error*, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
+<ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a <em>type error</em>, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
 
 <figure class="code">
 	<figcaption>

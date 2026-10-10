@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CSV: a streaming parser in a worker, and a streamed export — Building Abacus</title>
-<meta name="description" content="RFC 4180 with the lenient parts every real file needs, as a state machine that takes chunks of any size. A Web Worker feeds it from `File.stream()` and reports progress. Export goes the other way as a `ReadableStream` response.">
+<meta name="description" content="RFC 4180 with the lenient parts every real file needs, as a state machine that takes chunks of any size. A Web Worker feeds it from File.stream() and reports progress. Export goes the other way as a ReadableStream response.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -167,39 +167,32 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/csv/parse.spec.ts<span class="code__lines">:37-64</span></span>
+		<span class="code__file">src/lib/csv/parse.spec.ts<span class="code__lines">:37-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	it('produces the same rows however the input is chunked', () =&gt; {
-		const text = 'name,quote,n\r\n&quot;Ada, L.&quot;,&quot;she said &quot;&quot;hello&quot;&quot;\nand left&quot;,1\r\nBob,&quot;&quot;,2\n&quot;end&quot;';
-		const whole = parseCsv(text);
-		expect(whole).toEqual([
-			['name', 'quote', 'n'],
-			['Ada, L.', 'she said &quot;hello&quot;\nand left', '1'],
-			['Bob', '', '2'],
-			['end']
-		]);
+	<pre><code class="lang-ts">it('produces the same rows however the input is chunked', () =&gt; {
+	const text = 'name,quote,n\r\n&quot;Ada, L.&quot;,&quot;she said &quot;&quot;hello&quot;&quot;\nand left&quot;,1\r\nBob,&quot;&quot;,2\n&quot;end&quot;';
+	const whole = parseCsv(text);
+	expect(whole).toEqual([
+		['name', 'quote', 'n'],
+		['Ada, L.', 'she said &quot;hello&quot;\nand left', '1'],
+		['Bob', '', '2'],
+		['end']
+	]);
 
-		// Every chunk size from one character up: the streaming state must be
-		// right at every possible boundary, including inside `&quot;&quot;` and after `\r`.
-		for (let size = 1; size &lt;= text.length; size += 1) {
-			const parser = new CsvParser();
-			const rows: string[][] = [];
-			for (let i = 0; i &lt; text.length; i += size)
-				rows.push(...parser.push(text.slice(i, i + size)));
-			rows.push(...parser.finish());
-			expect(rows, `chunk size ${size}`).toEqual(whole);
-		}
-	});
-
-	it('keeps multi-byte text intact', () =&gt; {
-		expect(parseCsv('café,naïve,日本語')).toEqual([['café', 'naïve', '日本語']]);
-	});
-});
-
-describe('writing', () =&gt; {</code></pre>
+	// Every chunk size from one character up: the streaming state must be
+	// right at every possible boundary, including inside `&quot;&quot;` and after `\r`.
+	for (let size = 1; size &lt;= text.length; size += 1) {
+		const parser = new CsvParser();
+		const rows: string[][] = [];
+		for (let i = 0; i &lt; text.length; i += size)
+			rows.push(...parser.push(text.slice(i, i + size)));
+		rows.push(...parser.finish());
+		expect(rows, `chunk size ${size}`).toEqual(whole);
+	}
+});</code></pre>
 </figure>
-<p>The test that matters for a streaming parser: the same rows however the input is chunked. It feeds a nasty string one character at a time, in threes, and whole, and expects the same result each way.</p>
+<p>The test that matters for a streaming parser: the same rows however the input is chunked. It feeds a nasty string in chunks of every size from one character to the whole string, and expects the same rows every time.</p>
 <h3 id="the-worker">The worker</h3>
 
 <figure class="code">
@@ -446,7 +439,7 @@ export function* csvLines(doc: Document, locale: string): Generator&lt;string&gt
 	});
 };</code></pre>
 </figure>
-<p>The response body is a <code>ReadableStream</code> that pulls one row at a time from a generator. The first bytes leave the server before the last row has been formatted, a sheet with a hundred thousand rows never exists as one string, and cancelling the download cancels the generator. Values travel *formatted*, as a person would read them, because a CSV is for people and other programs, not for the engine.</p>
+<p>The response body is a <code>ReadableStream</code> that pulls one row at a time from a generator. The first bytes leave the server before the last row has been formatted, a sheet with a hundred thousand rows never exists as one string, and cancelling the download cancels the generator. Values travel <em>formatted</em>, as a person would read them, because a CSV is for people and other programs, not for the engine.</p>
 
 <figure class="code">
 	<figcaption>

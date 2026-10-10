@@ -282,7 +282,7 @@ export const getRuntime = query(async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:99-107</span></span>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:99-106</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;label class=&quot;field limit&quot;&gt;
@@ -292,8 +292,7 @@ export const getRuntime = query(async () =&gt; {
 
 &lt;svelte:boundary&gt;
 	&lt;!-- `$state.snapshot`: a plain copy of the filters object for the remote function, with no proxy in it. --&gt;
-	{const spans = $derived(await getSpans($state.snapshot(filters)))}
-	&lt;div class=&quot;table-wrap&quot;&gt;</code></pre>
+	{const spans = $derived(await getSpans($state.snapshot(filters)))}</code></pre>
 </figure>
 <p><code>$state.snapshot(filters)</code> — the right use of it, this time (compare ch. 14). <code>filters</code> is a <code>$state</code> object, and the remote function wants plain data with no proxy in it; for a plain object, <code>$state.snapshot</code> is exactly that. Change the limit and the derived re-awaits.</p>
 

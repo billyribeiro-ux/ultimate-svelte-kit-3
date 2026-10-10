@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:1-47</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:1-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -88,14 +88,15 @@ export interface Melodic extends Voice {
 	duration: number;
 }
 
-/** Between `min` and `max`, by `unit` in `[0, 1]`. */</code></pre>
+/** Between `min` and `max`, by `unit` in `[0, 1]`. */
+const lerp = (min: number, max: number, unit: number) =&gt; min + (max - min) * unit;</code></pre>
 </figure>
 <p>The header makes the one promise every function keeps: nothing plays *now*; everything plays *then*. Each voice takes a <code>time</code> on the context’s clock and schedules its nodes to start there. That is how Web Audio wants to be used — chapter 12 explains why — and it is also what lets the same functions render a whole pattern to a file through an <code>OfflineAudioContext</code>, which is a <code>BaseAudioContext</code> like the live one except that it runs as fast as it can.</p>
 <h3 id="noise-and-envelopes">Noise and envelopes</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:50-92</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:50-84</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -132,25 +133,25 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 	gain.gain.setValueAtTime(Math.max(peak, 0.0001), time);
 	gain.gain.exponentialRampToValueAtTime(0.0001, time + seconds);
 	return gain;
-}
-
-/**
- * KICK
- * ----
- * A sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen
- * milliseconds. The fall *is* the &quot;click&quot; at the front of a kick; the tail is
- * the sine settling at its low pitch and fading. `tone` sets how high the
- * pitch starts, `decay` how long the tail lasts.</code></pre>
+}</code></pre>
 </figure>
 <p>Two helpers. The noise buffer is made once per context and kept in a <code>WeakMap</code>, because an <code>OfflineAudioContext</code> is created per export and thrown away — a plain <code>Map</code> would keep every one of them alive. The envelope is a gain that opens instantly and closes exponentially, and the <code>0.0001</code> is not a typo: exponential ramps cannot reach zero, so the target is a value quiet enough to be silence and the node is stopped just after.</p>
 <h3 id="drums">How a drum is made</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:94-112</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:86-105</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function kick(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	<pre><code class="lang-ts">/**
+ * KICK
+ * ----
+ * A sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen
+ * milliseconds. The fall *is* the &quot;click&quot; at the front of a kick; the tail is
+ * the sine settling at its low pitch and fading. `tone` sets how high the
+ * pitch starts, `decay` how long the tail lasts.
+ */
+export function kick(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
 	const seconds = lerp(0.15, 0.9, v.decay);
 	const osc = ctx.createOscillator();
 	osc.type = 'sine';
@@ -161,23 +162,23 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 	osc.connect(env).connect(out);
 	osc.start(v.time);
 	osc.stop(v.time + seconds + 0.05);
-}
-
-/**
- * SNARE
- * -----
- * Two things at once, which is what a real snare is: a drum head (a short
- * triangle wave around 180Hz) and the wires underneath it (band-passed noise).
- * `tone` tilts the balance towards the noise; `decay` lengthens the wires.</code></pre>
+}</code></pre>
 </figure>
 <p>A kick is a sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen milliseconds. The fall *is* the click at the front; the tail is the sine settling at its low pitch and fading. <code>tone</code> sets how high the pitch starts, <code>decay</code> how long the tail lasts. Every drum below is the same three questions with different answers.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:114-136</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:107-136</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function snare(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	<pre><code class="lang-ts">/**
+ * SNARE
+ * -----
+ * Two things at once, which is what a real snare is: a drum head (a short
+ * triangle wave around 180Hz) and the wires underneath it (band-passed noise).
+ * `tone` tilts the balance towards the noise; `decay` lengthens the wires.
+ */
+export function snare(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
 	const peak = velocityGain(v.velocity);
 	const seconds = lerp(0.12, 0.4, v.decay);
 
@@ -204,10 +205,44 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:166-195</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:138-156</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function clap(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	<pre><code class="lang-ts">/**
+ * HI-HAT
+ * ------
+ * High-passed noise and nothing else. A closed hat is a very short one; the
+ * `decay` knob opens it. `tone` moves the high-pass cutoff — lower is darker,
+ * higher is thinner and more like a shaker.
+ */
+export function hat(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
+	const seconds = lerp(0.03, 0.35, v.decay);
+	const source = noise(ctx);
+	const filter = ctx.createBiquadFilter();
+	filter.type = 'highpass';
+	filter.frequency.value = lerp(5000, 11000, v.tone);
+
+	const env = envelope(ctx, v.time, velocityGain(v.velocity) * 0.6, seconds);
+	source.connect(filter).connect(env).connect(out);
+	source.start(v.time);
+	source.stop(v.time + seconds + 0.05);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:158-188</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * CLAP
+ * ----
+ * A clap is several people not clapping at quite the same moment: three or
+ * four very short bursts of noise, ten milliseconds apart, then one longer
+ * tail. Rendering it as one burst sounds like a snare with the head removed;
+ * the stagger is the whole character.
+ */
+export function clap(ctx: BaseAudioContext, out: AudioNode, v: Voice): void {
 	const peak = velocityGain(v.velocity);
 	const filter = ctx.createBiquadFilter();
 	filter.type = 'bandpass';
@@ -229,14 +264,7 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 		burst.start(at);
 		burst.stop(at + (isTail ? 0.5 : 0.03));
 	}
-}
-
-/**
- * BASS
- * ----
- * A sawtooth through a low-pass filter whose cutoff *moves* — it opens with
- * the note and closes as it decays. That moving filter is the sound of every
- * analogue synth bass ever recorded. `tone` is how far the filter opens.</code></pre>
+}</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -247,10 +275,17 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:197-232</span></span>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:190-225</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function bass(ctx: BaseAudioContext, out: AudioNode, v: Melodic): void {
+	<pre><code class="lang-ts">/**
+ * BASS
+ * ----
+ * A sawtooth through a low-pass filter whose cutoff *moves* — it opens with
+ * the note and closes as it decays. That moving filter is the sound of every
+ * analogue synth bass ever recorded. `tone` is how far the filter opens.
+ */
+export function bass(ctx: BaseAudioContext, out: AudioNode, v: Melodic): void {
 	const peak = velocityGain(v.velocity) * 0.7;
 	const release = lerp(0.05, 0.4, v.decay);
 	const end = v.time + v.duration + release;
@@ -278,16 +313,50 @@ function envelope(ctx: BaseAudioContext, time: number, peak: number, seconds: nu
 	osc.connect(filter).connect(gain).connect(out);
 	osc.start(v.time);
 	osc.stop(end + 0.02);
-}
+}</code></pre>
+</figure>
 
-/**
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/audio/voices.ts<span class="code__lines">:227-260</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
  * LEAD
  * ----
  * Two detuned square waves — the second a few cents sharp — which is where the
  * width comes from, through a gentler filter than the bass. `tone` brightens,
- * `decay` lengthens the release.</code></pre>
+ * `decay` lengthens the release.
+ */
+export function lead(ctx: BaseAudioContext, out: AudioNode, v: Melodic): void {
+	const peak = velocityGain(v.velocity) * 0.35;
+	const release = lerp(0.08, 0.6, v.decay);
+	const end = v.time + v.duration + release;
+
+	const filter = ctx.createBiquadFilter();
+	filter.type = 'lowpass';
+	filter.frequency.value = lerp(900, 6000, v.tone);
+	filter.Q.value = 1;
+
+	const gain = ctx.createGain();
+	gain.gain.setValueAtTime(0.0001, v.time);
+	gain.gain.exponentialRampToValueAtTime(peak, v.time + 0.01);
+	gain.gain.setValueAtTime(peak, v.time + v.duration);
+	gain.gain.exponentialRampToValueAtTime(0.0001, end);
+	filter.connect(gain).connect(out);
+
+	for (const detune of [-6, 6]) {
+		const osc = ctx.createOscillator();
+		osc.type = 'square';
+		osc.frequency.value = v.frequency;
+		osc.detune.value = detune;
+		osc.connect(filter);
+		osc.start(v.time);
+		osc.stop(end + 0.02);
+	}
+}</code></pre>
 </figure>
-<p>A sawtooth through a low-pass filter whose cutoff *moves* — open with the note, closing as it decays. That moving filter is the sound of every analogue synth bass ever recorded, and <code>tone</code> is how far it opens. The lead is two square waves detuned a few cents apart, which is where its width comes from.</p>
+<p>A sawtooth through a low-pass filter whose cutoff *moves* — open with the note, closing as it decays. That moving filter is the sound of every analogue synth bass ever recorded, and <code>tone</code> is how far it opens. The lead is two square waves, one six cents flat and one six cents sharp — which is where its width comes from — through a gentler filter than the bass.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

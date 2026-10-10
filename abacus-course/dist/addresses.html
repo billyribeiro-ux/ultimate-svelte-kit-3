@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Addresses: where a cell is — Building Abacus</title>
-<meta name="description" content="`B3` is column 1, row 2. One small module translates between the letters people use and the numbers the code uses, and packs a cell’s position into one number for a `Map` key.">
+<meta name="description" content="B3 is column 1, row 2. One small module translates between the letters people use and the numbers the code uses, and packs a cell’s position into one number for a Map key.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -68,7 +68,7 @@ export interface Address {
 	col: number;
 }</code></pre>
 </figure>
-<p>The comment at the top says the thing that matters: a sheet is *sparse*. A million-row grid with forty cells in it must not allocate the million rows. So cells live in a <code>Map</code> keyed by one number, and the number is <code>row * MAX_COLS + col</code>. With 16,384 columns and 1,048,576 rows that is 2³⁴, comfortably inside the 2⁵³ a JavaScript number can hold exactly, and cheaper to hash than the string <code>&quot;B3&quot;</code> would be.</p>
+<p>The comment at the top says the thing that matters: a sheet is <em>sparse</em>. A million-row grid with forty cells in it must not allocate the million rows. So cells live in a <code>Map</code> keyed by one number, and the number is <code>row * MAX_COLS + col</code>. With 16,384 columns and 1,048,576 rows that is 2³⁴, comfortably inside the 2⁵³ a JavaScript number can hold exactly, and cheaper to hash than the string <code>&quot;B3&quot;</code> would be.</p>
 <h3 id="letters">Letters to numbers and back</h3>
 
 <figure class="code">
@@ -127,7 +127,7 @@ export function parseA1(text: string): Address | null {
 
 <aside class="callout callout--why">
 	<h4>Why parseA1 ignores dollar signs</h4>
-	<p><code>$A$1</code> means “do not move this reference when the formula is copied”. That is a fact about *formulas*, not about *addresses*: the cell is the same cell either way. So the address module does not know about dollars at all, and the parser (ch. 07) records them on the reference node where they belong. A module that knows less has fewer ways to be wrong.</p>
+	<p><code>$A$1</code> means “do not move this reference when the formula is copied”. That is a fact about <em>formulas</em>, not about <em>addresses</em>: the cell is the same cell either way. So the address module does not know about dollars at all, and the parser (ch. 07) records them on the reference node where they belong. A module that knows less has fewer ways to be wrong.</p>
 </aside>
 <h3 id="the-key">The key, and the rectangle</h3>
 
@@ -196,7 +196,7 @@ export function parseRect(text: string): Rect | null {
 	return to ? rect(from, to) : null;
 }</code></pre>
 </figure>
-<p>A <code>Rect</code> is inclusive at both corners and *normalised*: <code>rect(a, b)</code> always puts the smaller row on top, so nothing downstream has to handle a selection dragged upwards. <code>rectToA1</code> prints <code>A1:C3</code>, or just <code>A1</code> for a single cell, which is what the formula bar inserts when you click a cell while typing a formula.</p>
+<p>A <code>Rect</code> is inclusive at both corners and <em>normalised</em>: <code>rect(a, b)</code> always puts the smaller row on top, so nothing downstream has to handle a selection dragged upwards. <code>rectToA1</code> prints <code>A1:C3</code>, or just <code>A1</code> for a single cell, which is what the formula bar inserts when you click a cell while typing a formula.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -1,6 +1,6 @@
 /**
  * PART 9 — Proving it, and running it
- * (chapters 42–45)
+ * (chapters 41–44)
  *
  * A phone, two browser contexts, the verification gate, and a last chapter on
  * what to do with all of this. The theme of this part is that a collaborative
@@ -388,6 +388,10 @@ export default defineConfig({
 				text: 'Five steps, in an order chosen so the fastest thing that can fail fails first. Running it takes about ninety seconds, which is short enough that there is no excuse.'
 			},
 			{
+				type: 'note',
+				text: 'One oddity in that line: the steps are chained with `npm run`, in a project pinned to pnpm. It works, because npm comes with Node and `npm run` only runs another script from this same `package.json`. But it is a leftover rather than a decision, and so is the `npm run build` in chapter 42’s Playwright config. In your own scripts, `pnpm run` is the consistent spelling.'
+			},
+			{
 				type: 'ul',
 				items: [
 					'**`check`** — `svelte-kit sync`, then `svelte-check`, then `tsc` over the service worker with its own config. The last is separate because a service worker has `WebWorker` lib and no DOM, and type-checking it with the app’s `tsconfig` is meaningless in both directions.',
@@ -512,7 +516,7 @@ node build/index.js`
 				type: 'ol',
 				items: [
 					'**The server owns permission; the data structure owns merging.** Almost every design question in a collaborative system resolves to "which of those two is this?", and the answer is usually obvious once the question is asked.',
-					'**Before removing work, say out loud what would have to be true for the removal to be safe.** Three of the four bugs in chapter 25 would have died at that sentence.',
+					'**Before removing work, say out loud what would have to be true for the removal to be safe.** Three of the four bugs in chapter 24 would have died at that sentence.',
 					'**When two failure directions have different costs, pick the algorithm that can only fail in the cheap one.** Deliver twice rather than risk delivering zero; echo an operation rather than risk dropping one.',
 					'**A guard belongs where the bad thing can still be prevented, and where the party being refused is the party at fault.** The clock check was in the wrong tier for a fortnight and read as defensive the whole time.',
 					'**Determinism beats polish in a shared document.** Hysteresis on arrow routing would look better and would make two people see different diagrams.',
@@ -525,7 +529,7 @@ node build/index.js`
 				type: 'ul',
 				items: [
 					'**Add a seventh node kind.** It touches `types.ts`, one schema in `ops.ts`, one switch in `NodeShape.svelte` and three catalogues — and nothing else. If it touches anything else, that is a layering bug worth finding.',
-					'**Add a fourth language.** One folder, per chapter 34. Time yourself.',
+					'**Add a fourth language.** One folder, per chapter 33. Time yourself.',
 					'**Break something on purpose.** Put the echo filter back in `client.svelte.ts` and watch the restore test fail *only after a reload*. Then delete a line from the convergence spec’s shuffle and watch two hundred seeds stop finding anything.',
 					'**Make the hub multi-instance.** It is one file, and it is the most realistic piece of production work left in the project.'
 				]

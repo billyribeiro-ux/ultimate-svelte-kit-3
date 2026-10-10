@@ -126,6 +126,13 @@ export function absoluteUrl(path: string): string {
  * without supplying a `slug`. This conditional type filters any route ID containing a
  * `[` out of the union, so the nav can only ever hold routes that are safe to link
  * to directly — and `resolve(href)` type-checks without needing a params argument.
+ *
+ * On the leading slash: SvelteKit 3's `resolve()` accepts either a route ID
+ * (`'/features'`, always with a leading slash) or a pathname (`'features'`, never
+ * with one). We store route IDs on purpose — a pathname is just a string that
+ * happens to exist today, whereas a route ID is checked against the union above.
+ * Both forms may carry a `?search` or `#hash` suffix, which is how the blog links
+ * to an author's section on `/about`.
  */
 export type StaticRoute = Exclude&lt;PageRouteId, `${string}[${string}`&gt;;
 
@@ -151,7 +158,7 @@ export const primaryNav: readonly NavLink[] = [
 </aside>
 <p>The <code>Exclude&lt;..., \</code>\${string}[\${string}\<code>&gt;</code> bit is a conditional type that removes anything containing a <code>[</code> — so dynamic routes like <code>/blog/[slug]</code>, which you can't link to without supplying a slug, can't end up in the nav by accident.</p>
 <h3 id="features">Features, pricing, FAQ, team, posts</h3>
-<p>The rest follow the same pattern: an exported <code>interface</code>, then a <code>readonly</code> array. Here is the shape of the features module:</p>
+<p>The rest follow the same pattern: an exported <code>interface</code>, then a <code>readonly</code> array. Here is the shape of the features module — the first of its six features in full, with each <code>// …</code> standing for code left out (the long <code>detail</code> copy, and the five features that follow the same shape):</p>
 
 <figure class="code">
 	<figcaption>
@@ -188,10 +195,10 @@ export const features: readonly Feature[] = [
 			'Filter by premium, size, expiry, moneyness or ticker'
 		]
 	},
-	// …five more
+	// …
 ];</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Icons are stored as <strong>strings</strong>, not imported components. A <code>.ts</code> data file importing <code>.svelte</code> files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.</p></aside>
+<aside class="callout callout--note"><p>Icons are stored as <strong>strings</strong>, not imported components. A <code>.ts</code> data file importing <code>.svelte</code> files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.</p></aside>
 <p>Build out <code>pricing.ts</code>, <code>faq.ts</code>, <code>team.ts</code> and <code>posts.ts</code> the same way. The full contents are in the finished project — the pattern matters more than the copy.</p>
 <h3 id="posts-blocks">One decision worth copying: blog posts as blocks</h3>
 

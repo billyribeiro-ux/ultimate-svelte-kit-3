@@ -96,7 +96,7 @@ export const part3 = [
 			},
 
 			{ type: 'h3', id: 'templates', text: 'Templates' },
-			code('src/lib/sheet/templates.ts', 19, 36, { partial: true }),
+			code('src/lib/sheet/templates.ts', 19, 57, { partial: true }),
 			code('src/lib/sheet/templates.ts', 159, 179),
 			{
 				type: 'p',
@@ -125,6 +125,10 @@ export const part3 = [
 			{
 				type: 'p',
 				text: 'The header states the two ideas of the class. The engine is plain `Map`s; this class publishes one number. Undo is commands with inverses rather than snapshots, because a sheet can be megabytes and project 6’s two-kilobyte snapshots would not survive contact with it.'
+			},
+			{
+				type: 'note',
+				text: 'The header’s “chapter 10” is the project’s own numbering for the hand-written engine, which is chapter 09 here. The note in chapter 08 has the whole mapping.'
 			},
 			code('src/lib/sheet/sheet.svelte.ts', 46, 65),
 			code('src/lib/sheet/sheet.svelte.ts', 67, 111, { partial: true }),
@@ -251,6 +255,10 @@ export const part3 = [
 				type: 'p',
 				text: 'The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”.'
 			},
+			{
+				type: 'note',
+				text: 'Both of the header’s “chapter 10”s mean the hand-written engine, which is chapter 09 here: the project numbers its chapters differently from this course. The note in chapter 08 has the whole mapping.'
+			},
 			code('src/lib/lesson/reactive.svelte.ts', 37, 78),
 			{
 				type: 'p',
@@ -268,7 +276,7 @@ export const part3 = [
 				type: 'p',
 				text: 'Both sheets start from the same nine formulas. `edit` writes the same input into both and records how many cells each evaluated — the engine reports it in its `Recalc`; the reactive side is read in full so the deriveds run now, and the difference in the counter is the answer.'
 			},
-			code('src/routes/(app)/lesson/+page.svelte', 112, 148),
+			code('src/routes/(app)/lesson/+page.svelte', 112, 147),
 			{
 				type: 'why',
 				title: 'Why each reactive cell is wrapped in a boundary',

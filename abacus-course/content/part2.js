@@ -23,6 +23,10 @@ export const part2 = [
 				type: 'p',
 				text: 'Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a `Map` from cell to readers, but *range* references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.'
 			},
+			{
+				type: 'note',
+				text: 'The header’s “Chapter 12” is the project’s own numbering: it means chapter 17 here, the `$derived` version of this engine. The note in chapter 08 has the whole mapping.'
+			},
 
 			{ type: 'h3', id: 'a-cell', text: 'What a cell is' },
 			code('src/lib/engine/engine.ts', 55, 93),
@@ -54,7 +58,7 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'recalculation', text: 'The recalculation' },
-			code('src/lib/engine/engine.ts', 383, 461),
+			code('src/lib/engine/engine.ts', 383, 436, { partial: true }),
 			{
 				type: 'p',
 				text: 'Step one collects the dirty set: the seeds, every volatile cell (`RAND()`, `NOW()`), and everything downstream, transitively. Step two counts in-degrees — but only among dirty *formulas*. A dirty literal was just typed and is already final; it holds nothing back. That distinction is the bug the first version had, and the comment is where it was fixed.'
@@ -192,15 +196,15 @@ export const part2 = [
 				type: 'p',
 				text: 'The idea is old and underused: build the *obviously correct* version — no indexes, no dirty sets, rebuild the whole graph every time — and check that the clever version agrees with it on inputs nobody chose. The two share the parser and the evaluator, which have their own tests, and nothing else. `mulberry32` is a seedable generator so that a failure prints a seed and can be replayed.'
 			},
-			code('src/lib/engine/engine.property.spec.ts', 38, 82),
+			code('src/lib/engine/engine.property.spec.ts', 38, 80),
 			{
 				type: 'p',
 				text: 'Random inputs are the part that takes judgement. A quarter numbers, some empties, a few awkward literals (`TRUE`, `\'abc`), and formulas over random cells and ranges with the whole operator set — including divisions that will be by zero and references that will be circular. A generator that only produces valid, sensible formulas tests only valid, sensible formulas.'
 			},
-			code('src/lib/engine/engine.property.spec.ts', 83, 144),
+			code('src/lib/engine/engine.property.spec.ts', 82, 144),
 			{
 				type: 'p',
-				text: 'The from-scratch evaluator finds cycle members on the *static* graph with the same `cyclicMembers` — that function is shared on purpose, because its correctness is a graph-theory fact tested elsewhere — then resolves every formula recursively, memoising as it goes. It is twenty lines because it does not have to be fast.'
+				text: 'The from-scratch evaluator finds cycle members on the *static* graph with the same `cyclicMembers` — that function is shared on purpose, because its correctness is a graph-theory fact tested elsewhere — then resolves every formula recursively, memoising as it goes. There is nothing clever in its sixty lines, because it does not have to be fast.'
 			},
 			code('src/lib/engine/engine.property.spec.ts', 146, 204),
 			{

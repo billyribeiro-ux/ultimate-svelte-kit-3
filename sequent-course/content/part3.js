@@ -1,5 +1,5 @@
 /**
- * PART 3 — Projections, the ledger, and reading (chapters 18–22)
+ * PART 3 — Projections, the ledger, and reading (chapters 17–21)
  *
  * The engine decides what happened. This part writes it down in shapes a screen
  * can read quickly — and every one of those shapes is a cache that can be
@@ -62,7 +62,13 @@ case 'order_cancelled': {
 				filled = quantity - ?,
 				updated_at = ?
 			WHERE order_id = ?\`,
-		args: [event.remainingQuantity, event.reason, event.remainingQuantity, record.at, event.orderId]
+		args: [
+			event.remainingQuantity,
+			event.reason,
+			event.remainingQuantity,
+			record.at,
+			event.orderId
+		]
 	});
 	break;
 }`
@@ -524,11 +530,23 @@ export const ROLES = ['trader', 'risk_manager', 'firm_admin', 'auditor', 'venue_
 const ALLOWED: Readonly<Record<Role, readonly Action[]>> = {
 	trader: ['place_order', 'cancel_order', 'view_orders', 'view_positions'],
 
-	risk_manager: ['cancel_firm_orders', 'view_orders', 'view_positions', 'view_ledger',
-	               'set_risk_limits', 'engage_kill_switch'],
+	risk_manager: [
+		'cancel_firm_orders',
+		'view_orders',
+		'view_positions',
+		'view_ledger',
+		'set_risk_limits',
+		'engage_kill_switch'
+	],
 
-	firm_admin: ['view_orders', 'view_positions', 'view_ledger', 'manage_users',
-	             'manage_api_keys', 'cancel_firm_orders'],
+	firm_admin: [
+		'view_orders',
+		'view_positions',
+		'view_ledger',
+		'manage_users',
+		'manage_api_keys',
+		'cancel_firm_orders'
+	],
 
 	// Reads everything, writes nothing. Note it can see the ledger and the audit
 	// log, which a trader cannot — more visibility, less power.
@@ -614,11 +632,7 @@ export function can(viewer: Viewer, action: Action, target: Target = {}): Decisi
  * as \`forbidden\`.**
  */
 export type DenialReason =
-	| 'not_found'
-	| 'forbidden'
-	| 'account_not_assigned'
-	| 'missing_scope'
-	| 'inactive';`
+	'not_found' | 'forbidden' | 'account_not_assigned' | 'missing_scope' | 'inactive';`
 			},
 
 			{ type: 'h3', id: 'exhaustive', text: 'Tested exhaustively, and that is not a figure of speech' },
@@ -689,10 +703,16 @@ if (!decision.allowed) error(403, 'Your role does not allow that.');`
 				lang: 'ts',
 				code: `
 /*
+ * The server-side control. Hiding the nav link is manners; this is the rule.
+ *
  * Gated on \`view_ledger\` rather than \`view_positions\`, and the difference
- * matters: every trader can see their own positions, so the first version let
- * traders straight into the risk console. \`view_ledger\` is held by exactly the
- * roles this screen is for — risk managers, firm admins and auditors.
+ * matters: every trader can see their own positions, so the first version of
+ * this let traders straight into the risk console. \`view_ledger\` is held by
+ * exactly the roles this screen is for — risk managers, firm admins and
+ * auditors.
+ *
+ * The lesson generalises: gate a screen on the permission that *describes*
+ * it, not on the first permission that happens to sound related.
  */
 const decision = can(locals.viewer, 'view_ledger', { firmId: locals.viewer.firmId });
 if (!decision.allowed) error(403, 'Your role does not allow that.');`
@@ -814,10 +834,12 @@ export function verifySecret(secret: string, stored: string): boolean {
 /*
  * A key is always a \`trader\`, whatever its scopes say.
  *
- * Scopes narrow; they never promote. A key cannot be an admin because no human
- * reviews what an algorithm decides to do at 400 orders a second, and the blast
- * radius of a compromised key should not include the firm's user list.
+ * Scopes narrow; they never promote. A key cannot be an admin because no
+ * human reviews what an algorithm decides to do at 400 orders a second, and
+ * the blast radius of a compromised key should not include the firm's user
+ * list.
  */
+// …
 const viewer: Viewer = {
 	userId: \`key:\${keyId}\`,
 	firmId,
@@ -856,6 +878,20 @@ accountIds: accountId ? [accountId] : await accountsFor(client, \`key:\${keyId}\
 				file: 'packages/store/src/tenancy.ts',
 				lang: 'ts',
 				code: `
+/*
+ * A pinned key trades exactly one account; an unpinned one trades all of the
+ * firm's.
+ *
+ * The \`account_assignment\` table is keyed on \`venue_user\`, and a key is not a
+ * user — so looking a key up there returns nothing, always. An earlier
+ * version of this function did exactly that, and the result was an unpinned
+ * key that authenticated perfectly and then refused every order it sent, for
+ * a reason no log line explained.
+ *
+ * Pinning stays the recommendation for an algorithm: a key that can only
+ * trade one desk cannot, when it misbehaves at three in the morning,
+ * misbehave on all of them.
+ */
 const accountIds = accountId ? [accountId] : await allAccountsOf(client, firmId);`
 			},
 			{
@@ -895,12 +931,22 @@ const accountIds = accountId ? [accountId] : await allAccountsOf(client, firmId)
 /*
  * Identity is stamped on **before** the command is parsed, not after.
  *
- * The order is the point. A client that could name its own firm could trade as
- * anybody, so \`firmId\` and \`actorId\` are overwritten with the viewer's — and
- * doing it first means a client-supplied value is never even syntactically
+ * The order is the point. A client that could name its own firm could trade
+ * as anybody, so \`firmId\` and \`actorId\` are overwritten with the viewer's —
+ * and doing it first means a client-supplied value is never even syntactically
  * meaningful. There is no window in which a parsed command carries a firm
  * somebody else chose.
+ *
+ * Doing it the other way round — parse, then overwrite — also worked, and had
+ * a subtler cost: the schema required a \`firmId\`, so every caller had to
+ * invent one purely to have it thrown away. The public API's first order was
+ * rejected with \`Expected "firmId" but received undefined\`, which is a
+ * confusing thing to tell somebody about a field they are not allowed to set.
  */
+if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+	error(400, 'A command must be an object.');
+}
+
 const claimed = {
 	...(input as Record<string, unknown>),
 	firmId: viewer.firmId,
@@ -917,6 +963,10 @@ try {
 			{
 				type: 'warn',
 				text: 'This is the single most important line in the gateway, and it is one line — which is exactly why it is easy to leave out. Without it, `{"firmId": "lowfield", ...}` in a request body lets Northgate trade as Lowfield.'
+			},
+			{
+				type: 'p',
+				text: 'The `typeof` guard comes first because spreading something that is not an object is perfectly legal JavaScript: `{ ...\'abc\' }` is `{ 0: \'a\', 1: \'b\', 2: \'c\' }`. Without the guard, a request body that was a string or an array would reach the schema as a heap of numbered keys, and the 400 would complain about missing fields instead of naming the real mistake.'
 			},
 
 			{ type: 'h3', id: 'ordering-bug', text: 'Why it moved from after to before' },
@@ -971,10 +1021,10 @@ const ACTION_FOR: Record<Command['kind'], Action> = {
  * The flag check goes **after** authorisation and before the append.
  *
  * After, because "the venue is paused" is not something to tell somebody who
- * was not allowed to send this anyway — that would leak which commands exist to
- * whoever is probing. Before the append, because a paused venue must not put
- * the command in the log at all: a log entry is a promise the engine will apply
- * it, and pausing means not making that promise.
+ * was not allowed to send this anyway — that would leak which commands exist
+ * to whoever is probing. Before the append, because a paused venue must not
+ * put the command in the log at all: a log entry is a promise the engine will
+ * apply it, and pausing means not making that promise.
  */
 const flag = FLAG_FOR[authorised.kind];
 if (flag && !(await flags.enabled(flag))) {

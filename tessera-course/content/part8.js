@@ -1,6 +1,6 @@
 /**
  * PART 8 — The rest of the product
- * (chapters 36–41)
+ * (chapters 35–40)
  *
  * Six features, each chosen because it needs a different part of the platform:
  * progressive forms, a fold over a log, a Web Worker, a custom element, a
@@ -338,7 +338,7 @@ export const postComment = form(
 			},
 			{
 				type: 'p',
-				text: 'A `form()` rather than a `command()`, for the reason from chapter 32 — it works without JavaScript — and for a second reason specific to this shape: `postComment.for(threadId)` gives every reply box its own instance from one definition.'
+				text: 'A `form()` rather than a `command()`, for the reason from chapter 31 — it works without JavaScript — and for a second reason specific to this shape: `postComment.for(threadId)` gives every reply box its own instance from one definition.'
 			},
 			{
 				type: 'code',
@@ -407,6 +407,10 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 			{
 				type: 'p',
 				text: 'Spread the bare `postComment` into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. `.for(id)` is the fix and it is four characters.'
+			},
+			{
+				type: 'note',
+				text: 'One line in that block is older syntax than the rest. `{@const reply = …}` is how this file declares the per-thread instance, and it still compiles; but since Svelte 5.56 the documentation calls `{@const}` legacy in favour of a declaration tag — `{const reply = $derived(postComment.for(thread.id))}` — which, unlike `{@const}`, is not confined to sitting directly inside a block. Write the declaration-tag form in new code.'
 			},
 			{
 				type: 'note',
@@ -828,7 +832,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 			},
 			{
 				type: 'note',
-				text: 'The cross-origin isolation headers from chapter 34 are what make `SharedArrayBuffer` available to this worker. They are scoped to the application’s own pages rather than set globally, because `require-corp` also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.'
+				text: 'The cross-origin isolation headers set in `hooks.server.ts` are what make `SharedArrayBuffer` available to this worker (the dev server gets the same two from `vite.config.ts`). In the built app they are scoped to the application’s own pages rather than set globally, because `require-corp` also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.'
 			},
 
 			{
@@ -1192,7 +1196,7 @@ import { resolve } from '$app/paths';`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 split the old `$service-worker` module apart. The build manifest is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build id is `version` from `$app/env`, and `$app/service-worker` now exports only a correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four "has no exported member" errors at once, which at least says so plainly.'
+				text: 'SvelteKit 3 removed the old `$service-worker` module and split what it exported apart. The build manifest is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build id is `version` from `$app/env`, and `$app/service-worker` is new, and exports only a correctly-typed `self`. Leave the SvelteKit 2 import exactly as it was and the type checker says `$service-worker` cannot be found at all. Repoint the same names at `$app/service-worker`, which is the obvious-looking fix, and you get four "has no exported member" errors instead, one each for `build`, `files`, `prerendered` and `version`. The comment above describes only the second. Both mean the same thing: the names moved, to `$app/manifest` and `$app/env`.'
 			},
 			{
 				type: 'code',

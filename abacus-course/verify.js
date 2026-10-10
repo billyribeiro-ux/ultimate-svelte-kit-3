@@ -14,7 +14,7 @@
  * as wrong to a reader as a stale paste, and no amount of byte-comparison
  * notices.
  *
- * So this checks six things a person would otherwise have to check by eye:
+ * So this checks nine things a person would otherwise have to check by eye:
  *
  *   1. the file exists;
  *   2. the range is inside it;
@@ -25,7 +25,15 @@
  *      cheap and surprisingly effective proxy for "this is a whole thing";
  *   6. every chapter has at least one code or terminal block, because a chapter
  *      of pure prose in a course about building something is usually a chapter
- *      that lost its code in an edit.
+ *      that lost its code in an edit;
+ *   7. no two blocks in one chapter quote the same lines of the same file — a
+ *      reader who meets a step twice on one page assumes it is two steps;
+ *   8. no block, `partial` or not, ends on a line that only opens something
+ *      (`switch (key) {`, `<div`) or on a comment about code it does not show;
+ *   9. in a `.svelte` file, the markup in a whole block balances: every
+ *      `{#if}`, `{#each}`, `{#snippet}` and every element it opens, it closes,
+ *      and it closes nothing it did not open. Brackets cannot see this — a
+ *      slice that stops between `{/each}` and `</div>` balances perfectly.
  *
  * Run:  node abacus-course/verify.js
  */
@@ -103,8 +111,184 @@ function balanced(text) {
 	return depth === 0;
 }
 
+/**
+ * Which lines of a `.svelte` file are markup, as opposed to the inside of the
+ * top-level `<script>` or `<style>`.
+ *
+ * This has to be decided from the whole file, not from the slice: a slice of
+ * TypeScript is full of `<Drag | null>` and `Map<string, Cell>`, which look
+ * exactly like tags to anything that only sees the slice. The top-level tags
+ * start in column 0 in every component this project has, and the opening and
+ * closing tag lines count as script or style — so a block may quote the top of
+ * a script, or the bottom of one, without being told it left a tag open.
+ *
+ * @param {string[]} lines
+ */
+function markupLines(lines) {
+	/** @type {boolean[]} */
+	const markup = [];
+	/** @type {string | null} */
+	let inside = null;
+
+	for (const line of lines) {
+		if (inside) {
+			markup.push(false);
+			if (line.startsWith(`</${inside}>`)) inside = null;
+			continue;
+		}
+		const open = /^<(script|style)\b/.exec(line);
+		if (open) {
+			markup.push(false);
+			if (!line.includes(`</${open[1]}>`)) inside = open[1];
+			continue;
+		}
+		markup.push(true);
+	}
+
+	return markup;
+}
+
+/**
+ * The index just past the `}` that closes the `{` at `i`, or -1 if the text ends
+ * first. Strings and template literals are skipped, so `{x ? '}' : y}` and
+ * `` style:--hl={`var(--h-${n})`} `` are one expression each.
+ *
+ * @param {string} text
+ * @param {number} i
+ */
+function skipExpression(text, i) {
+	const stack = ['{'];
+	i += 1;
+
+	while (i < text.length && stack.length > 0) {
+		const ch = text[i];
+		const top = stack[stack.length - 1];
+
+		if (top === '`' || top === '"' || top === "'") {
+			if (ch === '\\') i += 2;
+			else if (top === '`' && ch === '$' && text[i + 1] === '{') {
+				stack.push('{');
+				i += 2;
+			} else {
+				if (ch === top) stack.pop();
+				i += 1;
+			}
+			continue;
+		}
+
+		if (ch === '"' || ch === "'" || ch === '`') stack.push(ch);
+		else if (ch === '{') stack.push('{');
+		else if (ch === '}') stack.pop();
+		i += 1;
+	}
+
+	return stack.length > 0 ? -1 : i;
+}
+
+const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+
+/**
+ * What is wrong with the structure of a piece of Svelte markup, or `null`.
+ *
+ * Template blocks and elements share one stack, because they have to nest
+ * inside each other: `{#if}<div>{/if}</div>` is as broken as an unclosed tag.
+ * Expressions in braces and quoted attribute values are skipped whole, so an
+ * arrow function's `>` in `onclick={() => …}` does not end a tag.
+ *
+ * @param {string} text
+ */
+function markupProblem(text) {
+	/** @type {string[]} */
+	const stack = [];
+	const shown = (/** @type {string} */ open) => (open.startsWith('{') ? `\`${open}\`` : `\`<${open}>\``);
+	let i = 0;
+
+	while (i < text.length) {
+		if (text.startsWith('<!--', i)) {
+			const end = text.indexOf('-->', i + 4);
+			if (end < 0) return 'ends inside an HTML comment';
+			i = end + 3;
+			continue;
+		}
+
+		const ch = text[i];
+
+		if (ch === '{') {
+			const end = skipExpression(text, i);
+			if (end < 0) return 'ends inside a `{…}` tag';
+			const tag = /^([#:/])(\w+)/.exec(text.slice(i + 1, end - 1).trim());
+			if (tag) {
+				const [, sigil, name] = tag;
+				const top = stack[stack.length - 1];
+				if (sigil === '#') stack.push(`{#${name}}`);
+				else if (sigil === ':') {
+					if (!top?.startsWith('{#')) return `has \`{:${name}}\` outside the block it belongs to`;
+				} else if (top === `{#${name}}`) stack.pop();
+				else return `closes \`{/${name}}\` without the \`{#${name}}\` that opens it`;
+			}
+			i = end;
+			continue;
+		}
+
+		if (ch === '<' && /[a-zA-Z/]/.test(text[i + 1] ?? '')) {
+			const closing = text[i + 1] === '/';
+			const start = i + (closing ? 2 : 1);
+			const name = /^[a-zA-Z][\w:.-]*/.exec(text.slice(start))?.[0];
+			if (!name) {
+				i += 1;
+				continue;
+			}
+
+			// Walk the attributes to the `>` that really ends the tag.
+			let j = start + name.length;
+			let selfClosing = false;
+			for (;;) {
+				if (j >= text.length) return `ends inside the tag \`<${closing ? '/' : ''}${name}\``;
+				const c = text[j];
+				if (c === '"' || c === "'") {
+					const end = text.indexOf(c, j + 1);
+					if (end < 0) return `ends inside the tag \`<${name}\``;
+					j = end + 1;
+				} else if (c === '{') {
+					const end = skipExpression(text, j);
+					if (end < 0) return `ends inside the tag \`<${name}\``;
+					j = end;
+				} else if (c === '>') {
+					selfClosing = text[j - 1] === '/';
+					j += 1;
+					break;
+				} else j += 1;
+			}
+
+			if (closing) {
+				if (stack[stack.length - 1] === name) stack.pop();
+				else return `closes \`</${name}>\` without the \`<${name}>\` that opens it`;
+			} else if (name === 'script' || name === 'style') {
+				// A `<script>` in markup (JSON-LD in a head, say) is opaque text.
+				const end = text.indexOf(`</${name}>`, j);
+				if (end < 0) return `ends inside a \`<${name}>\``;
+				j = end + name.length + 3;
+			} else if (!selfClosing && !VOID.has(name.toLowerCase())) {
+				stack.push(name);
+			}
+
+			i = j;
+			continue;
+		}
+
+		i += 1;
+	}
+
+	if (stack.length > 0) {
+		return `opens ${stack.map(shown).join(', ')} and never closes ${stack.length > 1 ? 'them' : 'it'}`;
+	}
+	return null;
+}
+
 for (const chapter of chapters) {
 	let blocks = 0;
+	/** @type {{ file: string, from: number, to: number }[]} */
+	const seen = [];
 
 	for (const block of chapter.blocks) {
 		if (block.type === 'terminal') {
@@ -155,6 +339,37 @@ for (const chapter of chapters) {
 		// Everything else is claiming to be a whole thing, and is held to it.
 		if (!block.partial && !balanced(body)) {
 			problems.push(`${where}: brackets do not balance — the slice cuts through something`);
+		}
+
+		// The same lines twice on one page: the second block is either a repeat
+		// nobody meant or a range that grew into its neighbour.
+		for (const other of seen) {
+			if (other.file === block.file && block.from <= other.to && other.from <= block.to) {
+				problems.push(`${where}: overlaps ${other.from}-${other.to} earlier in the same chapter`);
+			}
+		}
+		seen.push({ file: block.file, from: block.from, to: block.to });
+
+		// `partial` excuses a block from balancing, not from stopping somewhere
+		// sensible. A last line that only opens something shows the reader a door
+		// and no room; a last line that is a comment describes code that is not
+		// there. (`*/` is fine — that is the end of a comment, not the start.)
+		const end = last.trim();
+		if (/[{([]$/.test(end) || /^<[a-zA-Z][^>]*$/.test(end)) {
+			problems.push(`${where}: ends on a line that only opens something — "${end.slice(0, 50)}"`);
+		}
+		if (/^(\/\/|\/\*|<!--)/.test(end) && !/(\*\/|-->)$/.test(end)) {
+			problems.push(`${where}: ends on a comment about code it does not show — "${end.slice(0, 50)}"`);
+		}
+
+		if (block.file.endsWith('.svelte') && !block.partial) {
+			const markup = markupLines(lines);
+			const template = lines
+				.slice(block.from - 1, block.to)
+				.filter((_, k) => markup[block.from - 1 + k])
+				.join('\n');
+			const problem = markupProblem(template);
+			if (problem) problems.push(`${where}: the markup ${problem}`);
 		}
 	}
 

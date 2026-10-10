@@ -48,7 +48,7 @@ export const part2 = [
 			},
 			{
 				type: 'warn',
-				text: '`@libsql/client` and `drizzle-orm` go in **dependencies**, not `devDependencies`. Vite bundles devDependencies into the server build, and `@libsql/client` loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with `Cannot find module \'@libsql/linux-x64-gnu\'`. This cost real time on this project.'
+				text: '`@libsql/client` and `drizzle-orm` go in **dependencies**, not `devDependencies`. `adapter-node` bundles devDependencies into the server build, and `@libsql/client` loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with `Cannot find module \'@libsql/linux-x64-gnu\'`. This cost real time on this project.'
 			},
 
 			{ type: 'h3', id: 'connection', text: 'The connection' },

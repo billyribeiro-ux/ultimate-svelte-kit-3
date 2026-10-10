@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moving references: insert, delete, copy — Building Abacus</title>
-<meta name="description" content="Insert a row above `A5` and every `A5` becomes `A6`. Delete the column a formula reads and the reference becomes `#REF!`. Copy `=A1*2` one row down and it becomes `=A2*2` — unless it said `$A$1`. One mechanism does all three.">
+<meta name="description" content="Insert a row above A5 and every A5 becomes A6. Delete the column a formula reads and the reference becomes #REF!. Copy =A1*2 one row down and it becomes =A2*2 — unless it said $A$1. One mechanism does all three.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -106,7 +106,7 @@ export function rewriteFormula(source: string, mapper: Mapper): string {
 	return out;
 }</code></pre>
 </figure>
-<p>The mechanism: parse, walk the references in source order, decide the new text of each, and splice it back into the original string *from the end* so that earlier spans stay valid. Everything that is not a reference — spacing, casing, the person’s own choices — is left as it was. <code>null</code> from the mapper means “this reference points nowhere now”, and <code>#REF!</code> is written in its place: a value the evaluator understands, so the cell shows an error rather than failing to parse.</p>
+<p>The mechanism: parse, walk the references in source order, decide the new text of each, and splice it back into the original string <em>from the end</em> so that earlier spans stay valid. Everything that is not a reference — spacing, casing, the person’s own choices — is left as it was. <code>null</code> from the mapper means “this reference points nowhere now”, and <code>#REF!</code> is written in its place: a value the evaluator understands, so the cell shows an error rather than failing to parse.</p>
 <h3 id="structural">A structural change</h3>
 
 <figure class="code">
@@ -180,7 +180,7 @@ export function shiftFormula(source: string, shift: Shift): string {
 	);
 }</code></pre>
 </figure>
-<p>A range is subtler than a cell. Deleting row 5 from <code>SUM(A1:A10)</code> gives <code>SUM(A1:A9)</code> — the range *shrinks* — and it vanishes only when all of it is deleted. An insertion inside a range grows it; at or before its start moves it. Those are what a person means, and they are the cases the property test in the next chapter checks by inserting rows and deleting them again.</p>
+<p>A range is subtler than a cell. Deleting row 5 from <code>SUM(A1:A10)</code> gives <code>SUM(A1:A9)</code> — the range <em>shrinks</em> — and it vanishes only when all of it is deleted. An insertion inside a range grows it; at or before its start moves it. Those are what a person means, and they are the cases the property test in the next chapter checks by inserting rows and deleting them again.</p>
 
 <figure class="code">
 	<figcaption>
@@ -250,7 +250,7 @@ export function translateFormula(source: string, dRow: number, dCol: number): st
 	});
 }</code></pre>
 </figure>
-<p>Copying a formula is *translation*: relative parts move by the distance, absolute parts (<code>$</code>) stay. A reference pushed off the top or left of the sheet becomes <code>#REF!</code>, which is what every spreadsheet shows when you paste <code>=A1</code> into row 1 from row 2. The sheet model uses this for paste, for the fill handle and for sorting rows (ch. 16).</p>
+<p>Copying a formula is <em>translation</em>: relative parts move by the distance, absolute parts (<code>$</code>) stay. A reference pushed off the top or left of the sheet becomes <code>#REF!</code>, which is what every spreadsheet shows when you paste <code>=A1</code> into row 1 from row 2. The sheet model uses this for paste, for the fill handle and for sorting rows (ch. 16).</p>
 
 <figure class="code">
 	<figcaption>

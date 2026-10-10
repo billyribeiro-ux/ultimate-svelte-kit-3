@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>A Kit 3 app from nothing — Building Sequent</title>
-<meta name="description" content="No svelte.config.js, no $lib, and a tsconfig that has to say which files are yours.">
+<meta name="description" content="Kit 2's svelte.config.js and $lib are gone in Kit 3, and the tsconfig has to say which files are yours.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 22</p>
 			<h1>A Kit 3 app from nothing</h1>
-			<p class="lede">No svelte.config.js, no $lib, and a tsconfig that has to say which files are yours.</p>
+			<p class="lede">Kit 2's svelte.config.js and $lib are gone in Kit 3, and the tsconfig has to say which files are yours.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Create the venue app and understand every line of its configuration.</p></aside>
 			<p>We have a matching engine, a log, projections and a ledger. None of it has a screen. This part builds the SvelteKit 3 application that participants actually use, and it starts with configuration — not because configuration is interesting, but because Kit 3 moved four things and each one produces a confusing error if you carry a Kit 2 habit into it.</p>
 
@@ -46,7 +46,7 @@
 cd apps/web</code></pre>
 </figure>
 <p>That is the whole scaffold. There is no <code>npx sv create</code> step in this course because typing the files out is how you find out what each one is for.</p>
-<h3 id="no-svelte-config">There is no svelte.config.js</h3>
+<h3 id="no-svelte-config">Kit 2's svelte.config.js is gone</h3>
 <p>In Kit 2, <code>svelte.config.js</code> held the adapter, the aliases, the CSRF setting and the compiler options, and <code>vite.config.js</code> held Vite's. Two files, one project, and a constant low-level question of which one a given setting lived in. Kit 3 deletes the first: <strong>everything is an option on the <code>sveltekit()</code> Vite plugin.</strong></p>
 
 <figure class="code">
@@ -58,7 +58,7 @@ cd apps/web</code></pre>
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-node';
 
-/* … */
+// …
 export default defineConfig(({ mode }) =&gt; {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
@@ -68,7 +68,7 @@ export default defineConfig(({ mode }) =&gt; {
 				// …
 				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
 
-				/* … */
+				// …
 				csrf: { trustedOrigins: ['*'] },
 
 				compilerOptions: { runes: true, experimental: { async: true } },
@@ -83,15 +83,15 @@ export default defineConfig(({ mode }) =&gt; {
 });</code></pre>
 </figure>
 <p>Line by line, because every one of these is load-bearing:</p>
-<ul><li><strong><code>defineConfig(({ mode }) =&gt; …)</code></strong> — a *function*, not an object. <code>loadEnv</code> has to run before the plugin is constructed, because <code>paths.origin</code> needs a value out of <code>.env</code> and Vite has not read those yet when a plain object literal is evaluated. Write it as an object and <code>PUBLIC_ORIGIN</code> is <code>undefined</code> at exactly the moment it is needed.</li><li><strong><code>paths.origin</code></strong> — the origin the app believes it is served from. More on this in a moment; it is the single most surprising thing in the file.</li><li><strong><code>csrf.trustedOrigins</code></strong> — replaces Kit 2's <code>checkOrigin: false</code>. We set <code>['*']</code> and write our own check, for reasons that get a whole chapter.</li><li><strong><code>compilerOptions.runes: true</code></strong> — no legacy mode. Every component is runes-only, so a stray <code>export let</code> is an error rather than a silent reactivity mismatch.</li><li><strong><code>compilerOptions.experimental.async: true</code></strong> — turns on <code>await</code> inside <code>$derived</code> and in component markup. The terminal is built on it.</li><li><strong><code>experimental.remoteFunctions: true</code></strong> — turns on <code>.remote.ts</code> files. Forget it and every import from one resolves to nothing, with an error that does not mention the flag.</li><li><strong><code>ssr.external</code></strong> — <code>@libsql/client</code> loads a native <code>.node</code> binary. Vite cannot bundle that, and the error if it tries is a module-not-found for a file that plainly exists.</li></ul>
+<ul><li><strong><code>defineConfig(({ mode }) =&gt; …)</code></strong> — a *function*, not an object. <code>loadEnv</code> has to run before the plugin is constructed, because <code>paths.origin</code> needs a value out of <code>.env</code> and Vite has not read those yet when a plain object literal is evaluated. Write it as an object and <code>PUBLIC_ORIGIN</code> is <code>undefined</code> at exactly the moment it is needed.</li><li><strong><code>paths.origin</code></strong> — the origin the app believes it is served from. More on this in a moment; it is the single most surprising thing in the file.</li><li><strong><code>csrf.trustedOrigins</code></strong> — Kit 2 turned the check off with <code>checkOrigin: false</code>; Kit 3 removed that option, and <code>trustedOrigins: ['*']</code> is how you say the same thing now. We set <code>['*']</code> and write our own check, for reasons that get a whole chapter.</li><li><strong><code>compilerOptions.runes: true</code></strong> — no legacy mode. Every component is runes-only, so a Svelte 4 <code>export let</code> left in by habit is a compile error telling you to use <code>$props()</code>, rather than a component that quietly runs in legacy mode.</li><li><strong><code>compilerOptions.experimental.async: true</code></strong> — turns on <code>await</code> inside <code>$derived</code> and in component markup. The terminal is built on it.</li><li><strong><code>experimental.remoteFunctions: true</code></strong> — turns on <code>.remote.ts</code> files. Forget it and every remote module fails to compile, in <code>vite dev</code> and in the build alike. The error does at least name the flag and give you the exact snippet to add to the <code>sveltekit()</code> options.</li><li><strong><code>ssr.external</code></strong> — <code>@libsql/client</code> loads a native <code>.node</code> binary. Vite cannot bundle that, and the error if it tries is a module-not-found for a file that plainly exists.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>paths.origin is baked in at build time</h4>
 	<p>This is not a runtime setting. <code>adapter-node</code> v6 reads <code>paths.origin</code> during <code>vite build</code> and compiles the value into the output. Change your domain and you must <strong>rebuild</strong>, not restart. And when the value is absent the adapter falls back to reconstructing the origin from the <code>Host</code> header, assuming <code>https</code> — so a plain-HTTP preview computes <code>https://localhost:4173</code>, which never matches the real <code>http://localhost:4173</code>, and every single POST returns 403 with no explanation beyond &quot;Cross-site POST form submissions are forbidden&quot;.</p>
 </aside>
 <aside class="callout callout--note"><p>If a deployed Kit 3 app suddenly rejects every form and you changed nothing but the hostname, <code>paths.origin</code> is the first place to look — and a restart will not fix it.</p></aside>
-<h3 id="no-dollar-lib">There is no $lib either</h3>
-<p><code>$lib</code> is gone. Kit 3 uses <strong>Node subpath imports</strong> — a plain <code>package.json</code> feature that existed long before Kit and needs no bundler magic to understand.</p>
+<h3 id="no-dollar-lib">Kit 2's $lib is gone too</h3>
+<p>Kit 2 generated a <code>$lib</code> alias for you. Kit 3 does not: it uses <strong>Node subpath imports</strong> — a plain <code>package.json</code> feature that existed long before Kit and needs no bundler magic to understand.</p>
 
 <figure class="code">
 	<figcaption>
@@ -111,7 +111,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">anywhere in src/</span>
+		<span class="code__file">the same import, in Kit 2 and in Kit 3</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// Kit 2
@@ -127,7 +127,7 @@ import { db } from '#lib/server/db.ts';</code></pre>
 	<p>A <code>$lib</code> alias only exists inside the bundler. Run a file under plain <code>node</code>, feed it to a test runner that does not share the config, or point an editor at it without the plugin loaded, and the import is unresolvable. <code>#lib/*</code> is resolved by Node itself, so a script, a test, an editor and the bundler all agree without being told anything.</p>
 </aside>
 <h3 id="tsconfig">The tsconfig has to say which files are yours</h3>
-<p>This one cost an afternoon. <code>svelte-kit sync</code> generates a base config and you extend it, exactly as in Kit 2. What changed is that the Kit 3 base deliberately sets <strong>no <code>include</code> and no <code>exclude</code>.</strong></p>
+<p>This one cost an afternoon. You still extend a base config that <code>svelte-kit sync</code> generates, but two things changed. The base is now <code>$app/tsconfig</code> rather than Kit 2's <code>./.svelte-kit/tsconfig.json</code>. And the Kit 3 base deliberately sets <strong>no <code>include</code> and no <code>exclude</code>.</strong> The first is a one-line edit. The second is where the afternoon went.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -136,10 +136,10 @@ import { db } from '#lib/server/db.ts';</code></pre>
 	</figcaption>
 	<pre><code>$ pnpm --filter @sequent/web check
 
-...
+…
 build/server/chunks/index-BqK2v8.js:1:2847
   Error: Parameter 'e' implicitly has an 'any' type.
-...
+…
 2952 errors</code></pre>
 </figure>
 <p>Two thousand nine hundred and fifty-two type errors, none of them in code anybody wrote. With no <code>include</code>, TypeScript falls back to &quot;every file under this directory&quot;, so <code>svelte-check</code> walked into <code>build/</code> and type-checked the app's own minified production output. The fix is to say what you meant:</p>
@@ -150,10 +150,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
-	// …
+	…
 	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
 
-	/* … */
+	…
 	&quot;include&quot;: [
 		&quot;src/**/*.ts&quot;,
 		&quot;src/**/*.js&quot;,
@@ -166,7 +166,7 @@ build/server/chunks/index-BqK2v8.js:1:2847
 
 	&quot;compilerOptions&quot;: {
 		&quot;strict&quot;: true,
-		// …
+		…
 		&quot;noUncheckedIndexedAccess&quot;: true,
 		&quot;noImplicitOverride&quot;: true,
 		&quot;noFallthroughCasesInSwitch&quot;: true,

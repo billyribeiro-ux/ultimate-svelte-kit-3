@@ -35,7 +35,7 @@
 			<h1>Testing time with Vitest</h1>
 			<p class="lede">Setting up Vitest properly, then writing the tests that would otherwise take six months to run.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A green test run that includes both clock changes, a half-hour-offset zone, and a window that runs past midnight.</p></aside>
-			<p>The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, in two hemispheres, in under a second.</p>
+			<p>The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, a zone that sits 45 minutes off the hour, and a shift that runs past midnight, in under a second.</p>
 <h3 id="setup">Two test environments, one config</h3>
 <p>Our project needs two kinds of unit test: server-side ones that run in Node, and component ones that need a browser DOM. Vitest calls these <strong>projects</strong>, and one config file describes both.</p>
 
@@ -200,6 +200,8 @@ import {
 const LONDON = 'Europe/London';
 // …
 const iso = (instant: number) =&gt; new Date(instant).toISOString();
+
+// …
 
 describe('wallClockToInstant — the mornings clocks move', () =&gt; {
 	/*

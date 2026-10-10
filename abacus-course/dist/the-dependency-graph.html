@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The dependency graph — Building Abacus</title>
-<meta name="description" content="A spreadsheet is a graph that recalculates itself. Cells in a `Map`, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.">
+<meta name="description" content="A spreadsheet is a graph that recalculates itself. Cells in a Map, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -77,7 +77,8 @@
  * `engine.spec.ts` are what would let you make it safely.
  */</code></pre>
 </figure>
-<p>Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a <code>Map</code> from cell to readers, but *range* references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.</p>
+<p>Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a <code>Map</code> from cell to readers, but <em>range</em> references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.</p>
+<aside class="callout callout--note"><p>The header’s “Chapter 12” is the project’s own numbering: it means chapter 17 here, the <code>$derived</code> version of this engine. The note in chapter 08 has the whole mapping.</p></aside>
 <h3 id="a-cell">What a cell is</h3>
 
 <figure class="code">
@@ -223,7 +224,7 @@ apply(edits: Edit[]): Recalc {
 	return this.#recalculate(seeds);
 }</code></pre>
 </figure>
-<p>A paste of a hundred cells is one batch, one topological sort and one version bump, rather than a hundred. Note the three outcomes per edit: an empty input with a general format *deletes* the entry — empty is the absence of a cell — an unchanged input keeps the compiled cell and only updates its format, and anything else is compiled, indexed and added to the seeds.</p>
+<p>A paste of a hundred cells is one batch, one topological sort and one version bump, rather than a hundred. Note the three outcomes per edit: an empty input with a general format <em>deletes</em> the entry — empty is the absence of a cell — an unchanged input keeps the compiled cell and only updates its format, and anything else is compiled, indexed and added to the seeds.</p>
 
 <figure class="code">
 	<figcaption>
@@ -332,7 +333,7 @@ apply(edits: Edit[]): Recalc {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:383-461</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:383-436</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#recalculate(seeds: Set&lt;number&gt;): Recalc {
@@ -388,39 +389,14 @@ apply(edits: Edit[]): Recalc {
 		}
 	};
 
-	drain();
-
-	// 4. Whatever is left is in a cycle, or downstream of one. The members of
-	//    each cycle — the strongly connected components of what remains — are
-	//    marked #CYCLE!; everything downstream is then evaluated normally and
-	//    sees that error as a value, exactly as it would see #DIV/0!.
-	const cycles: number[] = [];
-	const remaining = new Set([...indegree.keys()].filter((k) =&gt; !done.has(k)));
-	if (remaining.size &gt; 0) {
-		const members = cyclicMembers(remaining, (k) =&gt;
-			[...this.#dependents(k)].filter((f) =&gt; remaining.has(f))
-		);
-		for (const k of members) {
-			const cell = this.cells.get(k)!;
-			if (!(cell.value instanceof ErrorValue &amp;&amp; cell.value.code === '#CYCLE!')) changed.push(k);
-			cell.value = CYCLE();
-			cycles.push(k);
-			done.add(k);
-		}
-		for (const k of members) release(k);
-		drain();
-	}
-
-	this.version += 1;
-	return { changed, cycles, evaluated };
-}</code></pre>
+	drain();</code></pre>
 </figure>
-<p>Step one collects the dirty set: the seeds, every volatile cell (<code>RAND()</code>, <code>NOW()</code>), and everything downstream, transitively. Step two counts in-degrees — but only among dirty *formulas*. A dirty literal was just typed and is already final; it holds nothing back. That distinction is the bug the first version had, and the comment is where it was fixed.</p>
+<p>Step one collects the dirty set: the seeds, every volatile cell (<code>RAND()</code>, <code>NOW()</code>), and everything downstream, transitively. Step two counts in-degrees — but only among dirty <em>formulas</em>. A dirty literal was just typed and is already final; it holds nothing back. That distinction is the bug the first version had, and the comment is where it was fixed.</p>
 <p>Step three is Kahn’s algorithm. Evaluate every formula with no unevaluated precedents, then <code>release</code> its dependents — decrement their counts and enqueue any that reach zero. A formula is evaluated only after everything it reads has been, which is the guarantee that makes the value right the first time rather than eventually.</p>
 
 <aside class="callout callout--why">
 	<h4>Why this is what $derived does</h4>
-	<p>Svelte’s runtime keeps, for each <code>$derived</code>, the set of signals it read last time. When a signal changes, the runtime marks the deriveds that read it dirty, transitively, and recomputes them on demand in dependency order — never reading a stale value, never computing a diamond twice. Rename <code>Map</code> to “signal”, <code>#direct</code> to “reactions”, and the dirty set to “marked”, and this function is the scheduler. The difference is that the framework discovers edges by running the function, where the engine reads them out of a parsed formula — and that the framework has no notion of a cycle being a *value*. Chapter 17 puts the two next to each other.</p>
+	<p>Svelte’s runtime keeps, for each <code>$derived</code>, the set of signals it read last time. When a signal changes, the runtime marks the deriveds that read it dirty, transitively, and recomputes them on demand in dependency order — never reading a stale value, never computing a diamond twice. Rename <code>Map</code> to “signal”, <code>#direct</code> to “reactions”, and the dirty set to “marked”, and this function is the scheduler. The difference is that the framework discovers edges by running the function, where the engine reads them out of a parsed formula — and that the framework has no notion of a cycle being a <em>value</em>. Chapter 17 puts the two next to each other.</p>
 </aside>
 
 <figure class="code">
@@ -457,7 +433,7 @@ apply(edits: Edit[]): Recalc {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what the dirty set contains after editing A1 when B1 reads A1 and C1 reads B1.</li><li>You can explain why a dirty *literal* has no in-degree entry and what goes wrong if it does.</li><li>You can point at the line where a formula is evaluated and the line that releases its dependents.</li></ul>
+	<ul><li>You can say what the dirty set contains after editing A1 when B1 reads A1 and C1 reads B1.</li><li>You can explain why a dirty <em>literal</em> has no in-degree entry and what goes wrong if it does.</li><li>You can point at the line where a formula is evaluated and the line that releases its dependents.</li></ul>
 </aside>
 		</article>
 

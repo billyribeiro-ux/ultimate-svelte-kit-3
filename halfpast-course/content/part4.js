@@ -2,8 +2,10 @@
  * PART 4 — Remote functions and async Svelte (chapters 20–23)
  *
  * The part of SvelteKit 3 that changes how you write everything else. Load
- * functions and form actions are gone; in their place are typed functions you
- * import into a component and call.
+ * functions and form actions still exist, but this app keeps its load functions
+ * to small jobs (passing a route parameter on, finding who is signed in,
+ * guarding the owner's pages) and has no form actions at all. The data layer is
+ * typed functions you import into a component and call.
  */
 
 export const part4 = [
@@ -31,8 +33,8 @@ import { form, getRequestEvent, query } from '$app/server';
 export const getBookingPage = query(slugSchema, async (slug): Promise<BookingPageData> => {
 	const found = await db.query.business.findFirst({ where: eq(business.slug, slug) });
 	if (!found) error(404, 'We could not find that business.');
+
 	// …
-	return { /* … */ };
 });`
 			},
 			{
@@ -132,7 +134,12 @@ export const addHours = command(hoursSchema, async (data) => {
 		error(400, 'A shift has to end after it starts.');
 	}
 
-	await db.insert(availabilityRule).values({ /* … */ });
+	await db.insert(availabilityRule).values({
+		staffId: data.staffId,
+		weekday: data.weekday,
+		startMinute: data.startMinute,
+		endMinute: data.endMinute
+	});
 
 	void getHours({ slug: data.slug }).refresh();
 	publishDiaryChange(context.business.id);
@@ -163,10 +170,10 @@ export const addHours = command(hoursSchema, async (data) => {
 // instances are on screen:
 await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));
 
-// …and in the command handler, which must *accept* that request. Since
-// SvelteKit 3.0 an unhandled client-requested refresh is an error: the query
-// lands in an error state in the browser. \`requested\` comes from '$app/server';
-// the second argument caps how many instances one request may ask for.
+// …and in the command handler, which must *accept* that request. An
+// unhandled client-requested refresh is an error: the query lands in an error
+// state in the browser. \`requested\` comes from '$app/server'; the second
+// argument caps how many instances one request may ask for.
 for (const { query } of requested(getServices, 1)) {
 	void query.refresh();
 }
@@ -245,17 +252,35 @@ export function messageFrom(thrown: unknown, fallback: string): string {
 				code: `
 <form {...book} class="stack stack-lg">
 	<!-- … -->
-	<input {...book.fields.name.as('text')} … />
+	<input {...book.fields.slug.as('hidden', data.slug)} />
+	<input {...book.fields.serviceId.as('hidden', service.id)} />
+	<input {...book.fields.viewerTimeZone.as('hidden', viewerZone)} />
+
 	<!-- … -->
-	<input {...book.fields.email.as('email')} … />
+
+	<input
+		{...book.fields.name.as('text')}
+		{id}
+		aria-describedby={describedBy}
+		aria-invalid={invalid}
+		autocomplete="name"
+		placeholder="Sam Okafor"
+	/>
+
 	<!-- … -->
+
 	<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
+
 	<!-- … -->
 </form>`
 			},
 			{
 				type: 'p',
 				text: 'With JavaScript off this is an ordinary HTML form: it posts, the server validates, and the page comes back with errors filled in. With JavaScript on, SvelteKit intercepts, posts in the background, and updates in place. Same code, same handler, same validation.'
+			},
+			{
+				type: 'p',
+				text: 'Every input is spread from `book.fields`, including the three hidden ones that say which studio, which service and which time zone the booking is for. `book.pending` counts the submissions still in flight, which is what lets the button show it is working without a `$state` flag of your own.'
 			},
 
 			{ type: 'h3', id: 'the-rule', text: 'The rule that catches everybody once' },
@@ -367,21 +392,50 @@ const slotValueSchema = v.pipe(
 				lang: 'svelte',
 				code: `
 {#each services as entry (entry.id)}
-	<!-- … -->
+	<!--
+		\`.for(id)\` gives each row its own form instance. Without it every row
+		shares one set of fields, so typing in the third card fills the first,
+		and a validation error appears on all of them at once.
+	-->
 	{@const editForm = saveService.for(entry.id)}
-	<!-- … -->
-	<form {...editForm} class="edit stack">
+	<li class="card" class:inactive={!entry.isActive}>
 		<!-- … -->
-		<input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} … />
-		<!-- … -->
-		<Button type="submit" loading={editForm.pending > 0}>Save changes</Button>
-	</form>
-	<!-- … -->
+
+		{#if editing === entry.id}
+			<form {...editForm} class="edit stack">
+				<input {...editForm.fields.slug.as('hidden', data.slug)} />
+				<input {...editForm.fields.serviceId.as('hidden', entry.id)} />
+
+				<Field label="Name" required error={editForm.fields.name.issues()?.[0]?.message}>
+					{#snippet children({ id, describedBy, invalid })}
+						<input
+							{...editForm.fields.name.as('text', entry.name)}
+							{id}
+							aria-describedby={describedBy}
+							aria-invalid={invalid}
+						/>
+					{/snippet}
+				</Field>
+
+				<!-- … -->
+
+				{#if editForm.result?.saved}
+					<Alert tone="success"><p>Saved.</p></Alert>
+				{/if}
+
+				<Button type="submit" loading={editForm.pending > 0}>Save changes</Button>
+			</form>
+		{/if}
+	</li>
 {/each}`
 			},
 			{
 				type: 'p',
 				text: '`form.for(id)` gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.'
+			},
+			{
+				type: 'p',
+				text: 'Notice the second argument again, this time on a text input. `as(\'text\', entry.name)` renders each row\'s form already holding that row\'s current name, and it is also the value the field goes back to if the form is reset. `editForm.result` is whatever the handler returned, so `{ saved: true }` from the server becomes the "Saved." message on that one card and no other.'
 			},
 
 			{
@@ -413,7 +467,21 @@ export const getAvailability = query.live(availabilityArgs, async function* (arg
 	const found = await db.query.business.findFirst({ where: eq(business.slug, args.slug) });
 	if (!found) error(404, 'We could not find that business.');
 
-	const read = async (): Promise<AvailabilityResult> => { /* … */ };
+	const read = async (): Promise<AvailabilityResult> => {
+		const result = await loadAvailability({
+			businessSlug: args.slug,
+			serviceId: args.serviceId,
+			staffId: args.staffId,
+			from: args.from,
+			to: addDays(args.from, args.days - 1)
+		});
+
+		return {
+			timeZone: result.business.timeZone,
+			// …
+			generatedAt: Date.now()
+		};
+	};
 
 	yield await read();
 
@@ -422,6 +490,10 @@ export const getAvailability = query.live(availabilityArgs, async function* (arg
 		yield await read();
 	}
 });`
+			},
+			{
+				type: 'p',
+				text: '`read` is the whole query in one closure. It calls `loadAvailability`, which loads this service and these dates from the database and runs chapter 8\'s pure availability engine over them, then reshapes the answer for the page, and stamps it with `generatedAt` so the interface can say how fresh it is. Because it closes over the validated `args`, every yield re-runs exactly the same read.'
 			},
 			{
 				type: 'p',
@@ -608,48 +680,55 @@ sveltekit({
 				text: 'One more, because it produces a symptom that makes no sense: radio buttons that will not stay selected.'
 			},
 			{
+				type: 'p',
+				text: 'The booking page forgets the chosen time whenever the service, the person or the day changes, because a time picked for one of those means nothing for another. The obvious effect for that:'
+			},
+			{
 				type: 'code',
 				file: 'the bug',
 				lang: 'ts',
 				code: `
 $effect(() => {
-	// Reads book.fields.slot in order to write it. The write invalidates the
-	// read, the effect runs again, and the selection never survives a frame.
-	if (!isStillOffered(book.fields.slot.value())) book.fields.slot.set('');
+	void service?.id;
+	void staffId;
+	void selectedDay;
+	// set() reads the field's current value internally, so this effect also
+	// depends on the very thing it writes. Pick a time, the field changes, the
+	// effect wakes up and clears it again: the selection never survives a frame.
+	book.fields.slot.set('');
 });`
 			},
 			{
 				type: 'code',
-				file: 'the fix',
+				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'ts',
 				code: `
 import { untrack } from 'svelte';
-
+// …
 $effect(() => {
-	// Depend on the availability — the thing that should re-run this — and read
-	// the field without subscribing to it.
-	const offered = availability.staff.flatMap((entry) => entry.slots);
-
-	untrack(() => {
-		if (!offered.some((slot) => matches(slot, book.fields.slot.value()))) {
-			book.fields.slot.set('');
-		}
-	});
+	void service?.id;
+	void staffId;
+	void selectedDay;
+	untrack(() => book.fields.slot.set(''));
 });`
 			},
 			{
 				type: 'p',
-				text: '`untrack` says "read this, but do not treat it as a dependency". The effect now re-runs when availability changes, which is the only reason it should, and clearing the field does not wake it up again.'
+				text: '`untrack` says "run this, but do not count what it reads as a dependency". The three `void` lines are there on purpose: reading a value is all it takes for an effect to depend on it, so they name exactly what should re-run this one. The effect now re-runs when the service, the person or the day changes, which are the only reasons it should, and clearing the field does not wake it up again. Nothing in the console ever says why the first version misbehaves, which is why the comment above it in the real file is longer than the code.'
 			},
 
 			{ type: 'h3', id: 'why-worth-it', text: 'Why this is worth the sharp edges' },
+			{
+				type: 'p',
+				text: 'In SvelteKit 2, data that arrived late came from a `load` function that returned a promise without awaiting it, and the page unwrapped it with `{#await}`. Even with runes, every component that wanted the value wrote its own three states:'
+			},
 			{
 				type: 'code',
 				file: 'before — SvelteKit 2',
 				lang: 'svelte',
 				code: `
 <script>
-	export let data;
+	let { data } = $props();
 </script>
 
 {#await data.availability}
@@ -669,7 +748,7 @@ $effect(() => {
 	const availability = $derived(await getAvailability(args));
 </script>
 
-<AvailabilityGrid {availability} />`
+<SlotGrid {availability} />`
 			},
 			{
 				type: 'p',

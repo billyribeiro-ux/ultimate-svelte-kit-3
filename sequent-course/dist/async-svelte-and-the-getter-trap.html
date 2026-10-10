@@ -101,10 +101,10 @@ let ticket = $state({
 
 let sending = $state(false);
 let lastError = $state&lt;string | null&gt;(null);
-
-// …only now the awaited deriveds
+// …
 const instruments = $derived(await getInstruments());</code></pre>
 </figure>
+<p>The <code>// …</code> is two more <code>$state</code> declarations and <code>seenPhase</code>, a plain variable the next section uses. Only after all of them does the first <code>await</code> appear.</p>
 <aside class="callout callout--warn"><p>What makes this so easy to walk into is the asymmetry. <code>bind:value={quantity}</code> on a plain <code>$state</code> variable is completely fine in any order. It is only <code>bind:value={ticket.quantity}</code> — a member of a state object — that emits the getter. So you can have twenty bindings working and add the twenty-first, which happens to be a member access, and the page stops rendering on the server with an error pointing at a line you did not change.</p></aside>
 <aside class="callout callout--note"><p>The rule to carry: <strong>in a component with awaited <code>$derived</code>s, declare all <code>$state</code> first.</strong> It costs nothing, it reads better anyway — state at the top, computed below — and it makes the ordering hazard impossible rather than merely avoided.</p></aside>
 <h3 id="effects">When to reach for $effect instead</h3>

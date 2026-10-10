@@ -176,6 +176,8 @@ class ThemeStore {
 			this.#systemIsDark = event.matches;
 		});
 	}
+
+	// …
 }`
 			},
 			{
@@ -258,9 +260,18 @@ function pickService(slug: string | null) {
 {#if selectedStart !== null}
 	<section class="step details" {@attach reveal({ y: 14 })}>
 		<h3>Your details</h3>
-		<!-- … name, email, phone, note … -->
+
+		<!-- … -->
+
+		<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
+
+		<!-- … -->
 	</section>
 {/if}`
+			},
+			{
+				type: 'p',
+				text: 'Between the heading and the button sit a one-line summary of the chosen time, the error alert from the end of this chapter, and the four fields: name, email, phone and a note. The submit button is inside the same `{#if}`, so there is nothing to press until there is something to book.'
 			},
 			{
 				type: 'p',
@@ -287,7 +298,18 @@ function pickService(slug: string | null) {
 			>
 				Anyone
 			</button>
-			<!-- … one button per person who offers this service … -->
+			{#each shop.team.filter( (person) => service.staffIds.includes(person.id) ) as person (person.id)}
+				<button
+					type="button"
+					role="radio"
+					aria-checked={staffId === person.id}
+					class="who-option"
+					class:selected={staffId === person.id}
+					onclick={() => (staffId = person.id)}
+				>
+					{person.displayName}
+				</button>
+			{/each}
 		</div>
 	</section>
 {/if}`
@@ -295,6 +317,10 @@ function pickService(slug: string | null) {
 			{
 				type: 'p',
 				text: 'If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.'
+			},
+			{
+				type: 'p',
+				text: 'When there is a question, it is an "Anyone" button followed by one button per person who offers this service. Each is a `role="radio"` button whose `aria-checked` says whether it is the current choice, inside a `role="radiogroup"` with a label, so a screen reader announces one choice between several people rather than a row of unrelated buttons. The odd spacing inside `filter( … )` is Prettier\'s, not a typo.'
 			},
 
 			{ type: 'h3', id: 'zones', text: 'Two clocks, honestly labelled' },
@@ -442,12 +468,20 @@ function pickService(slug: string | null) {
  *   Play    — animate those transforms away. The elements slide to their new
  *             homes because the browser has already decided where those are.
  *
- * …
+ * The trick is that nothing animates layout. Layout happens once, in a single
+ * frame; what animates is a \`transform\`, which the compositor handles without
+ * touching the main thread. Animating \`top\` and \`left\` directly forces a reflow
+ * every frame and drops to roughly 20fps on a phone with forty cells on screen.
+ *
+ * Why it matters here specifically: when somebody else books the 11:00 slot,
+ * that button vanishes and every later slot shifts up. Without FLIP the grid
+ * snaps and the customer's finger is suddenly over a different time than the one
+ * they were reaching for. With it, the movement is visible — which is the point.
  */`
 			},
 			{
 				type: 'p',
-				text: 'Nothing animates layout. Layout happens once, in a single frame; what animates is a `transform`, which the compositor handles without touching the main thread. Animating `top` and `left` forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.'
+				text: 'The comment is the documentation, and its middle paragraph is the part to remember: nothing animates layout. The browser lays the grid out once, in a single frame, and what moves afterwards is only a `transform`, which the compositor handles without touching the main thread.'
 			},
 			{
 				type: 'p',
@@ -469,7 +503,11 @@ export function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise<Motion | null> | null = null;
+
+// …
 
 export function loadMotion(): Promise<Motion | null> {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
@@ -591,7 +629,11 @@ export const cancelOwnBooking = command(
 		if (!found) error(404, 'We could not find that booking.');
 
 		try {
-			await cancelBooking({ bookingId: found.id, by: 'customer', reason: reason || undefined });
+			await cancelBooking({
+				bookingId: found.id,
+				by: 'customer',
+				reason: reason || undefined
+			});
 		} catch (thrown) {
 			if (thrown instanceof BookingError) {
 				// 409 for "too late": the request was valid, the world moved on.
@@ -657,8 +699,12 @@ export const cancelOwnBooking = command(
 	{/if}
 </header>
 
+<!-- … -->
+
 {#if result.entries.length === 0}
 	<p class="empty">Nothing booked. Enjoy it.</p>
+{:else}
+	<!-- … -->
 {/if}`
 			},
 			{
@@ -707,25 +753,42 @@ export const cancelOwnBooking = command(
 				code: `
 <li class="entry" style="--hue: {entry.colourHue}">
 	<!-- … -->
-	<p class="who">
-		<strong>{entry.customerName}</strong>
-		<!-- … -->
-	</p>
 
-	<p class="with text-muted">
-		with {entry.staffName}
+	<div class="body">
+		<p class="who">
+			<strong>{entry.customerName}</strong>
+			<span class="text-muted"> · {entry.serviceName}</span>
+		</p>
+
+		<p class="with text-muted">
+			with {entry.staffName} ·
+			<!-- … -->
+		</p>
+
 		<!-- … -->
-	</p>
+	</div>
+
 	<!-- … -->
 </li>`
 			},
 			{
+				type: 'p',
+				text: 'And in the same component\'s `<style>` block:'
+			},
+			{
 				type: 'code',
-				file: 'and in the stylesheet',
+				file: 'src/routes/manage/[slug]/+page.svelte',
 				lang: 'css',
 				code: `
 .entry {
+	/* … */
+	/*
+	 * The staff member's colour, as a stripe rather than a background. A tinted
+	 * card would put text on an arbitrary hue and lose the contrast guarantee;
+	 * a stripe carries the same information and costs nothing in legibility.
+	 */
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
+	/* … */
 }`
 			},
 			{
@@ -744,7 +807,12 @@ export const cancelOwnBooking = command(
 		{#each visible as section (section.path)}
 			{@const Icon = section.icon}
 			{@const active = activePath === section.path}
-			<a class="tab" class:active href="{base}{section.path}" aria-current={active ? 'page' : undefined}>
+			<a
+				class="tab"
+				class:active
+				href="{base}{section.path}"
+				aria-current={active ? 'page' : undefined}
+			>
 				<Icon weight={active ? 'fill' : 'regular'} aria-hidden="true" />
 				{section.label}
 			</a>
@@ -811,6 +879,9 @@ const visible = $derived(
 				code: `
 <input
 	{...editForm.fields.durationMinutes.as('number', entry.durationMinutes)}
+	{id}
+	aria-describedby={describedBy}
+	aria-invalid={invalid}
 	min="5"
 	max="480"
 	step="5"
@@ -862,7 +933,7 @@ function toClock(minutes: number): string {
 			},
 			{
 				type: 'p',
-				text: 'Read the comment in `toClock` again. A shift running to 02:00 the next morning is stored as minute 1560, and showing that as "01:30" would be a lie about which day it belongs to. `25:30` looks odd for exactly the right reason.'
+				text: 'Read the comment in `toClock` again. A shift running to 01:30 the next morning is stored as minute 1530, and showing that as "01:30" would be a lie about which day it belongs to. `25:30` looks odd for exactly the right reason.'
 			},
 			{
 				type: 'p',
@@ -885,9 +956,15 @@ export const setStaffService = command(
 	async ({ slug, staffId, serviceId, offers }) => {
 		const context = await requireOwner(slug);
 
-		// … both staffId and serviceId are looked up scoped to
-		// context.business.id first, and a 404 stops an owner of one studio
-		// wiring their staff to another studio's services by id …
+		// Both sides must belong to this business, or an owner of one studio could
+		// wire their staff to another studio's services by id.
+		const member = await db.query.staff.findFirst({
+			where: and(eq(staff.id, staffId), eq(staff.businessId, context.business.id))
+		});
+		const target = await db.query.service.findFirst({
+			where: and(eq(service.id, serviceId), eq(service.businessId, context.business.id))
+		});
+		if (!member || !target) error(404, 'No such staff member or service.');
 
 		if (offers) {
 			/*

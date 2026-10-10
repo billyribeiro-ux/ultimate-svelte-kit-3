@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Live queries — Building Halfpast</title>
-<meta name="description" content="`query.live` takes an async generator. Three lines of shape, and the receptionist’s screen updates itself.">
+<meta name="description" content="query.live takes an async generator. Three lines of shape, and the receptionist’s screen updates itself.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -48,7 +48,21 @@
 	const found = await db.query.business.findFirst({ where: eq(business.slug, args.slug) });
 	if (!found) error(404, 'We could not find that business.');
 
-	const read = async (): Promise&lt;AvailabilityResult&gt; =&gt; { /* … */ };
+	const read = async (): Promise&lt;AvailabilityResult&gt; =&gt; {
+		const result = await loadAvailability({
+			businessSlug: args.slug,
+			serviceId: args.serviceId,
+			staffId: args.staffId,
+			from: args.from,
+			to: addDays(args.from, args.days - 1)
+		});
+
+		return {
+			timeZone: result.business.timeZone,
+			// …
+			generatedAt: Date.now()
+		};
+	};
 
 	yield await read();
 
@@ -58,6 +72,7 @@
 	}
 });</code></pre>
 </figure>
+<p><code>read</code> is the whole query in one closure. It calls <code>loadAvailability</code>, which loads this service and these dates from the database and runs chapter 8's pure availability engine over them, then reshapes the answer for the page, and stamps it with <code>generatedAt</code> so the interface can say how fresh it is. Because it closes over the validated <code>args</code>, every yield re-runs exactly the same read.</p>
 <p>The shape is always the same three steps, and it is worth learning as a shape:</p>
 <ol><li><strong>Yield the current answer immediately</strong>, so the page has something to draw.</li><li><strong>Wait for a reason to look again.</strong></li><li><strong>Yield the new answer</strong>, and go back to 2.</li></ol>
 <h3 id="not-polling">Step 2 is not a poll</h3>

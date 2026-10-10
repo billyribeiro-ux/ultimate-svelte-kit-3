@@ -35,7 +35,7 @@
 			<h1>One file to configure everything</h1>
 			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: what each option does, what it costs, and what was removed since SvelteKit 2.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config and know what every line is for — including the ones that are there because a test found a bug.</p></aside>
-			<p>There is no <code>svelte.config.js</code>. SvelteKit 3 moved every option into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
+			<p>There is no <code>svelte.config.js</code>. In SvelteKit 2 that file held the framework options; SvelteKit 3 moved every one of them into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
 
 <figure class="code">
 	<figcaption>
@@ -112,7 +112,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:59-91</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:59-92</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -147,14 +147,15 @@ dynamicCompileOptions({ filename, environment }) {
  * request from one to the other when the `reroute` hook says so. It
  * exists to show what an adapter *is*; the end-to-end suite runs against
  * its output, which is the only proof of an adapter that counts.
- */</code></pre>
+ */
+adapter: ostinato(),</code></pre>
 </figure>
 <p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.</p>
 <h3 id="experimental">Experimental, with evidence</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:94-136</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:94-122</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">experimental: {
@@ -185,21 +186,7 @@ dynamicCompileOptions({ filename, environment }) {
 	 * for turning it back on.
 	 */
 	forkPreloads: false
-},
-
-/*
- * TRACING
- * =======
- *
- * OpenTelemetry spans for `handle`, `load`, form actions and remote
- * functions. A top-level option in SvelteKit 3 — it graduated from
- * `experimental.tracing` — and the matching `instrumentation.server.ts`
- * no longer needs a flag at all: if the file exists and the adapter says
- * it can (`supports.instrumentation`), it runs before the app.
- *
- * The spans go to an in-memory ring rather than to a collector, and the
- * diagnostics page reads them back out, so &quot;why was that publish slow&quot;
- * has an answer without a second service.</code></pre>
+},</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -211,18 +198,30 @@ dynamicCompileOptions({ filename, environment }) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:138-146</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:124-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">tracing: { server: true },
+	<pre><code class="lang-ts">/*
+ * TRACING
+ * =======
+ *
+ * OpenTelemetry spans for `handle`, `load`, form actions and remote
+ * functions. A top-level option in SvelteKit 3 — it graduated from
+ * `experimental.tracing` — and the matching `instrumentation.server.ts`
+ * no longer needs a flag at all: if the file exists and the adapter says
+ * it can (`supports.instrumentation`), it runs before the app.
+ *
+ * The spans go to an in-memory ring rather than to a collector, and the
+ * diagnostics page reads them back out, so &quot;why was that publish slow&quot;
+ * has an answer without a second service.
+ */
+tracing: { server: true },
 
 prerender: {
 	// A broken internal link fails the build instead of shipping a 404.
 	handleHttpError: 'fail',
 	handleMissingId: 'fail'
-},
-
-/*</code></pre>
+},</code></pre>
 </figure>
 <aside class="callout callout--note"><p>The removal list lives in SvelteKit’s own <code>src/core/config/options.js</code>, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.</p></aside>
 <h3 id="security-and-versioning">Policy, origin, version</h3>
@@ -442,11 +441,11 @@ export const variables = defineEnvVars({
 	}
 });</code></pre>
 </figure>
-<p><code>defineEnvVars</code> replaced the <code>$env/*</code> magic modules. A variable not declared here cannot be imported — a build error, not an <code>undefined</code> in production — and <code>public: true</code> has to be typed, so a secret cannot reach the browser by accident. <code>TRACE_BUFFER</code> shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.</p>
+<p>In SvelteKit 2 a variable came from one of the <code>$env/*</code> magic modules; SvelteKit 3 deprecates those (they go in SvelteKit 4) in favour of <code>defineEnvVars</code> in this one file. A variable not declared here cannot be imported — a build error, not an <code>undefined</code> in production — and <code>public: true</code> has to be typed, so a secret cannot reach the browser by accident. <code>TRACE_BUFFER</code> shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain why the config is a function.</li><li>You know which three options were removed in SvelteKit 3 and what replaced each.</li><li>You can say, from the comment, why <code>forkPreloads</code> is off — and what would turn it back on.</li></ul>
+	<ul><li>You can explain why the config is a function.</li><li>You know which three options this file used that SvelteKit 3 removed, and what replaced each.</li><li>You can say, from the comment, why <code>forkPreloads</code> is off — and what would turn it back on.</li></ul>
 </aside>
 		</article>
 

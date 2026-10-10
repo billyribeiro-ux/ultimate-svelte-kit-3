@@ -45,7 +45,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">ts</span>
+		<span class="code__file">packages/core/src/invariants.spec.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">it('never leaves a crossed book during continuous trading', () =&gt; {
@@ -54,6 +54,8 @@
 			const { state } = run(steps);
 			const instrument = state.instruments.get(VOD)!;
 
+			// A crossed book is two participants who agree on a price and have
+			// not been matched. Outside an auction it must never happen.
 			if (instrument.phase === 'continuous') {
 				expect(isCrossed(instrument.book)).toBe(false);
 			}
@@ -81,25 +83,24 @@
  * Those are the only failures that matter in production, and they are the only
  * ones a developer never sees, because a developer's machine does not lose
  * power and does not run two copies of the engine by accident during a deploy.
+ *
+ * ## The invariant every test here checks
+ *
+ * However the venue is interrupted, **replaying the log produces the same
+ * state**. Not similar; identical, down to a fingerprint. That is the property
+ * event sourcing is *for*, and it is worth nothing unless something proves it
+ * survives contact with a crash.
  */</code></pre>
 </figure>
 <p>One of these found a genuinely dangerous bug. The test handed the engine a <strong>corrupt snapshot</strong> — a truncated JSON body — and asserted it still recovered. It did not: <code>deserialise</code> threw <code>body.instruments is not iterable</code>, the error escaped <code>recover()</code>, and the engine refused to start. A file that exists purely as an *optimisation* had become a single point of failure for the whole venue.</p>
+<p>The fix, which chapter 15 walks through with its full comment, treats a snapshot that will not parse as <strong>absent</strong>: recovery replays from genesis instead, more slowly and correctly. It logs as it does so, because a venue that quietly replays from genesis on every start is one whose snapshots have been broken for months.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">apps/engine/src/snapshot.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
- * A snapshot that will not parse is treated as **absent**, not as an error.
- *
- * …
- *
- * It is logged rather than swallowed silently: a venue that quietly replays
- * from genesis every start is one whose snapshots have been broken for
- * months and whose boot time nobody has questioned.
- */
-try {
+	<pre><code class="lang-ts">try {
 	return {
 		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
 		fingerprint: String(row['fingerprint'])
@@ -134,7 +135,16 @@ try {
  *   are the same ones the small suites make — the books balance, no order is
  *   overfilled — and they are the point. The timing is context.
  *
- * …
+ * ## Why the numbers here are deliberately modest
+ *
+ * These run on whatever machine CI happens to give us, against SQLite on a
+ * temp filesystem. Ten thousand orders is enough to shake out an ordering bug
+ * and short enough that nobody skips the suite. A throughput assertion tuned to
+ * a fast laptop is a test that fails on a busy CI box for no reason, which is
+ * how a suite gets an `it.skip` nobody removes.
+ *
+ * So the assertions are about **correctness and completeness**, and the timings
+ * are printed rather than asserted.
  */</code></pre>
 </figure>
 <p>Ten thousand orders. The engine died partway through:</p>
@@ -165,8 +175,11 @@ BEGIN / COMMIT           35 descriptors</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export type Executor = Pick&lt;Transaction, 'execute'&gt;;
+
+// …
 const chains = new WeakMap&lt;Client, Promise&lt;unknown&gt;&gt;();
 
+// …
 export async function withTransaction&lt;T&gt;(
 	client: Client,
 	work: (tx: Executor) =&gt; Promise&lt;T&gt;

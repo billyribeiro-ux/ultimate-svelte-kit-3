@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Live collaboration: a live query, a mailbox, and numbered operations — Building Abacus</title>
-<meta name="description" content="`watchSheet` is a `query.live`: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.">
+<meta name="description" content="watchSheet is a query.live: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -238,7 +238,7 @@ class Mailbox {
 
 <aside class="callout callout--why">
 	<h4>Why the mailbox coalesces, and why it can be closed</h4>
-	<p>Live streams are not event logs. If the sheet changes three times while a slow browser is still receiving the first message, it should get all three *operations*, in one message — so a push while nobody is waiting is merged into what is there. And <code>close()</code> exists because an async generator suspended on an <code>await</code> cannot be interrupted from outside: <code>return()</code> queues behind the pending promise, so a browser that closed its tab would keep its seat in the room until the next message happened to arrive. The end-to-end test that asserts Bob’s chip disappears when Bob leaves is the test that found this.</p>
+	<p>Live streams are not event logs. If the sheet changes three times while a slow browser is still receiving the first message, it should get all three <em>operations</em>, in one message — so a push while nobody is waiting is merged into what is there. And <code>close()</code> exists because an async generator suspended on an <code>await</code> cannot be interrupted from outside: <code>return()</code> queues behind the pending promise, so a browser that closed its tab would keep its seat in the room until the next message happened to arrive. The end-to-end test that asserts Bob’s chip disappears when Bob leaves is the test that found this.</p>
 </aside>
 
 <figure class="code">
@@ -294,13 +294,10 @@ export const watchSheet = query.live(WatchSchema, async function* ({ id, client,
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:125-147</span></span>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:128-147</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	}
-});
-
-export const send = command(
+	<pre><code class="lang-ts">export const send = command(
 	v.object({
 		id: v.string(),
 		client: v.string(),

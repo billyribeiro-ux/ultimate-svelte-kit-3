@@ -76,7 +76,15 @@ export async function enqueue(tx: Executor, message: OutboxMessage, now: number)
 		sql: `INSERT INTO outbox (kind, seq, firm_id, idempotency_key, payload, created_at, available_at)
 		      VALUES (?, ?, ?, ?, ?, ?, ?)
 		      ON CONFLICT (idempotency_key) DO NOTHING`,
-		args: [ /* … */ ]
+		args: [
+			message.kind,
+			message.seq,
+			message.firmId ?? null,
+			message.idempotencyKey,
+			JSON.stringify(message.payload),
+			now,
+			now
+		]
 	});
 }</code></pre>
 </figure>

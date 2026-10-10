@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The lexer: characters into tokens — Building Abacus</title>
-<meta name="description" content="`SUM(A1:B2)*1.1` becomes a name, a paren, a reference, a colon, a reference, a paren, an operator, a number. Each token remembers where it started, so an error can point at a character.">
+<meta name="description" content="SUM(A1:B2)*1.1 becomes a name, a paren, a reference, a colon, a reference, a paren, an operator, a number. Each token remembers where it started, so an error can point at a character.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -63,7 +63,7 @@
  * (see `src/lib/sheet/locale.ts`).
  */</code></pre>
 </figure>
-<p>Two decisions live in this comment. First, what is a reference: letters-then-digits with at most three letters, which is the spreadsheet rule and the reason <code>SUM1</code> is a cell (column SUM, row 1) rather than a typo. Second, the formula language is <strong>the same everywhere</strong>: numbers use <code>.</code> and arguments use <code>,</code> whatever the person’s locale. It is *values typed into cells* that are localised, and that is a different file (ch. 13). Mixing the two is how a formula that works in Berlin breaks in Boston.</p>
+<p>Two decisions live in this comment. First, what is a reference: letters-then-digits with at most three letters, which is the spreadsheet rule and the reason <code>SUM1</code> is a cell (column SUM, row 1) rather than a typo. Second, the formula language is <strong>the same everywhere</strong>: numbers use <code>.</code> and arguments use <code>,</code> whatever the person’s locale. It is <em>values typed into cells</em> that are localised, and that is a different file (ch. 13). Mixing the two is how a formula that works in Berlin breaks in Boston.</p>
 
 <figure class="code">
 	<figcaption>
@@ -166,16 +166,14 @@ if (/[0-9]/.test(ch) || (ch === '.' &amp;&amp; /[0-9]/.test(source[i + 1] ?? '')
 	continue;
 }</code></pre>
 </figure>
-<p>Numbers: digits, an optional fraction, an optional exponent. <code>.5</code> is a number, <code>5.</code> is a number, <code>1e3</code> is a number. <code>1.2.3</code> is deliberately *two* tokens and a syntax error at the parser — which is where the message can say something clear, rather than the lexer guessing.</p>
+<p>Numbers: digits, an optional fraction, an optional exponent. <code>.5</code> is a number, <code>5.</code> is a number, <code>1e3</code> is a number. <code>1.2.3</code> is deliberately <em>two</em> tokens and a syntax error at the parser — which is where the message can say something clear, rather than the lexer guessing.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:102-130</span></span>
+		<span class="code__file">src/lib/formula/lexer.ts<span class="code__lines">:104-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">}
-
-// A string: double quotes, with `&quot;&quot;` for a literal quote.
+	<pre><code class="lang-ts">// A string: double quotes, with `&quot;&quot;` for a literal quote.
 if (ch === '&quot;') {
 	const start = i;
 	i += 1;
@@ -201,7 +199,8 @@ if (ch === '#') {
 	if (!literal) throw new FormulaSyntaxError('Unknown error value', i);
 	push('error', i, i + literal.length);
 	i += literal.length;
-	continue;</code></pre>
+	continue;
+}</code></pre>
 </figure>
 <p>Strings use <code>&quot;&quot;</code> for a literal quote, as spreadsheets do. Error literals are tokens too, so <code>=IFERROR(#REF!, 0)</code> parses, and an unknown <code>#…</code> is refused at once.</p>
 
@@ -225,7 +224,7 @@ if (ch === '$' || /[A-Za-z_]/.test(ch)) {
 
 <aside class="callout callout--why">
 	<h4>Why the reference test is a regular expression on the whole word</h4>
-	<p>The lexer reads a run of letters, digits, underscores and dollars first, then decides what it was. <code>$A$1</code> matches the reference pattern; <code>TRUE</code> is a boolean; anything else is a name and will have to be followed by <code>(</code> or the parser will say so. Deciding *after* reading the whole word is what keeps <code>SUM1</code> a reference and <code>SUM</code> a function without special cases.</p>
+	<p>The lexer reads a run of letters, digits, underscores and dollars first, then decides what it was. <code>$A$1</code> matches the reference pattern; <code>TRUE</code> is a boolean; anything else is a name and will have to be followed by <code>(</code> or the parser will say so. Deciding <em>after</em> reading the whole word is what keeps <code>SUM1</code> a reference and <code>SUM</code> a function without special cases.</p>
 </aside>
 
 <figure class="code">

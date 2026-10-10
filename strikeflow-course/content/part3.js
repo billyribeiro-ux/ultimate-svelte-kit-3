@@ -39,7 +39,7 @@ export const part3 = [
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	// …the motion imports (heroSequence, parallax, reveal, revealGroup) are built in part 4…
+	import { heroSequence, parallax, reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const stats = [
 		{ value: '<250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
@@ -48,7 +48,23 @@ export const part3 = [
 		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
 	];
 
-	// …the \`steps\` data for the how-it-works section…
+	const steps = [
+		{
+			icon: DatabaseIcon,
+			title: 'We take the whole tape',
+			body: 'Direct OPRA ingest across all sixteen US options exchanges, plus FINRA dark pool reporting. No aggregator in the middle adding seconds and dropping fields.'
+		},
+		{
+			icon: StrategyIcon,
+			title: 'We work out what it means',
+			body: 'Every print is matched against the quote at execution to find the aggressor, stitched back together with its other legs, and scored against that contract’s own ninety-day baseline.'
+		},
+		{
+			icon: BroadcastIcon,
+			title: 'You see intent, not noise',
+			body: 'What reaches your screen is a classified, deduplicated stream you can filter and set rules on — rather than a wall of prints you have to interpret yourself.'
+		}
+	];
 </script>
 
 <Seo
@@ -118,7 +134,7 @@ export const part3 = [
 			},
 			{
 				type: 'note',
-				text: 'The `{@attach heroSequence()}` and `{@attach reveal(…)}` attributes, the `data-hero`/`data-reveal` markers, the `pull` prop on the primary button and the `animated` flag on `StatStrip` are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the markup matches the finished project; everything else on this page works without them.'
+				text: 'The `#lib/motion/index.ts` import at the top of the script, the `{@attach heroSequence()}`, `{@attach parallax(0.12)}` and `{@attach reveal(…)}` attributes, the `data-hero`/`data-reveal` markers, the `pull` prop on the primary button and the `animated` flag on `StatStrip` are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the code matches the finished project; until you build that folder, leave the import and every one of those hooks out — everything else on this page works without them. (The import also brings in `revealGroup`, which the sections further down the real file attach in the same way; leave those attachments out too.)'
 			},
 			{
 				type: 'why',
@@ -245,7 +261,7 @@ export const part3 = [
 				file: 'src/routes/features/+page.svelte',
 				code: `<Seo
 	title="Features — the full options tape, classified in real time"
-	description="Live flow scanning, unusual activity baselines, dealer gamma exposure…"
+	description="Live flow scanning, unusual activity baselines, dealer gamma exposure, dark pool prints, a real alerts engine and full tick replay. Here is exactly what StrikeFlow does."
 	schema={[
 		softwareApplicationSchema(),
 		breadcrumbSchema(pageUrl, [
@@ -285,12 +301,9 @@ export const part3 = [
 				lang: 'ts',
 				file: 'src/routes/features/+page.svelte',
 				code: `const limitations = [
-	'We infer dealer positioning from public volume and open interest. Nobody can ' +
-		'observe it directly, so treat every gamma figure as a well-informed estimate.',
-	'The consolidated tape does not report whether a trade opened or closed a position. ' +
-		'Our opening-position detection is probabilistic, and we show you the confidence.',
-	'Starter plan data is delayed fifteen minutes. That is the standard non-professional ' +
-		'market data entitlement, not a limitation we invented.'
+	'We infer dealer positioning from public volume and open interest. Nobody can observe it directly, so treat every gamma figure as a well-informed estimate.',
+	'The consolidated tape does not report whether a trade opened or closed a position. Our opening-position detection is probabilistic, and we show you the confidence.',
+	'Starter plan data is delayed fifteen minutes. That is the standard non-professional market data entitlement, not a limitation we invented.'
 ];`
 			},
 			{ type: 'h3', id: 'about', text: 'The about page, and why it is an SEO page' },
@@ -313,7 +326,7 @@ export const part3 = [
 				file: 'src/routes/about/+page.svelte',
 				code: `<Seo
 	title="About — the team behind StrikeFlow"
-	description="StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer…"
+	description="StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer. Here is who builds it, what we believe about market data, and what we refuse to do."
 	schema={[
 		...team.map(personSchema),
 		breadcrumbSchema(pageUrl, [
@@ -351,6 +364,8 @@ export const part3 = [
 	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a class="channels__link" href={channel.href}>{channel.linkLabel}</a>
 {:else}
+	<!-- \`<address>\` is the correct element for contact details of its
+	     nearest article or the document as a whole. -->
 	<address class="channels__address">{channel.linkLabel}</address>
 {/if}`
 			},
@@ -386,21 +401,28 @@ export const part3 = [
 				type: 'code',
 				file: 'src/lib/server/leads.ts',
 				lang: 'ts',
-				code: `export interface Lead {
+				code: `/** A captured lead. */
+export interface Lead {
 	readonly email: string;
+	/** Self-reported experience, used for list segmentation. */
 	readonly experience: ExperienceLevel;
 	readonly consentedToMarketing: boolean;
+	/** ISO 8601 timestamp of capture. */
 	readonly capturedAt: string;
+	/** Which page or campaign produced the signup. */
 	readonly source: string;
 }
 
+export type ExperienceLevel = 'new' | 'some' | 'experienced' | 'professional';
+// …
 export interface LeadStore {
+	/** Persist a lead. Must be idempotent-safe: the same email may arrive twice. */
 	save(lead: Lead): Promise<void>;
+	/** Has this address already signed up? Used to avoid duplicate welcome emails. */
 	has(email: string): Promise<boolean>;
 }
 
-// …a file-backed implementation…
-
+// …
 export const leadStore: LeadStore = new FileLeadStore();`
 			},
 			{
@@ -410,7 +432,7 @@ export const leadStore: LeadStore = new FileLeadStore();`
 			},
 			{
 				type: 'p',
-				text: 'The default implementation appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with `cat`.'
+				text: 'The second `// …` in that listing stands for the default implementation — a small `FileLeadStore` class, the path it writes to, and the `normaliseEmail()` helper it uses (the first is a doc comment). It appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with `cat`.'
 			},
 			{
 				type: 'note',
@@ -440,7 +462,13 @@ import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 // …
 const secret: string = EBOOK_TOKEN_SECRET ?? randomBytes(32).toString('hex');
 
-// …a boot-time console.warn if EBOOK_TOKEN_SECRET is unset…
+if (!EBOOK_TOKEN_SECRET) {
+	console.warn(
+		'[tokens] EBOOK_TOKEN_SECRET is not set — using an ephemeral key.\\n' +
+			'         Download links will stop working when the server restarts.\\n' +
+			'         Set it in .env before deploying. See .env.example.'
+	);
+}
 
 /** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
@@ -477,6 +505,10 @@ export function createDownloadToken(email: string): string {
 }`
 			},
 			{
+				type: 'p',
+				text: 'If `EBOOK_TOKEN_SECRET` is unset, the module makes up a random key when the server starts and says so in the console. The project runs with zero setup, at the cost of every outstanding link dying on restart — a deliberately visible symptom, so it gets fixed before deploy rather than running on a default key in production.'
+			},
+			{
 				type: 'note',
 				text: '`base64url` is the URL-safe variant of base64: it swaps `+`, `/` and `=` for `-`, `_` and nothing. Standard base64 in a query string needs escaping, and breaks when copied out of an email client.'
 			},
@@ -496,7 +528,7 @@ export function createDownloadToken(email: string): string {
 
 	const expected = sign(encoded);
 
-	/* …why timingSafeEqual and the length pre-check — see the warning below… */
+	// …
 	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
 
@@ -529,7 +561,7 @@ export function createDownloadToken(email: string): string {
 			},
 			{
 				type: 'warn',
-				text: '**`timingSafeEqual`, not `===`.** A normal string comparison returns as soon as it finds a differing character. That means comparing `"aaaa"` takes fractionally longer than `"zaaa"` when the real signature starts with `"a"` — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. `timingSafeEqual` always compares the full length.'
+				text: '**`timingSafeEqual`, not `===`.** A normal string comparison returns as soon as it finds a differing character. That means comparing `"aaaa"` takes fractionally longer than `"zaaa"` when the real signature starts with `"a"` — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. `timingSafeEqual` always compares the full length. It needs two buffers of equal length, so we check the lengths first — safe to short-circuit, because the length of a signature is not a secret. (The `// …` in the listing is the comment in the real file that says all of this.)'
 			},
 			{
 				type: 'note',
@@ -552,8 +584,20 @@ export function createDownloadToken(email: string): string {
 
 const buckets = new Map<string, Bucket>();
 
-// …the sweep() helper that deletes expired buckets…
+/**
+ * Reclaim memory from expired buckets.
+ *
+ * Without this the Map grows forever — one entry per unique IP, never removed. On a
+ * long-running server that is a slow memory leak, and "slow memory leak" is how you
+ * get paged at 4am six months from now.
+ */
+function sweep(now: number): void {
+	for (const [key, bucket] of buckets) {
+		if (bucket.resetAt <= now) buckets.delete(key);
+	}
+}
 
+// …
 export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimitResult {
 	const { limit = 5, windowMs = 60_000 } = options;
 	const now = Date.now();
@@ -629,13 +673,20 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 import { form, getRequestEvent } from '$app/server';
 import { redirect, invalid } from '@sveltejs/kit';
 
+import { leadStore, normaliseEmail, type Lead } from '#lib/server/leads.ts';
+import { createDownloadToken } from '#lib/server/tokens.ts';
+import { rateLimit } from '#lib/server/rate-limit.ts';
+
+// …
 const guideSchema = v.object({
 	email: v.pipe(
 		v.string(),
 		v.trim(),
 		v.nonEmpty('Enter your email address'),
 		v.email('That does not look like a valid email address'),
-		v.maxLength(254, 'That email address is too long')  // RFC 5321 limit
+		// Guards against a database column overflow and against absurd input.
+		// RFC 5321 caps a full address at 254 characters.
+		v.maxLength(254, 'That email address is too long')
 	),
 
 	experience: v.picklist(
@@ -643,19 +694,22 @@ const guideSchema = v.object({
 		'Choose which best describes you'
 	),
 
+	// …
 	consent: v.pipe(
 		v.optional(v.boolean(), false),
-		v.check((value) => value === true,
-			'Please confirm you would like to receive the guide by email')
+		v.check(
+			(value) => value === true,
+			'Please confirm you would like to receive the guide by email'
+		)
 	),
 
-	/** Honeypot — hidden from humans, filled in by naive bots. */
+	// …
 	_company: v.optional(v.string(), '')
 });`
 			},
 			{
 				type: 'warn',
-				text: "**Checkbox fields must be optional.** An unchecked checkbox sends *nothing* — not `false`, the field is simply absent. So `v.boolean()` can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the `form()` overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates."
+				text: "**Checkbox fields must be optional.** An unchecked checkbox sends *nothing* — not `false`, the field is simply absent. So `v.boolean()` can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the `form()` overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates. So: optional with a default of `false`, then a `check` that demands `true`. The real file spells all of this out in a long comment above `consent` — that is what the `// …` there stands for; the others are the schema's doc comment and the honeypot's."
 			},
 			{
 				type: 'note',
@@ -768,7 +822,7 @@ const guideSchema = v.object({
 	// …
 </script>
 
-<!-- …the hero copy column, then: -->
+<!-- … -->
 <form {...requestGuide} class="signup" aria-labelledby="signup-heading">
 	<h2 id="signup-heading" class="signup__title">Get the guide</h2>
 	<p class="signup__sub">Enter your email and we'll send you straight to the download.</p>
@@ -787,7 +841,11 @@ const guideSchema = v.object({
 				: undefined}
 		/>
 		{#if requestGuide.fields.email.issues()}
-			<!-- … -->
+			<!--
+				\`role="alert"\` makes a screen reader announce the message the
+				moment it appears, rather than only when the user happens to
+				navigate onto it.
+			-->
 			<p class="field__error" id="guide-email-error" role="alert">
 				{#each requestGuide.fields.email.issues() ?? [] as issue (issue.message)}
 					{issue.message}
@@ -796,10 +854,7 @@ const guideSchema = v.object({
 		{/if}
 	</div>
 
-	<!-- …the experience <select> and the consent checkbox repeat the same field pattern… -->
-
-	<!-- …the honeypot — shown in the next section… -->
-
+	<!-- … -->
 	<button class="signup__submit" type="submit" disabled={requestGuide.pending > 0}>
 		{#if requestGuide.pending > 0}
 			Sending…
@@ -809,8 +864,18 @@ const guideSchema = v.object({
 		{/if}
 	</button>
 
-	<!-- …the privacy reassurance line (LockSimpleIcon + a link to the policy)… -->
+	<p class="signup__privacy">
+		<LockSimpleIcon size={14} aria-hidden="true" />
+		<span>
+			We never sell or share your address. See our
+			<a href={resolve('/legal/privacy')}>privacy policy</a>.
+		</span>
+	</p>
 </form>`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` and `<!-- … -->` lines stand for what this listing leaves out: the other imports and the page data, the hero copy column beside the form, and — inside the form — the experience `<select>` and the consent checkbox (the same field pattern again), the honeypot, which the next section shows, and the comments the real file puts above each part.'
 			},
 			{ type: 'h3', id: 'spread', text: 'What the spreads do' },
 			{
@@ -871,8 +936,19 @@ const guideSchema = v.object({
 				lang: 'css',
 				file: 'src/routes/guide/+page.svelte',
 				code: `.field__input {
+	/* … */
 	min-height: 3rem;
-	font-size: var(--fs-base);   /* 1rem = 16px minimum */
+	/* … */
+	/*
+	 * 16px minimum on mobile.
+	 *
+	 * iOS Safari automatically zooms the page when you focus an input whose
+	 * font-size is under 16px, and it does not zoom back out. Users experience
+	 * this as the site "breaking" when they tap a field. \`--fs-base\` is 1rem,
+	 * which clears the threshold.
+	 */
+	font-size: var(--fs-base);
+	/* … */
 }`
 			},
 			{
@@ -927,27 +1003,42 @@ const guideSchema = v.object({
 import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
+// …
 export const prerender = false;
 
 export const load: PageServerLoad = ({ url, setHeaders }) => {
 	const token = url.searchParams.get('t');
 	const result = verifyDownloadToken(token);
 
+	// …
 	setHeaders({
 		'X-Robots-Tag': 'noindex, nofollow',
 		'Cache-Control': 'private, no-store'
 	});
 
 	if (!result.valid) {
-		return { status: 'invalid' as const, reason: result.reason, downloadUrl: null, email: null };
+		return {
+			// Never echo the raw token back into the page — that's how a bad token ends
+			// up in an analytics URL, a referrer header, or a support screenshot.
+			status: 'invalid' as const,
+			reason: result.reason,
+			downloadUrl: null,
+			email: null
+		};
 	}
 
 	return {
 		status: 'valid' as const,
 		reason: null,
-		// resolve() works on the server too, and in SvelteKit 3 a route ID may carry a
-		// ?search suffix. The result is a typed ResolvedPathname — a plain string at
-		// runtime — which the component can drop straight into an href.
+		// The token is re-used for the download route, which verifies it again.
+		// Every entry point validates independently — never trust that an earlier
+		// step in the flow did its job.
+		//
+		// \`resolve()\` works on the server too, and in SvelteKit 3 it takes a route ID
+		// with a \`?search\` suffix. The result is a \`ResolvedPathname\` — a plain string
+		// at runtime, so it serialises like any other load data — and the component
+		// can put it straight into an \`href\` without the "link without resolve()"
+		// lint complaint a hand-built string would earn.
 		downloadUrl: resolve(\`/guide/download?t=\${encodeURIComponent(token ?? '')}\`),
 		email: result.email
 	};
@@ -978,7 +1069,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const result = verifyDownloadToken(url.searchParams.get('t'));
 
 	if (!result.valid) {
-		/* …403, not 404 — the caller just isn't allowed it… */
+		// …
 		error(
 			403,
 			result.reason === 'expired' ? 'This download link has expired' : 'Invalid download link'
@@ -1008,6 +1099,10 @@ export const GET: RequestHandler = async ({ url }) => {
 };`
 			},
 			{
+				type: 'p',
+				text: 'The `// …` inside `if (!result.valid)` stands for a comment explaining why that is a **403, not a 404**: the resource exists, the caller just is not allowed it. Hiding existence with a 404 suits genuinely secret resources, but the whole site advertises this PDF, so pretending otherwise would only confuse someone with an expired link. The two `// …` among the headers are short comments: `attachment` makes the browser save the file rather than display it, and `private` is explained below.'
+			},
+			{
 				type: 'warn',
 				text: "**The PDF is not in `static/`.** Anything in `static/` is copied verbatim into the build and served directly by the CDN — it is public, full stop. The URL is guessable, and the moment one person shares it your email gate is decorative. So it lives in a top-level `private/` directory that never enters the client build."
 			},
@@ -1030,45 +1125,59 @@ export const GET: RequestHandler = async ({ url }) => {
 				file: 'scripts/build-ebook.js',
 				lang: 'js',
 				code: `import { chromium } from 'playwright';
+// …
+function renderHtml() {
+	// …
+}
 
-// …renderHtml() builds the document from ebook-content.js, then:
-
-// …CHROMIUM_PATH lets CI or Docker point at a system Chromium instead of downloading one…
-const executablePath = process.env.CHROMIUM_PATH;
-
-const browser = await chromium.launch(executablePath ? { executablePath } : {});
-try {
-	const page = await browser.newPage();
+async function main() {
+	await mkdir(outDir, { recursive: true });
 
 	// …
-	await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
+	const executablePath = process.env.CHROMIUM_PATH;
 
-	await page.pdf({
-		path: outFile,
-		format: 'A4',
-		// Chromium's own margins set to zero so the stylesheet's @page rule is the
-		// only thing controlling layout. Two competing margin systems is a
-		// reliable way to produce a document that looks fine on screen and wrong
-		// on paper.
-		margin: { top: '0', bottom: '0', left: '0', right: '0' },
-		// Without this, Chromium strips background colours when printing — which
-		// would silently remove every callout box.
-		printBackground: true,
-		displayHeaderFooter: true,
-		headerTemplate: '<div></div>',
-		footerTemplate: \`
-			<div style="width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;">
-				<span>StrikeFlow — How to read options flow</span>
-				<span class="pageNumber"></span>
-			</div>\`
-	});
+	const browser = await chromium.launch(executablePath ? { executablePath } : {});
+	try {
+		const page = await browser.newPage();
+		// …
+		await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
 
-	// …
-} finally {
-	// \`finally\` so a failed render still closes the browser. Leaked Chromium
-	// processes are a classic way to exhaust CI memory.
-	await browser.close();
-}`
+		await page.pdf({
+			path: outFile,
+			format: 'A4',
+			// Chromium's own margins set to zero so the stylesheet's @page rule is the
+			// only thing controlling layout. Two competing margin systems is a
+			// reliable way to produce a document that looks fine on screen and wrong
+			// on paper.
+			margin: { top: '0', bottom: '0', left: '0', right: '0' },
+			// Without this, Chromium strips background colours when printing — which
+			// would silently remove every callout box.
+			printBackground: true,
+			displayHeaderFooter: true,
+			headerTemplate: '<div></div>',
+			footerTemplate: \`
+				<div style="width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;">
+					<span>StrikeFlow — How to read options flow</span>
+					<span class="pageNumber"></span>
+				</div>\`
+		});
+
+		const pages = await page.evaluate(() => document.querySelectorAll('.chapter').length);
+		console.log(\`[ebook] \${pages} chapters rendered\`);
+	} finally {
+		// \`finally\` so a failed render still closes the browser. Leaked Chromium
+		// processes are a classic way to exhaust CI memory.
+		await browser.close();
+	}
+
+	console.log(\`[ebook] written to \${outFile}\`);
+}
+
+await main();`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` lines stand for the rest of the script: the other imports and paths, the body of `renderHtml()` — which builds the whole document as one HTML string from `ebook-content.js` — and two comments. The one above `CHROMIUM_PATH` explains the override: CI images, Docker builds and locked-down networks can point it at a Chromium they already have instead of downloading a second copy. The one above `setContent` explains `networkidle`: the document has no external resources today, but the day you add a logo or a web font, printing before it loads leaves a gap where it should be.'
 			},
 			{
 				type: 'p',
@@ -1192,8 +1301,15 @@ export const load: PageLoad = ({ params }) => {
 				type: 'code',
 				lang: 'css',
 				file: 'src/routes/blog/+page.svelte',
-				code: `.post-card { position: relative; }
+				code: `.post-card {
+	/* Required — the stretched-link ::after below is absolutely positioned
+	   against this. Without it, the overlay escapes to the nearest positioned
+	   ancestor and covers the whole page. */
+	position: relative;
+	/* … */
+}
 
+/* … */
 .post-card__title a::after {
 	content: '';
 	position: absolute;
@@ -1220,12 +1336,13 @@ export const load: PageLoad = ({ params }) => {
 				code: `.legal :global(h2) {
 	font-size: var(--fs-xl);
 	margin-block: var(--space-10) var(--space-4);
+	scroll-margin-top: calc(var(--header-height) + var(--space-6));
 }`
 			},
 			{
 				type: 'why',
 				title: 'Why :global here',
-				text: 'Svelte scopes styles by adding a hash class to elements it can see in **this** component\'s markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. `.legal :global(h2)` reads as: scope the `.legal` part, but let the `h2` part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for `!important`.'
+				text: 'Svelte scopes styles by adding a hash class to elements it can see in **this** component\'s markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. `.legal :global(h2)` reads as: scope the `.legal` part, but let the `h2` part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for `!important`. (The `scroll-margin-top` line does nothing yet: none of the legal headings has an `id`, so nothing can link to one. It is there for the day they do. When the browser scrolls to a linked element it adds that element\'s `scroll-margin-top` to the page-wide `scroll-padding-top` from chapter 13, so a linked `h2` here would stop with extra clearance below the sticky header.)'
 			},
 			{ type: 'h3', id: 'ymyl', text: 'Why a trading site needs these pages' },
 			{
@@ -1308,12 +1425,14 @@ export default defineConfig({
 			// …
 		}),
 
-		/* …the ordering story from chapter 19: this must come after sveltekit()… */
+		// …
 		sveltePhosphorOptimize()
 	],
 
 	test: {
 		expect: { requireAssertions: true },
+
+		// …
 		projects: [
 			// …
 		]
@@ -1322,7 +1441,7 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: 'The import comes from `vitest/config`, not `vite` — the same `defineConfig`, but its types know about the `test` block.'
+				text: 'The import comes from `vitest/config`, not `vite` — the same `defineConfig`, but its types know about the `test` block. The `// …` just above `sveltePhosphorOptimize()` is the ordering comment from chapter 19: it must come after `sveltekit()`.'
 			},
 			{
 				type: 'why',
@@ -1339,9 +1458,12 @@ export default defineConfig({
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `test: {
+	// …
 	projects: [
 		{
-			// Component tests — a REAL Chromium, not a DOM emulator
+			// Component tests — run in a real Chromium, not a DOM emulator.
+			// Worth the extra seconds: jsdom quietly lies about layout and focus,
+			// which are exactly the things a component test should verify.
 			test: {
 				name: 'client',
 				browser: {
@@ -1354,7 +1476,7 @@ export default defineConfig({
 			}
 		},
 		{
-			// Pure logic — plain Node, no browser, very fast
+			// Pure logic tests — plain Node, no browser, fast.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -1408,7 +1530,7 @@ export default defineConfig({
 	const token = createDownloadToken('reader@example.com');
 	const [, signature] = token.split('.');
 
-	// Re-encode a payload claiming a different email, keeping the old signature
+	// Re-encode a payload claiming a different email, keeping the old signature.
 	const forgedPayload = Buffer.from(
 		JSON.stringify({ email: 'attacker@example.com', exp: Date.now() + 100_000 })
 	).toString('base64url');
@@ -1506,14 +1628,30 @@ it('never produces a non-positive price', () => {
 				file: 'src/lib/utils/market-data.spec.ts',
 				lang: 'ts',
 				code: `it('formats a value with a trailing zero, whichever ICU is installed', () => {
-	/* …a long comment in the source explains: DELIBERATELY A PATTERN, NOT AN EXACT STRING… */
+	/*
+	 * DELIBERATELY A PATTERN, NOT AN EXACT STRING.
+	 *
+	 * \`Intl\` is implemented by ICU, the Unicode library Node bundles, and its
+	 * output is a moving target across versions. Compact *currency* formatting
+	 * used to keep the currency's minimum fraction digits — \`$5.60K\` — and as
+	 * of ICU 78.3 it trims them: \`$5.6K\`. Node 22 ships 78.2, Node 24 ships
+	 * 78.3, so the same code produces different text on each.
+	 *
+	 * A byte-exact assertion here is therefore not a test of this function. It
+	 * is a test of which Node version is installed, and it fails on upgrade for
+	 * a reason that has nothing to do with the code under test. This project
+	 * learned that the hard way while moving from Node 22 to Node 24.
+	 *
+	 * What the app actually needs is the right symbol, the right magnitude
+	 * suffix, and no more than two decimals. That is what this asserts.
+	 */
 	expect(formatCompactUsd(5_600)).toMatch(/^\\$5\\.60?K$/);
 	expect(formatCompactUsd(1_000)).toMatch(/^\\$1(\\.00)?K$/);
 });`
 			},
 			{
 				type: 'note',
-				text: 'A byte-exact assertion here is not a test of `formatCompactUsd` — it is a test of which Node version is installed, and it fails on upgrade for a reason that has nothing to do with the code under test. What the app actually needs is the right symbol, the right magnitude suffix and no more than two decimals, so the test asserts a pattern — and carries a comment explaining why, or the next person will "fix" it back to an exact string.'
+				text: 'The comment is half the test. A pattern where you would expect an exact string looks like laziness to the next person who reads it, and without the explanation they will "fix" it back to a byte-exact assertion — which is not a test of `formatCompactUsd` at all, but of which Node version is installed.'
 			},
 			{ type: 'h3', id: 'running', text: 'Running them' },
 			{
@@ -1579,7 +1717,7 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		trace: 'retain-on-failure'
 	},
 
-	/* … */
+	// …
 	projects: [
 		{
 			name: 'desktop',
@@ -1628,7 +1766,13 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		// means the end of your title is invisible in the results page.
 		expect(title.length).toBeLessThanOrEqual(70);
 
-		// …the meta description: present, 50–200 characters…
+		// --- Description ---
+		const description = await page
+			.locator('head meta[name="description"]')
+			.getAttribute('content');
+		expect(description).toBeTruthy();
+		expect((description ?? '').length).toBeGreaterThan(50);
+		expect((description ?? '').length).toBeLessThanOrEqual(200);
 
 		// --- Canonical: exactly one, absolute, matching this path ---
 		const canonicals = page.locator('head link[rel="canonical"]');
@@ -1638,11 +1782,21 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		expect(new URL(canonical ?? '').pathname).toBe(path);
 
 		// --- Exactly one h1 ---
-		// …
+		// More than one is a document-outline bug; zero means the page has no
+		// stated subject. Both are common and both are avoidable.
 		await expect(page.locator('h1')).toHaveCount(1);
 
-		// …robots: contains index, never noindex, plus max-image-preview:large…
-		// …Open Graph: og:title, og:description, og:image, og:url, og:type all present…
+		// --- Indexable ---
+		const robots = await page.locator('head meta[name="robots"]').getAttribute('content');
+		expect(robots).toContain('index');
+		expect(robots).not.toContain('noindex');
+		// The directive that unlocks large thumbnails, and Discover eligibility.
+		expect(robots).toContain('max-image-preview:large');
+
+		// --- Open Graph ---
+		for (const property of ['og:title', 'og:description', 'og:image', 'og:url', 'og:type']) {
+			await expect(page.locator(\`head meta[property="\${property}"]\`)).toHaveCount(1);
+		}
 
 		// --- Structured data parses and is a graph ---
 		const ldJson = await page.locator('head script[type="application/ld+json"]').textContent();
@@ -1699,11 +1853,18 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		await page.waitForURL(/\\/guide\\/thank-you/);
 		await expect(page.getByRole('heading', { name: /your guide is ready/i })).toBeVisible();
 	});
+
+	test('marketing pages render their content server-side', async ({ page }) => {
+		await page.goto('/');
+		// Real text in the initial HTML — which is also what a crawler sees.
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(/options flow/i);
+		await expect(page.getByRole('link', { name: /free guide/i }).first()).toBeVisible();
+	});
 });`
 			},
 			{
 				type: 'p',
-				text: 'This is the test that justifies using a remote `form()` rather than a `command()`. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.'
+				text: 'The first of these is the test that justifies using a remote `form()` rather than a `command()`; the second confirms the marketing copy is real text in the initial HTML, which is also what a crawler sees. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.'
 			},
 			{ type: 'h3', id: 'bug1', text: 'Bug one: 181 pixels' },
 			{
@@ -1731,23 +1892,35 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 // fallback against itself, producing a perfect 100% that is completely wrong.
 await page.evaluate(() => document.fonts.ready);
 
-// …then, inside page.evaluate, for each target font versus the Arial fallback…
-const targetWidth = width(target.family, target.weight);
-const fallbackWidth = width(fallback, target.weight);
-const metrics = vertical(target.family, target.weight);
+const results = await page.evaluate(
+	({ targets, fallback }) => {
+		// …
 
-const sizeAdjust = targetWidth / fallbackWidth;
+		return targets.map((/** @type {{label:string,family:string,weight:number}} */ target) => {
+			const targetWidth = width(target.family, target.weight);
+			const fallbackWidth = width(fallback, target.weight);
+			const metrics = vertical(target.family, target.weight);
 
-return {
-	label: target.label,
-	sizeAdjust,
-	// Overrides are relative to the already-size-adjusted em, so each
-	// real metric is divided by the size adjustment.
-	ascentOverride: metrics.ascent / sizeAdjust,
-	descentOverride: metrics.descent / sizeAdjust,
-	rawAscent: metrics.ascent,
-	rawDescent: metrics.descent
-};`
+			const sizeAdjust = targetWidth / fallbackWidth;
+
+			return {
+				label: target.label,
+				sizeAdjust,
+				// Overrides are relative to the already-size-adjusted em, so each
+				// real metric is divided by the size adjustment.
+				ascentOverride: metrics.ascent / sizeAdjust,
+				descentOverride: metrics.descent / sizeAdjust,
+				rawAscent: metrics.ascent,
+				rawDescent: metrics.descent
+			};
+		});
+	},
+	{ targets: TARGETS, fallback: FALLBACK }
+);`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` stands for two small helpers that run inside the page: `width()` renders a sample string in a hidden `<span>` and measures it, and `vertical()` reads the ascent and descent from a canvas. Everything is compared against Arial — the fallback the `@font-face` rules re-describe.'
 			},
 			{ type: 'terminal', code: 'pnpm run fonts:measure' },
 			{ type: 'p', text: 'Shift after the fix: **0 pixels**.' },
@@ -1824,7 +1997,7 @@ pnpm run build`
 			{
 				type: 'code',
 				lang: 'ts',
-				file: 'vite.config.ts',
+				file: 'swapping the adapter',
 				code: `import adapter from '@sveltejs/adapter-vercel';     // or -cloudflare, -netlify, -static
 
 export default defineConfig({
@@ -1837,27 +2010,44 @@ export default defineConfig({
 			},
 			{ type: 'h3', id: 'env-prod', text: 'Environment, before anything else' },
 			{
+				type: 'p',
+				text: 'The project\'s `.env.example` documents every variable `src/env.ts` declares. In production, give each one a real value:'
+			},
+			{
 				type: 'code',
-				file: 'production .env',
+				file: 'production values',
 				lang: 'bash',
 				code: `PUBLIC_SITE_URL="https://strikeflow.io"
 LEADS_DIR="/var/lib/strikeflow/leads"
 EBOOK_TOKEN_SECRET="<64 hex characters>"`
 			},
 			{
+				type: 'p',
+				text: 'For the secret, let Node generate the 64 random hex characters:'
+			},
+			{
 				type: 'terminal',
 				code: `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`
 			},
 			{
+				type: 'p',
+				text: 'Where you put those values depends on when each one is read. `LEADS_DIR` and `EBOOK_TOKEN_SECRET` are read when the server starts, and the server `adapter-node` builds does **not** load a `.env` file on its own — only `pnpm dev`, `pnpm preview` and the build do that. So either set them in your host\'s environment settings, or keep them in a `.env` file beside the build and start the server with Node\'s `--env-file` flag:'
+			},
+			{ type: 'terminal', code: 'node --env-file=.env build/index.js' },
+			{
+				type: 'p',
+				text: 'Start it with plain `node build/index.js` and no host settings, and the server never sees either value: it falls back to a throwaway signing key, so every download link dies on the next restart, and it writes leads to `.data` in whatever directory it was started from.'
+			},
+			{
 				type: 'warn',
-				text: '`PUBLIC_SITE_URL` is `static: true`, which means it is **baked in at build time**. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build.'
+				text: '`PUBLIC_SITE_URL` is `static: true`, which means it is **baked in at build time**. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build, in `.env` (which the build does read) or in the shell that runs `pnpm run build`.'
 			},
 			{ type: 'h3', id: 'checklist', text: 'Pre-launch checklist' },
 			{
 				type: 'ol',
 				items: [
 					'`PUBLIC_SITE_URL` is the real domain and was set **before** the build.',
-					'`EBOOK_TOKEN_SECRET` is set — otherwise download links die on every restart.',
+					'`EBOOK_TOKEN_SECRET` and `LEADS_DIR` reach the running server, from your host\'s settings or `node --env-file=.env` — otherwise download links die on every restart and leads land in `.data`.',
 					'`curl https://yourdomain.com/robots.txt` returns the real domain in the `Sitemap:` line.',
 					'`curl https://yourdomain.com/sitemap.xml` lists real URLs, and each returns 200.',
 					'View source on the home page: exactly one `<title>`, one canonical, one `<h1>`.',

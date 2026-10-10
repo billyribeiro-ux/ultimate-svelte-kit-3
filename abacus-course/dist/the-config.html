@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One file to configure everything — Building Abacus</title>
-<meta name="description" content="SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: what each option does, what it costs, and the one that is new to this project.">
+<meta name="description" content="SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads vite.config.ts top to bottom: what each option does, what it costs, and the one that is new to this project.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
 			<h1>One file to configure everything</h1>
 			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: what each option does, what it costs, and the one that is new to this project.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config and know what every line is for — including server-side route resolution, which none of the earlier projects used.</p></aside>
-			<p>There is no <code>svelte.config.js</code>. SvelteKit 3 moved every option into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
+			<p>There is no <code>svelte.config.js</code>. In SvelteKit 2 the framework options lived in that file; SvelteKit 3 moved every one of them into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a <em>function</em> because it needs to read the environment before the build starts.</p>
 
 <figure class="code">
 	<figcaption>
@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) =&gt; {
 				 */
 				paths: { origin: env.PUBLIC_ORIGIN },</code></pre>
 </figure>
-<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. <code>paths.origin</code> is read from the environment at *build* time: adapter-node 6 bakes it into the server, so a process started on plain HTTP behind a proxy does not reconstruct <code>https://…</code> from headers and reject every form post as cross-site. The passkey ceremonies use the same value’s hostname as the relying-party id, which is why chapter 03 makes it a <code>static</code> environment variable.</p>
+<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. <code>package.json</code> is imported whole, as <code>pkg</code>, rather than as <code>{ version }</code>: a JSON module has exactly one export, its default, and Vite 8 warns that its coming native config loader — plain Node, no bundling — will refuse the named form. <code>paths.origin</code> is read from the environment at <em>build</em> time: adapter-node 6 bakes it into the server, so a process started on plain HTTP behind a proxy does not reconstruct <code>https://…</code> from headers and reject every form post as cross-site. The passkey ceremonies use the same value’s hostname as the relying-party id, which is why chapter 03 makes it a <code>static</code> environment variable.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
@@ -110,7 +110,7 @@ export default defineConfig(({ mode }) =&gt; {
 },</code></pre>
 </figure>
 <p><code>runes</code> is a function so that a dependency written in Svelte 4 style keeps compiling. <code>experimental.async</code> is the one that changes how you write components: <code>await</code> at the top of a <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup — and with it <code>pending</code> snippets, <code>$effect.pending()</code>, <code>settled()</code> and <code>fork()</code>. A spreadsheet has more of this than it looks: opening a sheet, importing a file, publishing, signing in with a passkey — every one is “wait, then draw”.</p>
-<h3 id="adapter">The adapter, and the experiments</h3>
+<h3 id="adapter">The adapter, the experiments, prerendering</h3>
 
 <figure class="code">
 	<figcaption>
@@ -155,20 +155,27 @@ experimental: {
 </figure>
 <p>Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — <code>node build</code> behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. <code>precompress</code> writes <code>.br</code> and <code>.gz</code> beside every asset so the server never compresses on the fly.</p>
 <p><code>forkPreloads</code> is off, and the comment says why: two projects’ end-to-end suites found navigation failures that bisected to it. The evidence is in those suites, not in an opinion, and the criterion for turning it back on is named — one test, in one file.</p>
-<h3 id="csp">The Content Security Policy</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:96-144</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:96-100</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">prerender: {
 	// A broken internal link fails the build instead of shipping a 404.
 	handleHttpError: 'fail',
 	handleMissingId: 'fail'
-},
+},</code></pre>
+</figure>
+<p>Both prerender options are SvelteKit’s defaults, written out so nobody has to remember them. <code>handleHttpError: 'fail'</code> stops the build when a prerendered page links to a page that answers with an error, and <code>handleMissingId: 'fail'</code> stops it when a <code>#fragment</code> link points at an <code>id</code> the target page does not have. The landing page and the template pages are prerendered (ch. 31), so a broken link between them is a failed build rather than a 404 somebody finds later.</p>
+<h3 id="csp">The Content Security Policy</h3>
 
-/*
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:102-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
  * CONTENT SECURITY POLICY
  * =======================
  *
@@ -203,24 +210,23 @@ csp: {
 		'object-src': ['none'],
 		'base-uri': ['self']
 	}
-},
-
-/*
- * Nobody else may POST here. `trustedOrigins` exists for the case where a
- * form on a partner's domain submits to this app; that case does not
- * exist, so the list is empty and stays empty until somebody can name
- * the domain.
- */</code></pre>
+},</code></pre>
 </figure>
 <p><code>mode: 'auto'</code> uses hashes for prerendered pages — where the whole document is known at build time — and nonces for dynamically rendered ones. The directives that are specific to a spreadsheet are each explained in place. The one worth reading twice is <code>style-src 'unsafe-inline'</code>: a virtualised grid positions ten thousand cells with <code>style:</code> attributes and column widths are numbers a person drags, and attributes cannot be hashed. The exposure is CSS injection, not script execution, and the comment says so rather than pretending the trade is free.</p>
 <h3 id="version">CSRF, versioning, bundling</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:145-166</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:139-166</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">csrf: { trustedOrigins: [] },
+	<pre><code class="lang-ts">/*
+ * Nobody else may POST here. `trustedOrigins` exists for the case where a
+ * form on a partner's domain submits to this app; that case does not
+ * exist, so the list is empty and stays empty until somebody can name
+ * the domain.
+ */
+csrf: { trustedOrigins: [] },
 
 /*
  * VERSIONING, SO A DEPLOY DOES NOT STRAND OPEN TABS
@@ -243,7 +249,7 @@ version: {
 
 output: { bundleStrategy: 'split' },</code></pre>
 </figure>
-<p>Nobody else may POST here, so <code>trustedOrigins</code> is empty and stays empty until somebody can name a domain. <code>version.name</code> is the commit hash — deterministic, so two builds of the same code do not tell every open tab to reload for nothing — and <code>pollInterval</code> lets an open sheet notice a deploy and offer a reload while its edits are still saved.</p>
+<p>Nobody else may POST here, so <code>trustedOrigins</code> is empty and stays empty until somebody can name a domain. <code>version.name</code> is the commit hash — deterministic, so two builds of the same code do not tell every open tab to reload for nothing — and <code>pollInterval</code> lets an open sheet notice a deploy and offer a reload while its edits are still saved. <code>output.bundleStrategy: 'split'</code> is SvelteKit’s default too, spelled out like the prerender options: the app is split into many JavaScript and CSS files that load as a person moves around it, rather than one bundle for everything (<code>'single'</code>) or everything inlined into the HTML (<code>'inline'</code>).</p>
 <h3 id="router">The new one: server-side route resolution</h3>
 
 <figure class="code">
@@ -309,7 +315,7 @@ worker: { format: 'es' },
  */
 ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 </figure>
-<p>Three things that are Vite’s business rather than SvelteKit’s. The Phosphor plugin must come *after* <code>sveltekit()</code> because it parses its input as JavaScript and would die on the first <code>&lt;h1&gt;</code>. Workers are built as ES modules so the CSV importer can share the parser with the main thread instead of bundling a second copy. And libSQL is a native addon — a compiled <code>.node</code> binary — so it is kept out of the server bundle, where a bundler could inline the JavaScript that goes looking for it but not the binary.</p>
+<p>Three things that are Vite’s business rather than SvelteKit’s. The Phosphor plugin must come <em>after</em> <code>sveltekit()</code> because it parses its input as JavaScript and would die on the first <code>&lt;h1&gt;</code>. Workers are built as ES modules so the CSV importer can share the parser with the main thread instead of bundling a second copy. And libSQL is a native addon — a compiled <code>.node</code> binary — so it is kept out of the server bundle, where a bundler could inline the JavaScript that goes looking for it but not the binary.</p>
 
 <figure class="code">
 	<figcaption>

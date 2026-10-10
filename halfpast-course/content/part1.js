@@ -364,9 +364,12 @@ export function floorToSlot(instant: number): number {
 	return Math.floor(instant / SLOT_MS) * SLOT_MS;
 }
 
+/** The start of the first cell at or after \`instant\`. */
 export function ceilToSlot(instant: number): number {
 	return Math.ceil(instant / SLOT_MS) * SLOT_MS;
 }
+
+// …
 
 export function slotsIn({ start, end }: Interval): number[] {
 	if (!(end > start)) return [];
@@ -660,7 +663,7 @@ function assertServiceFitsGrid(service: ServiceShape): void {
 		blocks: [
 			{
 				type: 'p',
-				text: 'The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, in two hemispheres, in under a second.'
+				text: 'The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, a zone that sits 45 minutes off the hour, and a shift that runs past midnight, in under a second.'
 			},
 
 			{ type: 'h3', id: 'setup', text: 'Two test environments, one config' },
@@ -846,6 +849,8 @@ import {
 const LONDON = 'Europe/London';
 // …
 const iso = (instant: number) => new Date(instant).toISOString();
+
+// …
 
 describe('wallClockToInstant — the mornings clocks move', () => {
 	/*

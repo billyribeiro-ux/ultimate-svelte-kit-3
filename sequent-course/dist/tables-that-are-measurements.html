@@ -111,7 +111,15 @@
 	 * scrollable width to the *page*, even though the table itself is correctly
 	 * clipped and nothing is visibly out of place.
 	 *
-	 * …
+	 * Every element measures correctly. `getBoundingClientRect` on every child
+	 * is inside its parent. The page still scrolls sideways by 122px, and the
+	 * only way to see it is to try scrolling.
+	 *
+	 * `clip` rather than `hidden`: `hidden` would make this a scroll container,
+	 * which breaks the sticky positioning it is meant to protect and gives the
+	 * card its own scrollbar. `clip` just clips. The small margin lets focus
+	 * rings and the tap-target expanders bleed a few pixels rather than being
+	 * shaved off at the border.
 	 */
 	overflow-x: clip;
 	overflow-clip-margin: 4px;

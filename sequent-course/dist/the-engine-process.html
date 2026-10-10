@@ -193,25 +193,7 @@ SQLITE_ERROR: cannot commit - no transaction is active
 		<span class="code__file">packages/store/src/client.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * Run a function inside a transaction, serialised with every other one on this
- * client.
- *
- * …
- *
- * ## Why the queue matters *more* with a pool, not less
- *
- * Two overlapping transactions on one connection used to interleave into a
- * single transaction and commit together — not a deadlock, not an error, and
- * completely wrong. Two overlapping transactions on a pool each get their own
- * connection, and the second `BEGIN IMMEDIATE` waits for the first's write lock
- * — inside a synchronous native call, which blocks the event loop, which is the
- * only thing that could have let the first transaction finish. That is a
- * deadlock with a five-second timeout on it. The chain means the second caller
- * waits in JavaScript, where waiting is free, and only ever contends for the
- * lock with *other processes*.
- */
-export async function withTransaction&lt;T&gt;(
+	<pre><code class="lang-ts">export async function withTransaction&lt;T&gt;(
 	client: Client,
 	work: (tx: Executor) =&gt; Promise&lt;T&gt;
 ): Promise&lt;T&gt; {
@@ -225,7 +207,7 @@ export async function withTransaction&lt;T&gt;(
 			await transaction.commit();
 			return result;
 		} catch (thrown) {
-			/* … */
+			// …
 			try {
 				await transaction.rollback();
 			} catch {
@@ -249,7 +231,7 @@ export async function withTransaction&lt;T&gt;(
 	return run;
 }</code></pre>
 </figure>
-<aside class="callout callout--note"><p>The promise chain is not decoration. In <code>apps/engine</code> the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript.</p></aside>
+<aside class="callout callout--note"><p>The promise chain is not decoration. In <code>apps/engine</code> the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript. The function's own doc comment tells this whole story — 0.17.4, the workaround, 0.18 — so the next person to touch it meets the history before they meet the code.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>What a load test is actually for</h4>

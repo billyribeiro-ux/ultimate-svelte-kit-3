@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Passkeys: signing in without a password — Building Abacus</title>
-<meta name="description" content="A key pair: the private half stays in the device, the public half lives in `credentials`. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against `PUBLIC_ORIGIN`.">
+<meta name="description" content="A key pair: the private half stays in the device, the public half lives in credentials. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against PUBLIC_ORIGIN.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -85,7 +85,7 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 const encoder = new TextEncoder();</code></pre>
 </figure>
-<p>The verification is <code>@simplewebauthn/server</code>; what this file adds is the bookkeeping every relying party has to do. The relying-party id is the *hostname* of <code>PUBLIC_ORIGIN</code> — no scheme, no port — which is why that variable is <code>static</code> and baked in at build time: a passkey registered for one hostname must not be asserted against another.</p>
+<p>The verification is <code>@simplewebauthn/server</code>; what this file adds is the bookkeeping every relying party has to do. The relying-party id is the <em>hostname</em> of <code>PUBLIC_ORIGIN</code> — no scheme, no port — which is why that variable is <code>static</code> and baked in at build time: a passkey registered for one hostname must not be asserted against another.</p>
 
 <figure class="code">
 	<figcaption>
@@ -123,7 +123,7 @@ async function takeChallenge(id: string, kind: 'register' | 'login') {
 	return row;
 }</code></pre>
 </figure>
-<p>A challenge is stored with a five-minute expiry and *consumed* when taken: deleted on the way out, so it cannot be used twice. Expired ones are swept whenever a new one is stored.</p>
+<p>A challenge is stored with a five-minute expiry and <em>consumed</em> when taken: deleted on the way out, so it cannot be used twice. Expired ones are swept whenever a new one is stored.</p>
 <h3 id="registration">Registration</h3>
 
 <figure class="code">
@@ -170,7 +170,7 @@ export async function beginRegistration(
 	return { options, challengeId };
 }</code></pre>
 </figure>
-<p>For a new person, a user id is minted now and travels through the challenge row; it becomes a row in <code>users</code> only when the ceremony finishes, so an abandoned sign-up leaves nothing behind. For an existing person adding a second passkey, their current credentials are *excluded* so the same key is not registered twice — the end-to-end suite checks that the same virtual device is refused with exactly that error.</p>
+<p>For a new person, a user id is minted now and travels through the challenge row; it becomes a row in <code>users</code> only when the ceremony finishes, so an abandoned sign-up leaves nothing behind. For an existing person adding a second passkey, their current credentials are <em>excluded</em> so the same key is not registered twice — the end-to-end suite checks that the same virtual device is refused with exactly that error.</p>
 
 <figure class="code">
 	<figcaption>
@@ -303,7 +303,7 @@ export async function finishAuthentication(
 
 <aside class="callout callout--why">
 	<h4>Why there is no username field</h4>
-	<p>The passkey is *discoverable*: <code>beginAuthentication</code> sends no <code>allowCredentials</code>, so the browser shows the person their accounts for this site and nobody types a name first. The counter check after verification is the cloned-key defence: a response with a counter at or below the stored one came from a copy, the library refuses it, and the new value is stored so the next copy is caught too.</p>
+	<p>The passkey is <em>discoverable</em>: <code>beginAuthentication</code> sends no <code>allowCredentials</code>, so the browser shows the person their accounts for this site and nobody types a name first. The counter check after verification is the cloned-key defence: a response with a counter at or below the stored one came from a copy, the library refuses it, and the new value is stored so the next copy is caught too.</p>
 </aside>
 <h3 id="the-wire">The wire: a schema that matches the library’s types</h3>
 
@@ -346,7 +346,7 @@ const RegistrationResponseSchema = v.object({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:67-85</span></span>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:67-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const finishRegistration = command(
@@ -363,11 +363,7 @@ const RegistrationResponseSchema = v.object({
 		void listPasskeys().refresh();
 		return user;
 	}
-);
-
-/* ------------------------------------------------------------------ */
-/* Signing in                                                          */
-/* ------------------------------------------------------------------ */</code></pre>
+);</code></pre>
 </figure>
 
 <figure class="code">
@@ -487,7 +483,7 @@ export async function attachAuthenticator(page: Page) {
 	};
 }</code></pre>
 </figure>
-<p>How this is tested: Chromium’s DevTools protocol attaches a *virtual authenticator* — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.</p>
+<p>How this is tested: Chromium’s DevTools protocol attaches a <em>virtual authenticator</em> — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

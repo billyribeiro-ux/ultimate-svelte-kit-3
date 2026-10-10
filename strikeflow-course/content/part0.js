@@ -609,7 +609,7 @@ const label = plan.label ?? 'Untitled';`
 			{
 				type: 'code',
 				lang: 'js',
-				file: 'async / await',
+				file: 'async and await',
 				code: `async function loadPosts() {
 	const response = await fetch('/api/posts');
 	const posts = await response.json();
@@ -700,7 +700,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 itself runs on Node 22.17 or newer, but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.21.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
+				text: 'SvelteKit 3 on its own accepts an older Node (its floor is 22.17), but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.21.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
 			},
 			{ type: 'h3', id: 'packages', text: 'Packages and the package manager' },
 			{
@@ -720,7 +720,7 @@ mkdir new-thing  # make a directory`
 			{ type: 'h3', id: 'package-json', text: 'package.json' },
 			{
 				type: 'p',
-				text: "Every project has one. It is the project's identity card and instruction manual."
+				text: "Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each `…` line stands for entries left out, and you will see the whole file as the course goes on."
 			},
 			{
 				type: 'code',
@@ -728,16 +728,24 @@ mkdir new-thing  # make a directory`
 				file: 'package.json',
 				code: `{
 	"name": "strikeflow-site",
+	…
 	"type": "module",
+	…
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build"
-	},
-	"dependencies": {
-		"gsap": "^3.15.0"
+		"build": "vite build",
+		…
 	},
 	"devDependencies": {
-		"vite": "^8.3.4"
+		…
+		"vite": "^8.3.4",
+		…
+	},
+	…
+	"dependencies": {
+		…
+		"gsap": "^3.15.0",
+		…
 	}
 }`
 			},

@@ -90,6 +90,7 @@ export const DURATION = {
 	</figcaption>
 	<pre><code class="lang-ts">const REVEAL_BUDGET = 0.45;
 
+// …
 export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
 		const { distance = 10 } = options;
@@ -123,7 +124,7 @@ export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&g
 </figure>
 <ul><li><strong>The budget is enforced in code, not in a comment.</strong> <code>delay + duration</code> can never exceed 450ms, so a future person adding a seventh panel cannot quietly break the guarantee.</li><li><strong>The order ticket has no reveal at all.</strong> Not a shorter one — none. It is the one control somebody might need to reach in the first half-second.</li><li><strong><code>will-change</code> is set for the duration and removed after.</strong> Leaving it on permanently promotes the element to its own compositor layer forever, which on a page with forty of them costs more memory than the animation ever saved.</li></ul>
 <h3 id="attachments">Why these are attachments, not actions</h3>
-<p>An earlier version of this file exported Svelte *actions* returning <code>{ update, destroy }</code>. The official <code>use:</code> docs now mark that return shape as legacy — &quot;prior to the <code>$effect</code> rune, actions could return an object with <code>update</code> and <code>destroy</code> methods; using effects is preferred&quot; — and recommend attachments outright for 5.29 and newer. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why <code>reveal</code> above ends with <code>return () =&gt; …</code> instead of a <code>destroy</code> method.</p>
+<p>An earlier version of this file exported Svelte *actions* returning <code>{ update, destroy }</code>. The official <code>use:</code> docs now mark that return shape as legacy — &quot;prior to the <code>$effect</code> rune, actions could return an object with <code>update</code> and <code>destroy</code> methods … using effects is preferred&quot; — and for 5.29 and newer they suggest attachments instead: &quot;consider using attachments instead, as they are more flexible and composable&quot;. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why <code>reveal</code> above ends with <code>return () =&gt; …</code> instead of a <code>destroy</code> method.</p>
 <p>Used from the template as <code>{@attach reveal({ delay: 0.05 })}</code> instead of <code>use:reveal={{ delay: 0.05 }}</code>. The file is <code>motion.svelte.ts</code> rather than <code>motion.ts</code> for the same reason: the <code>.svelte.ts</code> suffix is what lets a shared module use runes.</p>
 
 <aside class="callout callout--why">

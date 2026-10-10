@@ -74,7 +74,7 @@ export interface RestingOrder {
 	readonly expiresAtClose: boolean;
 }
 
-/* … */
+// …
 
 /**
  * Every order resting at one price, in arrival order.
@@ -191,11 +191,11 @@ export function rest(book: Book, order: RestingOrder): number {
 }</code></pre>
 </figure>
 <h3 id="matching">Matching</h3>
-<p>The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A <code>MatchRequest</code> carries the side, the quantity, an optional <code>limitPrice</code> — absent for a market order — the sender's <code>firmId</code> and self-trade-prevention choice, and a <code>dryRun</code> flag the fill-or-kill check uses. Self-trade prevention is elided here; it gets its own chapter.</p>
+<p>The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A <code>MatchRequest</code> carries the side, the quantity, an optional <code>limitPrice</code> — absent for a market order — the sender's <code>firmId</code> and self-trade-prevention choice, and a <code>dryRun</code> flag the fill-or-kill check uses. Each <code>// …</code> below is a cut: the doc comment on <code>match</code>, the self-trade-prevention bookkeeping and the check itself (they get their own chapter), and the <code>dryRun</code> branch, which records the fill and moves on without touching the book.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">packages/core/src/book.ts (simplified)</span>
+		<span class="code__file">packages/core/src/book.ts (abridged)</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -210,8 +210,7 @@ function crosses(restingPrice: Price, side: Side, limitPrice: Price | undefined)
 	return side === 'buy' ? restingPrice &lt;= limitPrice : restingPrice &gt;= limitPrice;
 }
 
-/* … */
-
+// …
 export function match(book: Book, request: MatchRequest): MatchResult {
 	const opposite = request.side === 'buy' ? book.asks : book.bids;
 	const fills: Fill[] = [];
@@ -220,8 +219,7 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 	let remaining: number = request.quantity;
 	let levelIndex = 0;
 
-	// … (self-trade-prevention bookkeeping — the next chapter's subject)
-
+	// …
 	outer: while (remaining &gt; 0 &amp;&amp; levelIndex &lt; opposite.length) {
 		const level = opposite[levelIndex]!;
 
@@ -230,14 +228,12 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 		for (let i = 0; i &lt; level.orders.length &amp;&amp; remaining &gt; 0;) {
 			const resting = level.orders[i]!;
 
-			// … (the self-trade check lives here)
-
+			// …
 			const traded = Math.min(remaining, resting.remaining);
 			fills.push({ restingOrder: resting, price: level.price, quantity: traded as Quantity });
 			remaining -= traded;
 
-			// … (a dry run moves on without touching anything)
-
+			// …
 			resting.remaining = (resting.remaining - traded) as Quantity;
 			level.total -= traded;
 

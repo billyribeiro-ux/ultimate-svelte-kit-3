@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deploying: a container that migrates, listens and stops — Building Abacus</title>
-<meta name="description" content="A three-stage Dockerfile that bakes the origin in, runs as `node`, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.">
+<meta name="description" content="A three-stage Dockerfile that bakes the origin in, runs as node, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -75,7 +75,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile</code></pre>
 </figure>
-<p>Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
+<p>Three stages so the image that runs holds only what running needs. The origin is a <em>build</em> argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
 <p>adapter-node 6.0 serves <code>build/client</code> from a list it records at build time — each file with a content-hash <code>ETag</code>, no <code>Last-Modified</code>, and only to <code>GET</code> and <code>HEAD</code> (anything else is a 405). A file copied into the directory after the build is not served, and a replaced one keeps its old size and tag. That is the right answer for an image that is built once and started many times, and the reason the Dockerfile copies <code>build</code> as a unit: there is nothing to patch in place, and runtime configuration goes through environment variables.</p>
 
 <figure class="code">
@@ -412,7 +412,7 @@ defaults:
       - if: failure()
         run: docker logs abacus || true</code></pre>
 </figure>
-<p>The <code>image</code> job builds the Dockerfile, starts the container the way compose does, waits for the health check, and then *stops it with SIGTERM and checks the exit code*. A Dockerfile that is never built is documentation; a graceful shutdown that is never exercised is a hope.</p>
+<p>The <code>image</code> job builds the Dockerfile, starts the container the way compose does, waits for the health check, and then <em>stops it with SIGTERM and checks the exit code</em>. A Dockerfile that is never built is documentation; a graceful shutdown that is never exercised is a hope.</p>
 
 <figure class="code">
 	<figcaption>

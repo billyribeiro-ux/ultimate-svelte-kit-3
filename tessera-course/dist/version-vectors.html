@@ -159,17 +159,17 @@ export function equal(a: VersionVector, b: VersionVector): boolean {
 <p>This is where &quot;concurrent&quot; gets a definition rather than a feeling. <code>a</code> <strong>dominates</strong> <code>b</code> if it has seen everything <code>b</code> has. If neither dominates the other, the two states are <strong>concurrent</strong> — they each know something the other does not. That is the case a CRDT exists for, and it is now a function you can call.</p>
 <h3 id="the-bug">The afternoon this cost</h3>
 <aside class="callout callout--warn"><p>A version vector is a <strong>sync cursor</strong>, not a delivery filter. Those sound like the same thing. They are not, and the difference is silent data loss.</p></aside>
-<p>The first version of <code>apply</code> began with a fast path that looked obviously correct:</p>
+<p>The first version of <code>apply</code> began with a fast path that looked obviously correct. Here it is in the names the code uses today — <code>has</code> is re-exported from <code>crdt/index.ts</code> as <code>versionHas</code>:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">apply(operation: Operation): void {
+	<pre><code class="lang-ts">apply(operation: Operation): ApplyResult {
 	// &quot;We have already seen this one.&quot; — and this is wrong.
-	if (has(this.#version, operation.stamp)) return;
-	…
+	if (versionHas(this.#version, operation.stamp)) return { changed: false };
+	// …
 }</code></pre>
 </figure>
 <p>The reasoning: an operation already covered by the vector is one we have already applied, so skip the work. That reasoning holds <strong>only while each actor’s operations arrive in order</strong>.</p>
@@ -206,7 +206,7 @@ export function equal(a: VersionVector, b: VersionVector): boolean {
 	<h4>The fix was to delete the optimisation</h4>
 	<p>Every structure in this folder is idempotent on its own — a set insert, a stamp comparison, a <code>Map.has</code>. Applying an operation twice costs a few nanoseconds and changes nothing. So the fast path bought approximately nothing and cost a correctness guarantee. Deleting it makes <code>apply</code> safe under <strong>any</strong> delivery order, which is a much stronger property than &quot;safe under the order we currently happen to produce&quot;.</p>
 </aside>
-<p>The vector goes back to the one job it is genuinely correct for: telling the server where to resume. And the client advances it from the <strong>watermark</strong> the server sends with each batch — a point the server guarantees is complete — never from the stamps of individual operations. That distinction returns, with consequences, in chapter 25.</p>
+<p>The vector goes back to the one job it is genuinely correct for: telling the server where to resume. And the client advances it from the <strong>watermark</strong> the server sends with each batch — a point the server guarantees is complete — never from the stamps of individual operations. That distinction returns, with consequences, in chapter 24.</p>
 
 <figure class="code">
 	<figcaption>

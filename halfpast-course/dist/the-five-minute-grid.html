@@ -90,9 +90,12 @@ export interface Interval {
 	return Math.floor(instant / SLOT_MS) * SLOT_MS;
 }
 
+/** The start of the first cell at or after `instant`. */
 export function ceilToSlot(instant: number): number {
 	return Math.ceil(instant / SLOT_MS) * SLOT_MS;
 }
+
+// …
 
 export function slotsIn({ start, end }: Interval): number[] {
 	if (!(end &gt; start)) return [];
@@ -107,7 +110,7 @@ export function slotsIn({ start, end }: Interval): number[] {
 }</code></pre>
 </figure>
 <p>Notice the widening. The start is <strong>floored</strong> and the end is <strong>ceiled</strong>, so an appointment running 09:02–09:38 consumes the cells from 09:00 to 09:40. That is deliberate: half of the 09:00 cell is genuinely unusable, so the grid marks it taken rather than pretending somebody could squeeze in.</p>
-<aside class="callout callout--note"><p><code>Math.floor</code> rather than <code>Math.trunc</code> matters for instants before 1970, which are negative. <code>trunc</code> rounds those towards zero — i.e. *forwards* in time — and the grid would silently misalign. Nobody will book a haircut in 1969, but the day a bad input produces a negative number, flooring keeps the behaviour consistent instead of interesting.</p></aside>
+<aside class="callout callout--note"><p><code>Math.floor</code> rather than <code>Math.trunc</code> matters for instants before 1970, which are negative. <code>trunc</code> rounds those towards zero — i.e. <em>forwards</em> in time — and the grid would silently misalign. Nobody will book a haircut in 1969, but the day a bad input produces a negative number, flooring keeps the behaviour consistent instead of interesting.</p></aside>
 <h3 id="is-free">The check itself</h3>
 
 <figure class="code">

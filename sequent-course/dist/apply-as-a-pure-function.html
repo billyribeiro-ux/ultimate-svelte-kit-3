@@ -93,6 +93,7 @@
 </figure>
 <aside class="callout callout--note"><p>No <code>default</code> case. With a discriminated union and <code>strict</code> on, TypeScript checks the switch is exhaustive — so adding a tenth command produces a compile error here rather than being silently ignored at runtime. That is the entire reason for using a union with a <code>kind</code> field.</p></aside>
 <h3 id="place">Placing an order</h3>
+<p>Abridged, and each <code>// …</code> stands for something this chapter does not need yet: a <code>refuse</code> helper that wraps a refusal in an <code>order_rejected</code> event, the comment explaining why the duplicate check comes first, the refusal of a market order outside continuous trading, building the <code>LiveOrder</code> (a market order gets a sentinel price at the extreme of its side, so one comparison in the book handles both kinds), and the tail that reports pulled orders and fills before resting or cancelling whatever is left.</p>
 
 <figure class="code">
 	<figcaption>
@@ -106,8 +107,7 @@
 ): Event[] {
 	const instrument = state.instruments.get(command.instrumentId);
 
-	// … (a `refuse` helper wraps a Refusal in an `order_rejected` event)
-
+	// …
 	if (findLive(state, command.firmId, command.clientOrderId)) {
 		return refuse({
 			reason: 'duplicate_client_order_id',
@@ -121,8 +121,7 @@
 	// `checkOrder` proved this, but the compiler has not been told.
 	const found = instrument!;
 
-	// … (a market order outside continuous trading is refused here)
-
+	// …
 	if (found.phase === 'continuous') {
 		const bookRefusal = checkAgainstBook(found.book, {
 			...command,
@@ -133,8 +132,7 @@
 	}
 
 	const orderId = orderIdFor(seq);
-	// … (build the order; a market order gets a sentinel price that never rests)
-
+	// …
 	const events: Event[] = [];
 
 	// During pre-open and auction the book accumulates and nothing matches. The
@@ -154,7 +152,7 @@
 		...(command.price !== undefined ? { limitPrice: command.price } : {})
 	});
 
-	// … (report the pulls and the fills, then rest or cancel the remainder)
+	// …
 }</code></pre>
 </figure>
 <p>The duplicate check comes first, and it is idempotency rather than tidiness: a participant whose connection dropped mid-order does not know whether it arrived, so the only safe thing they can do is send it again — and the venue's job is to recognise the second copy rather than work it twice. Notice also where the book lives: each instrument owns its own, on <code>state.instruments.get(…).book</code>.</p>

@@ -80,6 +80,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'static', 'fonts');
 
+/** The only font files this site ships. Latin subset, variable weight axis. */
 const FONTS = [
 	{
 		from: '@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2',
@@ -95,16 +96,18 @@ mkdirSync(outDir, { recursive: true });
 
 for (const font of FONTS) {
 	const source = join(root, 'node_modules', font.from);
+
 	if (!existsSync(source)) {
 		console.error(`[sync-fonts] missing: ${font.from}`);
 		console.error('[sync-fonts] did you run `pnpm install`?');
 		process.exit(1);
 	}
+
 	copyFileSync(source, join(outDir, font.to));
 	console.log(`[sync-fonts] ${font.to}`);
 }
 
-// …</code></pre>
+console.log(`[sync-fonts] done — ${FONTS.length} files in static/fonts`);</code></pre>
 </figure>
 <p>Wire it into <code>package.json</code> so it runs on every install and nobody has to remember it:</p>
 
@@ -114,9 +117,11 @@ for (const font of FONTS) {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;scripts&quot;: {
+	…
 	&quot;fonts:sync&quot;: &quot;node scripts/sync-fonts.js&quot;,
-	&quot;prepare&quot;: &quot;node scripts/sync-fonts.js &amp;&amp; (svelte-kit sync || echo '')&quot;
-}</code></pre>
+	&quot;prepare&quot;: &quot;node scripts/sync-fonts.js &amp;&amp; (svelte-kit sync || echo '')&quot;,
+	…
+},</code></pre>
 </figure>
 
 <figure class="code code--terminal">
@@ -141,9 +146,8 @@ for (const font of FONTS) {
 	font-weight: 100 900;
 	src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
 	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-		U+2212, U+2215, U+FEFF, U+FFFD;
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -153,9 +157,8 @@ for (const font of FONTS) {
 	font-weight: 1 1000;
 	src: url('/fonts/sofia-sans-latin-wght-normal.woff2') format('woff2-variations');
 	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-		U+2212, U+2215, U+FEFF, U+FFFD;
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }</code></pre>
 </figure>
 <p><code>font-display: swap</code> means: show the text immediately in a fallback font, then swap to the real one when it arrives. The alternative leaves the user staring at invisible text.</p>
@@ -173,8 +176,8 @@ for (const font of FONTS) {
 	font-family: 'Montserrat Fallback';
 	src: local('Arial');
 	size-adjust: 110.2%;
-	ascent-override: 88%;      /* 0.97 / 1.102 */
-	descent-override: 22.7%;   /* 0.25 / 1.102 */
+	ascent-override: 88%; /* 0.97 / 1.102 */
+	descent-override: 22.7%; /* 0.25 / 1.102 */
 	line-gap-override: 0%;
 }
 
@@ -183,8 +186,8 @@ for (const font of FONTS) {
 	font-family: 'Sofia Sans Fallback';
 	src: local('Arial');
 	size-adjust: 96.7%;
-	ascent-override: 93.1%;    /* 0.90 / 0.967 */
-	descent-override: 31%;     /* 0.30 / 0.967 */
+	ascent-override: 93.1%; /* 0.90 / 0.967 */
+	descent-override: 31%; /* 0.30 / 0.967 */
 	line-gap-override: 0%;
 }</code></pre>
 </figure>

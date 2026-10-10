@@ -81,7 +81,7 @@ export class ErrorValue {
 /** A scalar: what a cell holds after evaluation. */
 export type Scalar = number | string | boolean | null | ErrorValue;</code></pre>
 </figure>
-<p>Numbers, strings and booleans are the JavaScript primitives, because wrapping them would buy nothing. Empty is <code>null</code>. Errors are a *class* so that <code>instanceof</code> tells <code>#REF!</code> the error apart from <code>&quot;#REF!&quot;</code> the text somebody typed — and so that the <code>transport</code> hook in chapter 29 can carry an error across the wire as itself. <code>toJSON</code> exists for the same reason: a published sheet’s values are serialised, and an error must serialise as something a reader can recognise.</p>
+<p>Numbers, strings and booleans are the JavaScript primitives, because wrapping them would buy nothing. Empty is <code>null</code>. Errors are a <em>class</em> so that <code>instanceof</code> tells <code>#REF!</code> the error apart from <code>&quot;#REF!&quot;</code> the text somebody typed — and so that the <code>transport</code> hook in chapter 29 can carry an error across the wire as itself. <code>toJSON</code> exists for the same reason: a published sheet’s values are serialised, and an error must serialise as something a reader can recognise.</p>
 <p>The second comment is the one people miss: <strong>dates are numbers</strong>. <code>DATE(2026, 9, 2)</code> is 46267, and adding 7 is a week later without a date library. Which epoch — and what a person sees — is chapter 13.</p>
 <h3 id="ranges">A range, only while evaluating</h3>
 
@@ -156,7 +156,7 @@ export function toNumber(v: Value): number | ErrorValue {
 	return text.endsWith('%') ? n / 100 : n;
 }</code></pre>
 </figure>
-<p>In arithmetic, empty is zero, a boolean is one or zero, and a string is a number if it *looks* like one and an error if it does not — <code>&quot;12%&quot;</code> is 0.12, <code>&quot;twelve&quot;</code> is <code>#VALUE!</code>. A range where a scalar was expected is an error; there is no implicit intersection here, because nobody can explain it.</p>
+<p>In arithmetic, empty is zero, a boolean is one or zero, and a string is a number if it <em>looks</em> like one and an error if it does not — <code>&quot;12%&quot;</code> is 0.12, <code>&quot;twelve&quot;</code> is <code>#VALUE!</code>. A range where a scalar was expected is an error; there is no implicit intersection here, because nobody can explain it.</p>
 
 <figure class="code">
 	<figcaption>
@@ -186,7 +186,7 @@ export function plainNumber(n: number): string {
 
 <aside class="callout callout--why">
 	<h4>Why toText rounds to fifteen significant digits</h4>
-	<p><code>0.1 + 0.2</code> is <code>0.30000000000000004</code> in floating point, and always will be. Every spreadsheet hides that at the *edge* — when a number becomes text — by printing fifteen significant digits, which is exactly the precision a double reliably carries. The engine never rounds; only the text does. That keeps <code>=A1*3</code> exact and <code>A1 &amp; &quot;&quot;</code> readable, which is the right pair.</p>
+	<p><code>0.1 + 0.2</code> is <code>0.30000000000000004</code> in floating point, and always will be. Every spreadsheet hides that at the <em>edge</em> — when a number becomes text — by printing fifteen significant digits, which is exactly the precision a double reliably carries. The engine never rounds; only the text does. That keeps <code>=A1*3</code> exact and <code>A1 &amp; &quot;&quot;</code> readable, which is the right pair.</p>
 </aside>
 
 <figure class="code">

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cycles: an error that is a value — Building Abacus</title>
-<meta name="description" content="`A1 = B1 + 1`, `B1 = A1 + 1`. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.">
+<meta name="description" content="A1 = B1 + 1, B1 = A1 + 1. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -35,7 +35,7 @@
 			<h1>Cycles: an error that is a value</h1>
 			<p class="lede"><code>A1 = B1 + 1</code>, <code>B1 = A1 + 1</code>. A program with that in it has a bug; a spreadsheet with that in it has a person who made a mistake, and must keep working. Tarjan’s algorithm finds the members, and everything downstream carries on.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know how the engine finds cycle members precisely — not just “something is left over” — and why cells downstream of a cycle are evaluated normally.</p></aside>
-			<p>When Kahn’s queue empties, anything still unevaluated has an in-degree that never reached zero. That means it is on a cycle — or merely *downstream* of one, which is a different thing. <code>=A1+1</code> where A1 is in a cycle is not itself circular; it should evaluate, see <code>#CYCLE!</code> as a value, and produce <code>#CYCLE!</code> the way it would produce <code>#DIV/0!</code> from a division by zero next door.</p>
+			<p>When Kahn’s queue empties, anything still unevaluated has an in-degree that never reached zero. That means it is on a cycle — or merely <em>downstream</em> of one, which is a different thing. <code>=A1+1</code> where A1 is in a cycle is not itself circular; it should evaluate, see <code>#CYCLE!</code> as a value, and produce <code>#CYCLE!</code> the way it would produce <code>#DIV/0!</code> from a division by zero next door.</p>
 
 <figure class="code">
 	<figcaption>
@@ -67,7 +67,7 @@
 	return { changed, cycles, evaluated };
 }</code></pre>
 </figure>
-<p>So the leftovers are split. The strongly connected components of the remaining graph with more than one node — plus any node that reads itself — are the cycle members. They are marked, counted as done, and *released*, and the queue is drained again. The downstream cells evaluate with the error as an input.</p>
+<p>So the leftovers are split. The strongly connected components of the remaining graph with more than one node — plus any node that reads itself — are the cycle members. They are marked, counted as done, and <em>released</em>, and the queue is drained again. The downstream cells evaluate with the error as an input.</p>
 
 <figure class="code">
 	<figcaption>

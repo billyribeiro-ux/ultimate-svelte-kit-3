@@ -39,7 +39,7 @@ export const part6 = [
 			},
 
 			{ type: 'h3', id: 'tokens', text: 'Tokens' },
-			code('src/lib/styles/tokens.css', 1, 60, { partial: true }),
+			code('src/lib/styles/tokens.css', 1, 62, { partial: true }),
 			{
 				type: 'p',
 				text: 'A spreadsheet is a sheet of paper, so the light theme is the design and the dark theme is a translation — the opposite of project 6, for the same reason: design the one people will live in. Every colour is a `light-dark()` pair and the browser picks by system setting. Windows High Contrast replaces every colour with a system one, so the rules that matter are restated in `forced-colors` with keywords that survive.'
@@ -83,11 +83,11 @@ export const part6 = [
 				title: 'Why the drifting dots use hydratable',
 				text: 'The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen *different* random positions during hydration, and Svelte would find the markup did not match. `hydratable(key, fn)` runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.'
 			},
-			code('src/routes/(app)/+page.svelte', 46, 75),
+			code('src/routes/(app)/+page.svelte', 46, 105),
 			code('src/lib/motion/cinematic.ts', 1, 55),
 			{
 				type: 'p',
-				text: 'The entrance is an attachment, so the markup says `{@attach cinematic()}` and nothing else. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; `prefersReducedMotion` is checked first; and nothing in the stylesheet starts at `opacity: 0`, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.'
+				text: 'The entrance is an attachment, so the markup says `{@attach cinematic()}` and nothing else; the elements it moves are marked in the hero with `data-word`, `data-pad` and `data-rise`, and the attachment finds them with `querySelectorAll`. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; `prefersReducedMotion` is checked first; and nothing in the stylesheet starts at `opacity: 0`, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.'
 			},
 
 			{ type: 'h3', id: 'templates', text: 'Templates from entries' },
@@ -185,13 +185,18 @@ export const part6 = [
 				title: 'Why the record comes from the query and not from data',
 				text: 'The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call `getSheet(id).refresh()`. A query awaited in the component updates in place when it is refreshed; `data` is a snapshot of what the load returned. The first version read `data.sheet` and the Unpublish button never appeared, because the load did not re-run. `await` inside `$derived` resolves at once from the cache the load already filled, so there is no second request and no flash.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 87, 107, { partial: true }),
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 114, 157),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 79, 107),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 114, 119),
+			{
+				type: 'p',
+				text: '`<svelte:window>` adds the one listener this page needs on the window. While `live.pending` says an edit is still queued or on its way to the server, `event.preventDefault()` in `beforeunload` makes the browser ask before the tab closes. Below it, the page is one `<div>` holding the header and the workbench.'
+			},
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 122, 157),
 			{
 				type: 'p',
 				text: 'The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, “Could not save” — and a chip for everybody else in the room. `stream.current` being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 159, 239),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 159, 238),
 			{
 				type: 'p',
 				text: 'Sharing and publishing live in a native popover. The access setting is a *form* — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button.'
@@ -219,8 +224,8 @@ export const part6 = [
 				type: 'p',
 				text: '`create.preflight(schema)` validates on the client before anything is sent — the same valibot the server runs, so “give it a title” appears on the keystroke — and `.enhance` wraps the submission so a failure becomes a toast rather than a page.'
 			},
-			code('src/routes/(app)/sheets/+page.svelte', 46, 73),
-			code('src/routes/(app)/sheets/+page.svelte', 75, 141),
+			code('src/routes/(app)/sheets/+page.svelte', 48, 73),
+			code('src/routes/(app)/sheets/+page.svelte', 75, 139),
 			{
 				type: 'why',
 				title: 'Why delete takes the card off the screen before the server answers',
@@ -237,12 +242,12 @@ export const part6 = [
 
 			{ type: 'h3', id: 'settings', text: 'Settings' },
 			code('src/routes/(app)/settings/+page.svelte', 15, 58),
-			code('src/routes/(app)/settings/+page.svelte', 82, 121),
+			code('src/routes/(app)/settings/+page.svelte', 82, 121, { partial: true }),
 			{
 				type: 'p',
-				text: 'The profile is awaited in markup with a `$derived`, and the form is `updateProfile` with a preflight. The name is in the session cookie, so the handler reissues it — `startSession` again — and refreshes `whoAmI`, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.'
+				text: 'The block stops at the end of the profile: the boundary and the `{#if me}` stay open around the passkeys below and close after them. The profile is awaited in markup with a declaration tag, `{const me = $derived(await getProfile())}`, and the form is `updateProfile` with a preflight. The name is in the session cookie, so the handler reissues it — `startSession` again — and refreshes `whoAmI`, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.'
 			},
-			code('src/routes/(app)/settings/+page.svelte', 123, 176),
+			code('src/routes/(app)/settings/+page.svelte', 123, 175),
 			{
 				type: 'p',
 				text: 'Passkeys are listed from a query, each with its own `removePasskey.for(id)` form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.'

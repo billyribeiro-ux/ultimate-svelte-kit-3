@@ -48,7 +48,7 @@
 	// …
 &lt;/script&gt;
 
-&lt;!-- …the hero copy column, then: --&gt;
+&lt;!-- … --&gt;
 &lt;form {...requestGuide} class=&quot;signup&quot; aria-labelledby=&quot;signup-heading&quot;&gt;
 	&lt;h2 id=&quot;signup-heading&quot; class=&quot;signup__title&quot;&gt;Get the guide&lt;/h2&gt;
 	&lt;p class=&quot;signup__sub&quot;&gt;Enter your email and we'll send you straight to the download.&lt;/p&gt;
@@ -67,7 +67,11 @@
 				: undefined}
 		/&gt;
 		{#if requestGuide.fields.email.issues()}
-			&lt;!-- … --&gt;
+			&lt;!--
+				`role=&quot;alert&quot;` makes a screen reader announce the message the
+				moment it appears, rather than only when the user happens to
+				navigate onto it.
+			--&gt;
 			&lt;p class=&quot;field__error&quot; id=&quot;guide-email-error&quot; role=&quot;alert&quot;&gt;
 				{#each requestGuide.fields.email.issues() ?? [] as issue (issue.message)}
 					{issue.message}
@@ -76,10 +80,7 @@
 		{/if}
 	&lt;/div&gt;
 
-	&lt;!-- …the experience &lt;select&gt; and the consent checkbox repeat the same field pattern… --&gt;
-
-	&lt;!-- …the honeypot — shown in the next section… --&gt;
-
+	&lt;!-- … --&gt;
 	&lt;button class=&quot;signup__submit&quot; type=&quot;submit&quot; disabled={requestGuide.pending &gt; 0}&gt;
 		{#if requestGuide.pending &gt; 0}
 			Sending…
@@ -89,9 +90,16 @@
 		{/if}
 	&lt;/button&gt;
 
-	&lt;!-- …the privacy reassurance line (LockSimpleIcon + a link to the policy)… --&gt;
+	&lt;p class=&quot;signup__privacy&quot;&gt;
+		&lt;LockSimpleIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+		&lt;span&gt;
+			We never sell or share your address. See our
+			&lt;a href={resolve('/legal/privacy')}&gt;privacy policy&lt;/a&gt;.
+		&lt;/span&gt;
+	&lt;/p&gt;
 &lt;/form&gt;</code></pre>
 </figure>
+<p>The <code>// …</code> and <code>&lt;!-- … --&gt;</code> lines stand for what this listing leaves out: the other imports and the page data, the hero copy column beside the form, and — inside the form — the experience <code>&lt;select&gt;</code> and the consent checkbox (the same field pattern again), the honeypot, which the next section shows, and the comments the real file puts above each part.</p>
 <h3 id="spread">What the spreads do</h3>
 <ul><li><code>{...requestGuide}</code> on the <code>&lt;form&gt;</code> — sets <code>action</code>, <code>method</code> and the enhancement handler. Without JavaScript this is an ordinary POST that works; with JavaScript it submits in the background.</li><li><code>{...requestGuide.fields.email.as('email')}</code> on the input — sets <code>name</code>, <code>type</code>, <code>aria-invalid</code> and the value binding. <code>as()</code> accepts every HTML input type: <code>text</code>, <code>email</code>, <code>password</code>, <code>number</code>, <code>date</code>, <code>checkbox</code>, <code>radio</code>, <code>file</code>, <code>select</code>, and more.</li><li><code>requestGuide.pending</code> — a counter of in-flight submissions. Disabling on it prevents the double-submit you get from an impatient double-click on a slow connection.</li></ul>
 <aside class="callout callout--note"><p><code>role=&quot;alert&quot;</code> on the error paragraph makes a screen reader announce the message the <strong>moment it appears</strong>, rather than only when the user happens to navigate onto it. <code>aria-describedby</code> then links the error to the input, so focusing the field re-reads it.</p></aside>
@@ -136,8 +144,19 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.field__input {
+	/* … */
 	min-height: 3rem;
-	font-size: var(--fs-base);   /* 1rem = 16px minimum */
+	/* … */
+	/*
+	 * 16px minimum on mobile.
+	 *
+	 * iOS Safari automatically zooms the page when you focus an input whose
+	 * font-size is under 16px, and it does not zoom back out. Users experience
+	 * this as the site &quot;breaking&quot; when they tap a field. `--fs-base` is 1rem,
+	 * which clears the threshold.
+	 */
+	font-size: var(--fs-base);
+	/* … */
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>iOS Safari automatically <strong>zooms the page</strong> when you focus an input whose font-size is under 16px — and it does not zoom back out. Users experience this as your site breaking when they tap a field. It is one of the most common mobile bugs on the web and the fix is one line.</p></aside>

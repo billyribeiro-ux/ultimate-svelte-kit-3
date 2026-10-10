@@ -35,7 +35,7 @@
 			<h1>The slot grid</h1>
 			<p class="lede">The one component customers actually touch. Radio buttons in disguise, sized for thumbs.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>An accessible, keyboard-navigable grid of times that animates when the world changes underneath it.</p></aside>
-			<p>It looks like a grid of buttons. It is a radio group, because that is what it *is*: a set of mutually exclusive options, exactly one of which will be chosen.</p>
+			<p>It looks like a grid of buttons. It is a radio group, because that is what it <em>is</em>: a set of mutually exclusive options, exactly one of which will be chosen.</p>
 
 <figure class="code">
 	<figcaption>
@@ -111,11 +111,19 @@
  *   Play    — animate those transforms away. The elements slide to their new
  *             homes because the browser has already decided where those are.
  *
- * …
+ * The trick is that nothing animates layout. Layout happens once, in a single
+ * frame; what animates is a `transform`, which the compositor handles without
+ * touching the main thread. Animating `top` and `left` directly forces a reflow
+ * every frame and drops to roughly 20fps on a phone with forty cells on screen.
+ *
+ * Why it matters here specifically: when somebody else books the 11:00 slot,
+ * that button vanishes and every later slot shifts up. Without FLIP the grid
+ * snaps and the customer's finger is suddenly over a different time than the one
+ * they were reaching for. With it, the movement is visible — which is the point.
  */</code></pre>
 </figure>
-<p>Nothing animates layout. Layout happens once, in a single frame; what animates is a <code>transform</code>, which the compositor handles without touching the main thread. Animating <code>top</code> and <code>left</code> forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.</p>
-<p>The point is not decoration. Movement that is *visible* is movement the customer can follow; movement that is instant is a button that was there a moment ago and now is not.</p>
+<p>The comment is the documentation, and its middle paragraph is the part to remember: nothing animates layout. The browser lays the grid out once, in a single frame, and what moves afterwards is only a <code>transform</code>, which the compositor handles without touching the main thread.</p>
+<p>The point is not decoration. Movement that is <em>visible</em> is movement the customer can follow; movement that is instant is a button that was there a moment ago and now is not.</p>
 <aside class="callout callout--warn"><p>Our first version left every cell stuck at <code>position: absolute</code>, because the capture was asynchronous — GSAP is loaded on demand — and <code>play()</code> could start before it finished. The fix was to hold a <strong>promise</strong> of the captured state rather than the state itself, so <code>play()</code> awaits whatever <code>capture()</code> began and the two can never cross.</p></aside>
 <h3 id="reduced-motion">And for anyone who asked for less</h3>
 
@@ -129,7 +137,11 @@
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise&lt;Motion | null&gt; | null = null;
+
+// …
 
 export function loadMotion(): Promise&lt;Motion | null&gt; {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);

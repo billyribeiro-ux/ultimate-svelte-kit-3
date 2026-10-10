@@ -58,7 +58,7 @@
 </figure>
 <p>One command. If <code>pnpm run verify</code> is green, the thing is deployable; if it is not, nothing else matters. Put it in CI and make it required.</p>
 <h3 id="origin">2. The adapter setting that ruins your day</h3>
-<aside class="callout callout--warn"><p><code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime. The trusted origin is baked in at <strong>build time</strong> from <code>kit.paths.origin</code>, and the header fallback assumes <code>https</code>. Deploy behind a proxy that terminates TLS and forwards plain HTTP without the right headers, and every form post returns 403 &quot;Cross-site remote requests are forbidden&quot; — with a perfectly healthy-looking app behind it.</p></aside>
+<aside class="callout callout--warn"><p>Up to v5, <code>@sveltejs/adapter-node</code> read the trusted origin from an <code>ORIGIN</code> environment variable at runtime. v6, the adapter for SvelteKit 3, no longer does: the origin is baked in at <strong>build time</strong> from <code>paths.origin</code> in the <code>sveltekit()</code> options. Leave that unset and the adapter rebuilds the origin from request headers, assuming <code>https</code> unless <code>PROTOCOL_HEADER</code> says otherwise. Serve the build over plain HTTP — a preview on localhost, a container on a private network — and the server computes <code>https://…</code> while the browser sends <code>http://…</code>, so every form post and remote call returns 403 &quot;Cross-site remote requests are forbidden&quot;, from a perfectly healthy-looking app. Behind a proxy that terminates TLS, setting <code>PROTOCOL_HEADER=x-forwarded-proto</code> and <code>HOST_HEADER=x-forwarded-host</code> is the other way out.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -72,8 +72,24 @@
 }),</code></pre>
 </figure>
 <p>Because it is baked in at build time, <code>PUBLIC_ORIGIN</code> must be correct <strong>when you build</strong>, not when you start. That catches people whose CI builds an artefact and whose deploy step sets the environment.</p>
+<p>That same CI job has a second surprise waiting. Give the build only the two public variables and it stops at <code>Analysing routes</code> with <code>SvelteKit error: env_invalid</code>, naming <code>DATABASE_URL</code>, <code>ORIGIN</code> and <code>BETTER_AUTH_SECRET</code>. That <code>ORIGIN</code> is the app's own variable from <code>src/env.ts</code>, the base URL Better Auth signs cookies against, not the adapter setting the warning above retired. The SvelteKit docs explain why in two sentences: &quot;If a value is invalid, the app will fail to start (or build)&quot;, and &quot;SvelteKit analyses your app during the <code>build</code> step by running it&quot;. <strong>Every</strong> variable in <code>src/env.ts</code> is validated when you build, static or not.</p>
+<p>What differs is where the value goes next. For the two <code>static: true</code> variables &quot;the build time value is inlined into the bundle&quot;, so they have to be the real ones. <code>DATABASE_URL</code>, <code>ORIGIN</code> and <code>BETTER_AUTH_SECRET</code> are dynamic, the default, where &quot;the value is read from the environment when the app starts&quot;. None of them ends up in <code>build/</code>, and the server reads and validates the real values again when it boots. For <code>ORIGIN</code> and the secret, a placeholder that passes the schema is all the build needs. (<code>DATABASE_AUTH_TOKEN</code> is private and dynamic too, and can be left out entirely, because its schema returns <code>undefined</code>.)</p>
+<p><code>DATABASE_URL</code> is the exception, because the build does more than validate it. Analysing the app imports <code>src/lib/server/db/index.ts</code>, which hands the URL to libSQL's <code>createClient</code> the moment the module loads. Its schema accepts any non-empty string, but the value must also be a URL libSQL can parse: <code>:memory:</code>, <code>file:</code>, <code>libsql:</code>, <code>http(s):</code> or <code>ws(s):</code>. <code>DATABASE_URL=placeholder</code> gets past <code>env_invalid</code> and then fails the build with <code>LibsqlError: URL_INVALID</code>, from inside a generated chunk. And a URL libSQL can parse gets used, not just checked: a <code>file:</code> URL creates the file, and a remote one can be sent the WAL pragma, so a build pointed at production can talk to production. <code>:memory:</code> parses and leaves nothing behind, a database that disappears when the build ends:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>PUBLIC_ORIGIN=https://halfpast.example \
+PUBLIC_DEFAULT_TIME_ZONE=Europe/London \
+DATABASE_URL=:memory: \
+ORIGIN=https://halfpast.example \
+BETTER_AUTH_SECRET=build-time-placeholder-never-read-at-runtime \
+pnpm run build</code></pre>
+</figure>
 <h3 id="deps">3. Dependencies versus devDependencies</h3>
-<p>Vite bundles <code>devDependencies</code> into the server build. <code>@libsql/client</code> loads a native binary at runtime and cannot be bundled.</p>
+<p><code>adapter-node</code> bundles <code>devDependencies</code> into the server build, with Rolldown since v6, and leaves <code>dependencies</code> to be installed beside it. <code>@libsql/client</code> loads a native binary at runtime and cannot be bundled.</p>
 
 <figure class="code">
 	<figcaption>

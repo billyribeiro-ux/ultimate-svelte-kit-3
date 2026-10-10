@@ -55,13 +55,20 @@
 import { form, getRequestEvent } from '$app/server';
 import { redirect, invalid } from '@sveltejs/kit';
 
+import { leadStore, normaliseEmail, type Lead } from '#lib/server/leads.ts';
+import { createDownloadToken } from '#lib/server/tokens.ts';
+import { rateLimit } from '#lib/server/rate-limit.ts';
+
+// …
 const guideSchema = v.object({
 	email: v.pipe(
 		v.string(),
 		v.trim(),
 		v.nonEmpty('Enter your email address'),
 		v.email('That does not look like a valid email address'),
-		v.maxLength(254, 'That email address is too long')  // RFC 5321 limit
+		// Guards against a database column overflow and against absurd input.
+		// RFC 5321 caps a full address at 254 characters.
+		v.maxLength(254, 'That email address is too long')
 	),
 
 	experience: v.picklist(
@@ -69,17 +76,20 @@ const guideSchema = v.object({
 		'Choose which best describes you'
 	),
 
+	// …
 	consent: v.pipe(
 		v.optional(v.boolean(), false),
-		v.check((value) =&gt; value === true,
-			'Please confirm you would like to receive the guide by email')
+		v.check(
+			(value) =&gt; value === true,
+			'Please confirm you would like to receive the guide by email'
+		)
 	),
 
-	/** Honeypot — hidden from humans, filled in by naive bots. */
+	// …
 	_company: v.optional(v.string(), '')
 });</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><strong>Checkbox fields must be optional.</strong> An unchecked checkbox sends *nothing* — not <code>false</code>, the field is simply absent. So <code>v.boolean()</code> can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the <code>form()</code> overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates.</p></aside>
+<aside class="callout callout--warn"><p><strong>Checkbox fields must be optional.</strong> An unchecked checkbox sends *nothing* — not <code>false</code>, the field is simply absent. So <code>v.boolean()</code> can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the <code>form()</code> overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates. So: optional with a default of <code>false</code>, then a <code>check</code> that demands <code>true</code>. The real file spells all of this out in a long comment above <code>consent</code> — that is what the <code>// …</code> there stands for; the others are the schema's doc comment and the honeypot's.</p></aside>
 <aside class="callout callout--note"><p>The leading underscore on <code>_company</code> is a SvelteKit convention: fields whose names start with <code>_</code> are not repopulated into the form when validation fails. It exists for passwords, and suits a honeypot too.</p></aside>
 
 <aside class="callout callout--why">

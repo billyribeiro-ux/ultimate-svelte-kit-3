@@ -127,11 +127,13 @@ export function write&lt;T&gt;(current: Lww&lt;T&gt; | undefined, value: T, stam
 		<span class="code__file">ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// A move writes two fields, so it is two register writes with one stamp.
-// A recolour writes one. They do not interact.
-{ kind: 'node.set', node: 'n1', stamp, fields: { x: 240, y: 120 } }
-{ kind: 'node.set', node: 'n1', stamp, fields: { fill: 'jade' } }</code></pre>
+	<pre><code class="lang-ts">// One operation per field, each with a stamp of its own. A move writes two
+// fields, so it is two operations; a recolour is one. They do not interact.
+{ kind: 'node.set', stamp: s1, target: 'n1', field: 'x', value: 240 }
+{ kind: 'node.set', stamp: s2, target: 'n1', field: 'y', value: 120 }
+{ kind: 'node.set', stamp: s3, target: 'n1', field: 'fill', value: 'jade' }</code></pre>
 </figure>
+<p>That is the real shape of a <code>node.set</code>: one <code>field</code>, one <code>value</code>, one stamp. Chapter 13 types it so that <code>field: 'x'</code> only accepts a number, and chapter 14’s <code>moveNode</code> is exactly the first two lines — two calls, two stamps.</p>
 <aside class="callout callout--note"><p>The cost is a stamp per field — twenty-six bytes — instead of a stamp per shape. For a board with a thousand shapes and eight fields each, that is about two hundred kilobytes of stamps. Worth it, and it is the sort of trade to make explicitly rather than discover.</p></aside>
 
 <aside class="callout callout--check">

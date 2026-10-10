@@ -66,11 +66,15 @@ node --version   # v24.21.0</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
+	// …
 	&quot;engines&quot;: {
 		&quot;node&quot;: &quot;&gt;=24.21.0&quot;
-	}
+	},
+	&quot;packageManager&quot;: &quot;pnpm@12.10.1&quot;,
+	// …
 }</code></pre>
 </figure>
+<p><code>engines</code> says which Node the project needs. <code>packageManager</code> does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.</p>
 
 <figure class="code">
 	<figcaption>
@@ -79,7 +83,7 @@ node --version   # v24.21.0</code></pre>
 	</figcaption>
 	<pre><code class="lang-ini">engine-strict=true</code></pre>
 </figure>
-<p>On its own, <code>engines</code> is advisory. What <code>engine-strict=true</code> buys you depends on which tool reads it: <strong>npm</strong> turns the mismatch into a refusal, while <strong>pnpm 12</strong> — what this project actually installs with — still carries on, but complains loudly. Run <code>pnpm install</code> under Node 22 and you get:</p>
+<p>On its own, <code>engines</code> is advisory. What <code>engine-strict=true</code> buys you depends on which tool reads it: <strong>npm</strong> turns the mismatch into a refusal, while <strong>pnpm 12</strong> — what this project actually installs with — still carries on, but complains loudly. Run <code>pnpm install</code> under Node 22, the LTS line before this one, and you get:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -92,7 +96,7 @@ node --version   # v24.21.0</code></pre>
 
 <aside class="callout callout--why">
 	<h4>Why this is worth the friction</h4>
-	<p>Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.</p>
+	<p>Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.</p>
 </aside>
 <p>Add an <code>.nvmrc</code> too, so <code>nvm use</code> in the project folder picks the right one with no arguments:</p>
 
@@ -104,7 +108,7 @@ node --version   # v24.21.0</code></pre>
 	<pre><code class="lang-text">24.21.0</code></pre>
 </figure>
 <h3 id="icu">A version really can change behaviour</h3>
-<p>It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving from 22 to 24.</p>
+<p>It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving it from Node 22, the previous LTS line, to Node 24.</p>
 
 <figure class="code">
 	<figcaption>
@@ -118,11 +122,11 @@ node --version   # v24.21.0</code></pre>
 	maximumFractionDigits: 2
 }).format(5600);
 
-// Node 22 (ICU 78.2) → &quot;$5.60K&quot;
-// Node 24 (ICU 78.3) → &quot;$5.6K&quot;</code></pre>
+// Node 22.22 (ICU 77.1) → &quot;$5.60K&quot;
+// Node 24.21 (ICU 78.3) → &quot;$5.6K&quot;</code></pre>
 </figure>
 <p><code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and ICU changes between releases. A test asserting the exact string <code>&quot;$5.60K&quot;</code> is not testing your formatting function — it is testing which Node is installed, and it fails on upgrade for a reason that has nothing to do with your code.</p>
-<aside class="callout callout--note"><p>The lesson, which we apply throughout: when asserting on <code>Intl</code> output, match a *pattern* that captures what your app actually needs — the right symbol, the right suffix, at most two decimals — not a byte-exact string.</p></aside>
+<aside class="callout callout--note"><p>The lesson, which we apply throughout: when asserting on <code>Intl</code> output, match a <em>pattern</em> that captures what your app actually needs — the right symbol, the right suffix, at most two decimals — not a byte-exact string.</p></aside>
 <h3 id="pnpm">pnpm</h3>
 
 <figure class="code code--terminal">

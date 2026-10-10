@@ -1,6 +1,6 @@
 /**
  * PART 5 — Local-first sync, and the four bugs in it
- * (chapters 21–25)
+ * (chapters 21–24)
  *
  * The client half. A tab's identity, a durable outbox, the wire format, and the
  * engine that ties them together. The last chapter of this part is nothing but
@@ -183,7 +183,7 @@ export type PresenceUpdate = v.InferOutput<typeof PresenceSchema>;`
 			},
 			{
 				type: 'p',
-				text: 'The `PushResult` doc comment is a warning to a future reader, and chapter 25 is the story of ignoring it: **the client advances its cursor to this and nothing else.** Advancing per operation is how a gap gets skipped.'
+				text: 'The `PushResult` doc comment is a warning to a future reader, and chapter 24 is the story of ignoring it: **the client advances its cursor to this and nothing else.** Advancing per operation is how a gap gets skipped.'
 			},
 			{
 				type: 'p',

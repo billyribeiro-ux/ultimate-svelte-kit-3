@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The landing page and the prerendered templates — Building Abacus</title>
-<meta name="description" content="A prerendered landing page with a GSAP entrance behind an attachment and `hydratable` random dots, and template pages prerendered from `entries()` with their formulas already computed on the server.">
+<meta name="description" content="A prerendered landing page with a GSAP entrance behind an attachment and hydratable random dots, and template pages prerendered from entries() with their formulas already computed on the server.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -95,12 +95,12 @@ export const prerender = true;</code></pre>
 
 <aside class="callout callout--why">
 	<h4>Why the drifting dots use hydratable</h4>
-	<p>The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen *different* random positions during hydration, and Svelte would find the markup did not match. <code>hydratable(key, fn)</code> runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.</p>
+	<p>The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen <em>different</em> random positions during hydration, and Svelte would find the markup did not match. <code>hydratable(key, fn)</code> runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:46-75</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:46-105</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
@@ -132,7 +132,37 @@ export const prerender = true;</code></pre>
 			&gt;Open a sheet — no account&lt;/a
 		&gt;
 		&lt;a class=&quot;btn btn--lg&quot; href={resolve('/(app)/templates')}&gt;Start from a template&lt;/a&gt;
-	&lt;/div&gt;</code></pre>
+	&lt;/div&gt;
+
+	&lt;div class=&quot;demo&quot; data-rise aria-hidden=&quot;true&quot;&gt;
+		&lt;div class=&quot;demo__bar mono&quot;&gt;
+			&lt;span class=&quot;demo__cell&quot;&gt;D5&lt;/span&gt;&lt;span class=&quot;demo__formula&quot;&gt;=B5-C5&lt;/span&gt;
+		&lt;/div&gt;
+		&lt;table class=&quot;demo__table&quot;&gt;
+			&lt;tbody&gt;
+				{#each demo as row, r (r)}
+					&lt;tr&gt;
+						{#each row as text, c (c)}
+							{#if r === 0}
+								&lt;th&gt;{text}&lt;/th&gt;
+							{:else}
+								&lt;td class={{ num: c &gt; 0, formula: text.startsWith('='), total: r === 4 }} data-pad&gt;
+									{text.startsWith('=')
+										? c === 1
+											? '1,970.00'
+											: c === 2
+												? '2,008.90'
+												: '-38.90'
+										: text}
+								&lt;/td&gt;
+							{/if}
+						{/each}
+					&lt;/tr&gt;
+				{/each}
+			&lt;/tbody&gt;
+		&lt;/table&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
 </figure>
 
 <figure class="code">
@@ -196,7 +226,7 @@ export function cinematic(): Attachment&lt;HTMLElement&gt; {
 	};
 }</code></pre>
 </figure>
-<p>The entrance is an attachment, so the markup says <code>{@attach cinematic()}</code> and nothing else. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; <code>prefersReducedMotion</code> is checked first; and nothing in the stylesheet starts at <code>opacity: 0</code>, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.</p>
+<p>The entrance is an attachment, so the markup says <code>{@attach cinematic()}</code> and nothing else; the elements it moves are marked in the hero with <code>data-word</code>, <code>data-pad</code> and <code>data-rise</code>, and the attachment finds them with <code>querySelectorAll</code>. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; <code>prefersReducedMotion</code> is checked first; and nothing in the stylesheet starts at <code>opacity: 0</code>, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.</p>
 <h3 id="templates">Templates from entries</h3>
 
 <figure class="code">

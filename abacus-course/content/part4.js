@@ -71,17 +71,17 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'the-cell', text: 'One snippet, five layers' },
-			code('src/lib/grid/Grid.svelte', 589, 646),
+			code('src/lib/grid/Grid.svelte', 596, 652),
 			{
 				type: 'p',
-				text: 'A snippet with parameters is a template function. `cell(r, c, top, left)` renders one cell at a position; its `{@const}`s compute everything the cell shows from the sheet and the decorations. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.'
+				text: 'A snippet with parameters is a template function. `cell(r, c, top, left)` renders one cell at a position; its `{@const}`s compute everything the cell shows from the sheet and the decorations, and each one is reactive — when the sheet changes, `value` is worked out again. The Svelte docs now call `{@const}` legacy. Its replacement, since Svelte 5.56, is a *declaration tag* with a `$derived` inside: `{const value = $derived(sheet.value(r, c))}`. The `$derived` is not optional. A bare `{const value = sheet.value(r, c)}` is worked out once, like a `const` in the script, and the cell would never change again. The header uses the new form for `{const me = $derived(await whoAmI())}` (ch. 30). The grid still uses the legacy tag, which compiles unchanged; in new code, write `{const x = $derived(…)}`. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.'
 			},
-			code('src/lib/grid/Grid.svelte', 693, 745),
+			code('src/lib/grid/Grid.svelte', 693, 747),
 			{
 				type: 'p',
 				text: 'Frozen panes are the same snippet rendered in extra layers: frozen rows at the top, frozen columns at the left, and the corner where they meet, each with a different origin. The layers are sticky, and the trick that makes that work is in the stylesheet.'
 			},
-			code('src/lib/grid/Grid.svelte', 779, 821, { partial: true }),
+			code('src/lib/grid/Grid.svelte', 782, 823),
 			{
 				type: 'p',
 				text: 'Each sticky layer is *zero-sized*: it takes no space in the canvas’s flow, and its absolutely positioned children overflow visibly and move with the canvas on the other axis. That is how the column headers stay at the top while scrolling down and still scroll sideways — with no JavaScript synchronising two scrollers, which is the way every grid used to do it and the way every grid got out of step.'
@@ -93,10 +93,16 @@ export const part4 = [
 				type: 'p',
 				text: 'Both are real side effects, which is what `$effect` is for. The first clears the flash set after a timer and cancels the timer if the set changes first. The second keeps the active cell on screen by writing to the element’s `scrollTop` — `untrack` around the reads so that the effect depends only on `sheet.anchor`, not on the scroll position it is about to change, which would otherwise loop.'
 			},
-			code('src/lib/grid/Grid.svelte', 553, 588),
+			code('src/lib/grid/Grid.svelte', 553, 595, { partial: true }),
 			{
 				type: 'p',
-				text: 'The outer element is `role="grid"` with `aria-rowcount`, `aria-colcount`, `aria-multiselectable` and `aria-activedescendant` pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is. A polite live region at the bottom announces the active cell’s address, value and formula on every move.'
+				text: 'Three elements nest here, and the comment says what each is for: the grid takes the keys, the viewport scrolls, and the canvas is the size of the whole sheet, which is what gives the viewport something to scroll. The block stops where the canvas opens; inside it come the snippet and the five layers from earlier in the chapter. The outer element is `role="grid"` with `aria-rowcount`, `aria-colcount`, `aria-multiselectable` and `aria-activedescendant` pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is.'
+			},
+			code('src/lib/grid/Grid.svelte', 543, 550),
+			code('src/lib/grid/Grid.svelte', 751, 751),
+			{
+				type: 'p',
+				text: 'After the canvas, as the last child of the grid, a polite live region announces the active cell’s address, value and formula on every move. `announcement` is a `$derived` that reads `sheet.version` as well as the anchor, so a recalculation that changes the active cell’s value is announced too, and `visually-hidden` keeps the text off the screen but in the accessibility tree.'
 			},
 			{
 				type: 'checkpoint',
@@ -116,12 +122,12 @@ export const part4 = [
 			'Arrows, Tab and Enter, typing to replace, F2 to edit, Ctrl+arrow to the edge of the data, Ctrl+A, undo and redo — then pointer drags for selection, references, the fill handle and column resizing, and copy, cut and paste through the clipboard events.',
 		goal: 'Implement a spreadsheet’s input model on one element with one keydown handler and one pointer state machine, and put two formats on the clipboard at once.',
 		blocks: [
-			code('src/lib/grid/Grid.svelte', 228, 250, { partial: true }),
+			code('src/lib/grid/Grid.svelte', 228, 248, { partial: true }),
 			{
 				type: 'p',
-				text: 'One handler on the grid element. `jump` is the arrow-key primitive: with Ctrl, to the edge of the data; with Shift, extend the selection instead of moving it. Every spreadsheet key a person expects is a case in the switch, and the last branch is the one that makes it feel like a spreadsheet: any printable character starts editing with that character, replacing the cell.'
+				text: 'One handler on the grid element. `jump` is the arrow-key primitive: with Ctrl, to the edge of the data; with Shift, extend the selection instead of moving it. Every spreadsheet key a person expects is a case in the `switch` that follows, and the `if` after the switch is the one that makes it feel like a spreadsheet: any printable character starts editing with that character, replacing the cell.'
 			},
-			code('src/lib/grid/Grid.svelte', 251, 323, { partial: true }),
+			code('src/lib/grid/Grid.svelte', 250, 323, { partial: true }),
 			{
 				type: 'p',
 				text: 'Note the first line of the handler: while the in-cell editor is open, the grid does nothing — the editor handles its own keys and stops propagation (ch. 21). Two components on one keyboard is a coordination problem, and “the editor wins while it exists” is the whole of the coordination.'
@@ -136,17 +142,17 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'pointer', text: 'The pointer' },
-			code('src/lib/grid/Grid.svelte', 369, 387),
+			code('src/lib/grid/Grid.svelte', 369, 393),
 			{
 				type: 'p',
-				text: '`cellAt` turns a client coordinate into a cell: subtract the headers, add the scroll — except inside a frozen pane, where the screen position *is* the canvas position. `Drag` is a discriminated union of the four things a drag can be doing, and `drag` is `$state` so the class list can show a fill target while the pointer moves.'
+				text: '`cellAt` turns a client coordinate into a cell: subtract the headers, add the scroll — except inside a frozen pane, where the screen position *is* the canvas position. The scroll it adds is read from the element, not from the `scrollTop` state of chapter 19, because the state arrives a frame late and a tap can land in that frame. `Drag` is a discriminated union of the four things a drag can be doing, and `drag` is `$state` so the class list can show a fill target while the pointer moves.'
 			},
-			code('src/lib/grid/Grid.svelte', 388, 462),
+			code('src/lib/grid/Grid.svelte', 395, 462),
 			{
 				type: 'p',
 				text: 'Pointer-down dispatches on what was hit, from most specific to least: a resize handle, the fill handle, a column header, a row header, an input, a cell. `setPointerCapture` is what keeps the drag alive when the pointer leaves the viewport — without it, dragging a selection past the edge would drop it. And the one spreadsheet gesture people never notice until it is missing: click a cell *while typing a formula* and its address is inserted at the caret instead of the selection moving.'
 			},
-			code('src/lib/grid/Grid.svelte', 461, 530, { partial: true }),
+			code('src/lib/grid/Grid.svelte', 464, 532),
 			{
 				type: 'p',
 				text: 'Move updates the drag; up commits it. A fill drag decides its direction by which way the pointer went furthest and extends the source rectangle that way. A resize drag holds the new width in the drag state until the pointer is released, so the column follows the pointer live and the sheet is written once.'
@@ -174,7 +180,7 @@ export const part4 = [
 				type: 'p',
 				text: 'The editor is an input that binds to `sheet.editing.text`. `focusAtEnd` is an attachment — a function that receives the element when it mounts — and it puts the caret at the end, which is where a person expects it after pressing F2. `bind:value` on a nested `$state` property works because `editing` is a reactive object.'
 			},
-			code('src/lib/grid/CellEditor.svelte', 40, 96),
+			code('src/lib/grid/CellEditor.svelte', 40, 94),
 			{
 				type: 'p',
 				text: 'The editor owns Enter, Tab and Escape, and *stops propagation* of everything so the grid’s handler never sees a keystroke meant for the input. `insertAtCaret` is an exported function, which is what the grid calls through `bind:this` when a cell is clicked during a formula: it splices the reference at the caret — or over the reference the last click inserted — and puts the caret after it.'
@@ -191,7 +197,7 @@ export const part4 = [
 				type: 'p',
 				text: 'Everything the bar shows is `$derived`: the text (the edit in progress, or the anchor cell’s input), the coloured segments, the syntax error with its position, and — when nothing is being edited — why the anchor cell shows an error. Note `void sheet.version` where a derived reads the engine: the same subscription the grid uses, for the same reason.'
 			},
-			code('src/lib/grid/FormulaBar.svelte', 179, 214),
+			code('src/lib/grid/FormulaBar.svelte', 184, 214),
 
 			{ type: 'h3', id: 'completion', text: 'Completion, and a reset without an effect' },
 			code('src/lib/grid/FormulaBar.svelte', 90, 119),
@@ -201,7 +207,8 @@ export const part4 = [
 				text: 'The arrow keys move a highlight through the suggestions, and the highlight must go back to the first suggestion whenever the list changes. The obvious code is `$state` plus an `$effect` that resets it — and the Svelte autofixer flags exactly that, because assigning state in an effect is how components loop. A `$derived` may be *reassigned*: the assignment holds until the expression re-runs, and it re-runs when `suggestions` changes because the body reads it. One declaration, no effect, and the reset is a consequence of the dependency rather than a second piece of code that has to agree with the first. The find bar does the same with its match index.'
 			},
 			code('src/lib/grid/FormulaBar.svelte', 121, 176),
-			code('src/lib/grid/FormulaBar.svelte', 216, 244),
+			code('src/lib/grid/FormulaBar.svelte', 216, 236),
+			code('src/lib/grid/FormulaBar.svelte', 240, 244),
 			{
 				type: 'p',
 				text: 'The list is a `listbox` of `option`s, the input is a `combobox` that says so with `aria-expanded` and `aria-controls`, and the syntax error is `role="alert"` so it is announced. `onpointerdown` on each option prevents default so the input does not lose focus before the click lands — the one line every custom completion needs and most forget.'
@@ -229,7 +236,7 @@ export const part4 = [
 				type: 'p',
 				text: 'Every button is a command, so every button undoes. The format menu is a native popover — `popovertarget` and a `popover` attribute, no JavaScript, dismissed by a click outside or Escape by the browser itself — which is the state of the art for a menu in 2026 and the reason there is no `Menu` component in this project.'
 			},
-			code('src/lib/grid/Toolbar.svelte', 102, 137),
+			code('src/lib/grid/Toolbar.svelte', 103, 137),
 			code('src/lib/grid/Toolbar.svelte', 262, 326),
 			{
 				type: 'p',
@@ -286,10 +293,10 @@ export const part4 = [
 				type: 'p',
 				text: '`#consume` is the state machine, one character at a time: in quotes, after a quote in quotes, after a carriage return, or plain. The delimiter is detected from the first line, which is buffered until the line ends and then replayed through the same machine.'
 			},
-			code('src/lib/csv/parse.spec.ts', 37, 64, { partial: true }),
+			code('src/lib/csv/parse.spec.ts', 37, 57),
 			{
 				type: 'p',
-				text: 'The test that matters for a streaming parser: the same rows however the input is chunked. It feeds a nasty string one character at a time, in threes, and whole, and expects the same result each way.'
+				text: 'The test that matters for a streaming parser: the same rows however the input is chunked. It feeds a nasty string in chunks of every size from one character to the whole string, and expects the same rows every time.'
 			},
 
 			{ type: 'h3', id: 'the-worker', text: 'The worker' },

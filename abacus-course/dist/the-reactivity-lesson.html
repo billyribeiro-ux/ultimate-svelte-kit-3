@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The lesson: the same engine, out of $derived — Building Abacus</title>
-<meta name="description" content="Nine cells whose values are `$derived`s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.">
+<meta name="description" content="Nine cells whose values are $deriveds that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -72,6 +72,7 @@
  */</code></pre>
 </figure>
 <p>The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”.</p>
+<aside class="callout callout--note"><p>Both of the header’s “chapter 10”s mean the hand-written engine, which is chapter 09 here: the project numbers its chapters differently from this course. The note in chapter 08 has the whole mapping.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -221,51 +222,50 @@ void lastReactive;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:112-148</span></span>
+		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:112-147</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	&lt;div class=&quot;twin card stack&quot;&gt;
-		&lt;h3&gt;Nine &lt;code&gt;$derived&lt;/code&gt;s&lt;/h3&gt;
-		&lt;table class=&quot;mini&quot;&gt;
-			&lt;tbody&gt;
-				{#each [1, 2, 3] as r (r)}
-					&lt;tr&gt;
-						{#each ['A', 'B', 'C'] as c (c)}
-							{@const name = `${c}${r}`}
-							{@const cell = reactive.cells.get(name)!}
-							&lt;td&gt;
-								&lt;label&gt;
-									&lt;span class=&quot;visually-hidden&quot;&gt;{name}&lt;/span&gt;
-									&lt;input
-										class=&quot;cell&quot;
-										value={cell.input}
-										onchange={(e) =&gt; edit(name, e.currentTarget.value)}
-									/&gt;
-								&lt;/label&gt;
-								&lt;svelte:boundary&gt;
-									&lt;output class={['shown', { error: cell.value instanceof ErrorValue }]}
-										&gt;{show(cell.value)}&lt;/output
-									&gt;
-									{#snippet failed(error)}
-										&lt;output class=&quot;shown error&quot; title={(error as Error).message}&gt;cycle!&lt;/output&gt;
-									{/snippet}
-								&lt;/svelte:boundary&gt;
-							&lt;/td&gt;
-						{/each}
-					&lt;/tr&gt;
-				{/each}
-			&lt;/tbody&gt;
-		&lt;/table&gt;
-		&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;
-			Last edit evaluated &lt;strong&gt;{reactiveEvaluated}&lt;/strong&gt; deriveds.
-		&lt;/p&gt;
-	&lt;/div&gt;
+	<pre><code class="lang-svelte">&lt;div class=&quot;twin card stack&quot;&gt;
+	&lt;h3&gt;Nine &lt;code&gt;$derived&lt;/code&gt;s&lt;/h3&gt;
+	&lt;table class=&quot;mini&quot;&gt;
+		&lt;tbody&gt;
+			{#each [1, 2, 3] as r (r)}
+				&lt;tr&gt;
+					{#each ['A', 'B', 'C'] as c (c)}
+						{@const name = `${c}${r}`}
+						{@const cell = reactive.cells.get(name)!}
+						&lt;td&gt;
+							&lt;label&gt;
+								&lt;span class=&quot;visually-hidden&quot;&gt;{name}&lt;/span&gt;
+								&lt;input
+									class=&quot;cell&quot;
+									value={cell.input}
+									onchange={(e) =&gt; edit(name, e.currentTarget.value)}
+								/&gt;
+							&lt;/label&gt;
+							&lt;svelte:boundary&gt;
+								&lt;output class={['shown', { error: cell.value instanceof ErrorValue }]}
+									&gt;{show(cell.value)}&lt;/output
+								&gt;
+								{#snippet failed(error)}
+									&lt;output class=&quot;shown error&quot; title={(error as Error).message}&gt;cycle!&lt;/output&gt;
+								{/snippet}
+							&lt;/svelte:boundary&gt;
+						&lt;/td&gt;
+					{/each}
+				&lt;/tr&gt;
+			{/each}
+		&lt;/tbody&gt;
+	&lt;/table&gt;
+	&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;
+		Last edit evaluated &lt;strong&gt;{reactiveEvaluated}&lt;/strong&gt; deriveds.
+	&lt;/p&gt;
 &lt;/div&gt;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
 	<h4>Why each reactive cell is wrapped in a boundary</h4>
-	<p>Type <code>=C3</code> into A1 and the hand-written engine marks a cycle and carries on. The reactive sheet *throws* — a derived that reads itself is a bug in a program, not a mistake in a sheet — and the <code>&lt;svelte:boundary&gt;</code> around that one cell catches it and renders <code>cycle!</code> in its place while the other eight keep working. That is the first thing a runtime cannot give a spreadsheet: a cycle as a value. The second is a million cells that are not each a signal, which is chapter 15’s line. Both are why the engine exists; neither makes it a different algorithm.</p>
+	<p>Type <code>=C3</code> into A1 and the hand-written engine marks a cycle and carries on. The reactive sheet <em>throws</em> — a derived that reads itself is a bug in a program, not a mistake in a sheet — and the <code>&lt;svelte:boundary&gt;</code> around that one cell catches it and renders <code>cycle!</code> in its place while the other eight keep working. That is the first thing a runtime cannot give a spreadsheet: a cycle as a value. The second is a million cells that are not each a signal, which is chapter 15’s line. Both are why the engine exists; neither makes it a different algorithm.</p>
 </aside>
 
 <figure class="code">

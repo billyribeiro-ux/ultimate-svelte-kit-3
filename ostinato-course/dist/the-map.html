@@ -85,6 +85,9 @@
 │  │  │  ├─ PatternCard.svelte
 │  │  │  ├─ PatternView.svelte
 │  │  │  └─ Section.svelte
+│  │  ├─ embed/
+│  │  │  ├─ OstinatoPlayer.svelte
+│  │  │  └─ element.ts
 │  │  ├─ motion/
 │  │  │  └─ cinematic.ts
 │  │  ├─ music/
@@ -142,6 +145,9 @@
 │  │  ├─ (app)/
 │  │  │  ├─ diagnostics/
 │  │  │  │  └─ +page.svelte
+│  │  │  ├─ embed/
+│  │  │  │  ├─ demo/
+│  │  │  │  └─ +page.svelte
 │  │  │  ├─ gallery/
 │  │  │  │  └─ +page.svelte
 │  │  │  ├─ jam/
@@ -163,6 +169,9 @@
 │  │  │     └─ +server.ts
 │  │  ├─ +error.svelte
 │  │  └─ +layout.svelte
+│  ├─ service-worker/
+│  │  ├─ index.ts
+│  │  └─ tsconfig.json
 │  ├─ ambient.d.ts
 │  ├─ app.css
 │  ├─ app.d.ts
@@ -171,11 +180,9 @@
 │  ├─ error.html
 │  ├─ hooks.server.ts
 │  ├─ hooks.ts
-│  ├─ instrumentation.server.ts
-│  └─ service-worker/
-│     ├─ index.ts
-│     └─ tsconfig.json
-├─ test-results/
+│  └─ instrumentation.server.ts
+├─ static/
+│  └─ robots.txt
 ├─ AGENTS.md
 ├─ README.md
 ├─ drizzle.config.ts
@@ -198,8 +205,8 @@
 <ul><li><code>svelte/reactivity</code>: <code>SvelteMap</code> with <code>getOrInsertComputed</code> (5.57), <code>SvelteDate</code>, <code>SvelteURL</code>, <code>MediaQuery</code>, <code>createSubscriber</code> — the engine, the studio page, the embed page, the sheet (ch. 11, 19, 18, 32)</li><li><code>svelte/reactivity/window</code>: <code>innerWidth</code>, <code>online</code>, <code>devicePixelRatio</code> — the gallery, the jam room, the meter (ch. 30, 31, 17)</li><li><code>svelte/motion</code>: <code>Spring.of</code>, <code>prefersReducedMotion</code> — the knob, every transition (ch. 15)</li><li><code>svelte/events</code> <code>on</code> with options — the knob (ch. 15)</li><li><code>svelte</code>: <code>createContext</code> with <code>has</code> (5.57), <code>hydratable</code>, <code>settled</code>, <code>fork</code>, <code>untrack</code>, <code>flushSync</code>, <code>mount</code>/<code>unmount</code> with <code>outro</code> — context (ch. 11), the landing page (ch. 28), the studio page (ch. 19), the share panel (ch. 20), toasts (ch. 27), tests (ch. 37)</li><li><code>svelte/server</code> <code>render</code> with <code>csp: { hash }</code> and <code>transformError</code>, typed <code>Sha256Source</code> (5.57) — the share card (ch. 29)</li></ul>
 <h3 id="kit">SvelteKit 3</h3>
 <ul><li>Remote functions: <code>query</code>, <code>query.batch</code>, <code>query.live</code>, <code>prerender</code>, <code>command</code>, <code>form</code> with <code>preflight</code>, <code>validate</code>, <code>issues</code>, <code>allIssues</code>, <code>invalid</code>, <code>.for(id)</code>, multiple submits, the <code>_</code> prefix; single-flight mutations with <code>refresh</code>, <code>requested().refreshAll()</code>, <code>.updates()</code>, <code>withOverride</code>, <code>reconnect</code> — <code>src/lib/remote/*</code> (ch. 23–25)</li><li>Hooks: <code>transport</code>, async <code>reroute</code> with <code>fetch</code>, <code>handle</code> with the <code>preload</code> filter (<code>filename</code>), <code>handleFetch</code>, <code>handleError</code> with <code>kind</code> (including <code>validation</code>), <code>init</code> — <code>src/hooks*.ts</code> (ch. 26)</li><li><code>load</code> with <code>RouteParams</code>, <code>$app/types</code>, <code>resolve</code> from <code>$app/paths</code>, snapshots, shallow routing with <code>goto(…, { shallow: true })</code>, <code>preloadData</code>, <code>page.state</code> — the studio, the pattern page, the gallery (ch. 19, 29, 30)</li><li><code>$app/state</code>: <code>page</code>, <code>navigating</code>, <code>updated</code> with <code>check()</code>; <code>version.pollInterval</code> — the layouts, diagnostics (ch. 27, 32)</li><li>Layout groups and <code>+page@.svelte</code> — <code>(app)</code>, the embed demo (ch. 27, 33)</li><li><code>+server.ts</code> with <code>QUERY</code>, <code>Response.json(...)</code> and a co-located <code>+server.test.ts</code> — the read API (ch. 32)</li><li><code>tracing.server</code>, <code>src/instrumentation.server.ts</code>, <code>event.tracing</code> — the ring exporter (ch. 32)</li><li><code>$app/service-worker</code>, <code>$app/manifest</code>, <code>$app/paths</code> in a worker, <code>$app/tsconfig/service-worker</code> — the service worker (ch. 35)</li><li>Writing an adapter: <code>adapt</code>, <code>emulate</code>, <code>supports</code>, <code>vite.plugins.pre</code>, <code>applyReroute</code>, <code>builder.generateServerInstance</code>, <code>builder.createInstrumentationInitializer</code> + <code>builder.instrument</code> — <code>adapters/ostinato</code> (ch. 34)</li><li><code>defineEnvVars</code>, <code>csp</code> with <code>mode: auto</code>, <code>csrf.trustedOrigins</code>, <code>version</code>, <code>output.bundleStrategy</code>, <code>router.resolution</code> — <code>vite.config.ts</code> (ch. 2, 36)</li></ul>
-<h3 id="september">On the way to 3.0: the September and October 2026 releases, item by item</h3>
-<ul><li><strong>Svelte 5.57</strong> — <code>SvelteMap.getOrInsertComputed</code> (the engine’s channel strips, ch. 11); <code>createContext</code> returning <code>has</code> (<code>Player.svelte</code>, ch. 29); <code>&lt;select defaultValue&gt;</code> (the WAV bar count, ch. 20); <code>Csp</code>/<code>Sha256Source</code> types from <code>svelte/server</code> (the share card, ch. 29).</li><li><strong>SvelteKit 3 release candidate (September)</strong> — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside <code>enhance</code> (ch. 24); adapters contribute Vite plugins, <code>pre</code> and <code>post</code>: the adapter provides <code>virtual:adapter</code> (ch. 34); <code>+</code> files with <code>.test.</code> in the name are not routes: <code>api/patterns/+server.test.ts</code> (ch. 32); <code>QUERY</code> handlers in <code>+server.ts</code>, and the <code>preload</code> filter gets <code>filename</code> for fonts (ch. 32, 26); <code>applyReroute</code> for adapters, and a catch-all that uses it (ch. 34).</li><li><strong>SvelteKit 3.0 and 3.0.1 (October)</strong> — <code>builder.generateServerInstance</code> replaces <code>generateManifest</code>, and the <code>Server</code> class gives way to a generated <code>server</code> object (ch. 34); <code>builder.createInstrumentationInitializer</code> fills in the environment before <code>instrumentation.server.js</code> runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind <code>.updates(…)</code> calls <code>requested(…).refreshAll()</code> or <code>ignore()</code> on purpose (ch. 24); <code>json()</code> and <code>text()</code> are deprecated for <code>Response.json()</code> (ch. 32); <code>pushState</code> and <code>replaceState</code> are deprecated for <code>goto(…, { shallow: true })</code>, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in <code>src/service-worker/</code> with a tsconfig of its own (ch. 35); adapter-node 6 drops the <code>ORIGIN</code> variable in favour of <code>paths.origin</code>, and so does this adapter (ch. 34).</li><li><strong>sv 1.0</strong> — <code>sv create</code> with <code>#lib</code> imports and the <code>ai-tools</code> add-on, which wrote <code>AGENTS.md</code> and <code>.claude/settings.json</code> (ch. 39); <code>sv migrate sveltekit-3</code> for the mechanical half of an upgrade.</li><li><strong>vite-plugin-svelte 7.3</strong> — <code>dynamicCompileOptions({ filename, environment })</code> (ch. 2, 33).</li><li><strong>Vitest 5</strong> — inline projects inherit the root config without an <code>extends</code> line, <code>clearMocks</code> on by default, locators exact by default (ch. 37).</li></ul>
+<h3 id="september">The September and October 2026 releases, item by item</h3>
+<ul><li><strong>Svelte 5.57</strong> — <code>SvelteMap.getOrInsertComputed</code> (the engine’s channel strips, ch. 11); <code>createContext</code> returning <code>has</code> (<code>Player.svelte</code>, ch. 29); <code>&lt;select defaultValue&gt;</code> (the WAV bar count, ch. 20); <code>Csp</code>/<code>Sha256Source</code> types from <code>svelte/server</code> (the share card, ch. 29).</li><li><strong>SvelteKit 3.0: what it adds</strong> — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside <code>enhance</code> (ch. 24); adapters contribute Vite plugins, <code>pre</code> and <code>post</code>: the adapter provides <code>virtual:adapter</code> (ch. 34); <code>+</code> files with <code>.test.</code> in the name are not routes: <code>api/patterns/+server.test.ts</code> (ch. 32); <code>QUERY</code> handlers in <code>+server.ts</code>, and the <code>preload</code> filter gets <code>filename</code> for fonts (ch. 32, 26); <code>applyReroute</code> for adapters, and a catch-all that uses it (ch. 34).</li><li><strong>SvelteKit 3.0 and 3.0.1: what they replace</strong> — <code>builder.generateServerInstance</code> replaces <code>generateManifest</code>, and the <code>Server</code> class gives way to a generated <code>server</code> object (ch. 34); <code>builder.createInstrumentationInitializer</code> fills in the environment before <code>instrumentation.server.js</code> runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind <code>.updates(…)</code> calls <code>requested(…).refreshAll()</code> or <code>ignore()</code> on purpose (ch. 24); <code>json()</code> and <code>text()</code> are deprecated for <code>Response.json()</code> and <code>new Response()</code> (ch. 32); <code>pushState</code> and <code>replaceState</code> are deprecated for <code>goto(…, { shallow: true })</code>, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in <code>src/service-worker/</code> with a tsconfig of its own (ch. 35); adapter-node 6 drops the <code>ORIGIN</code> variable in favour of <code>paths.origin</code>, and so does this adapter (ch. 34).</li><li><strong>sv 1.0</strong> — <code>sv create</code> with <code>#lib</code> imports and the <code>ai-tools</code> add-on, which wrote <code>AGENTS.md</code> and <code>.claude/settings.json</code> (ch. 39); <code>sv migrate sveltekit-3</code> for the mechanical half of an upgrade.</li><li><strong>vite-plugin-svelte 7.3</strong> — <code>dynamicCompileOptions({ filename, environment })</code> (ch. 2, 33).</li><li><strong>Vitest 5</strong> — inline projects inherit the root config without an <code>extends</code> line, <code>clearMocks</code> on by default, locators exact by default (ch. 37).</li></ul>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

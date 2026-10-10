@@ -248,7 +248,7 @@ export const checkpoint = sqliteTable(
 			},
 			{
 				type: 'p',
-				text: 'Restoring does not rewind the log. It replays the board as it was at that sequence and writes the difference as *new* operations. History is append-only, including the history of undoing things — which is the only way a restore can itself be undone, and the only way it can be collaborative. Chapter 39 builds it.'
+				text: 'Restoring does not rewind the log. It replays the board as it was at that sequence and writes the difference as *new* operations. History is append-only, including the history of undoing things — which is the only way a restore can itself be undone, and the only way it can be collaborative. Chapter 37 builds it.'
 			},
 
 			{

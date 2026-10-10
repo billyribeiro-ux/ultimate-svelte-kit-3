@@ -125,7 +125,7 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**SvelteKit 3** with **Svelte 5** — runes, remote functions, universal hooks, `defineParams`, and no `svelte.config.js`.',
+					'**SvelteKit 3** with **Svelte 5** — runes, remote functions, universal hooks, `defineParams`, and no `svelte.config.js`: SvelteKit 2 kept the framework’s options there, and SvelteKit 3 moved them into `vite.config.ts`.',
 					'**TypeScript**, strict, with `noUncheckedIndexedAccess` on. In a codebase full of array indexing into shared state, that flag earns its keep on the first day.',
 					'**Vite 8** and **Vitest 5** — unit tests in Node, component tests in a real Chromium.',
 					'**valibot** for every schema: environment variables, route parameters, form fields, and the sync wire format.',
@@ -241,8 +241,8 @@ export const part0 = [
 					'To decide a winner without asking anybody, every edit needs a **timestamp that is comparable across machines** and never ties. Wall clocks are not that. Chapter 06.',
 					'To know what a replica already has, we need a compact summary of "everything I have seen". Chapter 07.',
 					'To keep an ordering stable when two people insert in the same gap, positions must be **densely orderable** — there must always be a value between any two. Chapter 08.',
-					'Each kind of state needs its own type: a set for shapes, registers for fields, a sequence for text. Chapters 10 to 12.',
-					'And all of it needs to be tested against a network that behaves as badly as a real one, which turns out to be a *property* test rather than an example. Chapter 09.'
+					'Each kind of state needs its own type: a set for shapes, registers for fields, a sequence for text. Chapters 09 to 11.',
+					'And all of it needs to be tested against a network that behaves as badly as a real one, which turns out to be a *property* test rather than an example. Chapter 12.'
 				]
 			},
 			{
@@ -291,9 +291,13 @@ pnpm --version
 			{
 				type: 'terminal',
 				code: `
-pnpm create svelte@next tessera
+pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
 pnpm install`
+			},
+			{
+				type: 'p',
+				text: '`sv` is the Svelte CLI, and `pnpm dlx` runs its latest release without installing it. `--template minimal --types ts` gives a bare SvelteKit 3 project in TypeScript. `--no-add-ons` skips the interactive add-on prompt, because everything else in this project is configured by hand, and `--no-install` leaves the dependencies to the `pnpm install` two lines down, once you are inside the folder.'
 			},
 			{
 				type: 'p',
@@ -364,7 +368,7 @@ sveltekit({
 			{
 				type: 'why',
 				title: 'The 403 that looks like a bug in your form',
-				text: 'That comment is a scar. `adapter-node` v6 moved the trusted origin from a runtime `ORIGIN` variable to build-time `paths.origin`. Leave it unset and the adapter reconstructs the origin from request headers, assuming `https` unless told otherwise. Your server on plain HTTP computes `https://localhost:4173`, the browser sends `http://localhost:4173`, and every POST — every form, every remote command — comes back `403 Cross-site remote requests are forbidden`, in an application whose GET requests all work perfectly.'
+				text: 'That comment is a scar. Up to SvelteKit 2, `adapter-node` read the trusted origin from a runtime `ORIGIN` variable; v6, the adapter’s SvelteKit 3 release, removed it in favour of build-time `paths.origin`. Leave it unset and the adapter reconstructs the origin from request headers, assuming `https` unless told otherwise. Your server on plain HTTP computes `https://localhost:4173`, the browser sends `http://localhost:4173`, and every POST — every form, every remote command — comes back `403 Cross-site remote requests are forbidden`, in an application whose GET requests all work perfectly.'
 			},
 			{
 				type: 'code',
@@ -568,11 +572,11 @@ prerender: {
 			},
 			{
 				type: 'p',
-				text: 'Two of those flags do most of the work. `noUncheckedIndexedAccess` makes `array[i]` have type `T | undefined`, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.'
+				text: 'Two flags do most of the work, and only one of them is written in this file. `noUncheckedIndexedAccess` makes `array[i]` have type `T | undefined`, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.'
 			},
 			{
 				type: 'p',
-				text: '`verbatimModuleSyntax` forces `import type` where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.'
+				text: 'The other is `verbatimModuleSyntax`, which you will not find above because `$app/tsconfig` already sets it (alongside `isolatedModules`). It forces `import type` where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.'
 			},
 			{
 				type: 'warn',
@@ -603,7 +607,7 @@ prerender: {
 			},
 			{
 				type: 'p',
-				text: 'SvelteKit 3 replaced all four with one file.'
+				text: 'SvelteKit 3 deprecates all four — they still work, and they go in SvelteKit 4 — in favour of one file.'
 			},
 			{
 				type: 'code',
@@ -634,6 +638,10 @@ export const variables = defineEnvVars({
 			{
 				type: 'p',
 				text: 'A variable not in this file **cannot be imported**. Not "imports as nothing" — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.'
+			},
+			{
+				type: 'note',
+				text: 'One word in the comment at the top of `src/env.ts` is stronger than the documentation. "Replaced" means superseded, not gone: `$env/static/private` and the other three are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. Meeting one in an older project is not a bug. It is a migration still to do.'
 			},
 
 			{ type: 'h3', id: 'the-flags', text: 'What you declare, and why' },
@@ -674,7 +682,7 @@ BETTER_AUTH_SECRET: {`
 				items: [
 					'**`schema`** — a valibot schema, run once at boot against the real environment. `DATABASE_URL=""` stops the server starting with a clear message instead of producing an unopenable database three layers down.',
 					'**`public: true`** — allowed in the browser. Absent by default, so a secret reaching the client requires somebody to *type the word public*. That is a much better failure surface than a naming convention.',
-					'**`static: true`** — inlined at build time rather than read from `process.env` per request. `PUBLIC_ORIGIN` has to be static: `vite.config.ts` reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.'
+					'**`static: true`** — inlined at build time rather than read from the environment when the server starts. `PUBLIC_ORIGIN` has to be static: `vite.config.ts` reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.'
 				]
 			},
 			{
@@ -724,14 +732,15 @@ BETTER_AUTH_SECRET: {`
 			{ type: 'h3', id: 'using-them', text: 'Reading them' },
 			{
 				type: 'code',
+				file: 'src/lib/server/auth.ts',
 				lang: 'ts',
 				code: `
-import { DATABASE_URL } from '$app/env/private';
+import { BETTER_AUTH_SECRET } from '$app/env/private';
 import { PUBLIC_ORIGIN } from '$app/env/public';`
 			},
 			{
 				type: 'p',
-				text: 'Two modules, typed from your declarations. They live under `$app/env` beside `building`, `dev` and `version` — SvelteKit 3 deprecated the old `$env/private` and `$env/public` spellings in their favour. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
+				text: 'Two modules, typed from your declarations — here at the top of the authentication module, which needs one of each. Private variables come from `$app/env/private`, and anything declared `public: true` from `$app/env/public`. Both sit under `$app/env`, beside `browser`, `building`, `dev` and `version`, which SvelteKit 3 moved there from the old `$app/environment`. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
 			},
 			{
 				type: 'terminal',
@@ -739,7 +748,12 @@ import { PUBLIC_ORIGIN } from '$app/env/public';`
 # .env — never committed
 DATABASE_URL=file:local.db
 PUBLIC_ORIGIN=http://localhost:5173
-BETTER_AUTH_SECRET=$(openssl rand -base64 32)`
+# paste the output of: openssl rand -base64 32
+BETTER_AUTH_SECRET=`
+			},
+			{
+				type: 'p',
+				text: 'Run `openssl rand -base64 32` in your shell and paste what it prints after `BETTER_AUTH_SECRET=`. Do not put the command itself in the file. `.env` is read as plain `NAME=value` lines, not run as a shell script, so `$(openssl rand -base64 32)` would arrive as those 26 characters of literal text, and the schema above, which wants at least 32, would refuse to start the server. Left empty, it refuses too, with a message naming the variable. That is this chapter working as intended.'
 			},
 
 			{
@@ -815,9 +829,9 @@ src/
 			{ type: 'h3', id: 'imports', text: 'The import style' },
 			{
 				type: 'code',
-				lang: 'ts',
+				file: 'package.json',
+				lang: 'json',
 				code: `
-// package.json
 "imports": {
 	"#lib": "./src/lib/index.js",
 	"#lib/*": "./src/lib/*"
@@ -825,15 +839,19 @@ src/
 			},
 			{
 				type: 'p',
-				text: 'Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain `node` process running a script. Every import carries its extension:'
+				text: 'Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain `node` process running a script. This is also how SvelteKit 3 wants it: the framework no longer generates the old `$lib` alias, and the `imports` field in `package.json` is where `#lib` is declared instead. Every import carries its extension — here is the top of the server’s version-history module, which reaches into three other folders under `lib/` and one of its own:'
 			},
 			{
 				type: 'code',
+				file: 'src/lib/server/history.ts',
 				lang: 'ts',
 				code: `
-import { Clock } from '#lib/crdt/clock.ts';
-import Board from '#lib/components/Board.svelte';
-import { boardOps } from '#lib/board/index.ts';`
+import { BoardDocument, emptySnapshot, parseSnapshot, type Operation } from '#lib/board/index.ts';
+import type { EdgeFields, NodeFields } from '#lib/board/index.ts';
+import { Clock, newActorId, type ActorId } from '#lib/crdt/index.ts';
+import { BoardRevision } from '#lib/history/revision.ts';
+import { db } from './db/index.ts';
+import { board, checkpoint, operation, user } from './db/schema.ts';`
 			},
 			{
 				type: 'warn',
@@ -862,7 +880,7 @@ routes/
 			},
 			{
 				type: 'p',
-				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 6.'
+				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 7.'
 			},
 
 			{

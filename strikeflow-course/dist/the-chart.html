@@ -89,7 +89,7 @@ export function mulberry32(seed: number): () =&gt; number {
 </figure>
 <aside class="callout callout--note"><p>Import <code>UTCTimestamp</code> from the chart library as a <strong>type-only</strong> import. It is a *branded* type — <code>number &amp; { … }</code> — which exists so you cannot hand the library a millisecond timestamp where it wants seconds. That mix-up renders your chart in 1970 and is the most common Lightweight Charts bug. <code>import type</code> is erased at build time, so you get the safety without pulling 48kB into a utility module.</p></aside>
 <h3 id="attach">The component: {@attach}</h3>
-<p>An <strong>attachment</strong> is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old <code>onMount</code> + <code>bind:this</code> dance and <code>use:</code> actions.</p>
+<p>An <strong>attachment</strong> is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old <code>onMount</code> + <code>bind:this</code> dance and <code>use:</code> actions. The listing below is most of <code>FlowChart.svelte</code>; each <code>// …</code> or <code>&lt;!-- … --&gt;</code> stands for something left out — the long explanatory comments, the grid, price-scale, time-scale and crosshair options, the header strip with the price readout, and, inside <code>if (animate)</code>, the timer that appends a new bar every 1.6 seconds.</p>
 
 <figure class="code">
 	<figcaption>
@@ -171,6 +171,7 @@ export function mulberry32(seed: number): () =&gt; number {
 			if (disposed) return;
 
 			const api = createChart(node, {
+				// …
 				autoSize: true,
 				height,
 				layout: {
@@ -179,11 +180,17 @@ export function mulberry32(seed: number): () =&gt; number {
 					fontFamily: &quot;'Sofia Sans Variable', system-ui, sans-serif&quot;,
 					attributionLogo: false
 				},
-				// …grid, price-scale, time-scale and crosshair options…
+				// …
 				handleScroll: false,
 				handleScale: false
 			});
 
+			/*
+			 * v5 API note: series are created with `addSeries(Definition, options)`.
+			 * The v4 style — `chart.addAreaSeries(options)` — was removed. Most
+			 * tutorials you'll find online are still v4, and this is the line that
+			 * breaks.
+			 */
 			const priceSeries = api.addSeries(AreaSeries, {
 				lineColor: '#4f7dff',
 				lineWidth: 2,
@@ -212,7 +219,9 @@ export function mulberry32(seed: number): () =&gt; number {
 
 			let timer: ReturnType&lt;typeof setInterval&gt; | undefined;
 
-			if (animate) { /* …append a bar every 1600ms… */ }
+			if (animate) {
+				// …
+			}
 
 			teardown = () =&gt; {
 				if (timer) clearInterval(timer);
@@ -231,12 +240,14 @@ export function mulberry32(seed: number): () =&gt; number {
 &lt;/script&gt;
 
 &lt;!-- … --&gt;
-&lt;div
-	class=&quot;chart__canvas&quot;
-	style=&quot;min-height: {height}px&quot;
-	aria-hidden=&quot;true&quot;
-	{@attach chart}
-&gt;&lt;/div&gt;</code></pre>
+	&lt;div
+		class=&quot;chart__canvas&quot;
+		style=&quot;min-height: {height}px&quot;
+		aria-hidden=&quot;true&quot;
+		{@attach chart}
+	&gt;&lt;/div&gt;
+
+&lt;!-- … --&gt;</code></pre>
 </figure>
 <h3 id="three-things">Three things worth understanding</h3>
 

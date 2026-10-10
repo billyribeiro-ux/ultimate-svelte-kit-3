@@ -62,7 +62,9 @@ export const signIn = form(
 			HOME
 		)
 	}),
-	async (data) =&gt; { /* … */ }
+	async (data) =&gt; {
+		// …
+	}
 );</code></pre>
 </figure>
 <p>That regular expression is an <strong>open redirect</strong> guard. A URL like <code>/sign-in?redirectTo=//evil.example</code> would, after a successful sign-in, bounce the person to an attacker's site — from your domain, immediately after they typed their password, which is the ideal moment to show them a convincing &quot;session expired, sign in again&quot; page. <code>//host</code> is a protocol-relative URL: it looks like a path and is not one.</p>

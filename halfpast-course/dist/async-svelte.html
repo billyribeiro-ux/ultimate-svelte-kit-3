@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Async Svelte, and its sharp edges — Building Halfpast</title>
-<meta name="description" content="`await` inside `$derived`, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.">
+<meta name="description" content="await inside $derived, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -106,6 +106,7 @@
 <aside class="callout callout--note"><p>The rule to remember: <strong>declare any state you <code>bind:</code> to at the top of the script, above anything that awaits.</strong> It costs nothing, and it is a good habit regardless.</p></aside>
 <h3 id="untrack">Effects that trigger themselves</h3>
 <p>One more, because it produces a symptom that makes no sense: radio buttons that will not stay selected.</p>
+<p>The booking page forgets the chosen time whenever the service, the person or the day changes, because a time picked for one of those means nothing for another. The obvious effect for that:</p>
 
 <figure class="code">
 	<figcaption>
@@ -113,33 +114,33 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">$effect(() =&gt; {
-	// Reads book.fields.slot in order to write it. The write invalidates the
-	// read, the effect runs again, and the selection never survives a frame.
-	if (!isStillOffered(book.fields.slot.value())) book.fields.slot.set('');
+	void service?.id;
+	void staffId;
+	void selectedDay;
+	// set() reads the field's current value internally, so this effect also
+	// depends on the very thing it writes. Pick a time, the field changes, the
+	// effect wakes up and clears it again: the selection never survives a frame.
+	book.fields.slot.set('');
 });</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">the fix</span>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { untrack } from 'svelte';
-
+// …
 $effect(() =&gt; {
-	// Depend on the availability — the thing that should re-run this — and read
-	// the field without subscribing to it.
-	const offered = availability.staff.flatMap((entry) =&gt; entry.slots);
-
-	untrack(() =&gt; {
-		if (!offered.some((slot) =&gt; matches(slot, book.fields.slot.value()))) {
-			book.fields.slot.set('');
-		}
-	});
+	void service?.id;
+	void staffId;
+	void selectedDay;
+	untrack(() =&gt; book.fields.slot.set(''));
 });</code></pre>
 </figure>
-<p><code>untrack</code> says &quot;read this, but do not treat it as a dependency&quot;. The effect now re-runs when availability changes, which is the only reason it should, and clearing the field does not wake it up again.</p>
+<p><code>untrack</code> says &quot;run this, but do not count what it reads as a dependency&quot;. The three <code>void</code> lines are there on purpose: reading a value is all it takes for an effect to depend on it, so they name exactly what should re-run this one. The effect now re-runs when the service, the person or the day changes, which are the only reasons it should, and clearing the field does not wake it up again. Nothing in the console ever says why the first version misbehaves, which is why the comment above it in the real file is longer than the code.</p>
 <h3 id="why-worth-it">Why this is worth the sharp edges</h3>
+<p>In SvelteKit 2, data that arrived late came from a <code>load</code> function that returned a promise without awaiting it, and the page unwrapped it with <code>{#await}</code>. Even with runes, every component that wanted the value wrote its own three states:</p>
 
 <figure class="code">
 	<figcaption>
@@ -147,7 +148,7 @@ $effect(() =&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script&gt;
-	export let data;
+	let { data } = $props();
 &lt;/script&gt;
 
 {#await data.availability}
@@ -168,7 +169,7 @@ $effect(() =&gt; {
 	const availability = $derived(await getAvailability(args));
 &lt;/script&gt;
 
-&lt;AvailabilityGrid {availability} /&gt;</code></pre>
+&lt;SlotGrid {availability} /&gt;</code></pre>
 </figure>
 <p>The loading and error states did not disappear — they moved to a boundary, where they are written once for a whole region instead of once per await. Multiply that across a dozen components and it is a different codebase.</p>
 

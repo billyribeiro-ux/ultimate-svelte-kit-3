@@ -74,7 +74,7 @@ import {
 import { COOKIE, verify } from '#lib/server/identity.ts';
 import { setCapacity } from '#lib/server/tracing.ts';</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>The hook *types* come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3. Importing <code>Handle</code> from <code>@sveltejs/kit</code> still compiles — as <code>any</code> for every destructured argument — so the file keeps working and every parameter silently loses its type. It is the kind of regression that only a <code>noImplicitAny</code> error on the next edit would reveal.</p></aside>
+<aside class="callout callout--warn"><p>The hook *types* come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3; <code>@sveltejs/kit</code> no longer exports <code>Handle</code> at all. The comment above is about the build: Vite strips a type-only import without checking it, so with the old import the dev server and <code>vite build</code> carry on and every destructured argument is <code>any</code>. TypeScript does notice — <code>svelte-check</code> reports <code>Module '&quot;@sveltejs/kit&quot;' has no exported member 'Handle'</code> — which is one more reason the <code>check</code> script is the first step of <code>verify</code> (ch. 39).</p></aside>
 <h3 id="identity-and-security">Identity, then security</h3>
 
 <figure class="code">

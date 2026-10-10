@@ -1,6 +1,6 @@
 /**
  * PART 7 — SvelteKit 3 in anger
- * (chapters 31–35)
+ * (chapters 30–34)
  *
  * Remote functions, live queries, progressive forms, the two universal hooks,
  * and an i18n layer with no library in it. This is the part of the course that
@@ -81,7 +81,7 @@ export const pushOps = command(PushSchema, async ({ boardId, actor, ops }) => {
 			{
 				type: 'why',
 				title: 'A refusal is data, not a crash',
-				text: 'The client has already applied these operations locally — that is what local-first means — so it needs a status it can *act on*. 403 means "stop and reload". 422 means "your clock is wrong and this will keep happening". A 500 would tell it to retry forever, which for a permanent failure is a client that hammers the server until the tab closes. The `IngestError` → `error(status, message)` translation is three lines and it is what makes `#onPushFailure` in chapter 24 able to distinguish retryable from not.'
+				text: 'The client has already applied these operations locally — that is what local-first means — so it needs a status it can *act on*. 403 means "stop and reload". 422 means "your clock is wrong and this will keep happening". A 500 would tell it to retry forever, which for a permanent failure is a client that hammers the server until the tab closes. The `IngestError` → `error(status, message)` translation is three lines and it is what makes `#onPushFailure` in chapter 23 able to distinguish retryable from not.'
 			},
 
 			{ type: 'h3', id: 'query', text: '`query`' },
@@ -412,7 +412,7 @@ export const createBoard = form(
 			},
 			{
 				type: 'note',
-				text: 'In SvelteKit 3 this is `reconnect()`. If you have written `refresh()` on a live query before, that is the name that changed, and the error is a runtime `is not a function` rather than a type error, because the object is created dynamically.'
+				text: 'A live query has `reconnect()` and no `refresh()`. It updates itself, so the only thing left to ask of it is to restart its stream — and asked inside a form or command handler, as here, the restart travels back with that handler’s own response. Reach for `refresh()` out of habit from an ordinary `query` and `svelte-check` stops you: `RemoteLiveQuery` has no such method.'
 			},
 
 			{ type: 'h3', id: 'form-vs-command', text: '`form()` versus `command()`' },
@@ -440,25 +440,24 @@ export const createBoard = form(
 			{ type: 'h3', id: 'form-for', text: 'One definition, many instances' },
 			{
 				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
 				lang: 'svelte',
 				code: `
-{#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
-	<form {...reply} class="thread__reply-form">
-		<input {...reply.fields.boardId.as('hidden', boardId)} />
-		<input {...reply.fields.parentId.as('hidden', thread.id)} />
-		<input id="reply-{thread.id}" {...reply.fields.body.as('text')} placeholder="Reply…" />
-		<Button size="sm" type="submit">{t.comments.post}</Button>
-	</form>
-{/each}`
+<form {...reply} class="thread__reply-form">
+	<input {...reply.fields.boardId.as('hidden', boardId)} />
+	<input {...reply.fields.parentId.as('hidden', thread.id)} />
+	<label class="visually-hidden" for="reply-{thread.id}">Reply</label>
+	<input id="reply-{thread.id}" {...reply.fields.body.as('text')} placeholder="Reply…" />
+	<Button size="sm" type="submit">{t.comments.post}</Button>
+</form>`
 			},
 			{
 				type: 'p',
-				text: '`postComment.for(thread.id)` gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare `postComment` into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.'
+				text: 'That form sits inside `{#each open as thread (thread.id)}`, and `reply` is declared once per thread at the top of the loop as `postComment.for(thread.id)`. That call gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare `postComment` into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.'
 			},
 			{
 				type: 'p',
-				text: 'And `fields.x.as(\'hidden\', value)` spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter.'
+				text: 'And `fields.x.as(\'hidden\', value)` spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter. In SvelteKit 3 it is also the only way in: a control whose `name` was typed by hand instead of spread from a field gets the whole submission rejected.'
 			},
 
 			{
@@ -582,7 +581,7 @@ const RESERVED = new Set(['api', 'b', 'embed']);`
 			},
 			{
 				type: 'p',
-				text: 'The tidier fix — derive the list from the route manifest — is not possible: the universal hook runs in the browser too, where the manifest is not available. A short explicit list next to the code that needs it is the honest version.'
+				text: 'The comment calls the tidier fix — derive the list from the route manifest — impossible, because the universal hook runs in the browser too. That was true of SvelteKit 2, which had no route list a browser could import. SvelteKit 3’s `$app/manifest` can be imported anywhere, the browser included, and its `routes` export carries every route id, so the first segments could now be read off it. Three strings next to the code that needs them is still a fair trade; it has simply become a choice rather than a constraint.'
 			},
 			{
 				type: 'note',
@@ -708,7 +707,7 @@ import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#li
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them from `@sveltejs/kit` compiles to `any` for each destructured argument — which is **not an error**, so the file keeps working and every parameter silently loses its type. That is worth a grep in any project you migrate.'
+				text: 'SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`, and the comment above is right about the running app and too kind about the type checker. Type imports are erased before anything runs, so an old `import { type Handle } from \'@sveltejs/kit\'` leaves `vite dev` and `vite build` working perfectly. `svelte-check` is not fooled: it reports `Module \'"@sveltejs/kit"\' has no exported member \'Handle\'`, then an implicit `any` for every destructured argument after it. A green build proves nothing about the types — run `pnpm check` in any project you migrate.'
 			},
 			{
 				type: 'p',
@@ -750,7 +749,7 @@ export const handleError: HandleServerError = ({ error, event, kind }) => {
 			},
 			{
 				type: 'p',
-				text: '`handleError` takes `{ error, event, kind }` in SvelteKit 3, and `kind` discriminates the three cases that used to be inferred from a status code. `app` is a deliberate `error(...)` call and already says what it means. `framework` is a 404 or a malformed request. `unknown` is something genuinely broken — and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters.'
+				text: '`handleError` takes `{ error, event, kind }` in SvelteKit 3, and `kind` names the cases that used to be inferred from a status code. `app` is a deliberate `error(...)` call and already says what it means. `framework` is a 404 or a malformed request. On the server there is a fourth the comment does not mention: `validation`, a remote function argument that failed its schema — what SvelteKit 2 sent to a separate `handleValidationError` hook. `unknown` is something genuinely broken, and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters. `kind !== \'unknown\'` lets the other three keep SvelteKit’s defaults, which is exactly right for all of them.'
 			},
 
 			{
@@ -956,7 +955,7 @@ export function negotiate(header: string | null): Locale {
 			},
 			{
 				type: 'p',
-				text: 'Svelte 5.57 added `createContext`, and it is not sugar for `getContext`. `getContext(\'messages\')` is a string key and an `any`: two components can disagree about what is under it, a typo is a runtime `undefined`, and the type has to be re-asserted at every call. `createContext` hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.'
+				text: '`createContext` arrived in Svelte 5.40, and it is not sugar for `getContext`. `getContext(\'messages\')` is a string key and an `any`: two components can disagree about what is under it, a typo is a runtime `undefined`, and the type has to be re-asserted at every call. `createContext` hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.'
 			},
 			{
 				type: 'code',
@@ -1010,7 +1009,7 @@ export const hasMessages = has;`
 			},
 			{
 				type: 'p',
-				text: 'Three functions, and the third is the new one. `read()` returns the value **or throws** when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent `undefined` surfaces as `Cannot read properties of undefined` three frames later in a component that is not the problem. `provide(value)` sets it. `has()` answers *without* throwing, which is the only way to ask whether you are inside a provider at all.'
+				text: 'Three functions, and the third is the one people miss. `read()` returns the value **or throws** when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent `undefined` surfaces as `Cannot read properties of undefined` three frames later in a component that is not the problem. `provide(value)` sets it. `has()` answers *without* throwing, which is the only way to ask whether you are inside a provider at all.'
 			},
 			{
 				type: 'why',
@@ -1115,7 +1114,7 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 			{
 				type: 'why',
 				title: '`getOrInsertComputed`, borrowed rather than called',
-				text: 'Svelte 5.57 added exactly this shape to `SvelteMap`: `getOrInsertComputed(key, build)` reads, or builds and remembers. These two caches are deliberately **not** `SvelteMap`s, so `cached` is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a `$derived` must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a `get(…) ?? new …` followed by an *unconditional* `set`, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.'
+				text: '`SvelteMap` has exactly this shape built in: `getOrInsertComputed(key, build)` reads, or builds and remembers. These two caches are deliberately **not** `SvelteMap`s, so `cached` is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a `$derived` must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a `get(…) ?? new …` followed by an *unconditional* `set`, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.'
 			},
 			{
 				type: 'p',

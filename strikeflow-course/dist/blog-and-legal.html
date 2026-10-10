@@ -119,8 +119,15 @@ export const load: PageLoad = ({ params }) =&gt; {
 		<span class="code__file">src/routes/blog/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">.post-card { position: relative; }
+	<pre><code class="lang-css">.post-card {
+	/* Required — the stretched-link ::after below is absolutely positioned
+	   against this. Without it, the overlay escapes to the nearest positioned
+	   ancestor and covers the whole page. */
+	position: relative;
+	/* … */
+}
 
+/* … */
 .post-card__title a::after {
 	content: '';
 	position: absolute;
@@ -140,12 +147,13 @@ export const load: PageLoad = ({ params }) =&gt; {
 	<pre><code class="lang-css">.legal :global(h2) {
 	font-size: var(--fs-xl);
 	margin-block: var(--space-10) var(--space-4);
+	scroll-margin-top: calc(var(--header-height) + var(--space-6));
 }</code></pre>
 </figure>
 
 <aside class="callout callout--why">
 	<h4>Why :global here</h4>
-	<p>Svelte scopes styles by adding a hash class to elements it can see in <strong>this</strong> component's markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. <code>.legal :global(h2)</code> reads as: scope the <code>.legal</code> part, but let the <code>h2</code> part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for <code>!important</code>.</p>
+	<p>Svelte scopes styles by adding a hash class to elements it can see in <strong>this</strong> component's markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. <code>.legal :global(h2)</code> reads as: scope the <code>.legal</code> part, but let the <code>h2</code> part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for <code>!important</code>. (The <code>scroll-margin-top</code> line does nothing yet: none of the legal headings has an <code>id</code>, so nothing can link to one. It is there for the day they do. When the browser scrolls to a linked element it adds that element's <code>scroll-margin-top</code> to the page-wide <code>scroll-padding-top</code> from chapter 13, so a linked <code>h2</code> here would stop with extra clearance below the sticky header.)</p>
 </aside>
 <h3 id="ymyl">Why a trading site needs these pages</h3>
 <p>Three legal pages: risk disclosure, privacy, terms. For a financial site these are not boilerplate — they are trust signals a quality rater is explicitly told to look for, and the risk disclosure in particular is genuinely important.</p>

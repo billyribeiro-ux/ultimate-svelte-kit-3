@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Forms that work without JavaScript — Building Halfpast</title>
-<meta name="description" content="`form()`, `fields.&lt;name&gt;.as()`, and the rule that catches everybody once.">
+<meta name="description" content="form(), fields.&lt;name&gt;.as(), and the rule that catches everybody once.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -44,15 +44,30 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;form {...book} class=&quot;stack stack-lg&quot;&gt;
 	&lt;!-- … --&gt;
-	&lt;input {...book.fields.name.as('text')} … /&gt;
+	&lt;input {...book.fields.slug.as('hidden', data.slug)} /&gt;
+	&lt;input {...book.fields.serviceId.as('hidden', service.id)} /&gt;
+	&lt;input {...book.fields.viewerTimeZone.as('hidden', viewerZone)} /&gt;
+
 	&lt;!-- … --&gt;
-	&lt;input {...book.fields.email.as('email')} … /&gt;
+
+	&lt;input
+		{...book.fields.name.as('text')}
+		{id}
+		aria-describedby={describedBy}
+		aria-invalid={invalid}
+		autocomplete=&quot;name&quot;
+		placeholder=&quot;Sam Okafor&quot;
+	/&gt;
+
 	&lt;!-- … --&gt;
+
 	&lt;Button type=&quot;submit&quot; size=&quot;lg&quot; full loading={book.pending &gt; 0}&gt;Book this time&lt;/Button&gt;
+
 	&lt;!-- … --&gt;
 &lt;/form&gt;</code></pre>
 </figure>
 <p>With JavaScript off this is an ordinary HTML form: it posts, the server validates, and the page comes back with errors filled in. With JavaScript on, SvelteKit intercepts, posts in the background, and updates in place. Same code, same handler, same validation.</p>
+<p>Every input is spread from <code>book.fields</code>, including the three hidden ones that say which studio, which service and which time zone the booking is for. <code>book.pending</code> counts the submissions still in flight, which is what lets the button show it is working without a <code>$state</code> flag of your own.</p>
 <h3 id="the-rule">The rule that catches everybody once</h3>
 <aside class="callout callout--warn"><p>Every control inside a remote form must come from <code>fields.&lt;name&gt;.as(...)</code>. A hand-written <code>&lt;input type=&quot;hidden&quot; name=&quot;slug&quot;&gt;</code> throws <strong>&quot;Form contained a field that wasn't created with form.fields.as(...)&quot;</strong> the moment the form is submitted.</p></aside>
 <p>SvelteKit has to own the name and the value in order to construct the submitted object and match it against your schema. A field it did not create is a field it cannot account for, so it refuses rather than silently dropping it.</p>
@@ -65,7 +80,7 @@
 	<pre><code class="lang-svelte">&lt;!-- Not &lt;input type=&quot;hidden&quot; name=&quot;redirectTo&quot; value={redirectTo} /&gt; --&gt;
 &lt;input {...signIn.fields.redirectTo.as('hidden', redirectTo)} /&gt;</code></pre>
 </figure>
-<p>The second argument is the value. It caught us three times in this project: the booking page's service id, the slot grid's chosen time, and the sign-in page's <code>redirectTo</code>. The last one only broke sign-ins that arrived *with* a redirect, which meant every test that started at <code>/manage</code> failed and every test that started at <code>/sign-in</code> passed.</p>
+<p>The second argument is the value. It caught us three times in this project: the booking page's service id, the slot grid's chosen time, and the sign-in page's <code>redirectTo</code>. The last one only broke sign-ins that arrived <em>with</em> a redirect, which meant every test that started at <code>/manage</code> failed and every test that started at <code>/sign-in</code> passed.</p>
 <h3 id="errors">Showing what went wrong</h3>
 
 <figure class="code">
@@ -91,7 +106,7 @@
 	{/snippet}
 &lt;/Field&gt;</code></pre>
 </figure>
-<ul><li><code>fields.email.issues()</code> — problems with that one field, shown next to it.</li><li><code>fields.allIssues()</code> — everything, including errors that belong to the form as a whole rather than any single input.</li><li><code>aria-invalid</code> and <code>aria-describedby</code> are what make the error *readable* rather than merely visible. A screen reader announces &quot;Email, invalid entry, that does not look like an email address&quot; instead of &quot;Email, edit text&quot;.</li></ul>
+<ul><li><code>fields.email.issues()</code> — problems with that one field, shown next to it.</li><li><code>fields.allIssues()</code> — everything, including errors that belong to the form as a whole rather than any single input.</li><li><code>aria-invalid</code> and <code>aria-describedby</code> are what make the error <em>readable</em> rather than merely visible. A screen reader announces &quot;Email, invalid entry, that does not look like an email address&quot; instead of &quot;Email, edit text&quot;.</li></ul>
 <h3 id="fusing">Fusing two answers into one field</h3>
 <p>The booking form has an interesting problem. The customer picks a <strong>time</strong>, but a time on its own is not bookable — it belongs to a particular staff member, and when the customer chose &quot;anyone&quot;, the app picked for them.</p>
 <p>The obvious design is a radio group of times plus a hidden <code>staffId</code>, updated by JavaScript when the selection changes. That design <strong>needs</strong> JavaScript. Without it the hidden field keeps whatever the server rendered — for &quot;anyone&quot;, nothing — and the form fails validation for a reason the customer can neither see nor fix.</p>
@@ -132,19 +147,45 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each services as entry (entry.id)}
-	&lt;!-- … --&gt;
+	&lt;!--
+		`.for(id)` gives each row its own form instance. Without it every row
+		shares one set of fields, so typing in the third card fills the first,
+		and a validation error appears on all of them at once.
+	--&gt;
 	{@const editForm = saveService.for(entry.id)}
-	&lt;!-- … --&gt;
-	&lt;form {...editForm} class=&quot;edit stack&quot;&gt;
+	&lt;li class=&quot;card&quot; class:inactive={!entry.isActive}&gt;
 		&lt;!-- … --&gt;
-		&lt;input {...editForm.fields.durationMinutes.as('number', entry.durationMinutes)} … /&gt;
-		&lt;!-- … --&gt;
-		&lt;Button type=&quot;submit&quot; loading={editForm.pending &gt; 0}&gt;Save changes&lt;/Button&gt;
-	&lt;/form&gt;
-	&lt;!-- … --&gt;
+
+		{#if editing === entry.id}
+			&lt;form {...editForm} class=&quot;edit stack&quot;&gt;
+				&lt;input {...editForm.fields.slug.as('hidden', data.slug)} /&gt;
+				&lt;input {...editForm.fields.serviceId.as('hidden', entry.id)} /&gt;
+
+				&lt;Field label=&quot;Name&quot; required error={editForm.fields.name.issues()?.[0]?.message}&gt;
+					{#snippet children({ id, describedBy, invalid })}
+						&lt;input
+							{...editForm.fields.name.as('text', entry.name)}
+							{id}
+							aria-describedby={describedBy}
+							aria-invalid={invalid}
+						/&gt;
+					{/snippet}
+				&lt;/Field&gt;
+
+				&lt;!-- … --&gt;
+
+				{#if editForm.result?.saved}
+					&lt;Alert tone=&quot;success&quot;&gt;&lt;p&gt;Saved.&lt;/p&gt;&lt;/Alert&gt;
+				{/if}
+
+				&lt;Button type=&quot;submit&quot; loading={editForm.pending &gt; 0}&gt;Save changes&lt;/Button&gt;
+			&lt;/form&gt;
+		{/if}
+	&lt;/li&gt;
 {/each}</code></pre>
 </figure>
 <p><code>form.for(id)</code> gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.</p>
+<p>Notice the second argument again, this time on a text input. <code>as('text', entry.name)</code> renders each row's form already holding that row's current name, and it is also the value the field goes back to if the form is reset. <code>editForm.result</code> is whatever the handler returned, so <code>{ saved: true }</code> from the server becomes the &quot;Saved.&quot; message on that one card and no other.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

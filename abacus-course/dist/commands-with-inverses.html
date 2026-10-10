@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commands with inverses: undo, structure, clipboard, fill, sort — Building Abacus</title>
-<meta name="description" content="Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.">
+<meta name="description" content="Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells and every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 16</p>
 			<h1>Commands with inverses: undo, structure, clipboard, fill, sort</h1>
-			<p class="lede">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</p>
+			<p class="lede">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells <em>and</em> every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build undo as commands rather than snapshots, and handle the case that snapshots would have hidden: an inverse that is not a mirror image.</p></aside>
 			
 <figure class="code">
@@ -172,7 +172,7 @@ deleteColumns(at: number, count = 1): void {
 
 <aside class="callout callout--why">
 	<h4>Why undoing a deletion needs a snapshot of formulas it did not delete</h4>
-	<p>Delete row 2 from a sheet where A3 says <code>=SUM(A1:A2)</code>. The engine rewrites the formula to <code>=SUM(A1:A1)</code> and moves it up. Undo inserts a row at 2 — and <code>A1:A1</code> stays <code>A1:A1</code>, because an insertion *below* a range does not grow it. The inverse shift restores the shape of the sheet but not the text of the formulas, and a reference into the deleted band became <code>#REF!</code> for good. So a deletion snapshots two things: the cells in the band, and every formula the shift would rewrite, found by rewriting and comparing. Undo runs the inverse shift and then restores both. The browser test that undoes a deleted row, cells and all, is what found this; a snapshot-based undo would have hidden it and cost the memory instead.</p>
+	<p>Delete row 2 from a sheet where A3 says <code>=SUM(A1:A2)</code>. The engine rewrites the formula to <code>=SUM(A1:A1)</code> and moves it up. Undo inserts a row at 2 — and <code>A1:A1</code> stays <code>A1:A1</code>, because an insertion <em>below</em> a range does not grow it. The inverse shift restores the shape of the sheet but not the text of the formulas, and a reference into the deleted band became <code>#REF!</code> for good. So a deletion snapshots two things: the cells in the band, and every formula the shift would rewrite, found by rewriting and comparing. Undo runs the inverse shift and then restores both. The browser test that undoes a deleted row, cells and all, is what found this; a snapshot-based undo would have hidden it and cost the memory instead.</p>
 </aside>
 
 <figure class="code">

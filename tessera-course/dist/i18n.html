@@ -198,7 +198,7 @@ export function negotiate(header: string | null): Locale {
 <p>Quality values honoured, a bare tag matching a regional one so <code>fr-CA</code> finds <code>fr</code>, and anything unrecognised falling through to the default rather than erroring. A visitor with an exotic locale should get the app in English, not a 406.</p>
 <h3 id="context"><code>createContext</code>, and the third function it returns</h3>
 <p><code>t</code> was a prop. It was declared on eight components and written out at seventeen call sites, and every one of them said the same thing: *whatever my parent has*. A prop that is only ever forwarded is not a prop — it is a global with extra steps and a rename that touches eight files.</p>
-<p>Svelte 5.57 added <code>createContext</code>, and it is not sugar for <code>getContext</code>. <code>getContext('messages')</code> is a string key and an <code>any</code>: two components can disagree about what is under it, a typo is a runtime <code>undefined</code>, and the type has to be re-asserted at every call. <code>createContext</code> hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.</p>
+<p><code>createContext</code> arrived in Svelte 5.40, and it is not sugar for <code>getContext</code>. <code>getContext('messages')</code> is a string key and an <code>any</code>: two components can disagree about what is under it, a typo is a runtime <code>undefined</code>, and the type has to be re-asserted at every call. <code>createContext</code> hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.</p>
 
 <figure class="code">
 	<figcaption>
@@ -250,7 +250,7 @@ export function useMessages(): () =&gt; Messages {
 /** Whether an ancestor provided a catalogue. Exported so tests can assert it. */
 export const hasMessages = has;</code></pre>
 </figure>
-<p>Three functions, and the third is the new one. <code>read()</code> returns the value <strong>or throws</strong> when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent <code>undefined</code> surfaces as <code>Cannot read properties of undefined</code> three frames later in a component that is not the problem. <code>provide(value)</code> sets it. <code>has()</code> answers *without* throwing, which is the only way to ask whether you are inside a provider at all.</p>
+<p>Three functions, and the third is the one people miss. <code>read()</code> returns the value <strong>or throws</strong> when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent <code>undefined</code> surfaces as <code>Cannot read properties of undefined</code> three frames later in a component that is not the problem. <code>provide(value)</code> sets it. <code>has()</code> answers *without* throwing, which is the only way to ask whether you are inside a provider at all.</p>
 
 <aside class="callout callout--why">
 	<h4>Why the context value is a function</h4>
@@ -345,7 +345,7 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 
 <aside class="callout callout--why">
 	<h4><code>getOrInsertComputed</code>, borrowed rather than called</h4>
-	<p>Svelte 5.57 added exactly this shape to <code>SvelteMap</code>: <code>getOrInsertComputed(key, build)</code> reads, or builds and remembers. These two caches are deliberately <strong>not</strong> <code>SvelteMap</code>s, so <code>cached</code> is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a <code>$derived</code> must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a <code>get(…) ?? new …</code> followed by an *unconditional* <code>set</code>, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.</p>
+	<p><code>SvelteMap</code> has exactly this shape built in: <code>getOrInsertComputed(key, build)</code> reads, or builds and remembers. These two caches are deliberately <strong>not</strong> <code>SvelteMap</code>s, so <code>cached</code> is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a <code>$derived</code> must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a <code>get(…) ?? new …</code> followed by an *unconditional* <code>set</code>, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.</p>
 </aside>
 <p>And the cut-off is a product decision worth copying: anything older than a week becomes an absolute date, because &quot;47 weeks ago&quot; is a number people have to convert and &quot;12 October&quot; is one they can read.</p>
 

@@ -15,6 +15,11 @@
  *   - It works with JavaScript off
  *
  * Run:  node sequent-course/build.js
+ *
+ * Then: node sequent-course/verify.js — reads the pages just written to `dist/`
+ * and fails if any block that names a file is not in that file, verbatim or as
+ * an excerpt whose every gap is marked with an elision line. Run it after every
+ * build; the course drifted from the code once already without it.
  */
 
 import { mkdir, writeFile, rm, cp } from 'node:fs/promises';

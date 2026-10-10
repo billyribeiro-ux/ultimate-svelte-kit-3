@@ -48,9 +48,24 @@
 
 export interface SitemapEntry {
 	readonly path: StaticRoute;
+	/**
+	 * ISO date of the last *meaningful* content change.
+	 *
+	 * Omit it unless you genuinely track it. Google's documented guidance is that it
+	 * uses `lastmod` only when it appears consistently accurate — and a site that
+	 * stamps today's date on every page at every deploy teaches it to ignore the field
+	 * entirely. Blog posts have real dates, so they get one. Marketing pages don't
+	 * track edits, so they don't.
+	 */
 	readonly lastmod?: string;
 }
 
+/**
+ * Static pages that belong in the index.
+ *
+ * Deliberately excluded:
+ *   /guide/thank-you  — gated confirmation page, noindexed
+ */
 export const staticSitemapEntries: readonly SitemapEntry[] = [
 	{ path: '/' },
 	{ path: '/features' },

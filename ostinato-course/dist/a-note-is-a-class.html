@@ -126,10 +126,17 @@ export const HIGHEST = 96; // C7</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/music/note.ts<span class="code__lines">:77-113</span></span>
+		<span class="code__file">src/lib/music/note.ts<span class="code__lines">:70-113</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	transpose(semitones: number): Note {
+	<pre><code class="lang-ts">	/**
+	 * A new note `semitones` away, clamped to the sequenceable range.
+	 *
+	 * Clamped rather than thrown: this is called from a keyboard shortcut, and a
+	 * person holding the up arrow at the top of the range wants the note to stay
+	 * put, not an exception.
+	 */
+	transpose(semitones: number): Note {
 		const midi = Math.min(HIGHEST, Math.max(LOWEST, this.midi + semitones));
 		return midi === this.midi ? this : new Note(midi);
 	}

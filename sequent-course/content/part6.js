@@ -1,5 +1,5 @@
 /**
- * PART 6 — The screens (chapters 34–38)
+ * PART 6 — The screens (chapters 33–37)
  *
  * Mobile first on a screen designed for six monitors, two bugs that only a real
  * browser could find, and a motion system whose defining feature is how little
@@ -109,7 +109,9 @@ export const part6 = [
 	 * \`overflow-x: auto\` and exists precisely to absorb this. It never gets the
 	 * chance: its parent has already grown to fit, so there is nothing to scroll.
 	 *
-	 * …
+	 * This is the single most common cause of "why does my page scroll sideways
+	 * on mobile", and it is invisible in devtools because every element looks
+	 * like it is behaving.
 	 */
 	min-inline-size: 0;
 
@@ -303,7 +305,15 @@ export const part6 = [
 	 * scrollable width to the *page*, even though the table itself is correctly
 	 * clipped and nothing is visibly out of place.
 	 *
-	 * …
+	 * Every element measures correctly. \`getBoundingClientRect\` on every child
+	 * is inside its parent. The page still scrolls sideways by 122px, and the
+	 * only way to see it is to try scrolling.
+	 *
+	 * \`clip\` rather than \`hidden\`: \`hidden\` would make this a scroll container,
+	 * which breaks the sticky positioning it is meant to protect and gives the
+	 * card its own scrollbar. \`clip\` just clips. The small margin lets focus
+	 * rings and the tap-target expanders bleed a few pixels rather than being
+	 * shaved off at the border.
 	 */
 	overflow-x: clip;
 	overflow-clip-margin: 4px;
@@ -458,6 +468,7 @@ export const DURATION = {
 				code: `
 const REVEAL_BUDGET = 0.45;
 
+// …
 export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 	return (node) => {
 		const { distance = 10 } = options;
@@ -501,7 +512,7 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			{ type: 'h3', id: 'attachments', text: 'Why these are attachments, not actions' },
 			{
 				type: 'p',
-				text: 'An earlier version of this file exported Svelte *actions* returning `{ update, destroy }`. The official `use:` docs now mark that return shape as legacy — "prior to the `$effect` rune, actions could return an object with `update` and `destroy` methods; using effects is preferred" — and recommend attachments outright for 5.29 and newer. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why `reveal` above ends with `return () => …` instead of a `destroy` method.'
+				text: 'An earlier version of this file exported Svelte *actions* returning `{ update, destroy }`. The official `use:` docs now mark that return shape as legacy — "prior to the `$effect` rune, actions could return an object with `update` and `destroy` methods … using effects is preferred" — and for 5.29 and newer they suggest attachments instead: "consider using attachments instead, as they are more flexible and composable". An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why `reveal` above ends with `return () => …` instead of a `destroy` method.'
 			},
 			{
 				type: 'p',
@@ -647,10 +658,15 @@ gsap.to(state, {
 			{ type: 'h3', id: 'keyed', text: '2. Keyed by price' },
 			{
 				type: 'code',
+				file: 'apps/web/src/lib/components/DepthLadder.svelte',
 				lang: 'svelte',
 				code: `
-{#each levels as level (level.price)}
-	<tr>…</tr>
+{#each column.levels as level (level.price)}
+	<tr class={column.side} {@attach flash(() => directionFor(level))}>
+		<!-- … -->
+	</tr>
+{:else}
+	<tr><td colspan="3" class="empty muted">Nothing resting</td></tr>
 {/each}`
 			},
 			{
@@ -718,10 +734,18 @@ const largest = $derived(
  * the template depend on it, and writing it during that same render
  * invalidates the thing being rendered.
  *
- * …
+ * This is the general shape of "previous value" in a reactive system, and
+ * getting it wrong produces an infinite loop rather than a wrong answer,
+ * which is at least honest.
  */
-// …
+// A \`SvelteMap\` here would be precisely the bug described above: nothing reads
+// this during render, and making it reactive creates the cycle.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
 const lastSize = new Map<number, number>();`
+			},
+			{
+				type: 'p',
+				text: 'The `eslint-disable` line is there because `svelte/prefer-svelte-reactivity` flags a plain `Map` inside a component and suggests a `SvelteMap` — which here would be exactly the reactive cycle the comment describes. A lint rule is a good default, and the place to overrule it is next to the line, with the reason written down.'
 			},
 			{
 				type: 'why',
@@ -865,7 +889,7 @@ export const getVenue = query.live(async function* () {
 			{ type: 'h3', id: 'the-test-trap', text: 'The test that could never pass' },
 			{
 				type: 'p',
-				text: 'One more trap, from driving this page in a browser:'
+				text: 'One more trap, from the days when this project drove its pages with Playwright (the browser tests have since gone, and the lesson has not):'
 			},
 			{
 				type: 'code',

@@ -49,11 +49,15 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">apps/web/src/lib/components/DepthLadder.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#each levels as level (level.price)}
-	&lt;tr&gt;…&lt;/tr&gt;
+	<pre><code class="lang-svelte">{#each column.levels as level (level.price)}
+	&lt;tr class={column.side} {@attach flash(() =&gt; directionFor(level))}&gt;
+		&lt;!-- … --&gt;
+	&lt;/tr&gt;
+{:else}
+	&lt;tr&gt;&lt;td colspan=&quot;3&quot; class=&quot;empty muted&quot;&gt;Nothing resting&lt;/td&gt;&lt;/tr&gt;
 {/each}</code></pre>
 </figure>
 <p>The key is <code>level.price</code>, not the index. A level that survives an update keeps its DOM node, and Svelte writes only the numbers that changed. Keyed by index, every row's text would be rewritten whenever a level appeared or vanished at the top of the book — which is most updates, since the top of the book is where all the action is.</p>
@@ -98,11 +102,16 @@ const largest = $derived(
  * the template depend on it, and writing it during that same render
  * invalidates the thing being rendered.
  *
- * …
+ * This is the general shape of &quot;previous value&quot; in a reactive system, and
+ * getting it wrong produces an infinite loop rather than a wrong answer,
+ * which is at least honest.
  */
-// …
+// A `SvelteMap` here would be precisely the bug described above: nothing reads
+// this during render, and making it reactive creates the cycle.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
 const lastSize = new Map&lt;number, number&gt;();</code></pre>
 </figure>
+<p>The <code>eslint-disable</code> line is there because <code>svelte/prefer-svelte-reactivity</code> flags a plain <code>Map</code> inside a component and suggests a <code>SvelteMap</code> — which here would be exactly the reactive cycle the comment describes. A lint rule is a good default, and the place to overrule it is next to the line, with the reason written down.</p>
 
 <aside class="callout callout--why">
 	<h4>Not everything in a component is state</h4>

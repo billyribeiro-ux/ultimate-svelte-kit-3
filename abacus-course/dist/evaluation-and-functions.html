@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evaluation and the function library — Building Abacus</title>
-<meta name="description" content="The evaluator walks the tree with a `Context` and knows nothing about sheets. Fifty functions register themselves in a `Map`, receive their arguments as thunks so `IF` is lazy, and share a few coercion helpers.">
+<meta name="description" content="The evaluator walks the tree with a Context and knows nothing about sheets. Fifty functions register themselves in a Map, receive their arguments as thunks so IF is lazy, and share a few coercion helpers.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -86,6 +86,7 @@ export interface Context {
 export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 </figure>
 <p>The evaluator does not know what a sheet is. The cells it needs come through a <code>Context</code> — the engine provides one, a test provides a <code>Map</code>, the lesson page in chapter 17 provides a closure over nine <code>$derived</code>s. The clock and the random source are injected for the same reason: <code>TODAY()</code> in a test must give the same answer tomorrow.</p>
+<aside class="callout callout--note"><p>The project’s own comments number the chapters differently from this course, and the header above has the first of them. Where a comment in the code says “chapter 10” it means the hand-written engine (chapter 09 here), and where it says “chapter 12” it means the <code>$derived</code> version of it (chapter 17 here).</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -143,7 +144,7 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 	}
 }</code></pre>
 </figure>
-<p>The <code>call</code> branch is the one to read slowly. A function receives its arguments as <strong>thunks</strong> — <code>() =&gt; evaluate(arg, ctx)</code> — not as values. <code>IF</code> must not evaluate the branch it does not take (it might be <code>1/0</code>), and <code>IFERROR</code> must be able to *catch* an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.</p>
+<p>The <code>call</code> branch is the one to read slowly. A function receives its arguments as <strong>thunks</strong> — <code>() =&gt; evaluate(arg, ctx)</code> — not as values. <code>IF</code> must not evaluate the branch it does not take (it might be <code>1/0</code>), and <code>IFERROR</code> must be able to <em>catch</em> an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.</p>
 
 <figure class="code">
 	<figcaption>
@@ -326,7 +327,7 @@ function numbers(values: Value[]): number[] | ErrorValue {
 	return out;
 }</code></pre>
 </figure>
-<p><code>numbers</code> is the rule that makes <code>SUM(A1:A3)</code> ignore a heading in A1 while <code>SUM(&quot;3&quot;, TRUE)</code> is 4: in a *range*, only numbers count; a *scalar* argument is coerced. Both are what every spreadsheet does, and they are different rules, so they are written as two branches rather than one clever one.</p>
+<p><code>numbers</code> is the rule that makes <code>SUM(A1:A3)</code> ignore a heading in A1 while <code>SUM(&quot;3&quot;, TRUE)</code> is 4: in a <em>range</em>, only numbers count; a <em>scalar</em> argument is coerced. Both are what every spreadsheet does, and they are different rules, so they are written as two branches rather than one clever one.</p>
 
 <figure class="code">
 	<figcaption>
@@ -696,7 +697,7 @@ export function highlights(source: string): Highlight[] {
 	return out;
 }</code></pre>
 </figure>
-<p>The formula bar colours references while a formula is *being typed*, and a formula being typed is unfinished more often than not: <code>=SUM(A1:</code> does not parse. So this works from tokens, not from the tree, and the colours do not vanish at every keystroke that makes the text unparseable. The hue cycles through six, defined in <code>tokens.css</code>, and the same hue outlines the range on the grid.</p>
+<p>The formula bar colours references while a formula is <em>being typed</em>, and a formula being typed is unfinished more often than not: <code>=SUM(A1:</code> does not parse. So this works from tokens, not from the tree, and the colours do not vanish at every keystroke that makes the text unparseable. The hue cycles through six, defined in <code>tokens.css</code>, and the same hue outlines the range on the grid.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

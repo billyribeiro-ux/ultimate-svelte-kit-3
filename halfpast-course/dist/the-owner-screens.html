@@ -45,6 +45,9 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;input
 	{...editForm.fields.durationMinutes.as('number', entry.durationMinutes)}
+	{id}
+	aria-describedby={describedBy}
+	aria-invalid={invalid}
 	min=&quot;5&quot;
 	max=&quot;480&quot;
 	step=&quot;5&quot;
@@ -89,7 +92,7 @@ function toClock(minutes: number): string {
 	return `${hh}:${mm}`;
 }</code></pre>
 </figure>
-<p>Read the comment in <code>toClock</code> again. A shift running to 02:00 the next morning is stored as minute 1560, and showing that as &quot;01:30&quot; would be a lie about which day it belongs to. <code>25:30</code> looks odd for exactly the right reason.</p>
+<p>Read the comment in <code>toClock</code> again. A shift running to 01:30 the next morning is stored as minute 1530, and showing that as &quot;01:30&quot; would be a lie about which day it belongs to. <code>25:30</code> looks odd for exactly the right reason.</p>
 <p>The page also uses <code>&lt;input type=&quot;time&quot; step=&quot;300&quot;&gt;</code>, which gives you the platform's native time picker — the one the owner already knows how to use — snapping to five minutes.</p>
 <h3 id="team">Team: a checkbox that is a join table</h3>
 
@@ -108,9 +111,15 @@ function toClock(minutes: number): string {
 	async ({ slug, staffId, serviceId, offers }) =&gt; {
 		const context = await requireOwner(slug);
 
-		// … both staffId and serviceId are looked up scoped to
-		// context.business.id first, and a 404 stops an owner of one studio
-		// wiring their staff to another studio's services by id …
+		// Both sides must belong to this business, or an owner of one studio could
+		// wire their staff to another studio's services by id.
+		const member = await db.query.staff.findFirst({
+			where: and(eq(staff.id, staffId), eq(staff.businessId, context.business.id))
+		});
+		const target = await db.query.service.findFirst({
+			where: and(eq(service.id, serviceId), eq(service.businessId, context.business.id))
+		});
+		if (!member || !target) error(404, 'No such staff member or service.');
 
 		if (offers) {
 			/*

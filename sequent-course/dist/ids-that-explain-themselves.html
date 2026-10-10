@@ -157,7 +157,20 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
  * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
  * randomness, encoded as 26 characters of Base32.
  *
- * …
+ * **Sortable** is not a nicety. Because the timestamp is most-significant,
+ * sorting these strings sorts them by creation time — so a database index on an
+ * id column is also an index on age, and every insert lands at the right-hand
+ * edge of the B-tree instead of scattering through it. A UUIDv4 primary key on
+ * a busy table fragments the index and turns inserts into random writes; this
+ * does not.
+ *
+ * **Unguessable** matters because these identifiers appear in URLs and API
+ * responses. 80 bits of entropy per millisecond is enough that enumerating
+ * other firms' orders is not a thing anybody will manage.
+ *
+ * `now` is a parameter rather than a call to `Date.now()` inside, purely so the
+ * tests can assert that two ids minted in the same millisecond still differ and
+ * that ids minted later sort after ids minted earlier.
  */
 export function newId(now: number = Date.now()): string {
 	if (!Number.isInteger(now) || now &lt; 0) {
@@ -175,7 +188,6 @@ export function newId(now: number = Date.now()): string {
 	}
 
 	// …
-
 	let carry = 0n;
 	for (const byte of bytes) carry = (carry &lt;&lt; 8n) | BigInt(byte);
 
@@ -197,12 +209,12 @@ export function newId(now: number = Date.now()): string {
 	</figcaption>
 	<pre><code class="lang-json">{
 	&quot;name&quot;: &quot;@sequent/protocol&quot;,
-	// …
+	…
 	&quot;exports&quot;: {
 		&quot;.&quot;: &quot;./src/index.ts&quot;,
 		&quot;./generate&quot;: &quot;./src/generate.ts&quot;
-	}
-	// …
+	},
+	…
 }</code></pre>
 </figure>
 <h3 id="keys">Composite keys, built not looked up</h3>
@@ -222,7 +234,7 @@ export function newId(now: number = Date.now()): string {
  * order.
  */
 export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
-	return `${firmId}\0${clientOrderId}`;
+	// …
 }
 
 /**
@@ -234,9 +246,10 @@ export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string 
  * listed with a dot in its symbol, which is most of them.
  */
 export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
-	return `${accountId}\0${instrumentId}`;
+	// …
 }</code></pre>
 </figure>
+<p>Each body is one line: the two identifiers joined by a NUL character, as in <code>${firmId}\0${clientOrderId}</code>. In <code>ids.ts</code> that separator is a literal NUL byte rather than the <code>\0</code> escape, which is why the line is elided above — a NUL cannot be shown on a web page — and why <code>grep</code> calls the file binary. Writing the escape is the friendlier habit; the string it produces is identical.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

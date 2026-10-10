@@ -162,18 +162,18 @@ export class OrSet<K extends string> {
 			},
 			{
 				type: 'p',
-				text: 'Look closely at `observedAdds`. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta:'
+				text: 'Look closely at `observedAdds`. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta. In the shape the board’s `node.remove` operation has in chapter 13:'
 			},
 			{
 				type: 'code',
 				lang: 'ts',
 				code: `
 // Wrong: means something different depending on when it lands.
-{ kind: 'remove', node: 'n1' }
+{ kind: 'node.remove', stamp, target: 'n1' }
 
 // Right: means exactly one thing, here, on a replica three weeks behind,
 // and during a replay in six months.
-{ kind: 'remove', node: 'n1', observed: ['1756…0000aaaaaaaa', '1756…0003bbbbbbbb'] }`
+{ kind: 'node.remove', stamp, target: 'n1', observed: ['1756…00000aaaaaaaa', '1756…00003bbbbbbbb'] }`
 			},
 
 			{ type: 'h3', id: 'add-wins', text: 'Why add-wins and not remove-wins' },
@@ -463,10 +463,15 @@ export function write<T>(current: Lww<T> | undefined, value: T, stamp: Stamp): L
 				type: 'code',
 				lang: 'ts',
 				code: `
-// A move writes two fields, so it is two register writes with one stamp.
-// A recolour writes one. They do not interact.
-{ kind: 'node.set', node: 'n1', stamp, fields: { x: 240, y: 120 } }
-{ kind: 'node.set', node: 'n1', stamp, fields: { fill: 'jade' } }`
+// One operation per field, each with a stamp of its own. A move writes two
+// fields, so it is two operations; a recolour is one. They do not interact.
+{ kind: 'node.set', stamp: s1, target: 'n1', field: 'x', value: 240 }
+{ kind: 'node.set', stamp: s2, target: 'n1', field: 'y', value: 120 }
+{ kind: 'node.set', stamp: s3, target: 'n1', field: 'fill', value: 'jade' }`
+			},
+			{
+				type: 'p',
+				text: 'That is the real shape of a `node.set`: one `field`, one `value`, one stamp. Chapter 13 types it so that `field: \'x\'` only accepts a number, and chapter 14’s `moveNode` is exactly the first two lines — two calls, two stamps.'
 			},
 			{
 				type: 'note',
@@ -1201,11 +1206,11 @@ it('survives a replica that stays offline for the whole session', () => {
 				code: `
 pnpm vitest run src/lib/crdt
 
- ✓ src/lib/crdt/clock.spec.ts        (18 tests)
+ ✓ src/lib/crdt/clock.spec.ts        (19 tests)
  ✓ src/lib/crdt/version.spec.ts      (12 tests)
  ✓ src/lib/crdt/orset.spec.ts        (11 tests)
  ✓ src/lib/crdt/register.spec.ts      (7 tests)
- ✓ src/lib/crdt/fracdex.spec.ts      (14 tests)
+ ✓ src/lib/crdt/fracdex.spec.ts      (15 tests)
  ✓ src/lib/crdt/rga.spec.ts          (16 tests)
  ✓ src/lib/crdt/convergence.spec.ts   (4 tests)  1.1s`
 			},

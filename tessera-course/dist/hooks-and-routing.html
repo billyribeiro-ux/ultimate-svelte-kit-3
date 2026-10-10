@@ -129,7 +129,7 @@ const LANGUAGE_LIKE = /^\/([a-z]{2,3})(?:-[A-Za-z]{2,4})?(\/|$)/;
 const RESERVED = new Set(['api', 'b', 'embed']);</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>This is the best bug in the project, because the code was doing exactly what it was told. <code>api</code> is three lowercase letters, which is what a language tag looks like. Every request to <code>/api/boards/…/stream</code> was quietly rewritten to <code>/boards/…/stream</code> and answered 404 — so boards loaded, rendered their chrome, and then sat empty while the browser retried a stream that could never exist. Nothing logged an error anywhere.</p></aside>
-<p>The tidier fix — derive the list from the route manifest — is not possible: the universal hook runs in the browser too, where the manifest is not available. A short explicit list next to the code that needs it is the honest version.</p>
+<p>The comment calls the tidier fix — derive the list from the route manifest — impossible, because the universal hook runs in the browser too. That was true of SvelteKit 2, which had no route list a browser could import. SvelteKit 3’s <code>$app/manifest</code> can be imported anywhere, the browser included, and its <code>routes</code> export carries every route id, so the first segments could now be read off it. Three strings next to the code that needs them is still a fair trade; it has simply become a choice rather than a constraint.</p>
 <aside class="callout callout--note"><p><code>reroute</code> is allowed to be <code>async</code>. Resist it. Making it so puts a network round trip in front of <strong>every navigation on both sides</strong> — it is a tempting place for a lookup table and a very expensive one. And returning <code>void</code> rather than <code>url.pathname</code> when nothing changes keeps the devtools from showing every navigation as a rewrite.</p></aside>
 <h3 id="params">Matchers are one file now</h3>
 
@@ -239,7 +239,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth } from '#lib/server/auth.ts';
 import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#lib/i18n/index.ts';</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>SvelteKit 3 moved every hook type into <code>@sveltejs/kit/hooks</code>. Importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for each destructured argument — which is <strong>not an error</strong>, so the file keeps working and every parameter silently loses its type. That is worth a grep in any project you migrate.</p></aside>
+<aside class="callout callout--warn"><p>SvelteKit 3 moved every hook type into <code>@sveltejs/kit/hooks</code>, and the comment above is right about the running app and too kind about the type checker. Type imports are erased before anything runs, so an old <code>import { type Handle } from '@sveltejs/kit'</code> leaves <code>vite dev</code> and <code>vite build</code> working perfectly. <code>svelte-check</code> is not fooled: it reports <code>Module '&quot;@sveltejs/kit&quot;' has no exported member 'Handle'</code>, then an implicit <code>any</code> for every destructured argument after it. A green build proves nothing about the types — run <code>pnpm check</code> in any project you migrate.</p></aside>
 <p>The order in that comment is the content of the block. Locale first, because everything that renders text needs it — *including error pages*. Get it after auth and an unauthenticated error page renders in English for a French visitor, which is a small thing that reads as carelessness.</p>
 
 <figure class="code">
@@ -276,7 +276,7 @@ export const handleError: HandleServerError = ({ error, event, kind }) =&gt; {
 };
 </code></pre>
 </figure>
-<p><code>handleError</code> takes <code>{ error, event, kind }</code> in SvelteKit 3, and <code>kind</code> discriminates the three cases that used to be inferred from a status code. <code>app</code> is a deliberate <code>error(...)</code> call and already says what it means. <code>framework</code> is a 404 or a malformed request. <code>unknown</code> is something genuinely broken — and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters.</p>
+<p><code>handleError</code> takes <code>{ error, event, kind }</code> in SvelteKit 3, and <code>kind</code> names the cases that used to be inferred from a status code. <code>app</code> is a deliberate <code>error(...)</code> call and already says what it means. <code>framework</code> is a 404 or a malformed request. On the server there is a fourth the comment does not mention: <code>validation</code>, a remote function argument that failed its schema — what SvelteKit 2 sent to a separate <code>handleValidationError</code> hook. <code>unknown</code> is something genuinely broken, and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters. <code>kind !== 'unknown'</code> lets the other three keep SvelteKit’s defaults, which is exactly right for all of them.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

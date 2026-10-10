@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The workspace, sign-in and settings — Building Abacus</title>
-<meta name="description" content="A list of sheets with a create form (`preflight`, `enhance`), per-card rename and delete (`.for(id)`, `withOverride`), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.">
+<meta name="description" content="A list of sheets with a create form (preflight, enhance), per-card rename and delete (.for(id), withOverride), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -76,111 +76,107 @@ const when = (ms: number) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:46-73</span></span>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:48-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
-	&lt;Section eyebrow=&quot;Workspace&quot; title=&quot;Your sheets&quot;&gt;
-		&lt;form
-			{...newSheet}
-			class=&quot;newsheet card&quot;
-			oninput={() =&gt; create.validate()}
-			onfocusout={() =&gt; create.validate()}
-		&gt;
-			&lt;label class=&quot;field&quot;&gt;
-				&lt;span class=&quot;field__label&quot;&gt;Title&lt;/span&gt;
-				&lt;input class=&quot;input&quot; {...create.fields.title.as('text')} placeholder=&quot;Untitled sheet&quot; /&gt;
-				{#each create.fields.title.issues() ?? [] as issue (issue.message)}
-					&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
-				{/each}
-			&lt;/label&gt;
-			&lt;label class=&quot;field&quot;&gt;
-				&lt;span class=&quot;field__label&quot;&gt;Start from&lt;/span&gt;
-				&lt;select class=&quot;input&quot; {...create.fields.template.as('select')}&gt;
-					&lt;option value=&quot;&quot;&gt;An empty sheet&lt;/option&gt;
-					{#each Object.values(TEMPLATES) as template (template.slug)}
-						&lt;option value={template.slug}&gt;{template.title}&lt;/option&gt;
-					{/each}
-				&lt;/select&gt;
-			&lt;/label&gt;
-			&lt;button class=&quot;btn btn--primary&quot; disabled={!!create.pending}&gt;
-				&lt;PlusIcon size={16} /&gt; New sheet
-			&lt;/button&gt;
-		&lt;/form&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;form
+	{...newSheet}
+	class=&quot;newsheet card&quot;
+	oninput={() =&gt; create.validate()}
+	onfocusout={() =&gt; create.validate()}
+&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;field__label&quot;&gt;Title&lt;/span&gt;
+		&lt;input class=&quot;input&quot; {...create.fields.title.as('text')} placeholder=&quot;Untitled sheet&quot; /&gt;
+		{#each create.fields.title.issues() ?? [] as issue (issue.message)}
+			&lt;p class=&quot;issue&quot;&gt;{issue.message}&lt;/p&gt;
+		{/each}
+	&lt;/label&gt;
+	&lt;label class=&quot;field&quot;&gt;
+		&lt;span class=&quot;field__label&quot;&gt;Start from&lt;/span&gt;
+		&lt;select class=&quot;input&quot; {...create.fields.template.as('select')}&gt;
+			&lt;option value=&quot;&quot;&gt;An empty sheet&lt;/option&gt;
+			{#each Object.values(TEMPLATES) as template (template.slug)}
+				&lt;option value={template.slug}&gt;{template.title}&lt;/option&gt;
+			{/each}
+		&lt;/select&gt;
+	&lt;/label&gt;
+	&lt;button class=&quot;btn btn--primary&quot; disabled={!!create.pending}&gt;
+		&lt;PlusIcon size={16} /&gt; New sheet
+	&lt;/button&gt;
+&lt;/form&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:75-141</span></span>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:75-139</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">		&lt;svelte:boundary&gt;
-			&lt;ul class=&quot;cards&quot;&gt;
-				{#each await getMine() as sheet (sheet.id)}
-					{@const del = remove.for(sheet.id)}
-					{@const ren = rename.for(sheet.id)}
-					&lt;li class=&quot;card sheetcard&quot;&gt;
-						&lt;a class=&quot;sheetcard__link&quot; href={resolve('/(app)/sheet/[id]', { id: sheet.id })}&gt;
-							&lt;h3&gt;{sheet.title}&lt;/h3&gt;
-							&lt;p class=&quot;hint&quot;&gt;
-								{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
-								{#if sheet.published}· &lt;span class=&quot;chip chip--on&quot;&gt;published&lt;/span&gt;{/if}
-								{#if sheet.access === 'link'}· shared by link{/if}
-							&lt;/p&gt;
-						&lt;/a&gt;
-						&lt;div class=&quot;sheetcard__actions&quot;&gt;
-							&lt;form {...ren} class=&quot;cluster&quot;&gt;
-								&lt;input {...ren.fields.id.as('hidden', sheet.id)} /&gt;
-								&lt;input
-									class=&quot;input input--sm&quot;
-									{...ren.fields.title.as('text', sheet.title)}
-									aria-label=&quot;Rename {sheet.title}&quot;
-								/&gt;
-								&lt;button class=&quot;btn btn--sm&quot; disabled={!!ren.pending}&gt;Rename&lt;/button&gt;
-							&lt;/form&gt;
-							&lt;form
-								{...del.enhance(async (f) =&gt; {
-									if (!confirm(`Delete &quot;${sheet.title}&quot;? This cannot be undone.`)) return;
-									try {
-										await f
-											.submit()
-											.updates(
-												getMine().withOverride((list) =&gt; list.filter((s) =&gt; s.id !== sheet.id))
-											);
-										toast('Deleted');
-									} catch {
-										toast('Could not delete that', 'error');
-									}
-								})}
-							&gt;
-								&lt;input {...del.fields.id.as('hidden', sheet.id)} /&gt;
-								&lt;button
-									class=&quot;btn btn--sm btn--danger btn--icon&quot;
-									aria-label=&quot;Delete {sheet.title}&quot;
-									disabled={!!del.pending}
-								&gt;
-									&lt;TrashIcon size={16} /&gt;
-								&lt;/button&gt;
-							&lt;/form&gt;
-						&lt;/div&gt;
-					&lt;/li&gt;
-				{:else}
-					&lt;li class=&quot;hint&quot;&gt;
-						No sheets yet. Make one above, or
-						&lt;a href={resolve('/(app)/sheet/local')}&gt;start without saving&lt;/a&gt;.
-					&lt;/li&gt;
-				{/each}
-			&lt;/ul&gt;
-			{#snippet pending()}
-				&lt;p class=&quot;hint&quot;&gt;Loading your sheets…&lt;/p&gt;
-			{/snippet}
-			{#snippet failed(error, reset)}
-				&lt;p class=&quot;issue&quot;&gt;{(error as Error).message}&lt;/p&gt;
-				&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
-			{/snippet}
-		&lt;/svelte:boundary&gt;
-	&lt;/Section&gt;
-&lt;/div&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	&lt;ul class=&quot;cards&quot;&gt;
+		{#each await getMine() as sheet (sheet.id)}
+			{@const del = remove.for(sheet.id)}
+			{@const ren = rename.for(sheet.id)}
+			&lt;li class=&quot;card sheetcard&quot;&gt;
+				&lt;a class=&quot;sheetcard__link&quot; href={resolve('/(app)/sheet/[id]', { id: sheet.id })}&gt;
+					&lt;h3&gt;{sheet.title}&lt;/h3&gt;
+					&lt;p class=&quot;hint&quot;&gt;
+						{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
+						{#if sheet.published}· &lt;span class=&quot;chip chip--on&quot;&gt;published&lt;/span&gt;{/if}
+						{#if sheet.access === 'link'}· shared by link{/if}
+					&lt;/p&gt;
+				&lt;/a&gt;
+				&lt;div class=&quot;sheetcard__actions&quot;&gt;
+					&lt;form {...ren} class=&quot;cluster&quot;&gt;
+						&lt;input {...ren.fields.id.as('hidden', sheet.id)} /&gt;
+						&lt;input
+							class=&quot;input input--sm&quot;
+							{...ren.fields.title.as('text', sheet.title)}
+							aria-label=&quot;Rename {sheet.title}&quot;
+						/&gt;
+						&lt;button class=&quot;btn btn--sm&quot; disabled={!!ren.pending}&gt;Rename&lt;/button&gt;
+					&lt;/form&gt;
+					&lt;form
+						{...del.enhance(async (f) =&gt; {
+							if (!confirm(`Delete &quot;${sheet.title}&quot;? This cannot be undone.`)) return;
+							try {
+								await f
+									.submit()
+									.updates(
+										getMine().withOverride((list) =&gt; list.filter((s) =&gt; s.id !== sheet.id))
+									);
+								toast('Deleted');
+							} catch {
+								toast('Could not delete that', 'error');
+							}
+						})}
+					&gt;
+						&lt;input {...del.fields.id.as('hidden', sheet.id)} /&gt;
+						&lt;button
+							class=&quot;btn btn--sm btn--danger btn--icon&quot;
+							aria-label=&quot;Delete {sheet.title}&quot;
+							disabled={!!del.pending}
+						&gt;
+							&lt;TrashIcon size={16} /&gt;
+						&lt;/button&gt;
+					&lt;/form&gt;
+				&lt;/div&gt;
+			&lt;/li&gt;
+		{:else}
+			&lt;li class=&quot;hint&quot;&gt;
+				No sheets yet. Make one above, or
+				&lt;a href={resolve('/(app)/sheet/local')}&gt;start without saving&lt;/a&gt;.
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+	{#snippet pending()}
+		&lt;p class=&quot;hint&quot;&gt;Loading your sheets…&lt;/p&gt;
+	{/snippet}
+	{#snippet failed(error, reset)}
+		&lt;p class=&quot;issue&quot;&gt;{(error as Error).message}&lt;/p&gt;
+		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -256,7 +252,7 @@ async function signIn() {
 	}
 }</code></pre>
 </figure>
-<p>Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. <code>next</code> is checked to be a path on this site — a <code>?next=https://elsewhere</code> must not become a redirect to elsewhere — and then asked of the router: SvelteKit 3’s <code>goto</code> rejects a URL that is not one of the app’s routes, so <code>match()</code> from <code>$app/paths</code> decides whether <code>next</code> is one, and a stale bookmark lands on the workspace instead of in a rejected promise. A <code>next</code> that <code>match</code> accepted *is* a <code>ResolvedPathname</code>, and the cast says exactly that — it is the type the lint rule accepts in place of a <code>resolve()</code> call.</p>
+<p>Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. <code>next</code> is checked to be a path on this site — a <code>?next=https://elsewhere</code> must not become a redirect to elsewhere — and then asked of the router: SvelteKit 3’s <code>goto</code> rejects a URL that is not one of the app’s routes, so <code>match()</code> from <code>$app/paths</code> decides whether <code>next</code> is one, and a stale bookmark lands on the workspace instead of in a rejected promise. A <code>next</code> that <code>match</code> accepted <em>is</em> a <code>ResolvedPathname</code>, and the cast says exactly that — it is the type the lint rule accepts in place of a <code>resolve()</code> call.</p>
 
 <figure class="code">
 	<figcaption>
@@ -413,67 +409,66 @@ async function addPasskey(name: string) {
 				&lt;/form&gt;
 			&lt;/Section&gt;</code></pre>
 </figure>
-<p>The profile is awaited in markup with a <code>$derived</code>, and the form is <code>updateProfile</code> with a preflight. The name is in the session cookie, so the handler reissues it — <code>startSession</code> again — and refreshes <code>whoAmI</code>, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.</p>
+<p>The block stops at the end of the profile: the boundary and the <code>{#if me}</code> stay open around the passkeys below and close after them. The profile is awaited in markup with a declaration tag, <code>{const me = $derived(await getProfile())}</code>, and the form is <code>updateProfile</code> with a preflight. The name is in the session cookie, so the handler reissues it — <code>startSession</code> again — and refreshes <code>whoAmI</code>, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:123-176</span></span>
+		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:123-175</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	&lt;Section eyebrow=&quot;Passkeys&quot; title=&quot;Your passkeys&quot;&gt;
-		&lt;svelte:boundary&gt;
-			&lt;ul class=&quot;keys&quot;&gt;
-				{#each await listPasskeys() as passkey (passkey.id)}
-					{@const del = removePasskey.for(passkey.id)}
-					&lt;li class=&quot;card key&quot;&gt;
-						&lt;KeyIcon size={20} /&gt;
-						&lt;div class=&quot;key__body&quot;&gt;
-							&lt;strong&gt;{passkey.label}&lt;/strong&gt;
-							&lt;span class=&quot;hint&quot;&gt;
-								{passkey.deviceType === 'multiDevice' ? 'Synced passkey' : 'This device only'}
-								{passkey.backedUp ? '· backed up' : ''} · added {when(passkey.createdAt)} · last used
-								{when(passkey.lastUsedAt)}
-							&lt;/span&gt;
-						&lt;/div&gt;
-						&lt;form
-							{...del.enhance(async (f) =&gt; {
-								try {
-									await f.submit();
-									toast('Passkey removed');
-								} catch (e) {
-									toast((e as Error).message, 'error');
-								}
-							})}
+	<pre><code class="lang-svelte">&lt;Section eyebrow=&quot;Passkeys&quot; title=&quot;Your passkeys&quot;&gt;
+	&lt;svelte:boundary&gt;
+		&lt;ul class=&quot;keys&quot;&gt;
+			{#each await listPasskeys() as passkey (passkey.id)}
+				{@const del = removePasskey.for(passkey.id)}
+				&lt;li class=&quot;card key&quot;&gt;
+					&lt;KeyIcon size={20} /&gt;
+					&lt;div class=&quot;key__body&quot;&gt;
+						&lt;strong&gt;{passkey.label}&lt;/strong&gt;
+						&lt;span class=&quot;hint&quot;&gt;
+							{passkey.deviceType === 'multiDevice' ? 'Synced passkey' : 'This device only'}
+							{passkey.backedUp ? '· backed up' : ''} · added {when(passkey.createdAt)} · last used
+							{when(passkey.lastUsedAt)}
+						&lt;/span&gt;
+					&lt;/div&gt;
+					&lt;form
+						{...del.enhance(async (f) =&gt; {
+							try {
+								await f.submit();
+								toast('Passkey removed');
+							} catch (e) {
+								toast((e as Error).message, 'error');
+							}
+						})}
+					&gt;
+						&lt;input {...del.fields.id.as('hidden', passkey.id)} /&gt;
+						&lt;button
+							class=&quot;btn btn--sm btn--icon btn--danger&quot;
+							aria-label=&quot;Remove {passkey.label}&quot;
+							disabled={!!del.pending}
 						&gt;
-							&lt;input {...del.fields.id.as('hidden', passkey.id)} /&gt;
-							&lt;button
-								class=&quot;btn btn--sm btn--icon btn--danger&quot;
-								aria-label=&quot;Remove {passkey.label}&quot;
-								disabled={!!del.pending}
-							&gt;
-								&lt;TrashIcon size={16} /&gt;
-							&lt;/button&gt;
-						&lt;/form&gt;
-					&lt;/li&gt;
-				{/each}
-			&lt;/ul&gt;
-			{#snippet pending()}
-				&lt;p class=&quot;hint&quot;&gt;Loading…&lt;/p&gt;
-			{/snippet}
-		&lt;/svelte:boundary&gt;
-		&lt;div class=&quot;cluster&quot;&gt;
-			&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={() =&gt; addPasskey(me.name)} disabled={adding}&gt;
-				&lt;KeyIcon size={16} /&gt;
-				{adding ? 'Waiting for your device…' : 'Add a passkey on this device'}
-			&lt;/button&gt;
-			&lt;form {...signOut}&gt;
-				&lt;button class=&quot;btn btn--ghost&quot; disabled={!!signOut.pending}
-					&gt;&lt;SignOutIcon size={16} /&gt; Sign out&lt;/button
-				&gt;
-			&lt;/form&gt;
-		&lt;/div&gt;
-	&lt;/Section&gt;
-{/if}</code></pre>
+							&lt;TrashIcon size={16} /&gt;
+						&lt;/button&gt;
+					&lt;/form&gt;
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
+		{#snippet pending()}
+			&lt;p class=&quot;hint&quot;&gt;Loading…&lt;/p&gt;
+		{/snippet}
+	&lt;/svelte:boundary&gt;
+	&lt;div class=&quot;cluster&quot;&gt;
+		&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={() =&gt; addPasskey(me.name)} disabled={adding}&gt;
+			&lt;KeyIcon size={16} /&gt;
+			{adding ? 'Waiting for your device…' : 'Add a passkey on this device'}
+		&lt;/button&gt;
+		&lt;form {...signOut}&gt;
+			&lt;button class=&quot;btn btn--ghost&quot; disabled={!!signOut.pending}
+				&gt;&lt;SignOutIcon size={16} /&gt; Sign out&lt;/button
+			&gt;
+		&lt;/form&gt;
+	&lt;/div&gt;
+&lt;/Section&gt;</code></pre>
 </figure>
 <p>Passkeys are listed from a query, each with its own <code>removePasskey.for(id)</code> form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.</p>
 

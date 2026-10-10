@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Functions that cross the network — Building Halfpast</title>
-<meta name="description" content="`query` and `command`: server code you import into a component and call like any other function.">
+<meta name="description" content="query and command: server code you import into a component and call like any other function.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -50,8 +50,8 @@ import { form, getRequestEvent, query } from '$app/server';
 export const getBookingPage = query(slugSchema, async (slug): Promise&lt;BookingPageData&gt; =&gt; {
 	const found = await db.query.business.findFirst({ where: eq(business.slug, slug) });
 	if (!found) error(404, 'We could not find that business.');
+
 	// …
-	return { /* … */ };
 });</code></pre>
 </figure>
 
@@ -124,7 +124,12 @@ const timeZoneSchema = v.pipe(
 		error(400, 'A shift has to end after it starts.');
 	}
 
-	await db.insert(availabilityRule).values({ /* … */ });
+	await db.insert(availabilityRule).values({
+		staffId: data.staffId,
+		weekday: data.weekday,
+		startMinute: data.startMinute,
+		endMinute: data.endMinute
+	});
 
 	void getHours({ slug: data.slug }).refresh();
 	publishDiaryChange(context.business.id);
@@ -146,10 +151,10 @@ const timeZoneSchema = v.pipe(
 // instances are on screen:
 await setServiceActive({ slug, serviceId, isActive }).updates(getServices(slug));
 
-// …and in the command handler, which must *accept* that request. Since
-// SvelteKit 3.0 an unhandled client-requested refresh is an error: the query
-// lands in an error state in the browser. `requested` comes from '$app/server';
-// the second argument caps how many instances one request may ask for.
+// …and in the command handler, which must *accept* that request. An
+// unhandled client-requested refresh is an error: the query lands in an error
+// state in the browser. `requested` comes from '$app/server'; the second
+// argument caps how many instances one request may ask for.
 for (const { query } of requested(getServices, 1)) {
 	void query.refresh();
 }
@@ -194,7 +199,7 @@ for (const { query } of requested(getServices, 1)) {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>The booking page renders from a <code>query</code>, and a <code>command</code> that calls <code>error(400, …)</code> shows *your* message in the browser, not a generic one.</p>
+	<p>The booking page renders from a <code>query</code>, and a <code>command</code> that calls <code>error(400, …)</code> shows <em>your</em> message in the browser, not a generic one.</p>
 </aside>
 		</article>
 

@@ -72,7 +72,7 @@
 		trace: 'retain-on-failure'
 	},
 
-	/* … */
+	// …
 	projects: [
 		{
 			name: 'desktop',
@@ -120,7 +120,13 @@
 		// means the end of your title is invisible in the results page.
 		expect(title.length).toBeLessThanOrEqual(70);
 
-		// …the meta description: present, 50–200 characters…
+		// --- Description ---
+		const description = await page
+			.locator('head meta[name=&quot;description&quot;]')
+			.getAttribute('content');
+		expect(description).toBeTruthy();
+		expect((description ?? '').length).toBeGreaterThan(50);
+		expect((description ?? '').length).toBeLessThanOrEqual(200);
 
 		// --- Canonical: exactly one, absolute, matching this path ---
 		const canonicals = page.locator('head link[rel=&quot;canonical&quot;]');
@@ -130,11 +136,21 @@
 		expect(new URL(canonical ?? '').pathname).toBe(path);
 
 		// --- Exactly one h1 ---
-		// …
+		// More than one is a document-outline bug; zero means the page has no
+		// stated subject. Both are common and both are avoidable.
 		await expect(page.locator('h1')).toHaveCount(1);
 
-		// …robots: contains index, never noindex, plus max-image-preview:large…
-		// …Open Graph: og:title, og:description, og:image, og:url, og:type all present…
+		// --- Indexable ---
+		const robots = await page.locator('head meta[name=&quot;robots&quot;]').getAttribute('content');
+		expect(robots).toContain('index');
+		expect(robots).not.toContain('noindex');
+		// The directive that unlocks large thumbnails, and Discover eligibility.
+		expect(robots).toContain('max-image-preview:large');
+
+		// --- Open Graph ---
+		for (const property of ['og:title', 'og:description', 'og:image', 'og:url', 'og:type']) {
+			await expect(page.locator(`head meta[property=&quot;${property}&quot;]`)).toHaveCount(1);
+		}
 
 		// --- Structured data parses and is a graph ---
 		const ldJson = await page.locator('head script[type=&quot;application/ld+json&quot;]').textContent();
@@ -192,9 +208,16 @@
 		await page.waitForURL(/\/guide\/thank-you/);
 		await expect(page.getByRole('heading', { name: /your guide is ready/i })).toBeVisible();
 	});
+
+	test('marketing pages render their content server-side', async ({ page }) =&gt; {
+		await page.goto('/');
+		// Real text in the initial HTML — which is also what a crawler sees.
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(/options flow/i);
+		await expect(page.getByRole('link', { name: /free guide/i }).first()).toBeVisible();
+	});
 });</code></pre>
 </figure>
-<p>This is the test that justifies using a remote <code>form()</code> rather than a <code>command()</code>. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.</p>
+<p>The first of these is the test that justifies using a remote <code>form()</code> rather than a <code>command()</code>; the second confirms the marketing copy is real text in the initial HTML, which is also what a crawler sees. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.</p>
 <h3 id="bug1">Bug one: 181 pixels</h3>
 <p>The mobile no-JS test failed with a strange message: Playwright timed out with *&quot;element is not stable&quot;*. The checkbox was moving.</p>
 <p>Measuring it, the checkbox was jumping <strong>181 pixels</strong> shortly after page load — on mobile only. The cause: the font-fallback metrics from chapter 11. I had estimated them. Sofia Sans is 96.7% of Arial's width; I had guessed 92%. When the real font loaded, every line of body copy re-flowed, and on mobile — where the copy sits above the form — that shoved the whole form down the page.</p>
@@ -214,24 +237,33 @@
 // fallback against itself, producing a perfect 100% that is completely wrong.
 await page.evaluate(() =&gt; document.fonts.ready);
 
-// …then, inside page.evaluate, for each target font versus the Arial fallback…
-const targetWidth = width(target.family, target.weight);
-const fallbackWidth = width(fallback, target.weight);
-const metrics = vertical(target.family, target.weight);
+const results = await page.evaluate(
+	({ targets, fallback }) =&gt; {
+		// …
 
-const sizeAdjust = targetWidth / fallbackWidth;
+		return targets.map((/** @type {{label:string,family:string,weight:number}} */ target) =&gt; {
+			const targetWidth = width(target.family, target.weight);
+			const fallbackWidth = width(fallback, target.weight);
+			const metrics = vertical(target.family, target.weight);
 
-return {
-	label: target.label,
-	sizeAdjust,
-	// Overrides are relative to the already-size-adjusted em, so each
-	// real metric is divided by the size adjustment.
-	ascentOverride: metrics.ascent / sizeAdjust,
-	descentOverride: metrics.descent / sizeAdjust,
-	rawAscent: metrics.ascent,
-	rawDescent: metrics.descent
-};</code></pre>
+			const sizeAdjust = targetWidth / fallbackWidth;
+
+			return {
+				label: target.label,
+				sizeAdjust,
+				// Overrides are relative to the already-size-adjusted em, so each
+				// real metric is divided by the size adjustment.
+				ascentOverride: metrics.ascent / sizeAdjust,
+				descentOverride: metrics.descent / sizeAdjust,
+				rawAscent: metrics.ascent,
+				rawDescent: metrics.descent
+			};
+		});
+	},
+	{ targets: TARGETS, fallback: FALLBACK }
+);</code></pre>
 </figure>
+<p>The <code>// …</code> stands for two small helpers that run inside the page: <code>width()</code> renders a sample string in a hidden <code>&lt;span&gt;</code> and measures it, and <code>vertical()</code> reads the ascent and descent from a canvas. Everything is compared against Arial — the fallback the <code>@font-face</code> rules re-describe.</p>
 
 <figure class="code code--terminal">
 	<figcaption>

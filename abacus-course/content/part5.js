@@ -142,7 +142,7 @@ export const part5 = [
 				type: 'p',
 				text: 'The browser’s answer arrives as JSON, and a remote command validates its argument with valibot. The schema names every field the library reads — base64url strings, the two attachment kinds, the extension outputs — and `v.object` drops anything else a client sends. The output type is assignable to the library’s `RegistrationResponseJSON`, and the library’s type from the browser package is assignable to the schema’s input, so both directions are checked by the compiler with no casts. The first draft used `looseObject` and needed two `as unknown as` casts; that was the sign the schema was wrong, not the types.'
 			},
-			code('src/lib/remote/auth.remote.ts', 67, 85),
+			code('src/lib/remote/auth.remote.ts', 67, 81),
 			code('src/lib/auth/passkey.ts', 1, 27),
 			code('src/lib/auth/passkey.ts', 40, 64),
 			{
@@ -240,7 +240,7 @@ export const part5 = [
 				type: 'p',
 				text: 'The generator: require a person, join the room, and wire the request’s abort signal to the mailbox — the adapter fires it when the socket closes. Then catch up (every operation since the version the tab has), and loop on the mailbox until it is closed. The `finally` leaves the room, and it now runs promptly.'
 			},
-			code('src/lib/remote/live.remote.ts', 125, 147, { partial: true }),
+			code('src/lib/remote/live.remote.ts', 128, 147),
 			{
 				type: 'p',
 				text: '`send` applies a batch of operations to the stored document in a transaction with the op log, gets back the new version, and broadcasts the batch with the sender’s client id. The sender receives its own batch and ignores it; everyone else applies it.'
@@ -293,7 +293,7 @@ export const part5 = [
 			{
 				type: 'why',
 				title: 'Why handleError looks at kind',
-				text: 'SvelteKit 3 tells `handleError` what kind of error it is holding: `app` for a deliberate `error(404, …)`, `framework` for its own, `validation` for a remote function argument that failed its schema, `unknown` for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. Before `kind`, every one of those was an `unknown` with a stack trace.'
+				text: 'SvelteKit 3 tells `handleError` what kind of error it is holding: `app` for a deliberate `error(404, …)`, `framework` for its own, `validation` for a remote function argument that failed its schema, `unknown` for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. In SvelteKit 2 the hook never saw a deliberate `error(…)` at all and validation failures went to a separate `handleValidationError`; SvelteKit 3 sends every error here and `kind` says which is which.'
 			},
 			code('src/hooks.server.ts', 149, 158),
 			{

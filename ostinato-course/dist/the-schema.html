@@ -34,7 +34,7 @@
 			<p class="eyebrow">Chapter 21</p>
 			<h1>The schema, and the environment</h1>
 			<p class="lede">Four tables in Drizzle, a pattern as one JSON column, relations for the query builder, one libSQL client with WAL, and every environment variable declared once with a valibot schema.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a small schema and know why it is small; understand what <code>relations()</code> is for; and see how SvelteKit 3 replaced <code>$env/*</code> with a typed, validated declaration.</p></aside>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a small schema and know why it is small; understand what <code>relations()</code> is for; and see how SvelteKit 3 replaces the deprecated <code>$env/*</code> modules with a typed, validated declaration in one file.</p></aside>
 			<p>The smallest schema of the six projects, on purpose. A pattern is read and written whole and never queried by its insides, so it is one JSON column; a table of steps would be a hundred and twenty-eight rows per pattern for no query that anybody runs.</p>
 
 <figure class="code">
@@ -198,7 +198,7 @@ export * as schema from './schema.ts';</code></pre>
 </figure>
 <p>A top-level <code>await</code> in a module is fine on the server, and here it sets two pragmas before anything else can run a query. WAL — write-ahead logging — lets readers proceed while a writer appends, and a jam room is many readers and one writer at a time. The busy timeout makes a second writer wait a few milliseconds rather than fail with <code>SQLITE_BUSY</code>.</p>
 <h3 id="the-environment">The environment, declared</h3>
-<p>SvelteKit 3 replaced the <code>$env/static/*</code> and <code>$env/dynamic/*</code> modules with one file: <code>src/env.ts</code> calls <code>defineEnvVars</code> with every variable the app reads, each with a description, a schema and — if the browser may see it — <code>public: true</code>. A variable not declared here cannot be imported. <code>DATABASE_URL</code> comes in through <code>$app/env/private</code>; <code>PUBLIC_ORIGIN</code> through <code>$app/env/public</code>.</p>
+<p>In SvelteKit 2 environment variables came from the <code>$env/static/*</code> and <code>$env/dynamic/*</code> modules. SvelteKit 3 deprecates them — they are removed in SvelteKit 4 — in favour of one file: <code>src/env.ts</code> calls <code>defineEnvVars</code> with every variable the app reads, each with a description, a schema and — if the browser may see it — <code>public: true</code>. A variable not declared here cannot be imported. <code>DATABASE_URL</code> comes in through <code>$app/env/private</code>; <code>PUBLIC_ORIGIN</code> through <code>$app/env/public</code>.</p>
 
 <figure class="code">
 	<figcaption>

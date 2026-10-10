@@ -57,10 +57,11 @@ pnpm --version
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>pnpm create svelte@next tessera
+	<pre><code>pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
 pnpm install</code></pre>
 </figure>
+<p><code>sv</code> is the Svelte CLI, and <code>pnpm dlx</code> runs its latest release without installing it. <code>--template minimal --types ts</code> gives a bare SvelteKit 3 project in TypeScript. <code>--no-add-ons</code> skips the interactive add-on prompt, because everything else in this project is configured by hand, and <code>--no-install</code> leaves the dependencies to the <code>pnpm install</code> two lines down, once you are inside the folder.</p>
 <p>Open the folder and look at what is *not* there.</p>
 <aside class="callout callout--warn"><p>There is no <code>svelte.config.js</code>. In SvelteKit 3 every framework option moved into the <code>sveltekit()</code> plugin inside <code>vite.config.ts</code>. If you have written SvelteKit before, this is the change that will trip you the most: the adapter, <code>prerender</code>, <code>alias</code>, <code>paths</code>, compiler options — all of it is now one object, in one file, next to the rest of the build configuration.</p></aside>
 <h3 id="the-vite-config">The whole configuration, in one file</h3>
@@ -119,7 +120,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <aside class="callout callout--why">
 	<h4>The 403 that looks like a bug in your form</h4>
-	<p>That comment is a scar. <code>adapter-node</code> v6 moved the trusted origin from a runtime <code>ORIGIN</code> variable to build-time <code>paths.origin</code>. Leave it unset and the adapter reconstructs the origin from request headers, assuming <code>https</code> unless told otherwise. Your server on plain HTTP computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, and every POST — every form, every remote command — comes back <code>403 Cross-site remote requests are forbidden</code>, in an application whose GET requests all work perfectly.</p>
+	<p>That comment is a scar. Up to SvelteKit 2, <code>adapter-node</code> read the trusted origin from a runtime <code>ORIGIN</code> variable; v6, the adapter’s SvelteKit 3 release, removed it in favour of build-time <code>paths.origin</code>. Leave it unset and the adapter reconstructs the origin from request headers, assuming <code>https</code> unless told otherwise. Your server on plain HTTP computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, and every POST — every form, every remote command — comes back <code>403 Cross-site remote requests are forbidden</code>, in an application whose GET requests all work perfectly.</p>
 </aside>
 
 <figure class="code">
@@ -312,8 +313,8 @@ prerender: {
 	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;drizzle&quot;, &quot;src/service-worker&quot;]
 }</code></pre>
 </figure>
-<p>Two of those flags do most of the work. <code>noUncheckedIndexedAccess</code> makes <code>array[i]</code> have type <code>T | undefined</code>, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.</p>
-<p><code>verbatimModuleSyntax</code> forces <code>import type</code> where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.</p>
+<p>Two flags do most of the work, and only one of them is written in this file. <code>noUncheckedIndexedAccess</code> makes <code>array[i]</code> have type <code>T | undefined</code>, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.</p>
+<p>The other is <code>verbatimModuleSyntax</code>, which you will not find above because <code>$app/tsconfig</code> already sets it (alongside <code>isolatedModules</code>). It forces <code>import type</code> where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.</p>
 <aside class="callout callout--warn"><p>Node’s strip-only TypeScript has a second consequence that will bite you within an hour: <strong>no parameter properties</strong>. <code>constructor(private readonly db: Client) {}</code> is a syntax error at runtime, because stripping the types leaves a constructor that assigns nothing. Declare the field and assign it. Relative imports also need their file extensions — <code>./clock.ts</code>, not <code>./clock</code>.</p></aside>
 
 <aside class="callout callout--check">

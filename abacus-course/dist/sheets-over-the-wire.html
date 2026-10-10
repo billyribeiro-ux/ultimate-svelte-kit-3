@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sheets over the wire: queries, forms, commands — Building Abacus</title>
-<meta name="description" content="Every read and write of a stored sheet as a remote function: `query` for reads, `form` for anything a page without JavaScript must still do, `command` for the rest. Access checks that answer 404 for “not yours”, a version check on save, and a cell limit.">
+<meta name="description" content="Every read and write of a stored sheet as a remote function: query for reads, form for anything a page without JavaScript must still do, command for the rest. Access checks that answer 404 for “not yours”, a version check on save, and a cell limit.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -209,7 +209,7 @@ export const getSheet = query(v.string(), (id) =&gt; store.requireSheet(id, curr
 	}
 );</code></pre>
 </figure>
-<p><code>create</code> is a form: it works with JavaScript off, and it *redirects* from inside the handler to the new sheet, which is what a form submission that made something should do. It accepts a template name or a whole document — the local sheet being saved to an account — and <code>invalid(issue._doc(…))</code> is how a handler reports a field-level problem the page can show beside the field.</p>
+<p><code>create</code> is a form: it works with JavaScript off, and it <em>redirects</em> from inside the handler to the new sheet, which is what a form submission that made something should do. It accepts a template name or a whole document — the local sheet being saved to an account — and <code>invalid(issue._doc(…))</code> is how a handler reports a field-level problem the page can show beside the field.</p>
 
 <figure class="code">
 	<figcaption>
@@ -239,7 +239,7 @@ export const remove = form(v.object({ id: v.string() }), async ({ id }) =&gt; {
 	await requested(getMine, 1).refreshAll();
 });</code></pre>
 </figure>
-<p>Every write ends by refreshing the queries it invalidated: <code>getMine()</code> for the workspace list, <code>getSheet(id)</code> for the open page. <code>remove</code> uses <code>requested(getMine, 1).refreshAll()</code> — refresh the query *as the requesting page has it*, in the same response, which is what makes a delete feel instant with no JavaScript at all. On the page (ch. 34), <code>remove.for(id)</code> gives each card its own pending state.</p>
+<p>Every write ends by refreshing the queries it invalidated: <code>getMine()</code> for the workspace list, <code>getSheet(id)</code> for the open page. <code>remove</code> uses <code>requested(getMine, 1).refreshAll()</code> — refresh the query <em>as the requesting page has it</em>, in the same response, which is what makes a delete feel instant with no JavaScript at all. On the page (ch. 34), <code>remove.for(id)</code> gives each card its own pending state.</p>
 
 <figure class="code">
 	<figcaption>

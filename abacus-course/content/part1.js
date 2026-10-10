@@ -142,7 +142,7 @@ export const part1 = [
 				type: 'p',
 				text: 'Numbers: digits, an optional fraction, an optional exponent. `.5` is a number, `5.` is a number, `1e3` is a number. `1.2.3` is deliberately *two* tokens and a syntax error at the parser — which is where the message can say something clear, rather than the lexer guessing.'
 			},
-			code('src/lib/formula/lexer.ts', 102, 130, { partial: true }),
+			code('src/lib/formula/lexer.ts', 104, 131),
 			{
 				type: 'p',
 				text: 'Strings use `""` for a literal quote, as spreadsheets do. Error literals are tokens too, so `=IFERROR(#REF!, 0)` parses, and an unknown `#…` is refused at once.'
@@ -240,6 +240,10 @@ export const part1 = [
 			{
 				type: 'p',
 				text: 'The evaluator does not know what a sheet is. The cells it needs come through a `Context` — the engine provides one, a test provides a `Map`, the lesson page in chapter 17 provides a closure over nine `$derived`s. The clock and the random source are injected for the same reason: `TODAY()` in a test must give the same answer tomorrow.'
+			},
+			{
+				type: 'note',
+				text: 'The project’s own comments number the chapters differently from this course, and the header above has the first of them. Where a comment in the code says “chapter 10” it means the hand-written engine (chapter 09 here), and where it says “chapter 12” it means the `$derived` version of it (chapter 17 here).'
 			},
 			code('src/lib/formula/evaluate.ts', 45, 94),
 			{

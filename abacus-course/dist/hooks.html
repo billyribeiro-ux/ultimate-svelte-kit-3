@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hooks: identity, headers, one framed route, errors by kind — Building Abacus</title>
-<meta name="description" content="`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones, `init`, and the `transport` that carries an `ErrorValue` across the wire.">
+<meta name="description" content="sequence of two handles, a preload filter that names font files by source filename, a per-route frame-ancestors swap, handleFetch, handleError that tells validation failures from real ones, init, and the transport that carries an ErrorValue across the wire.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -212,7 +212,7 @@ export const handleError: HandleServerError = ({ error, event, kind, issues }) =
 
 <aside class="callout callout--why">
 	<h4>Why handleError looks at kind</h4>
-	<p>SvelteKit 3 tells <code>handleError</code> what kind of error it is holding: <code>app</code> for a deliberate <code>error(404, …)</code>, <code>framework</code> for its own, <code>validation</code> for a remote function argument that failed its schema, <code>unknown</code> for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. Before <code>kind</code>, every one of those was an <code>unknown</code> with a stack trace.</p>
+	<p>SvelteKit 3 tells <code>handleError</code> what kind of error it is holding: <code>app</code> for a deliberate <code>error(404, …)</code>, <code>framework</code> for its own, <code>validation</code> for a remote function argument that failed its schema, <code>unknown</code> for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. In SvelteKit 2 the hook never saw a deliberate <code>error(…)</code> at all and validation failures went to a separate <code>handleValidationError</code>; SvelteKit 3 sends every error here and <code>kind</code> says which is which.</p>
 </aside>
 
 <figure class="code">

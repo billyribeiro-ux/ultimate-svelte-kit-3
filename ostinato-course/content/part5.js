@@ -27,6 +27,10 @@ export const part5 = [
 			},
 			code('src/routes/+layout.svelte', 19, 75),
 			{
+				type: 'p',
+				text: 'The first check is new with SvelteKit 3. A shallow navigation — a panel opening in the studio (ch. 18), a preview in the gallery (ch. 30) — now runs `onNavigate` like any other, and it changes history rather than the document, so `navigation.shallow` returns before a cross-fade can start; the panel brings its own transition. Then the two guards the comment names — no API, or a person who asked for reduced motion, means no transition — and one it does not: a tab that is not visible has nobody to cross-fade for.'
+			},
+			{
 				type: 'why',
 				title: 'Why the transition has a timeout',
 				text: '`onNavigate` returns a promise SvelteKit waits for before completing the navigation. Wrapping it in `startViewTransition` hands the browser both states of the page and lets it cross-fade. But a transition must never hold a navigation hostage: the promise resolves when the update callback runs, or when the transition reports it cannot start, or after three hundred milliseconds — whichever is first. While chasing a flaky back navigation this guard was the first suspect and was innocent (the cause was `forkPreloads`, ch. 38); it stayed because it rules out a whole class of hang for nothing.'
@@ -42,10 +46,10 @@ export const part5 = [
 				text: 'With async Svelte, a navigation’s state changes are held back until the new page’s `await`s resolve, so the interface never shows half an update. That is right for content and wrong for the thing somebody just clicked: a nav link that stays un-highlighted for the four hundred milliseconds a remote query takes feels broken. `$state.eager(pathname)` reads the *incoming* value immediately — for this one attribute and nothing else. The rest of the page still waits.'
 			},
 			code('src/routes/(app)/+layout.svelte', 41, 60),
-			code('src/routes/(app)/+layout.svelte', 68, 75),
+			code('src/routes/(app)/+layout.svelte', 63, 75),
 			{
 				type: 'p',
-				text: '`version.pollInterval` in the config makes SvelteKit check for a new build every minute and set `updated.current` when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so `beforeNavigate` turns the next navigation into a full page load. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. `data-sveltekit-reload` on the link is what makes it a real reload rather than a client-side navigation.'
+				text: '`version.pollInterval` in the config makes SvelteKit check for a new build every minute and set `updated.current` when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so `beforeNavigate` turns the next navigation into a full page load — unless it is shallow, because a shallow navigation never asks the server for a file and a new deployment is no reason to reload the studio under a panel that is opening. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. `data-sveltekit-reload` on the link is what makes it a real reload rather than a client-side navigation.'
 			},
 			code('src/routes/(app)/+layout.svelte', 102, 121),
 			{
@@ -341,7 +345,7 @@ export const part5 = [
 				type: 'p',
 				text: 'Three sources on one page. `virtual:adapter` is the module the adapter’s Vite plugin provides (ch. 34) — the app can say which adapter built it without hard-coding the name. `runtime.platform` is `event.platform`, filled in by the adapter’s runtime or its emulator, read with `getRequestEvent()` inside a query. And `updated.check()` asks the server for its version right now rather than waiting for the next poll.'
 			},
-			code('src/routes/(app)/diagnostics/+page.svelte', 99, 107),
+			code('src/routes/(app)/diagnostics/+page.svelte', 99, 106),
 			{
 				type: 'p',
 				text: '`$state.snapshot(filters)` — the right use of it, this time (compare ch. 14). `filters` is a `$state` object, and the remote function wants plain data with no proxy in it; for a plain object, `$state.snapshot` is exactly that. Change the limit and the derived re-awaits.'

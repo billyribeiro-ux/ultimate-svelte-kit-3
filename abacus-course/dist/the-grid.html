@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The grid: a thousand cells out of a million — Building Abacus</title>
-<meta name="description" content="Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One `cell` snippet, five layers.">
+<meta name="description" content="Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One cell snippet, five layers.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -82,7 +82,7 @@ let {
 	onactivate?: (cell: Address) =&gt; void;
 } = $props();</code></pre>
 </figure>
-<p>Three ideas in the header. Only visible cells exist. Cell values are not reactive — one signal, <code>sheet.version</code>, redraws the viewport. And every decoration — selection, formula-reference colours, other people’s cursors, the “changed by somebody else” flash — is a *class on a cell*, not an overlay, because an overlay would need its own copy of the geometry and would come apart at the frozen panes.</p>
+<p>Three ideas in the header. Only visible cells exist. Cell values are not reactive — one signal, <code>sheet.version</code>, redraws the viewport. And every decoration — selection, formula-reference colours, other people’s cursors, the “changed by somebody else” flash — is a <em>class on a cell</em>, not an overlay, because an overlay would need its own copy of the geometry and would come apart at the frozen panes.</p>
 <h3 id="geometry">Geometry</h3>
 
 <figure class="code">
@@ -167,73 +167,72 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:589-646</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:596-652</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	ondblclick={dblclick}
-&gt;
+	<pre><code class="lang-svelte">{#snippet cell(r: number, c: number, top: number, left: number)}
+	{@const k = key(r, c)}
+	{@const value = sheet.value(r, c)}
+	{@const selected = inRect(selection, { row: r, col: c })}
+	{@const anchor = sheet.anchor.row === r &amp;&amp; sheet.anchor.col === c}
+	{@const highlight = highlights.find((h) =&gt; inRect(h.rect, { row: r, col: c }))}
+	{@const cursor = cursorsByCell.get(k)}
+	{@const editing = sheet.editing?.row === r &amp;&amp; sheet.editing.col === c}
+	{@const filling =
+		fillTarget !== null &amp;&amp; inRect(fillTarget, { row: r, col: c }) &amp;&amp; !selected}
 	&lt;div
-		class=&quot;canvas&quot;
-		style:width=&quot;{HEADER_WIDTH + totalWidth}px&quot;
-		style:height=&quot;{HEADER_HEIGHT + totalHeight}px&quot;
+		id=&quot;cell-{r}-{c}&quot;
+		class={[
+			'cell',
+			{
+				'cell--num': typeof value === 'number',
+				'cell--bool': typeof value === 'boolean',
+				'cell--error': value !== null &amp;&amp; typeof value === 'object',
+				'cell--selected': selected,
+				'cell--anchor': anchor,
+				'cell--editing': editing,
+				'cell--flash': sheet.flashes.has(k),
+				'cell--filling': filling,
+				'cell--top': selected &amp;&amp; r === selection.top,
+				'cell--bottom': selected &amp;&amp; r === selection.bottom,
+				'cell--left': selected &amp;&amp; c === selection.left,
+				'cell--right': selected &amp;&amp; c === selection.right,
+				'cell--hl-top': highlight &amp;&amp; r === highlight.rect.top,
+				'cell--hl-bottom': highlight &amp;&amp; r === highlight.rect.bottom,
+				'cell--hl-left': highlight &amp;&amp; c === highlight.rect.left,
+				'cell--hl-right': highlight &amp;&amp; c === highlight.rect.right
+			}
+		]}
+		role=&quot;gridcell&quot;
+		aria-rowindex={r + 1}
+		aria-colindex={c + 1}
+		aria-selected={selected}
+		style:top=&quot;{top}px&quot;
+		style:left=&quot;{left}px&quot;
+		style:width=&quot;{widthOf(c)}px&quot;
+		style:height=&quot;{rowAxis.size(r)}px&quot;
+		style:--hl={highlight ? `var(--ref-hue-${highlight.hue})` : undefined}
+		style:--cursor-hue={cursor?.hue}
 	&gt;
-		{#snippet cell(r: number, c: number, top: number, left: number)}
-			{@const k = key(r, c)}
-			{@const value = sheet.value(r, c)}
-			{@const selected = inRect(selection, { row: r, col: c })}
-			{@const anchor = sheet.anchor.row === r &amp;&amp; sheet.anchor.col === c}
-			{@const highlight = highlights.find((h) =&gt; inRect(h.rect, { row: r, col: c }))}
-			{@const cursor = cursorsByCell.get(k)}
-			{@const editing = sheet.editing?.row === r &amp;&amp; sheet.editing.col === c}
-			{@const filling =
-				fillTarget !== null &amp;&amp; inRect(fillTarget, { row: r, col: c }) &amp;&amp; !selected}
-			&lt;div
-				id=&quot;cell-{r}-{c}&quot;
-				class={[
-					'cell',
-					{
-						'cell--num': typeof value === 'number',
-						'cell--bool': typeof value === 'boolean',
-						'cell--error': value !== null &amp;&amp; typeof value === 'object',
-						'cell--selected': selected,
-						'cell--anchor': anchor,
-						'cell--editing': editing,
-						'cell--flash': sheet.flashes.has(k),
-						'cell--filling': filling,
-						'cell--top': selected &amp;&amp; r === selection.top,
-						'cell--bottom': selected &amp;&amp; r === selection.bottom,
-						'cell--left': selected &amp;&amp; c === selection.left,
-						'cell--right': selected &amp;&amp; c === selection.right,
-						'cell--hl-top': highlight &amp;&amp; r === highlight.rect.top,
-						'cell--hl-bottom': highlight &amp;&amp; r === highlight.rect.bottom,
-						'cell--hl-left': highlight &amp;&amp; c === highlight.rect.left,
-						'cell--hl-right': highlight &amp;&amp; c === highlight.rect.right
-					}
-				]}
-				role=&quot;gridcell&quot;
-				aria-rowindex={r + 1}
-				aria-colindex={c + 1}
-				aria-selected={selected}
-				style:top=&quot;{top}px&quot;
-				style:left=&quot;{left}px&quot;
-				style:width=&quot;{widthOf(c)}px&quot;
-				style:height=&quot;{rowAxis.size(r)}px&quot;
-				style:--hl={highlight ? `var(--ref-hue-${highlight.hue})` : undefined}
-				style:--cursor-hue={cursor?.hue}
-			&gt;
-				{#if editing &amp;&amp; !readonly}
-					&lt;CellEditor bind:this={editor} {sheet} oncommit={commit} oncancel={cancel} /&gt;
-				{:else}
-					{sheet.display(r, c)}
-				{/if}
-				{#if cursor &amp;&amp; !editing}
-					&lt;span class=&quot;cursor-name&quot; style:--cursor-hue={cursor.hue}&gt;{cursor.name}&lt;/span&gt;</code></pre>
+		{#if editing &amp;&amp; !readonly}
+			&lt;CellEditor bind:this={editor} {sheet} oncommit={commit} oncancel={cancel} /&gt;
+		{:else}
+			{sheet.display(r, c)}
+		{/if}
+		{#if cursor &amp;&amp; !editing}
+			&lt;span class=&quot;cursor-name&quot; style:--cursor-hue={cursor.hue}&gt;{cursor.name}&lt;/span&gt;
+		{/if}
+		{#if !readonly &amp;&amp; selected &amp;&amp; r === selection.bottom &amp;&amp; c === selection.right &amp;&amp; !editing}
+			&lt;span class=&quot;fill-handle&quot; data-fill aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+		{/if}
+	&lt;/div&gt;
+{/snippet}</code></pre>
 </figure>
-<p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position; its <code>{@const}</code>s compute everything the cell shows from the sheet and the decorations. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.</p>
+<p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position; its <code>{@const}</code>s compute everything the cell shows from the sheet and the decorations, and each one is reactive — when the sheet changes, <code>value</code> is worked out again. The Svelte docs now call <code>{@const}</code> legacy. Its replacement, since Svelte 5.56, is a <em>declaration tag</em> with a <code>$derived</code> inside: <code>{const value = $derived(sheet.value(r, c))}</code>. The <code>$derived</code> is not optional. A bare <code>{const value = sheet.value(r, c)}</code> is worked out once, like a <code>const</code> in the script, and the cell would never change again. The header uses the new form for <code>{const me = $derived(await whoAmI())}</code> (ch. 30). The grid still uses the legacy tag, which compiles unchanged; in new code, write <code>{const x = $derived(…)}</code>. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts <em>inside</em> the cell being edited, so it is positioned by the same geometry as everything else.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:693-745</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:693-747</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The corner, above everything. --&gt;
@@ -288,19 +287,18 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 				HEADER_HEIGHT + rowAxis.offset(r),
 				HEADER_WIDTH + colAxis.offset(c)
 			)}
-		{/each}</code></pre>
+		{/each}
+	{/each}
+&lt;/div&gt;</code></pre>
 </figure>
 <p>Frozen panes are the same snippet rendered in extra layers: frozen rows at the top, frozen columns at the left, and the corner where they meet, each with a different origin. The layers are sticky, and the trick that makes that work is in the stylesheet.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:779-821</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:782-823</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	scrollbar-gutter: stable;
-}
-
-.canvas {
+	<pre><code class="lang-svelte">.canvas {
 	position: relative;
 }
 
@@ -339,9 +337,11 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 	z-index: 2;
 }
 
-.layer--frozen-corner {</code></pre>
+.layer--frozen-corner {
+	z-index: 5;
+}</code></pre>
 </figure>
-<p>Each sticky layer is *zero-sized*: it takes no space in the canvas’s flow, and its absolutely positioned children overflow visibly and move with the canvas on the other axis. That is how the column headers stay at the top while scrolling down and still scroll sideways — with no JavaScript synchronising two scrollers, which is the way every grid used to do it and the way every grid got out of step.</p>
+<p>Each sticky layer is <em>zero-sized</em>: it takes no space in the canvas’s flow, and its absolutely positioned children overflow visibly and move with the canvas on the other axis. That is how the column headers stay at the top while scrolling down and still scroll sideways — with no JavaScript synchronising two scrollers, which is the way every grid used to do it and the way every grid got out of step.</p>
 <h3 id="effects">The two effects</h3>
 
 <figure class="code">
@@ -386,7 +386,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:553-588</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:553-595</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -424,9 +424,40 @@ $effect(() =&gt; {
 		onpointerdown={pointerdown}
 		onpointermove={pointermove}
 		onpointerup={pointerup}
-		onpointercancel={pointerup}</code></pre>
+		onpointercancel={pointerup}
+		ondblclick={dblclick}
+	&gt;
+		&lt;div
+			class=&quot;canvas&quot;
+			style:width=&quot;{HEADER_WIDTH + totalWidth}px&quot;
+			style:height=&quot;{HEADER_HEIGHT + totalHeight}px&quot;
+		&gt;</code></pre>
 </figure>
-<p>The outer element is <code>role=&quot;grid&quot;</code> with <code>aria-rowcount</code>, <code>aria-colcount</code>, <code>aria-multiselectable</code> and <code>aria-activedescendant</code> pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is. A polite live region at the bottom announces the active cell’s address, value and formula on every move.</p>
+<p>Three elements nest here, and the comment says what each is for: the grid takes the keys, the viewport scrolls, and the canvas is the size of the whole sheet, which is what gives the viewport something to scroll. The block stops where the canvas opens; inside it come the snippet and the five layers from earlier in the chapter. The outer element is <code>role=&quot;grid&quot;</code> with <code>aria-rowcount</code>, <code>aria-colcount</code>, <code>aria-multiselectable</code> and <code>aria-activedescendant</code> pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:543-550</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const announcement = $derived.by(() =&gt; {
+	void sheet.version;
+	const a = sheet.anchor;
+	const text = sheet.display(a.row, a.col);
+	const input = sheet.input(a.row, a.col);
+	const formula = input.startsWith('=') ? `, formula ${input}` : '';
+	return `${toA1(a)}${text ? `: ${text}` : ', empty'}${formula}`;
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:751-751</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;visually-hidden&quot; aria-live=&quot;polite&quot;&gt;{announcement}&lt;/div&gt;</code></pre>
+</figure>
+<p>After the canvas, as the last child of the grid, a polite live region announces the active cell’s address, value and formula on every move. <code>announcement</code> is a <code>$derived</code> that reads <code>sheet.version</code> as well as the anchor, so a recalculation that changes the active cell’s value is announced too, and <code>visually-hidden</code> keeps the text off the screen but in the accessibility tree.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -1,5 +1,5 @@
 /**
- * PART 4 — The web tier (chapters 23–28)
+ * PART 4 — The web tier (chapters 22–27)
  *
  * Everything so far runs happily in a terminal. This part puts a SvelteKit 3
  * application in front of it, and spends most of its time on the four places
@@ -12,7 +12,7 @@ export const part4 = [
 		slug: 'a-kit-3-app-from-nothing',
 		title: 'A Kit 3 app from nothing',
 		summary:
-			'No svelte.config.js, no $lib, and a tsconfig that has to say which files are yours.',
+			'Kit 2\'s svelte.config.js and $lib are gone in Kit 3, and the tsconfig has to say which files are yours.',
 		goal: 'Create the venue app and understand every line of its configuration.',
 		blocks: [
 			{
@@ -30,7 +30,7 @@ cd apps/web`
 				text: 'That is the whole scaffold. There is no `npx sv create` step in this course because typing the files out is how you find out what each one is for.'
 			},
 
-			{ type: 'h3', id: 'no-svelte-config', text: 'There is no svelte.config.js' },
+			{ type: 'h3', id: 'no-svelte-config', text: 'Kit 2\'s svelte.config.js is gone' },
 			{
 				type: 'p',
 				text: 'In Kit 2, `svelte.config.js` held the adapter, the aliases, the CSRF setting and the compiler options, and `vite.config.js` held Vite\'s. Two files, one project, and a constant low-level question of which one a given setting lived in. Kit 3 deletes the first: **everything is an option on the `sveltekit()` Vite plugin.**'
@@ -44,7 +44,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-node';
 
-/* … */
+// …
 export default defineConfig(({ mode }) => {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
 				// …
 				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
 
-				/* … */
+				// …
 				csrf: { trustedOrigins: ['*'] },
 
 				compilerOptions: { runes: true, experimental: { async: true } },
@@ -77,10 +77,10 @@ export default defineConfig(({ mode }) => {
 				items: [
 					'**`defineConfig(({ mode }) => …)`** — a *function*, not an object. `loadEnv` has to run before the plugin is constructed, because `paths.origin` needs a value out of `.env` and Vite has not read those yet when a plain object literal is evaluated. Write it as an object and `PUBLIC_ORIGIN` is `undefined` at exactly the moment it is needed.',
 					'**`paths.origin`** — the origin the app believes it is served from. More on this in a moment; it is the single most surprising thing in the file.',
-					'**`csrf.trustedOrigins`** — replaces Kit 2\'s `checkOrigin: false`. We set `[\'*\']` and write our own check, for reasons that get a whole chapter.',
-					'**`compilerOptions.runes: true`** — no legacy mode. Every component is runes-only, so a stray `export let` is an error rather than a silent reactivity mismatch.',
+					'**`csrf.trustedOrigins`** — Kit 2 turned the check off with `checkOrigin: false`; Kit 3 removed that option, and `trustedOrigins: [\'*\']` is how you say the same thing now. We set `[\'*\']` and write our own check, for reasons that get a whole chapter.',
+					'**`compilerOptions.runes: true`** — no legacy mode. Every component is runes-only, so a Svelte 4 `export let` left in by habit is a compile error telling you to use `$props()`, rather than a component that quietly runs in legacy mode.',
 					'**`compilerOptions.experimental.async: true`** — turns on `await` inside `$derived` and in component markup. The terminal is built on it.',
-					'**`experimental.remoteFunctions: true`** — turns on `.remote.ts` files. Forget it and every import from one resolves to nothing, with an error that does not mention the flag.',
+					'**`experimental.remoteFunctions: true`** — turns on `.remote.ts` files. Forget it and every remote module fails to compile, in `vite dev` and in the build alike. The error does at least name the flag and give you the exact snippet to add to the `sveltekit()` options.',
 					'**`ssr.external`** — `@libsql/client` loads a native `.node` binary. Vite cannot bundle that, and the error if it tries is a module-not-found for a file that plainly exists.'
 				]
 			},
@@ -94,10 +94,10 @@ export default defineConfig(({ mode }) => {
 				text: 'If a deployed Kit 3 app suddenly rejects every form and you changed nothing but the hostname, `paths.origin` is the first place to look — and a restart will not fix it.'
 			},
 
-			{ type: 'h3', id: 'no-dollar-lib', text: 'There is no $lib either' },
+			{ type: 'h3', id: 'no-dollar-lib', text: 'Kit 2\'s $lib is gone too' },
 			{
 				type: 'p',
-				text: '`$lib` is gone. Kit 3 uses **Node subpath imports** — a plain `package.json` feature that existed long before Kit and needs no bundler magic to understand.'
+				text: 'Kit 2 generated a `$lib` alias for you. Kit 3 does not: it uses **Node subpath imports** — a plain `package.json` feature that existed long before Kit and needs no bundler magic to understand.'
 			},
 			{
 				type: 'code',
@@ -116,7 +116,7 @@ export default defineConfig(({ mode }) => {
 			},
 			{
 				type: 'code',
-				file: 'anywhere in src/',
+				file: 'the same import, in Kit 2 and in Kit 3',
 				lang: 'ts',
 				code: `
 // Kit 2
@@ -138,17 +138,17 @@ import { db } from '#lib/server/db.ts';`
 			{ type: 'h3', id: 'tsconfig', text: 'The tsconfig has to say which files are yours' },
 			{
 				type: 'p',
-				text: 'This one cost an afternoon. `svelte-kit sync` generates a base config and you extend it, exactly as in Kit 2. What changed is that the Kit 3 base deliberately sets **no `include` and no `exclude`.**'
+				text: 'This one cost an afternoon. You still extend a base config that `svelte-kit sync` generates, but two things changed. The base is now `$app/tsconfig` rather than Kit 2\'s `./.svelte-kit/tsconfig.json`. And the Kit 3 base deliberately sets **no `include` and no `exclude`.** The first is a one-line edit. The second is where the afternoon went.'
 			},
 			{
 				type: 'terminal',
 				code: `
 $ pnpm --filter @sequent/web check
 
-...
+…
 build/server/chunks/index-BqK2v8.js:1:2847
   Error: Parameter 'e' implicitly has an 'any' type.
-...
+…
 2952 errors`
 			},
 			{
@@ -161,10 +161,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 				lang: 'json',
 				code: `
 {
-	// …
+	…
 	"extends": "$app/tsconfig",
 
-	/* … */
+	…
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.js",
@@ -177,7 +177,7 @@ build/server/chunks/index-BqK2v8.js:1:2847
 
 	"compilerOptions": {
 		"strict": true,
-		// …
+		…
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"noFallthroughCasesInSwitch": true,
@@ -211,14 +211,14 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		slug: 'environment-variables-declared',
 		title: 'Environment variables, declared',
 		summary:
-			'src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.',
+			'src/env.ts replaces Kit 2\'s four $env modules, and makes leaking a secret into the browser a build error.',
 		goal: 'Declare every variable the app reads, with a valibot schema on each.',
 		blocks: [
 			{
 				type: 'p',
 				text: 'Kit 2 had four magic modules: `$env/static/private`, `$env/static/public`, `$env/dynamic/private`, `$env/dynamic/public`. They worked, but they had two problems. Nothing told you which variables an app actually needed until it crashed, and the only thing standing between a secret and the browser bundle was remembering which of four import paths you were typing.'
 			},
-			{ type: 'p', text: 'Kit 3 replaces all four with one file you write.' },
+			{ type: 'p', text: 'Kit 3 deprecates all four — they are due to be removed in Kit 4 — in favour of one file you write.' },
 			{
 				type: 'code',
 				file: 'apps/web/src/env.ts',
@@ -255,9 +255,9 @@ export const variables = defineEnvVars({
 			{
 				type: 'ul',
 				items: [
-					'**`schema`** — a valibot schema. It runs at startup, so `DATABASE_URL=""` fails immediately with a clear message instead of producing an unopenable database three layers down.',
+					'**`schema`** — a valibot schema. It runs when the app starts, and during the build, so `DATABASE_URL=""` fails immediately with a clear message instead of producing an unopenable database three layers down.',
 					'**`public: true`** — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.',
-					'**`static: true`** — inlined at build time rather than read from `process.env` at request time. Faster, and it means the value cannot change under a running process. Use it for things that genuinely do not vary between restarts.'
+					'**`static: true`** — inlined into the bundle at build time, rather than read from the environment when the app starts. That allows dead-code elimination, and it means changing the value needs a **rebuild**, not a restart. Use it for things that are fixed for the life of a build — `PUBLIC_ORIGIN` is one, since `paths.origin` is baked in at build time anyway.'
 				]
 			},
 			{
@@ -343,26 +343,56 @@ export const getMyOrders = query(async () => {
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row: Row) => ({ /* … */ }));
+	return result.rows.map((row: Row) => ({
+		orderId: String(row['order_id']),
+		clientOrderId: String(row['client_order_id']),
+		instrumentId: String(row['instrument_id']),
+		side: String(row['side']),
+		price: row['price'] === null ? null : Number(row['price']),
+		priceLabel:
+			row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
+		quantity: Number(row['quantity']),
+		filled: Number(row['filled']),
+		timeInForce: String(row['time_in_force']),
+		status: String(row['status']),
+		cancelReason: row['cancel_reason'] === null ? null : String(row['cancel_reason']),
+		updatedAt: Number(row['updated_at'])
+	}));
 });`
 			},
 			{
 				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
 				lang: 'svelte',
 				code: `
 <script lang="ts">
-	import { getMyOrders } from './market.remote.ts';
+	// …
+	import {
+		cancelOrder,
+		getInstruments,
+		getMyOrders,
+		getMyPositions,
+		placeOrder,
+		watchMarket
+	} from './market.remote.ts';
 
+	// …
 	const orders = $derived(await getMyOrders());
+	// …
 </script>
 
+<!-- … -->
 {#each orders as order (order.orderId)}
-	<tr>…</tr>
+	<tr>
+		<!-- … -->
+	</tr>
+{:else}
+	<tr><td colspan="7" class="muted small">Nothing sent yet.</td></tr>
 {/each}`
 			},
 			{
 				type: 'p',
-				text: 'That is the whole thing. `await` inside `$derived` is the `experimental.async` flag from the last chapter, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls `.refresh()` on it.'
+				text: 'That is all a component needs: import the function, await it inside `$derived`, use the result. `await` inside `$derived` is the `compilerOptions.experimental.async` flag from chapter 22, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls `.refresh()` on it.'
 			},
 
 			{ type: 'h3', id: 'schemas', text: 'Every argument gets a schema' },
@@ -385,7 +415,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 			},
 			{
 				type: 'note',
-				text: 'SvelteKit enforces the discipline for you: inside a remote function, `event.url` and `event.params` **throw** if you read them. A remote function is not a route, so it has no URL to read, and the framework refuses to let you pretend otherwise. Everything that varies must arrive as a validated argument.'
+				text: 'SvelteKit enforces part of the discipline for you: inside a `query` (and a `query.live`), reading `event.url`, `event.params` or `event.route` **throws**. A query is cached by its arguments and is not re-run when somebody navigates, so anything it read from the URL would go stale without the cache noticing. In a `command` or a `form` those properties describe the page that made the call — which is part of the request, so it can be forged and must never decide what somebody is allowed to do. Either way, everything that varies must arrive as a validated argument.'
 			},
 
 			{ type: 'h3', id: 'command', text: 'command — writing' },
@@ -456,10 +486,11 @@ export const signOut = form(v.object({}), async () => {
 			},
 			{
 				type: 'code',
+				file: 'apps/web/src/routes/+layout.svelte',
 				lang: 'svelte',
 				code: `
 <form {...signOut}>
-	<button type="submit">Sign out</button>
+	<button type="submit" class="link">Sign out</button>
 </form>`
 			},
 			{
@@ -470,7 +501,7 @@ export const signOut = form(v.object({}), async () => {
 			{ type: 'h3', id: 'live', text: 'query.live — streaming' },
 			{
 				type: 'p',
-				text: 'The last kind takes an **async generator**, and everything it yields is pushed to every browser subscribed with the same arguments.'
+				text: 'The last kind takes an **async generator**, and everything it yields is streamed to the browser for as long as a component on the page is using it. Several components using the same live query share one connection; when the last of them goes away, the stream disconnects and the generator on the server is stopped.'
 			},
 			{
 				type: 'code',
@@ -568,7 +599,9 @@ export const signIn = form(
 			HOME
 		)
 	}),
-	async (data) => { /* … */ }
+	async (data) => {
+		// …
+	}
 );`
 			},
 			{
@@ -743,19 +776,19 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);`
 			{ type: 'h3', id: 'the-bug', text: 'The bug' },
 			{
 				type: 'p',
-				text: 'While testing the public API by hand, this happened:'
+				text: 'While testing the public API by hand against a production build, this happened:'
 			},
 			{
 				type: 'terminal',
 				code: `
-$ curl -X DELETE http://localhost:5173/api/v1/orders/ORD-1 \\
-    -H "Authorization: Bearer sq_live_9f2a…"
+$ curl -X DELETE http://localhost:4173/api/v1/orders/ORD-1 \\
+    -H "Authorization: Bearer ak_7f2cQe9xKm4t.Zq4mR8sT…"
 
-Cross-site POST form submissions are forbidden`
+Cross-site DELETE form submissions are forbidden`
 			},
 			{
 				type: 'p',
-				text: 'A body-less `DELETE`, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission.'
+				text: 'A body-less `DELETE`, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission. Port 4173 is `vite preview`, and that matters: Kit runs its CSRF check only in production, so the same request against `vite dev` goes straight through and the bug waits for the first deploy.'
 			},
 			{
 				type: 'p',
@@ -787,7 +820,22 @@ sveltekit({
 	/*
 	 * Kit's own cross-site check is turned off, and replaced by a stricter
 	 * one in \`hooks.server.ts\`. Read that before deciding this is reckless.
-	 * …
+	 *
+	 * Kit blocks a non-GET request when its \`Content-Type\` is form-like *or
+	 * absent* and the \`Origin\` does not match. Two consequences:
+	 *
+	 *   1. A body-less \`DELETE /api/v1/orders/ORD-1\` sends no content type,
+	 *      so it is blocked — and there is no way for an API client to know
+	 *      it must send a content type on a request with no body.
+	 *   2. A cross-origin \`POST\` with \`Content-Type: application/json\` is
+	 *      *allowed*, because browsers cannot send one without a CORS
+	 *      preflight. True, but it makes our safety depend on the browser.
+	 *
+	 * Our rule instead: **any state-changing request authenticated by a
+	 * cookie must carry a matching Origin.** Bearer-token requests are
+	 * exempt because CSRF is a cookie attack — a browser attaches cookies to
+	 * a forged cross-site request automatically and never attaches an
+	 * \`Authorization\` header. That covers case 1 and closes case 2.
 	 */
 	csrf: { trustedOrigins: ['*'] },
 
@@ -805,7 +853,7 @@ sveltekit({
 				code: `
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/* … */
+// …
 const handleCsrf: Handle = async ({ event, resolve }) => {
 	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
 
@@ -961,9 +1009,12 @@ let ticket = $state({
 
 let sending = $state(false);
 let lastError = $state<string | null>(null);
-
-// …only now the awaited deriveds
+// …
 const instruments = $derived(await getInstruments());`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` is two more `$state` declarations and `seenPhase`, a plain variable the next section uses. Only after all of them does the first `await` appear.'
 			},
 			{
 				type: 'warn',

@@ -161,7 +161,13 @@ if (parsed.username || parsed.password) {
  * Link-local is refused **even in development**, and that is the one carve-out
  * `allowInsecure` does not get.
  *
- * …
+ * The flag exists so a student can point a webhook at `http://localhost:3000`
+ * and watch a delivery arrive. It was originally implemented as &quot;skip the
+ * private-address check&quot;, which also permitted `169.254.169.254` — the cloud
+ * metadata service, and the single most valuable SSRF target there is.
+ *
+ * A browser test caught it: the admin form accepted the metadata endpoint
+ * without complaint, because the dev server had the flag set.
  *
  * Nobody has ever needed to send a webhook to a link-local address. Making
  * the escape hatch narrower than &quot;turn the check off&quot; costs one branch and

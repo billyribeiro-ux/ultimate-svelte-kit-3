@@ -50,8 +50,12 @@
 	{/if}
 &lt;/header&gt;
 
+&lt;!-- … --&gt;
+
 {#if result.entries.length === 0}
 	&lt;p class=&quot;empty&quot;&gt;Nothing booked. Enjoy it.&lt;/p&gt;
+{:else}
+	&lt;!-- … --&gt;
 {/if}</code></pre>
 </figure>
 <p>The &quot;Live&quot; badge is not decoration either. A screen that changes on its own is unsettling unless the person knows it does; a small word in the corner is the difference between &quot;that is odd&quot; and &quot;ah, a booking came in&quot;.</p>
@@ -85,26 +89,40 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;li class=&quot;entry&quot; style=&quot;--hue: {entry.colourHue}&quot;&gt;
 	&lt;!-- … --&gt;
-	&lt;p class=&quot;who&quot;&gt;
-		&lt;strong&gt;{entry.customerName}&lt;/strong&gt;
-		&lt;!-- … --&gt;
-	&lt;/p&gt;
 
-	&lt;p class=&quot;with text-muted&quot;&gt;
-		with {entry.staffName}
+	&lt;div class=&quot;body&quot;&gt;
+		&lt;p class=&quot;who&quot;&gt;
+			&lt;strong&gt;{entry.customerName}&lt;/strong&gt;
+			&lt;span class=&quot;text-muted&quot;&gt; · {entry.serviceName}&lt;/span&gt;
+		&lt;/p&gt;
+
+		&lt;p class=&quot;with text-muted&quot;&gt;
+			with {entry.staffName} ·
+			&lt;!-- … --&gt;
+		&lt;/p&gt;
+
 		&lt;!-- … --&gt;
-	&lt;/p&gt;
+	&lt;/div&gt;
+
 	&lt;!-- … --&gt;
 &lt;/li&gt;</code></pre>
 </figure>
+<p>And in the same component's <code>&lt;style&gt;</code> block:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">and in the stylesheet</span>
+		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.entry {
+	/* … */
+	/*
+	 * The staff member's colour, as a stripe rather than a background. A tinted
+	 * card would put text on an arbitrary hue and lose the contrast guarantee;
+	 * a stripe carries the same information and costs nothing in legibility.
+	 */
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
+	/* … */
 }</code></pre>
 </figure>
 <p>One custom property carries the staff member's hue into the CSS, and because every staff colour shares one hard-coded lightness in oklch, they are legible at a glance and equally weighted regardless of hue. <strong>And the name is always there too</strong> — <code>.who</code> names the customer, <code>.with</code> names the staff member, and colour alone excludes roughly one man in twelve.</p>
@@ -120,7 +138,12 @@
 		{#each visible as section (section.path)}
 			{@const Icon = section.icon}
 			{@const active = activePath === section.path}
-			&lt;a class=&quot;tab&quot; class:active href=&quot;{base}{section.path}&quot; aria-current={active ? 'page' : undefined}&gt;
+			&lt;a
+				class=&quot;tab&quot;
+				class:active
+				href=&quot;{base}{section.path}&quot;
+				aria-current={active ? 'page' : undefined}
+			&gt;
 				&lt;Icon weight={active ? 'fill' : 'regular'} aria-hidden=&quot;true&quot; /&gt;
 				{section.label}
 			&lt;/a&gt;

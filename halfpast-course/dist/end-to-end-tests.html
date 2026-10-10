@@ -99,7 +99,7 @@ workers: 1,</code></pre>
 			 * &quot;empty the bookings&quot; is no longer enough to make a test independent —
 			 * the studio itself has to go back to its known shape.
 			 *
-			 * …
+			 …
 			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
@@ -113,7 +113,7 @@ workers: 1,</code></pre>
 </figure>
 <p><code>auto: true</code> means every test gets this whether it asks for it or not, which is what makes the guarantee unconditional — a test <strong>cannot</strong> forget to reset.</p>
 <p>Without it the tests are order-dependent in a genuinely nasty way. Each one books something, so &quot;the first free time on Thursday&quot; means something different by the fifth test. The suite passes, then fails, then passes again as tests are added or reordered, and every failure looks like an application bug.</p>
-<aside class="callout callout--note"><p>The seed keeps the same business row rather than dropping and recreating it. Deleting it produced an intermittent 500 in whichever test ran next — a live query still streaming to a page the previous test had only just closed would find its business missing.</p></aside>
+<aside class="callout callout--note"><p>The reset is the real seed script, run as a child process with <code>DATABASE_URL</code> pointed at <code>e2e.db</code> — the same <code>scripts/seed.ts</code> you run by hand in chapter 13. So every test starts from exactly the demo studio a developer sees, with no second, test-only idea of what the data looks like to drift away from the first.</p></aside>
 <h3 id="browser-errors">The fixture that finds bugs on its own</h3>
 
 <figure class="code">
@@ -154,11 +154,28 @@ workers: 1,</code></pre>
 		<span class="code__file">e2e/dashboard.e2e.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">await page.getByRole('button', { name: /Cancel Doomed Dora/ }).click();
-await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
-await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();</code></pre>
+	<pre><code class="lang-ts">page.once('dialog', (dialog) =&gt; void dialog.accept());
+await page.getByRole('button', { name: /Cancel Doomed Dora/ }).click();
+
+await expect(page.getByText('Doomed Dora')).toHaveCount(0, { timeout: 15_000 });
+
+// …
+
+test('sees only the sections they can use', async ({ page }) =&gt; {
+	await page.goto(MANAGE);
+	const nav = page.getByRole('navigation', { name: 'Dashboard sections' });
+
+	await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
+	await expect(nav.getByRole('link', { name: 'Hours' })).toBeVisible();
+
+	// Hiding the link is manners. The next three tests are the control.
+	await expect(nav.getByRole('link', { name: 'Services' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Team' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+});</code></pre>
 </figure>
 <p>Roles and accessible names, not CSS classes. A test written against <code>.btn-cancel</code> breaks when somebody renames a class and passes when somebody removes the button's label — exactly backwards. These break when the interface becomes unusable, which is when you want to hear about it.</p>
+<p>The first half is the end of the cancel test. The diary asks <code>confirm()</code> before it cancels anything, and Playwright dismisses a dialog nobody has answered, so <code>page.once('dialog', …)</code> accepts that one prompt before the click that raises it. The second half signs in as a member rather than the owner and asserts on the navigation by its name, &quot;Dashboard sections&quot;, so the test reads like a description of the screen.</p>
 <aside class="callout callout--warn"><p>One gotcha: <code>getByLabel</code> matches by <strong>substring</strong>. <code>getByLabel('Day')</code> on the hours page matched fifteen elements, because every &quot;Remove Tuesday 09:00…&quot; button contains the letters d-a-y. Scope to a container — <code>page.locator('.adder').getByLabel('Day')</code> — rather than reaching for a test id.</p></aside>
 <h3 id="security-tests">Testing the guard, not the button</h3>
 
@@ -184,7 +201,7 @@ test('cannot see another studio s diary', async ({ page }) =&gt; {
 	expect(response?.status()).toBe(404);
 });</code></pre>
 </figure>
-<p>These are the tests worth having. A hidden link is easy to test and proves nothing; typing the URL is what an attacker does, and asserting the *status code* is what pins the 403/404 distinction in place so a future refactor cannot quietly lose it.</p>
+<p>These are the tests worth having. A hidden link is easy to test and proves nothing; typing the URL is what an attacker does, and asserting the <em>status code</em> is what pins the 403/404 distinction in place so a future refactor cannot quietly lose it.</p>
 <p>The same principle drives the two tests that fight the browser: one strips <code>step=&quot;5&quot;</code> before submitting 47 minutes, the other injects an option into the time-zone select. Both exist because a client-side constraint is not a control, and the only way to know the server check is load-bearing is to remove the client one and watch the server refuse.</p>
 
 <aside class="callout callout--check">

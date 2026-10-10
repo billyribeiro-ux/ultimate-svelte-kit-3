@@ -150,7 +150,7 @@ export const createBoard = form(
 );</code></pre>
 </figure>
 <p><code>await myBoards().reconnect()</code> refreshes the live query <strong>for this client only, in the same round trip</strong>. Everybody else finds out from their own generator on its next tick. That asymmetry is deliberate: the person who pressed the button should never see a delay, and everybody else can wait five seconds for a board that did not exist a moment ago.</p>
-<aside class="callout callout--note"><p>In SvelteKit 3 this is <code>reconnect()</code>. If you have written <code>refresh()</code> on a live query before, that is the name that changed, and the error is a runtime <code>is not a function</code> rather than a type error, because the object is created dynamically.</p></aside>
+<aside class="callout callout--note"><p>A live query has <code>reconnect()</code> and no <code>refresh()</code>. It updates itself, so the only thing left to ask of it is to restart its stream — and asked inside a form or command handler, as here, the restart travels back with that handler’s own response. Reach for <code>refresh()</code> out of habit from an ordinary <code>query</code> and <code>svelte-check</code> stops you: <code>RemoteLiveQuery</code> has no such method.</p></aside>
 <h3 id="form-vs-command"><code>form()</code> versus <code>command()</code></h3>
 <p><code>createBoard</code> above is a <code>form()</code>, and <code>renameBoard</code> next to it is a <code>command()</code>. The difference is one sentence: <strong>a <code>form()</code> works with JavaScript switched off.</strong></p>
 <ul><li>The markup is a real <code>&lt;form&gt;</code> with a real submit button, so a browser that has not run — or has failed to run — the client bundle still creates the board and follows the redirect.</li><li>With JavaScript, SvelteKit intercepts the submission and there is no page load.</li><li>Spread it into the element (<code>&lt;form {...createBoard}&gt;</code>) and the action, method and enhancement are all set for you.</li></ul>
@@ -160,21 +160,19 @@ export const createBoard = form(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
-	&lt;form {...reply} class=&quot;thread__reply-form&quot;&gt;
-		&lt;input {...reply.fields.boardId.as('hidden', boardId)} /&gt;
-		&lt;input {...reply.fields.parentId.as('hidden', thread.id)} /&gt;
-		&lt;input id=&quot;reply-{thread.id}&quot; {...reply.fields.body.as('text')} placeholder=&quot;Reply…&quot; /&gt;
-		&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
-	&lt;/form&gt;
-{/each}</code></pre>
+	<pre><code class="lang-svelte">&lt;form {...reply} class=&quot;thread__reply-form&quot;&gt;
+	&lt;input {...reply.fields.boardId.as('hidden', boardId)} /&gt;
+	&lt;input {...reply.fields.parentId.as('hidden', thread.id)} /&gt;
+	&lt;label class=&quot;visually-hidden&quot; for=&quot;reply-{thread.id}&quot;&gt;Reply&lt;/label&gt;
+	&lt;input id=&quot;reply-{thread.id}&quot; {...reply.fields.body.as('text')} placeholder=&quot;Reply…&quot; /&gt;
+	&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
+&lt;/form&gt;</code></pre>
 </figure>
-<p><code>postComment.for(thread.id)</code> gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare <code>postComment</code> into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.</p>
-<p>And <code>fields.x.as('hidden', value)</code> spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter.</p>
+<p>That form sits inside <code>{#each open as thread (thread.id)}</code>, and <code>reply</code> is declared once per thread at the top of the loop as <code>postComment.for(thread.id)</code>. That call gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare <code>postComment</code> into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.</p>
+<p>And <code>fields.x.as('hidden', value)</code> spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter. In SvelteKit 3 it is also the only way in: a control whose <code>name</code> was typed by hand instead of spread from a field gets the whole submission rejected.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

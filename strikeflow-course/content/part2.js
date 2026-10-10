@@ -104,6 +104,13 @@ export function absoluteUrl(path: string): string {
  * without supplying a \`slug\`. This conditional type filters any route ID containing a
  * \`[\` out of the union, so the nav can only ever hold routes that are safe to link
  * to directly — and \`resolve(href)\` type-checks without needing a params argument.
+ *
+ * On the leading slash: SvelteKit 3's \`resolve()\` accepts either a route ID
+ * (\`'/features'\`, always with a leading slash) or a pathname (\`'features'\`, never
+ * with one). We store route IDs on purpose — a pathname is just a string that
+ * happens to exist today, whereas a route ID is checked against the union above.
+ * Both forms may carry a \`?search\` or \`#hash\` suffix, which is how the blog links
+ * to an author's section on \`/about\`.
  */
 export type StaticRoute = Exclude<PageRouteId, \`\${string}[\${string}\`>;
 
@@ -134,7 +141,7 @@ export const primaryNav: readonly NavLink[] = [
 			{ type: 'h3', id: 'features', text: 'Features, pricing, FAQ, team, posts' },
 			{
 				type: 'p',
-				text: 'The rest follow the same pattern: an exported `interface`, then a `readonly` array. Here is the shape of the features module:'
+				text: 'The rest follow the same pattern: an exported `interface`, then a `readonly` array. Here is the shape of the features module — the first of its six features in full, with each `// …` standing for code left out (the long `detail` copy, and the five features that follow the same shape):'
 			},
 			{
 				type: 'code',
@@ -170,12 +177,12 @@ export const features: readonly Feature[] = [
 			'Filter by premium, size, expiry, moneyness or ticker'
 		]
 	},
-	// …five more
+	// …
 ];`
 			},
 			{
 				type: 'note',
-				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.'
+				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.'
 			},
 			{
 				type: 'p',
@@ -400,7 +407,7 @@ EBOOK_TOKEN_SECRET=""`
 			},
 			{
 				type: 'note',
-				text: '`$props()` is the Svelte 5 rune that replaces `export let`. Destructure it, give defaults inline, and type it with an interface. There is no separate props declaration.'
+				text: '`$props()` is the Svelte 5 rune that replaces Svelte 4\'s `export let`. Destructure it, give defaults inline, and type it with an interface. There is no separate props declaration.'
 			},
 			{ type: 'h3', id: 'canonical', text: 'The canonical URL' },
 			{
@@ -566,6 +573,7 @@ EBOOK_TOKEN_SECRET=""`
 				code: `export const ids = {
 	organization: \`\${site.url}/#organization\`,
 	website: \`\${site.url}/#website\`,
+	/** Per-page nodes. \`url\` must already be absolute. */
 	webPage: (url: string) => \`\${url}#webpage\`,
 	breadcrumb: (url: string) => \`\${url}#breadcrumb\`,
 	article: (url: string) => \`\${url}#article\`,
@@ -638,7 +646,10 @@ EBOOK_TOKEN_SECRET=""`
 				type: 'code',
 				file: 'src/lib/seo/schema.ts',
 				lang: 'ts',
-				code: `	offers: plans.map((plan) => ({ /* … */ }))
+				code: `	offers: plans.map((plan) => ({
+		'@type': 'Offer',
+		// …
+	}))
 	// NOTE: there is deliberately no \`aggregateRating\` here. We have not collected
 	// verifiable reviews, and inventing one is a spam policy violation that gets
 	// sites manually penalised. Rich stars are not worth a manual action.`
@@ -663,7 +674,7 @@ EBOOK_TOKEN_SECRET=""`
 	};
 }
 
-/* … */
+// …
 export function serializeJsonLd(graph: Record<string, unknown>): string {
 	return JSON.stringify(graph)
 		.replace(/</g, '\\\\u003c')
@@ -748,9 +759,24 @@ export function serializeJsonLd(graph: Record<string, unknown>): string {
 
 export interface SitemapEntry {
 	readonly path: StaticRoute;
+	/**
+	 * ISO date of the last *meaningful* content change.
+	 *
+	 * Omit it unless you genuinely track it. Google's documented guidance is that it
+	 * uses \`lastmod\` only when it appears consistently accurate — and a site that
+	 * stamps today's date on every page at every deploy teaches it to ignore the field
+	 * entirely. Blog posts have real dates, so they get one. Marketing pages don't
+	 * track edits, so they don't.
+	 */
 	readonly lastmod?: string;
 }
 
+/**
+ * Static pages that belong in the index.
+ *
+ * Deliberately excluded:
+ *   /guide/thank-you  — gated confirmation page, noindexed
+ */
 export const staticSitemapEntries: readonly SitemapEntry[] = [
 	{ path: '/' },
 	{ path: '/features' },
@@ -1096,7 +1122,7 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
-/* … */
+// …
 export const featureIcons: Record<IconName, Component<Record<string, unknown>>> = {
 	PulseIcon,
 	CrosshairIcon,
@@ -1112,7 +1138,7 @@ export const featureIcons: Record<IconName, Component<Record<string, unknown>>> 
 			},
 			{
 				type: 'p',
-				text: 'In Svelte 5 you render a component held in a variable by just using it as a tag. `<svelte:component this={Icon} />` is legacy:'
+				text: 'In Svelte 5 you render a component held in a variable by just using it as a tag. The Svelte 4 way, `<svelte:component this={Icon} />`, is now legacy and not needed:'
 			},
 			{
 				type: 'code',
@@ -1132,16 +1158,23 @@ export const featureIcons: Record<IconName, Component<Record<string, unknown>>> 
 				lang: 'ts',
 				code: `import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 
+// …
 export default defineConfig({
 	plugins: [
-		sveltekit({ /* … */ }),
-		sveltePhosphorOptimize()   // MUST come AFTER sveltekit()
-	]
+		sveltekit({
+			// …
+		}),
+
+		// …
+		sveltePhosphorOptimize()
+	],
+
+	// …
 });`
 			},
 			{
 				type: 'warn',
-				text: 'The ordering matters and the failure is loud. Vite runs `transform` hooks in array order, and this plugin parses its input as JavaScript. Put it **before** `sveltekit()` and it receives raw `.svelte` source — markup and all — and dies on the first `<h1>` with *"Unexpected JSX expression"*. I lost ten minutes to this.'
+				text: 'The ordering matters and the failure is loud. Vite runs `transform` hooks in array order, and this plugin parses its input as JavaScript. Put it **before** `sveltekit()` and it receives raw `.svelte` source — markup and all — and dies on the first `<h1>` with *"Unexpected JSX expression"*. I lost ten minutes to this. The `// …` just above `sveltePhosphorOptimize()` stands for the comment in the real file that records all of this — it opens with *MUST come AFTER `sveltekit()`*.'
 			},
 			{
 				type: 'checkpoint',
@@ -1455,7 +1488,7 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The `navigation.shallow` guard is the same one the header drawer uses in chapter 14: since Kit 3, `onNavigate` also fires for `goto(url, { shallow: true })`, and a change that only touches `page.state` should not cross-fade the whole page.'
+				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The `navigation.shallow` guard is the same one the header drawer uses in chapter 20: since Kit 3, `onNavigate` also fires for `goto(url, { shallow: true })`, and a change that only touches `page.state` should not cross-fade the whole page.'
 			},
 			{
 				type: 'why',
@@ -1492,12 +1525,15 @@ main:focus {
 				type: 'code',
 				file: 'src/routes/+layout.ts',
 				lang: 'ts',
-				code: `export const prerender = true;
+				code: `// …
+export const prerender = true;
+
+// …
 export const trailingSlash = 'never';`
 			},
 			{
 				type: 'p',
-				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site. At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start."
+				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site (each `// …` stands for a doc comment in the real file saying what follows here). At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start."
 			},
 			{
 				type: 'note',
@@ -1540,7 +1576,7 @@ export const trailingSlash = 'never';`
 		<!-- … -->
 		<meta name="color-scheme" content="dark" />
 
-		<!-- … the MOTION GATE comment — see the note below … -->
+		<!-- … -->
 		<script>
 			(function () {
 				var root = document.documentElement;
@@ -1585,7 +1621,7 @@ export const trailingSlash = 'never';`
 			},
 			{
 				type: 'note',
-				text: 'That `<script>` in the head is the **motion gate** — the only inline script on the site. It adds a `motion-pending` class to `<html>` before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all `catch`) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles `motion-pending` yet.'
+				text: 'That `<script>` in the head is the **motion gate** — the only inline script on the site, and the `<!-- … -->` just above it stands for the long comment headed THE MOTION GATE in the real file (the other `<!-- … -->` lines are the comments explaining each tag). It adds a `motion-pending` class to `<html>` before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all `catch`) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles `motion-pending` yet.'
 			},
 			{
 				type: 'checkpoint',
@@ -1659,7 +1695,7 @@ export function mulberry32(seed: number): () => number {
 			{ type: 'h3', id: 'attach', text: 'The component: {@attach}' },
 			{
 				type: 'p',
-				text: 'An **attachment** is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old `onMount` + `bind:this` dance and `use:` actions.'
+				text: 'An **attachment** is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old `onMount` + `bind:this` dance and `use:` actions. The listing below is most of `FlowChart.svelte`; each `// …` or `<!-- … -->` stands for something left out — the long explanatory comments, the grid, price-scale, time-scale and crosshair options, the header strip with the price readout, and, inside `if (animate)`, the timer that appends a new bar every 1.6 seconds.'
 			},
 			{
 				type: 'code',
@@ -1740,6 +1776,7 @@ export function mulberry32(seed: number): () => number {
 			if (disposed) return;
 
 			const api = createChart(node, {
+				// …
 				autoSize: true,
 				height,
 				layout: {
@@ -1748,11 +1785,17 @@ export function mulberry32(seed: number): () => number {
 					fontFamily: "'Sofia Sans Variable', system-ui, sans-serif",
 					attributionLogo: false
 				},
-				// …grid, price-scale, time-scale and crosshair options…
+				// …
 				handleScroll: false,
 				handleScale: false
 			});
 
+			/*
+			 * v5 API note: series are created with \`addSeries(Definition, options)\`.
+			 * The v4 style — \`chart.addAreaSeries(options)\` — was removed. Most
+			 * tutorials you'll find online are still v4, and this is the line that
+			 * breaks.
+			 */
 			const priceSeries = api.addSeries(AreaSeries, {
 				lineColor: '#4f7dff',
 				lineWidth: 2,
@@ -1781,7 +1824,9 @@ export function mulberry32(seed: number): () => number {
 
 			let timer: ReturnType<typeof setInterval> | undefined;
 
-			if (animate) { /* …append a bar every 1600ms… */ }
+			if (animate) {
+				// …
+			}
 
 			teardown = () => {
 				if (timer) clearInterval(timer);
@@ -1800,12 +1845,14 @@ export function mulberry32(seed: number): () => number {
 </script>
 
 <!-- … -->
-<div
-	class="chart__canvas"
-	style="min-height: {height}px"
-	aria-hidden="true"
-	{@attach chart}
-></div>`
+	<div
+		class="chart__canvas"
+		style="min-height: {height}px"
+		aria-hidden="true"
+		{@attach chart}
+	></div>
+
+<!-- … -->`
 			},
 			{ type: 'h3', id: 'three-things', text: 'Three things worth understanding' },
 			{

@@ -72,6 +72,7 @@
 	<pre><code class="lang-ts">export const ids = {
 	organization: `${site.url}/#organization`,
 	website: `${site.url}/#website`,
+	/** Per-page nodes. `url` must already be absolute. */
 	webPage: (url: string) =&gt; `${url}#webpage`,
 	breadcrumb: (url: string) =&gt; `${url}#breadcrumb`,
 	article: (url: string) =&gt; `${url}#article`,
@@ -139,7 +140,10 @@
 		<span class="code__file">src/lib/seo/schema.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	offers: plans.map((plan) =&gt; ({ /* … */ }))
+	<pre><code class="lang-ts">	offers: plans.map((plan) =&gt; ({
+		'@type': 'Offer',
+		// …
+	}))
 	// NOTE: there is deliberately no `aggregateRating` here. We have not collected
 	// verifiable reviews, and inventing one is a spam policy violation that gets
 	// sites manually penalised. Rich stars are not worth a manual action.</code></pre>
@@ -160,7 +164,7 @@
 	};
 }
 
-/* … */
+// …
 export function serializeJsonLd(graph: Record&lt;string, unknown&gt;): string {
 	return JSON.stringify(graph)
 		.replace(/&lt;/g, '\\u003c')

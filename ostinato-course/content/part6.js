@@ -88,7 +88,7 @@ export const part6 = [
 			'What an adapter is: `writeClient`, `writePrerendered`, `generateServerInstance` per function, a runtime bundled with rolldown, an instrumentation initializer and `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.',
 		goal: 'Read a whole adapter and know which five steps every adapter takes; understand the server-per-function split; and see how SvelteKit 3’s `applyReroute` hands a request between functions.',
 		blocks: [
-			code('adapters/ostinato/index.js', 1, 28),
+			code('adapters/ostinato/index.js', 1, 29),
 			{
 				type: 'p',
 				text: 'An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Everything up to step 2 in that list is *every* adapter; everything after it is this one. It targets a plain Node process, like `adapter-node`, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.'
@@ -121,10 +121,14 @@ export const part6 = [
 			code('adapters/ostinato/index.js', 227, 282),
 			{
 				type: 'p',
-				text: 'Three more things an adapter can declare. `emulate()` fills in `event.platform` during `vite dev` and `vite preview`, with the same shape the runtime produces, so nothing has to guard against `undefined`. `supports` says what the runtime can do — `read()` from `$app/server`, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, `pre` or `post`: this one provides `virtual:adapter`, which the diagnostics page imports.'
+				text: 'Three more things an adapter can declare. `emulate()` fills in `event.platform` during `vite dev`, `vite build` and `vite preview`, with the same shape the runtime produces, so nothing has to guard against `undefined`. `supports` says what the runtime can do — `read()` from `$app/server`, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, `pre` or `post`: this one provides `virtual:adapter`, which the diagnostics page imports.'
 			},
 			code('adapters/ostinato/index.js', 285, 334, { partial: true }),
 			code('src/app.d.ts', 41, 54),
+			{
+				type: 'note',
+				text: 'The two comments disagree. The type’s says `emulate()` fills in `event.platform` during `vite dev` and `vite preview`; the adapter’s, above it, says `vite dev`, `vite build` and `vite preview`. The adapter’s is right, and the SvelteKit docs on writing adapters agree: the build prerenders the landing page, and a prerendered page gets its `event.platform` from `emulate()` as well. The type’s comment is simply older than the prerendering.'
+			},
 			{ type: 'h3', id: 'the-runtime', text: 'The runtime: four steps per request' },
 			code('adapters/ostinato/files/handler.js', 1, 17),
 			code('adapters/ostinato/files/handler.js', 19, 79),
@@ -209,7 +213,7 @@ export const part6 = [
 		slug: 'the-security-posture',
 		title: 'The security posture',
 		summary:
-			'One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, and two tests that prove the policy covers every inline script.',
+			'One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, two tests that prove the policy covers every inline script, and one that proves it blocks nothing else.',
 		goal: 'Read the whole posture as one decision, and know which trade each line makes.',
 		blocks: [
 			code('vite.config.ts', 146, 177),
@@ -222,7 +226,7 @@ export const part6 = [
 			{
 				type: 'why',
 				title: 'Why a test hashes the scripts itself',
-				text: 'A policy that is too strict blocks the app’s own bootstrap and the page never hydrates; a policy that is too loose is decoration. The test fetches three pages — dynamic, dynamic with data, prerendered — finds every inline `<script>`, computes its SHA-256, and checks that the policy in force (header or `<meta>`) names that hash or that the script carries the nonce. It is the only way to know the policy covers what SvelteKit emits, and it is what would catch a framework upgrade that added a new inline script.'
+				text: 'A policy that is too strict blocks the app’s own bootstrap and the page never hydrates; a policy that is too loose is decoration. The test fetches three pages — dynamic, dynamic with data, prerendered — finds every inline `<script>`, computes its SHA-256, and checks that the policy in force (header or `<meta>`) names that hash or that the script carries the nonce. It is the only way to know the policy covers what SvelteKit emits, and it is what would catch a framework upgrade that added a new inline script. The test after it checks the other direction: with a console listener attached, it plays and stops a pattern in the studio and opens a pattern page with its share card, and fails on any policy violation that is not about `script-src` — those come from Playwright’s own injected scripts. A directive too tight for either page is a failing test rather than a blank where the card should be.'
 			},
 			{ type: 'h3', id: 'csrf-and-the-cookie', text: 'CSRF, and the cookie' },
 			code('vite.config.ts', 179, 185),

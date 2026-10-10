@@ -51,7 +51,7 @@
 	<pre><code>pnpm add drizzle-orm @libsql/client
 pnpm add -D drizzle-kit</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><code>@libsql/client</code> and <code>drizzle-orm</code> go in <strong>dependencies</strong>, not <code>devDependencies</code>. Vite bundles devDependencies into the server build, and <code>@libsql/client</code> loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with <code>Cannot find module '@libsql/linux-x64-gnu'</code>. This cost real time on this project.</p></aside>
+<aside class="callout callout--warn"><p><code>@libsql/client</code> and <code>drizzle-orm</code> go in <strong>dependencies</strong>, not <code>devDependencies</code>. <code>adapter-node</code> bundles devDependencies into the server build, and <code>@libsql/client</code> loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with <code>Cannot find module '@libsql/linux-x64-gnu'</code>. This cost real time on this project.</p></aside>
 <h3 id="connection">The connection</h3>
 
 <figure class="code">
@@ -98,7 +98,7 @@ export const db = drizzle(client, { schema });</code></pre>
 })();</code></pre>
 </figure>
 <ul><li><strong><code>journal_mode = WAL</code></strong> — write-ahead logging. Without it, a single writer blocks every reader for the duration of its transaction. With it, readers carry on against the last committed state while a write is in progress. For a page that streams live availability to visitors, this is the difference between working and not.</li><li><strong><code>busy_timeout = 5000</code></strong> — how long a blocked connection waits before giving up. We will come back to why this alone is not the answer.</li></ul>
-<aside class="callout callout--warn"><p>These are two separate <code>execute</code> calls, and they must be. <code>client.batch()</code> wraps its statements in a transaction, and SQLite refuses to change journal mode inside one: *&quot;cannot change into wal mode from within a transaction&quot;*. Written as a batch, the <code>catch</code> above swallows the error and WAL silently never applies — the app works, slowly and mysteriously, under any concurrent load. Discovering that took an afternoon.</p></aside>
+<aside class="callout callout--warn"><p>These are two separate <code>execute</code> calls, and they must be. <code>client.batch()</code> wraps its statements in a transaction, and SQLite refuses to change journal mode inside one: <em>&quot;cannot change into wal mode from within a transaction&quot;</em>. Written as a batch, the <code>catch</code> above swallows the error and WAL silently never applies — the app works, slowly and mysteriously, under any concurrent load. Discovering that took an afternoon.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>One is permanent, one is not</h4>

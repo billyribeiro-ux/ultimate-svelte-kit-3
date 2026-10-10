@@ -100,6 +100,7 @@ onNavigate((navigation) =&gt; {
 	});
 });</code></pre>
 </figure>
+<p>The first check is new with SvelteKit 3. A shallow navigation — a panel opening in the studio (ch. 18), a preview in the gallery (ch. 30) — now runs <code>onNavigate</code> like any other, and it changes history rather than the document, so <code>navigation.shallow</code> returns before a cross-fade can start; the panel brings its own transition. Then the two guards the comment names — no API, or a person who asked for reduced motion, means no transition — and one it does not: a tab that is not visible has nobody to cross-fade for.</p>
 
 <aside class="callout callout--why">
 	<h4>Why the transition has a timeout</h4>
@@ -229,10 +230,15 @@ beforeNavigate(({ willUnload, to, shallow }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:68-75</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:63-75</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	The skip link, first in the DOM and invisible until focused. The header has
+	a logo, four links and a name; a keyboard user should not have to Tab past
+	all of it on every page.
+--&gt;
+&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
 
 {#if updated.current}
 	&lt;div class=&quot;updated&quot; role=&quot;status&quot; transition:fly={{ y: -16, duration: 240 }}&gt;
@@ -241,7 +247,7 @@ beforeNavigate(({ willUnload, to, shallow }) =&gt; {
 	&lt;/div&gt;
 {/if}</code></pre>
 </figure>
-<p><code>version.pollInterval</code> in the config makes SvelteKit check for a new build every minute and set <code>updated.current</code> when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so <code>beforeNavigate</code> turns the next navigation into a full page load. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. <code>data-sveltekit-reload</code> on the link is what makes it a real reload rather than a client-side navigation.</p>
+<p><code>version.pollInterval</code> in the config makes SvelteKit check for a new build every minute and set <code>updated.current</code> when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so <code>beforeNavigate</code> turns the next navigation into a full page load — unless it is shallow, because a shallow navigation never asks the server for a file and a new deployment is no reason to reload the studio under a panel that is opening. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. <code>data-sveltekit-reload</code> on the link is what makes it a real reload rather than a client-side navigation.</p>
 
 <figure class="code">
 	<figcaption>

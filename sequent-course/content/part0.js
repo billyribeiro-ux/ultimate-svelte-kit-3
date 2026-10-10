@@ -98,8 +98,8 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**Node 24 LTS** — we use its ability to run TypeScript directly, with no build step for the server-side code',
-					'**pnpm** — the workspace is a monorepo and pnpm handles that better than the alternatives',
+					'**Node 24 LTS**, 24.21 or newer (the root `package.json` says so in `engines`) — we use its ability to run TypeScript directly, with no build step for the server-side code',
+					'**pnpm 12** — the workspace is a monorepo and pnpm handles that better than the alternatives. `packageManager` in the root `package.json` pins the exact release',
 					'A terminal, an editor, and a browser',
 					'No prior knowledge of finance. Every term is defined the first time it appears.'
 				]
@@ -269,7 +269,18 @@ packages:
 # letting a transitive dependency satisfy an undeclared import.
 linkWorkspacePackages: true
 
-# …`
+# Releases younger than the global \`minimumReleaseAge\` that we have read the
+# changelogs for and want anyway. pnpm 12 appends to this list itself when an
+# install picks one, so the entries are a record of what was waved through, not
+# a wish list — remove one and the next install waits for the release to age.
+minimumReleaseAgeExclude:
+  - svelte@5.57.0
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1`
+			},
+			{
+				type: 'p',
+				text: 'The first two settings are the ones this chapter is about. The last block is housekeeping that pnpm 12 does for you: it records the few releases younger than the global `minimumReleaseAge` that were read and accepted anyway. pnpm appends to it itself when an install picks one, so treat it as a log of what was waved through rather than a list to edit by hand.'
 			},
 
 			{ type: 'h3', id: 'the-six', text: 'The six packages' },
@@ -339,7 +350,7 @@ linkWorkspacePackages: true
 		"verbatimModuleSyntax": true,
 		"isolatedModules": true,
 
-		// …
+		…
 		"skipLibCheck": true,
 		"resolveJsonModule": true
 	}
@@ -749,7 +760,20 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
  * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
  * randomness, encoded as 26 characters of Base32.
  *
- * …
+ * **Sortable** is not a nicety. Because the timestamp is most-significant,
+ * sorting these strings sorts them by creation time — so a database index on an
+ * id column is also an index on age, and every insert lands at the right-hand
+ * edge of the B-tree instead of scattering through it. A UUIDv4 primary key on
+ * a busy table fragments the index and turns inserts into random writes; this
+ * does not.
+ *
+ * **Unguessable** matters because these identifiers appear in URLs and API
+ * responses. 80 bits of entropy per millisecond is enough that enumerating
+ * other firms' orders is not a thing anybody will manage.
+ *
+ * \`now\` is a parameter rather than a call to \`Date.now()\` inside, purely so the
+ * tests can assert that two ids minted in the same millisecond still differ and
+ * that ids minted later sort after ids minted earlier.
  */
 export function newId(now: number = Date.now()): string {
 	if (!Number.isInteger(now) || now < 0) {
@@ -767,7 +791,6 @@ export function newId(now: number = Date.now()): string {
 	}
 
 	// …
-
 	let carry = 0n;
 	for (const byte of bytes) carry = (carry << 8n) | BigInt(byte);
 
@@ -791,12 +814,12 @@ export function newId(now: number = Date.now()): string {
 				code: `
 {
 	"name": "@sequent/protocol",
-	// …
+	…
 	"exports": {
 		".": "./src/index.ts",
 		"./generate": "./src/generate.ts"
-	}
-	// …
+	},
+	…
 }`
 			},
 
@@ -816,7 +839,7 @@ export function newId(now: number = Date.now()): string {
  * order.
  */
 export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
-	return \`\${firmId}\\0\${clientOrderId}\`;
+	// …
 }
 
 /**
@@ -828,8 +851,12 @@ export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string 
  * listed with a dot in its symbol, which is most of them.
  */
 export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
-	return \`\${accountId}\\0\${instrumentId}\`;
+	// …
 }`
+			},
+			{
+				type: 'p',
+				text: 'Each body is one line: the two identifiers joined by a NUL character, as in `${firmId}\\0${clientOrderId}`. In `ids.ts` that separator is a literal NUL byte rather than the `\\0` escape, which is why the line is elided above — a NUL cannot be shown on a web page — and why `grep` calls the file binary. Writing the escape is the friendlier habit; the string it produces is identical.'
 			},
 			{
 				type: 'checkpoint',

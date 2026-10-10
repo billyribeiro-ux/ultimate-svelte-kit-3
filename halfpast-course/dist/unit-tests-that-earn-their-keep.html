@@ -103,7 +103,7 @@ describe('createBooking under concurrency', () =&gt; {
 	// …
 });</code></pre>
 </figure>
-<p><code>Promise.allSettled</code>, not <code>Promise.all</code> — we *expect* nine rejections and want to inspect them, not to have the first one abandon the test.</p>
+<p><code>Promise.allSettled</code>, not <code>Promise.all</code> — we <em>expect</em> nine rejections and want to inspect them, not to have the first one abandon the test.</p>
 <p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of leftovers from the nine rolled-back transactions. Counting the rows directly — one booking, and exactly the twelve five-minute claim cells of the winner's hour-long block, nothing more — is what proves the rollback rolled back.</p>
 <p>The test after this one sends five losers to the same slot and accepts either <code>slot_taken</code> or <code>slot_not_offered</code> as the reason: sometimes the pre-flight availability check catches the collision before the claim does, and both are honest answers. What matters, as its comment says, is that neither is a 500.</p>
 <h3 id="when-wrong">When the test is the thing that is wrong</h3>
@@ -120,7 +120,8 @@ describe('createBooking under concurrency', () =&gt; {
 	<pre><code class="lang-ts">const compact = new Intl.NumberFormat('en-GB', {
 	style: 'currency',
 	currency: 'GBP',
-	notation: 'compact'
+	notation: 'compact',
+	maximumFractionDigits: 2
 });
 
 expect(compact.format(5600)).toBe('£5.60K');</code></pre>
@@ -131,10 +132,10 @@ expect(compact.format(5600)).toBe('£5.60K');</code></pre>
 		<span class="code__file">do</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">expect(compact.format(5600)).toMatch(/^£5\.60?K$/);</code></pre>
+	<pre><code class="lang-ts">expect(compact.format(5600)).toMatch(/^£5\.60?k$/i);</code></pre>
 </figure>
-<p><code>Intl</code> output depends on the runtime's ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from <code>£5.60K</code> to <code>£5.6K</code>. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast's own <code>formatMoney</code> is a thin wrapper around <code>Intl.NumberFormat</code>, so its tests face exactly this trap.</p>
-<p>Assert the shape, or assert on the *inputs* to formatting. Never on a locale-dependent string you did not construct yourself.</p>
+<p><code>Intl</code> output depends on the runtime's ICU version. Node 22.22, from the LTS line before this one, ships ICU 77.1; Node 24.21, the version this project pins, ships ICU 78.3; and between the two that compact pound changed from <code>£5.60K</code> to <code>£5.6k</code>: a zero dropped and the K went lower-case, which is why the pattern above allows both. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast's own <code>formatMoney</code> is a thin wrapper around <code>Intl.NumberFormat</code>, so its tests face exactly this trap.</p>
+<p>Assert the shape, or assert on the <em>inputs</em> to formatting. Never on a locale-dependent string you did not construct yourself.</p>
 <h3 id="require">One config flag worth turning on</h3>
 
 <figure class="code">

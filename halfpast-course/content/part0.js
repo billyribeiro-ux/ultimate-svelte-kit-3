@@ -59,7 +59,7 @@ if (clash.length === 0) {
 			{
 				type: 'why',
 				title: 'Why we cannot just be careful',
-				text: 'There is no amount of careful ordering that closes a check-then-act race. The fix is structural: make the check and the act the *same operation*, and let the database — which is genuinely good at this — be the one that says no. Chapter 17 does exactly that.'
+				text: 'There is no amount of careful ordering that closes a check-then-act race. The fix is structural: make the check and the act the *same operation*, and let the database — which is genuinely good at this — be the one that says no. Chapter 12 does exactly that.'
 			},
 
 			{ type: 'h3', id: 'problem-two', text: 'Problem two: time is not what you think' },
@@ -255,10 +255,17 @@ node --version   # v24.21.0`
 				lang: 'json',
 				code: `
 {
+	// …
 	"engines": {
 		"node": ">=24.21.0"
-	}
+	},
+	"packageManager": "pnpm@12.10.1",
+	// …
 }`
+			},
+			{
+				type: 'p',
+				text: '`engines` says which Node the project needs. `packageManager` does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.'
 			},
 			{
 				type: 'code',
@@ -268,7 +275,7 @@ node --version   # v24.21.0`
 			},
 			{
 				type: 'p',
-				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 12** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22 and you get:'
+				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 12** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22, the LTS line before this one, and you get:'
 			},
 			{
 				type: 'terminal',
@@ -281,7 +288,7 @@ node --version   # v24.21.0`
 			{
 				type: 'why',
 				title: 'Why this is worth the friction',
-				text: 'Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.'
+				text: 'Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.'
 			},
 			{
 				type: 'p',
@@ -292,7 +299,7 @@ node --version   # v24.21.0`
 			{ type: 'h3', id: 'icu', text: 'A version really can change behaviour' },
 			{
 				type: 'p',
-				text: 'It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving from 22 to 24.'
+				text: 'It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving it from Node 22, the previous LTS line, to Node 24.'
 			},
 			{
 				type: 'code',
@@ -306,8 +313,8 @@ new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 2
 }).format(5600);
 
-// Node 22 (ICU 78.2) → "$5.60K"
-// Node 24 (ICU 78.3) → "$5.6K"`
+// Node 22.22 (ICU 77.1) → "$5.60K"
+// Node 24.21 (ICU 78.3) → "$5.6K"`
 			},
 			{
 				type: 'p',
@@ -339,7 +346,7 @@ new Intl.NumberFormat('en-US', {
 			},
 			{
 				type: 'terminal',
-				code: `npx -y sv@next create halfpast-app \\
+				code: `npx -y sv create halfpast-app \\
   --template minimal --types ts \\
   --add prettier eslint "vitest=usages:unit,component" playwright \\
         "sveltekit-adapter=adapter:node" \\

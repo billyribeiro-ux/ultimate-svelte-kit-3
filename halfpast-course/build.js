@@ -14,7 +14,12 @@
  *   - Ctrl+F searches the chapter you're actually reading
  *   - It works with JavaScript off
  *
- * Run:  node strikeflow-course/build.js
+ * Every block that names a file is a quotation from `halfpast-app`, and
+ * `verify.js` holds it to that: it reads the pages this writes to `dist/` and
+ * fails on any block that is not in the file it names, verbatim or as an
+ * excerpt whose gaps are marked. So build first, then verify.
+ *
+ * Run:  node halfpast-course/build.js && node halfpast-course/verify.js
  */
 
 import { mkdir, writeFile, rm, cp } from 'node:fs/promises';
@@ -55,15 +60,42 @@ function esc(value) {
 }
 
 /**
- * Inline markup for prose: `code`, **bold**, [text](url).
+ * A `*word*` that is emphasis: the asterisks touch the words they wrap, and
+ * neither has a letter or another asterisk on its outside. That leaves `2 * 3`,
+ * `a*b` and `**bold**` alone.
+ */
+const EMPHASIS = /(^|[^\w*])\*(?=[^\s*])([^*]*?[^\s*])\*(?![\w*])/g;
+
+/**
+ * Inline markup for prose: `code`, **bold**, *emphasis*, [text](url).
  * Escaping happens FIRST, so the source text can never inject HTML.
+ *
+ * Emphasis runs last and never inside a code span, where an asterisk is code
+ * (a JSDoc opener, a glob). The chapters were always written with `*word*`;
+ * before this pass existed, every one of them reached the page with its
+ * asterisks showing.
  * @param {string} text
  */
 function inline(text) {
 	return esc(text)
 		.replace(/`([^`]+)`/g, '<code>$1</code>')
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+		.split(/(<code>[\s\S]*?<\/code>)/)
+		.map((part, i) => (i % 2 === 1 ? part : part.replace(EMPHASIS, '$1<em>$2</em>')))
+		.join('');
+}
+
+/**
+ * The same prose with its markup taken out, for the one place that cannot hold
+ * HTML: `<meta name="description">`, which a search result shows as text.
+ * @param {string} text
+ */
+function plain(text) {
+	return text
+		.replace(/`([^`]+)`/g, '$1')
+		.replace(/\*\*([^*]+)\*\*/g, '$1')
+		.replace(EMPHASIS, '$1$2');
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,7 +203,7 @@ function renderPage({ chapter, index, all }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(chapter.title)} — ${COURSE.name}</title>
-<meta name="description" content="${esc(chapter.summary ?? '')}">
+<meta name="description" content="${esc(plain(chapter.summary ?? ''))}">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -259,7 +291,7 @@ function renderIndex(all) {
 				<span class="card__num">${String(i + 1).padStart(2, '0')}</span>
 				<span class="card__body">
 					<span class="card__title">${esc(c.title)}</span>
-					${c.summary ? `<span class="card__summary">${esc(c.summary)}</span>` : ''}
+					${c.summary ? `<span class="card__summary">${inline(c.summary)}</span>` : ''}
 				</span>
 			</a>
 		</li>`

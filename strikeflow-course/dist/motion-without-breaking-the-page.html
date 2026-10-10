@@ -86,13 +86,17 @@
 }
 
 /* … */
-
 /* Hero parts are choreographed by `motion/hero.ts`, which sets its own start
    positions. They just need to be invisible until it does. */
 .motion-pending [data-hero] {
 	opacity: 0;
 }
 
+/*
+ * Belt and braces. If the media query somehow evaluates differently to the inline
+ * script's `matchMedia` check, this guarantees a reduced-motion user is never
+ * looking at a hidden element.
+ */
 @media (prefers-reduced-motion: reduce) {
 	.motion-pending [data-reveal],
 	.motion-pending [data-hero] {
@@ -119,7 +123,7 @@
 	opacity: 0,
 	...offset,
 	...(scale ? { scale: 0.97 } : {}),
-	/* … */
+	// …
 	force3D: true
 });
 
@@ -153,20 +157,22 @@ gsap.to(targets, {
 	</figcaption>
 	<pre><code class="lang-ts">export function loadMotion(): Promise&lt;MotionApi | null&gt; {
 	if (!browser || prefersReducedMotion()) {
+		// …
 		releaseMotionGate();
-		return Promise.resolve(null);   // never even imports GSAP
+		return Promise.resolve(null);
 	}
 
 	motionPromise ??= (async () =&gt; {
-		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] =
-			await Promise.all([
-				import('gsap'),
-				import('gsap/ScrollTrigger'),
-				import('gsap/SplitText'),
-				import('gsap/CustomEase')
-			]);
+		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] = await Promise.all([
+			import('gsap'),
+			import('gsap/ScrollTrigger'),
+			import('gsap/SplitText'),
+			import('gsap/CustomEase')
+		]);
+
 		gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
-		// ...
+		// …
+		return { gsap, ScrollTrigger, SplitText, duration, stagger, travel, trigger };
 	})();
 
 	return motionPromise;
@@ -177,7 +183,7 @@ gsap.to(targets, {
 	<h4>Note where the check happens</h4>
 	<p>It returns <code>null</code> <strong>before</strong> the dynamic imports. So a reduced-motion user does not merely see no animation — they never download the ~90kB animation library at all. Respecting the setting should mean not making that person pay for something they explicitly asked not to see.</p>
 </aside>
-<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget.</p></aside>
+<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The first <code>// …</code> in the listing is a comment on that <code>releaseMotionGate()</code> call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The second stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.</p></aside>
 <h3 id="attachment">The reveal, as a Svelte attachment</h3>
 
 <figure class="code">
@@ -188,9 +194,12 @@ gsap.to(targets, {
 	<pre><code class="lang-ts">export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
 		let cancelled = false;
+		/** GSAP's Context: cleans up every tween and ScrollTrigger created inside it. */
 		let context: { revert: () =&gt; void } | undefined;
 
 		void loadMotion().then((motion) =&gt; {
+			// `null` means reduced motion or SSR. The CSS gate has already been
+			// released by the inline script in that case, so content is visible.
 			if (!motion || cancelled) return;
 
 			const { gsap } = motion;
@@ -198,10 +207,12 @@ gsap.to(targets, {
 			// …
 
 			context = gsap.context(() =&gt; {
+				// …
 				gsap.set(targets, {
 					opacity: 0,
 					...offset,
 					...(scale ? { scale: 0.97 } : {}),
+					// …
 					force3D: true
 				});
 
@@ -215,6 +226,7 @@ gsap.to(targets, {
 					duration: dur,
 					delay,
 					stagger: items ? staggerAmount : 0,
+					// …
 					clearProps: 'transform',
 					scrollTrigger: {
 						trigger: node,
@@ -227,12 +239,13 @@ gsap.to(targets, {
 
 		return () =&gt; {
 			cancelled = true;
+			// …
 			context?.revert();
 		};
 	};
 }</code></pre>
 </figure>
-<ul><li><code>cancelled</code> guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.</li><li><code>gsap.context()</code> scopes everything created inside it. One <code>revert()</code> kills every tween and ScrollTrigger — no manual bookkeeping.</li><li><code>clearProps: 'transform'</code> strips the inline transform when the tween finishes. A leftover <code>translate3d(0,0,0)</code> creates a containing block that quietly breaks any <code>position: fixed</code> descendant.</li><li>The returned function is the cleanup. <strong>Skip it and every client-side navigation leaks a ScrollTrigger</strong> that keeps recalculating on every scroll event, forever.</li></ul>
+<ul><li>The first <code>// …</code> stands for reading the options and working out the start offset from <code>from</code> and <code>distance</code>; the others are the comments the real file carries on the points below.</li><li><code>cancelled</code> guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.</li><li><code>gsap.context()</code> scopes everything created inside it. One <code>revert()</code> kills every tween and ScrollTrigger — no manual bookkeeping.</li><li><code>clearProps: 'transform'</code> strips the inline transform when the tween finishes. A leftover <code>translate3d(0,0,0)</code> creates a containing block that quietly breaks any <code>position: fixed</code> descendant.</li><li>The returned function is the cleanup. <strong>Skip it and every client-side navigation leaks a ScrollTrigger</strong> that keeps recalculating on every scroll event, forever.</li></ul>
 <aside class="callout callout--note"><p><code>start: 'top 85%'</code> means &quot;begin when the top of the element reaches 85% of the way down the viewport&quot; — just as it comes into view. Wait until it is fully on screen and the user watches a static element suddenly move, which looks broken.</p></aside>
 
 <aside class="callout callout--check">

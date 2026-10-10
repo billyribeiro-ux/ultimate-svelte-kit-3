@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The cell editor and the formula bar — Building Abacus</title>
-<meta name="description" content="An input inside the cell, focused by an attachment. A formula bar whose coloured references are a mirror under a transparent input, with function-name completion and a syntax error that says where. Both bind to the same `editing.text`.">
+<meta name="description" content="An input inside the cell, focused by an attachment. A formula bar whose coloured references are a mirror under a transparent input, with function-name completion and a syntax error that says where. Both bind to the same editing.text.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -84,7 +84,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:40-96</span></span>
+		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:40-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	function keydown(event: KeyboardEvent) {
@@ -141,11 +141,9 @@
 		onkeydown={keydown}
 		{@attach focusAtEnd}
 	/&gt;
-{/if}
-
-&lt;style&gt;</code></pre>
+{/if}</code></pre>
 </figure>
-<p>The editor owns Enter, Tab and Escape, and *stops propagation* of everything so the grid’s handler never sees a keystroke meant for the input. <code>insertAtCaret</code> is an exported function, which is what the grid calls through <code>bind:this</code> when a cell is clicked during a formula: it splices the reference at the caret — or over the reference the last click inserted — and puts the caret after it.</p>
+<p>The editor owns Enter, Tab and Escape, and <em>stops propagation</em> of everything so the grid’s handler never sees a keystroke meant for the input. <code>insertAtCaret</code> is an exported function, which is what the grid calls through <code>bind:this</code> when a cell is clicked during a formula: it splices the reference at the caret — or over the reference the last click inserted — and puts the caret after it.</p>
 <h3 id="the-mirror">The mirror</h3>
 
 <figure class="code">
@@ -239,45 +237,40 @@ const cellProblem = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:179-214</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:184-214</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;bar&quot;&gt;
-	&lt;output class=&quot;address mono&quot; aria-label=&quot;Active cell&quot;&gt;{toA1(sheet.anchor)}&lt;/output&gt;
-	&lt;span class=&quot;fx&quot; aria-hidden=&quot;true&quot;&gt;&lt;FunctionIcon size={14} /&gt;&lt;/span&gt;
-
-	&lt;div class=&quot;field&quot;&gt;
-		&lt;div class=&quot;mirror mono&quot; aria-hidden=&quot;true&quot;&gt;
-			{#each segments as segment, i (i)}
-				{#if segment.hue === null}{segment.text}{:else}&lt;span
-						class=&quot;ref&quot;
-						style:--hl=&quot;var(--ref-hue-{segment.hue})&quot;&gt;{segment.text}&lt;/span
-					&gt;{/if}
-			{/each}
-		&lt;/div&gt;
-		&lt;input
-			bind:this={input}
-			class={['input-line mono', { 'input-line--formula': isFormula }]}
-			type=&quot;text&quot;
-			role=&quot;combobox&quot;
-			aria-label=&quot;Formula&quot;
-			aria-autocomplete=&quot;list&quot;
-			aria-expanded={suggestions.length &gt; 0}
-			aria-controls=&quot;formula-suggestions&quot;
-			spellcheck=&quot;false&quot;
-			autocomplete=&quot;off&quot;
-			{readonly}
-			value={text}
-			oninput={(event) =&gt; {
-				if (!sheet.editing) sheet.beginEdit(event.currentTarget.value);
-				else sheet.editing.text = event.currentTarget.value;
-				updateCaret();
-			}}
-			onfocus={focus}
-			onkeydown={keydown}
-			onkeyup={updateCaret}
-			onclick={updateCaret}
-		/&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;div class=&quot;mirror mono&quot; aria-hidden=&quot;true&quot;&gt;
+	{#each segments as segment, i (i)}
+		{#if segment.hue === null}{segment.text}{:else}&lt;span
+				class=&quot;ref&quot;
+				style:--hl=&quot;var(--ref-hue-{segment.hue})&quot;&gt;{segment.text}&lt;/span
+			&gt;{/if}
+	{/each}
+&lt;/div&gt;
+&lt;input
+	bind:this={input}
+	class={['input-line mono', { 'input-line--formula': isFormula }]}
+	type=&quot;text&quot;
+	role=&quot;combobox&quot;
+	aria-label=&quot;Formula&quot;
+	aria-autocomplete=&quot;list&quot;
+	aria-expanded={suggestions.length &gt; 0}
+	aria-controls=&quot;formula-suggestions&quot;
+	spellcheck=&quot;false&quot;
+	autocomplete=&quot;off&quot;
+	{readonly}
+	value={text}
+	oninput={(event) =&gt; {
+		if (!sheet.editing) sheet.beginEdit(event.currentTarget.value);
+		else sheet.editing.text = event.currentTarget.value;
+		updateCaret();
+	}}
+	onfocus={focus}
+	onkeydown={keydown}
+	onkeyup={updateCaret}
+	onclick={updateCaret}
+/&gt;</code></pre>
 </figure>
 <h3 id="completion">Completion, and a reset without an effect</h3>
 
@@ -320,7 +313,7 @@ let highlighted = $derived.by(() =&gt; {
 
 <aside class="callout callout--why">
 	<h4>Why highlighted is a $derived that a key handler writes to</h4>
-	<p>The arrow keys move a highlight through the suggestions, and the highlight must go back to the first suggestion whenever the list changes. The obvious code is <code>$state</code> plus an <code>$effect</code> that resets it — and the Svelte autofixer flags exactly that, because assigning state in an effect is how components loop. A <code>$derived</code> may be *reassigned*: the assignment holds until the expression re-runs, and it re-runs when <code>suggestions</code> changes because the body reads it. One declaration, no effect, and the reset is a consequence of the dependency rather than a second piece of code that has to agree with the first. The find bar does the same with its match index.</p>
+	<p>The arrow keys move a highlight through the suggestions, and the highlight must go back to the first suggestion whenever the list changes. The obvious code is <code>$state</code> plus an <code>$effect</code> that resets it — and the Svelte autofixer flags exactly that, because assigning state in an effect is how components loop. A <code>$derived</code> may be <em>reassigned</em>: the assignment holds until the expression re-runs, and it re-runs when <code>suggestions</code> changes because the body reads it. One declaration, no effect, and the reset is a consequence of the dependency rather than a second piece of code that has to agree with the first. The find bar does the same with its match index.</p>
 </aside>
 
 <figure class="code">
@@ -388,34 +381,38 @@ function updateCaret() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:216-244</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:216-236</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">		{#if suggestions.length &gt; 0}
-			&lt;ul class=&quot;suggestions&quot; id=&quot;formula-suggestions&quot; role=&quot;listbox&quot;&gt;
-				{#each suggestions as name, i (name)}
-					{@const spec = FUNCTIONS.get(name)}
-					&lt;li
-						role=&quot;option&quot;
-						aria-selected={i === highlighted}
-						class={{ 'suggestion--active': i === highlighted }}
-					&gt;
-						&lt;button
-							type=&quot;button&quot;
-							onpointerdown={(e) =&gt; e.preventDefault()}
-							onclick={() =&gt; accept(name)}
-						&gt;
-							&lt;span class=&quot;mono&quot;&gt;{spec?.signature}&lt;/span&gt;
-							&lt;span class=&quot;hint&quot;&gt;{spec?.description}&lt;/span&gt;
-						&lt;/button&gt;
-					&lt;/li&gt;
-				{/each}
-			&lt;/ul&gt;
-		{/if}
-	&lt;/div&gt;
-&lt;/div&gt;
+	<pre><code class="lang-svelte">{#if suggestions.length &gt; 0}
+	&lt;ul class=&quot;suggestions&quot; id=&quot;formula-suggestions&quot; role=&quot;listbox&quot;&gt;
+		{#each suggestions as name, i (name)}
+			{@const spec = FUNCTIONS.get(name)}
+			&lt;li
+				role=&quot;option&quot;
+				aria-selected={i === highlighted}
+				class={{ 'suggestion--active': i === highlighted }}
+			&gt;
+				&lt;button
+					type=&quot;button&quot;
+					onpointerdown={(e) =&gt; e.preventDefault()}
+					onclick={() =&gt; accept(name)}
+				&gt;
+					&lt;span class=&quot;mono&quot;&gt;{spec?.signature}&lt;/span&gt;
+					&lt;span class=&quot;hint&quot;&gt;{spec?.description}&lt;/span&gt;
+				&lt;/button&gt;
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+{/if}</code></pre>
+</figure>
 
-{#if problem}
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:240-244</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if problem}
 	&lt;p class=&quot;issue problem&quot; role=&quot;alert&quot;&gt;{problem.message} — at character {problem.at}&lt;/p&gt;
 {:else if cellProblem}
 	&lt;p class=&quot;issue problem&quot; role=&quot;status&quot;&gt;{cellProblem}&lt;/p&gt;

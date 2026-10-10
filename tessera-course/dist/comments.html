@@ -154,7 +154,7 @@ export const postComment = form(
 		await threads(id).refresh();
 	}</code></pre>
 </figure>
-<p>A <code>form()</code> rather than a <code>command()</code>, for the reason from chapter 32 — it works without JavaScript — and for a second reason specific to this shape: <code>postComment.for(threadId)</code> gives every reply box its own instance from one definition.</p>
+<p>A <code>form()</code> rather than a <code>command()</code>, for the reason from chapter 31 — it works without JavaScript — and for a second reason specific to this shape: <code>postComment.for(threadId)</code> gives every reply box its own instance from one definition.</p>
 
 <figure class="code">
 	<figcaption>
@@ -218,6 +218,7 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 		&lt;/Button&gt;</code></pre>
 </figure>
 <p>Spread the bare <code>postComment</code> into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. <code>.for(id)</code> is the fix and it is four characters.</p>
+<aside class="callout callout--note"><p>One line in that block is older syntax than the rest. <code>{@const reply = …}</code> is how this file declares the per-thread instance, and it still compiles; but since Svelte 5.56 the documentation calls <code>{@const}</code> legacy in favour of a declaration tag — <code>{const reply = $derived(postComment.for(thread.id))}</code> — which, unlike <code>{@const}</code>, is not confined to sitting directly inside a block. Write the declaration-tag form in new code.</p></aside>
 <aside class="callout callout--note"><p>Note <code>resolveThread</code>’s <code>where</code> clause: <code>and(eq(comment.id, id), isNull(comment.parentId))</code>. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.</p></aside>
 
 <aside class="callout callout--check">

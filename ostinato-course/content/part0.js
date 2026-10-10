@@ -25,7 +25,7 @@ export const part0 = [
 			},
 			{
 				type: 'p',
-				text: 'The five projects before this one each had a *domain* problem at their centre — a booking system that must not double-book, an exchange that must balance, a canvas that must merge edits, a query language. This one is different on purpose. The domain — sound — is genuinely interesting, but the point of the project is **the framework**. Svelte 5.57 and SvelteKit 3 have a lot of surface area, and the September and October 2026 releases — the release candidate and then 3.0 itself — added more. This project uses all of it, and the rule for every feature was the same: it had to be *for* something. There is no `$host` demo page; there is a custom element that needs `$host` to dispatch an event.'
+				text: 'The five projects before this one each had a *domain* problem at their centre — a booking system that must not double-book, an exchange that must balance, a canvas that must merge edits, a query language. This one is different on purpose. The domain — sound — is genuinely interesting, but the point of the project is **the framework**. Svelte 5 and SvelteKit have a lot of surface area, and the releases of September and October 2026 — Svelte 5.57, SvelteKit 3.0 and 3.0.1 — added more. This project uses all of it, and the rule for every feature was the same: it had to be *for* something. There is no `$host` demo page; there is a custom element that needs `$host` to dispatch an event.'
 			},
 
 			{ type: 'h3', id: 'the-tour', text: 'The tour' },
@@ -115,7 +115,7 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'There is no `svelte.config.js`. SvelteKit 3 moved every option into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
+				text: 'There is no `svelte.config.js`. In SvelteKit 2 that file held the framework options; SvelteKit 3 moved every one of them into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
 			},
 			code('vite.config.ts', 1, 37, { partial: true }),
 			{
@@ -129,14 +129,14 @@ export const part0 = [
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling. `experimental.async` is the one that changes how you write components: `await` at the top of a `<script>`, inside `$derived`, and directly in markup — and with it `pending` snippets, `$effect.pending()`, `settled()` and `fork()`. An instrument is full of “wait, then draw”, and this is the honest way to write that.'
 			},
-			code('vite.config.ts', 59, 91),
+			code('vite.config.ts', 59, 92),
 			{
 				type: 'p',
 				text: '`dynamicCompileOptions` is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.'
 			},
 
 			{ type: 'h3', id: 'experimental', text: 'Experimental, with evidence' },
-			code('vite.config.ts', 94, 136),
+			code('vite.config.ts', 94, 122),
 			{
 				type: 'why',
 				title: 'Why the comment is longer than the option',
@@ -148,7 +148,7 @@ export const part0 = [
 				type: 'p',
 				text: 'Three options that this file *tried* to set no longer exist, and SvelteKit says so at startup rather than ignoring them. `experimental.tracing` is now top-level `tracing`; `experimental.instrumentation` is gone because `src/instrumentation.server.ts` is picked up whenever the adapter says it can; and `output.preloadStrategy` is gone because `modulepreload` is the only strategy modern browsers need.'
 			},
-			code('vite.config.ts', 138, 146),
+			code('vite.config.ts', 124, 144),
 			{
 				type: 'note',
 				text: 'The removal list lives in SvelteKit’s own `src/core/config/options.js`, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.'
@@ -172,13 +172,13 @@ export const part0 = [
 			code('src/env.ts', 12, 66),
 			{
 				type: 'p',
-				text: '`defineEnvVars` replaced the `$env/*` magic modules. A variable not declared here cannot be imported — a build error, not an `undefined` in production — and `public: true` has to be typed, so a secret cannot reach the browser by accident. `TRACE_BUFFER` shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.'
+				text: 'In SvelteKit 2 a variable came from one of the `$env/*` magic modules; SvelteKit 3 deprecates those (they go in SvelteKit 4) in favour of `defineEnvVars` in this one file. A variable not declared here cannot be imported — a build error, not an `undefined` in production — and `public: true` has to be typed, so a secret cannot reach the browser by accident. `TRACE_BUFFER` shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.'
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can explain why the config is a function.',
-					'You know which three options were removed in SvelteKit 3 and what replaced each.',
+					'You know which three options this file used that SvelteKit 3 removed, and what replaced each.',
 					'You can say, from the comment, why `forkPreloads` is off — and what would turn it back on.'
 				]
 			}
@@ -242,6 +242,9 @@ ostinato/
 │  │  │  ├─ PatternCard.svelte
 │  │  │  ├─ PatternView.svelte
 │  │  │  └─ Section.svelte
+│  │  ├─ embed/
+│  │  │  ├─ OstinatoPlayer.svelte
+│  │  │  └─ element.ts
 │  │  ├─ motion/
 │  │  │  └─ cinematic.ts
 │  │  ├─ music/
@@ -299,6 +302,9 @@ ostinato/
 │  │  ├─ (app)/
 │  │  │  ├─ diagnostics/
 │  │  │  │  └─ +page.svelte
+│  │  │  ├─ embed/
+│  │  │  │  ├─ demo/
+│  │  │  │  └─ +page.svelte
 │  │  │  ├─ gallery/
 │  │  │  │  └─ +page.svelte
 │  │  │  ├─ jam/
@@ -320,6 +326,9 @@ ostinato/
 │  │  │     └─ +server.ts
 │  │  ├─ +error.svelte
 │  │  └─ +layout.svelte
+│  ├─ service-worker/
+│  │  ├─ index.ts
+│  │  └─ tsconfig.json
 │  ├─ ambient.d.ts
 │  ├─ app.css
 │  ├─ app.d.ts
@@ -328,11 +337,9 @@ ostinato/
 │  ├─ error.html
 │  ├─ hooks.server.ts
 │  ├─ hooks.ts
-│  ├─ instrumentation.server.ts
-│  └─ service-worker/
-│     ├─ index.ts
-│     └─ tsconfig.json
-├─ test-results/
+│  └─ instrumentation.server.ts
+├─ static/
+│  └─ robots.txt
 ├─ AGENTS.md
 ├─ README.md
 ├─ drizzle.config.ts
@@ -411,13 +418,13 @@ ostinato/
 				]
 			},
 
-			{ type: 'h3', id: 'september', text: 'On the way to 3.0: the September and October 2026 releases, item by item' },
+			{ type: 'h3', id: 'september', text: 'The September and October 2026 releases, item by item' },
 			{
 				type: 'ul',
 				items: [
 					'**Svelte 5.57** — `SvelteMap.getOrInsertComputed` (the engine’s channel strips, ch. 11); `createContext` returning `has` (`Player.svelte`, ch. 29); `<select defaultValue>` (the WAV bar count, ch. 20); `Csp`/`Sha256Source` types from `svelte/server` (the share card, ch. 29).',
-					'**SvelteKit 3 release candidate (September)** — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside `enhance` (ch. 24); adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34); `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32); `QUERY` handlers in `+server.ts`, and the `preload` filter gets `filename` for fonts (ch. 32, 26); `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
-					'**SvelteKit 3.0 and 3.0.1 (October)** — `builder.generateServerInstance` replaces `generateManifest`, and the `Server` class gives way to a generated `server` object (ch. 34); `builder.createInstrumentationInitializer` fills in the environment before `instrumentation.server.js` runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind `.updates(…)` calls `requested(…).refreshAll()` or `ignore()` on purpose (ch. 24); `json()` and `text()` are deprecated for `Response.json()` (ch. 32); `pushState` and `replaceState` are deprecated for `goto(…, { shallow: true })`, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in `src/service-worker/` with a tsconfig of its own (ch. 35); adapter-node 6 drops the `ORIGIN` variable in favour of `paths.origin`, and so does this adapter (ch. 34).',
+					'**SvelteKit 3.0: what it adds** — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside `enhance` (ch. 24); adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34); `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32); `QUERY` handlers in `+server.ts`, and the `preload` filter gets `filename` for fonts (ch. 32, 26); `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
+					'**SvelteKit 3.0 and 3.0.1: what they replace** — `builder.generateServerInstance` replaces `generateManifest`, and the `Server` class gives way to a generated `server` object (ch. 34); `builder.createInstrumentationInitializer` fills in the environment before `instrumentation.server.js` runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind `.updates(…)` calls `requested(…).refreshAll()` or `ignore()` on purpose (ch. 24); `json()` and `text()` are deprecated for `Response.json()` and `new Response()` (ch. 32); `pushState` and `replaceState` are deprecated for `goto(…, { shallow: true })`, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in `src/service-worker/` with a tsconfig of its own (ch. 35); adapter-node 6 drops the `ORIGIN` variable in favour of `paths.origin`, and so does this adapter (ch. 34).',
 					'**sv 1.0** — `sv create` with `#lib` imports and the `ai-tools` add-on, which wrote `AGENTS.md` and `.claude/settings.json` (ch. 39); `sv migrate sveltekit-3` for the mechanical half of an upgrade.',
 					'**vite-plugin-svelte 7.3** — `dynamicCompileOptions({ filename, environment })` (ch. 2, 33).',
 					'**Vitest 5** — inline projects inherit the root config without an `extends` line, `clearMocks` on by default, locators exact by default (ch. 37).'

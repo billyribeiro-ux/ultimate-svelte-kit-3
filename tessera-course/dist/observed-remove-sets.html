@@ -164,7 +164,7 @@ export class OrSet&lt;K extends string&gt; {
 	}</code></pre>
 </figure>
 <p>Two maps, both of which only ever grow. <code>has(key)</code> is *computed*, not stored — &quot;some add stamp for this element has not been removed&quot; — and that is the reason this structure never had the ordering bug that the text CRDT in chapter 11 did have. Nothing here is derived state waiting to go stale.</p>
-<p>Look closely at <code>observedAdds</code>. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta:</p>
+<p>Look closely at <code>observedAdds</code>. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta. In the shape the board’s <code>node.remove</code> operation has in chapter 13:</p>
 
 <figure class="code">
 	<figcaption>
@@ -172,11 +172,11 @@ export class OrSet&lt;K extends string&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// Wrong: means something different depending on when it lands.
-{ kind: 'remove', node: 'n1' }
+{ kind: 'node.remove', stamp, target: 'n1' }
 
 // Right: means exactly one thing, here, on a replica three weeks behind,
 // and during a replay in six months.
-{ kind: 'remove', node: 'n1', observed: ['1756…0000aaaaaaaa', '1756…0003bbbbbbbb'] }</code></pre>
+{ kind: 'node.remove', stamp, target: 'n1', observed: ['1756…00000aaaaaaaa', '1756…00003bbbbbbbb'] }</code></pre>
 </figure>
 <h3 id="add-wins">Why add-wins and not remove-wins</h3>
 <p>Both are perfectly consistent. They differ in exactly one situation: *I deleted this while you were editing it*. Add-wins keeps the element; remove-wins discards it.</p>

@@ -312,7 +312,7 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 					'**44px minimum** on anything tappable — `min-height: 2.75rem`. The slot grid, the buttons, the header links.',
 					'**Spacing between targets**, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.',
 					'**Primary actions at the bottom** on a phone. The top of a 6.7-inch screen needs a hand shuffle.',
-					'**`inputmode` and `autocomplete`** on every field. `autocomplete="email"` plus `inputmode="email"` is the difference between two taps and thirty.'
+					'**The right `type`, and `autocomplete`**, on every field the browser can fill. `fields.email.as(\'email\')` renders `type="email"`, which brings up the keyboard with an @ on it, and `autocomplete="email"` lets the browser offer the address it already knows: the difference between two taps and thirty.'
 				]
 			},
 
@@ -483,7 +483,8 @@ describe('createBooking under concurrency', () => {
 const compact = new Intl.NumberFormat('en-GB', {
 	style: 'currency',
 	currency: 'GBP',
-	notation: 'compact'
+	notation: 'compact',
+	maximumFractionDigits: 2
 });
 
 expect(compact.format(5600)).toBe('£5.60K');`
@@ -493,11 +494,11 @@ expect(compact.format(5600)).toBe('£5.60K');`
 				file: 'do',
 				lang: 'ts',
 				code: `
-expect(compact.format(5600)).toMatch(/^£5\\.60?K$/);`
+expect(compact.format(5600)).toMatch(/^£5\\.60?k$/i);`
 			},
 			{
 				type: 'p',
-				text: '`Intl` output depends on the runtime\'s ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from `£5.60K` to `£5.6K`. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast\'s own `formatMoney` is a thin wrapper around `Intl.NumberFormat`, so its tests face exactly this trap.'
+				text: '`Intl` output depends on the runtime\'s ICU version. Node 22.22, from the LTS line before this one, ships ICU 77.1; Node 24.21, the version this project pins, ships ICU 78.3; and between the two that compact pound changed from `£5.60K` to `£5.6k`: a zero dropped and the K went lower-case, which is why the pattern above allows both. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast\'s own `formatMoney` is a thin wrapper around `Intl.NumberFormat`, so its tests face exactly this trap.'
 			},
 			{
 				type: 'p',
@@ -609,7 +610,7 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 			 * "empty the bookings" is no longer enough to make a test independent —
 			 * the studio itself has to go back to its known shape.
 			 *
-			 * …
+			 …
 			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
@@ -631,7 +632,7 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 			},
 			{
 				type: 'note',
-				text: 'The seed keeps the same business row rather than dropping and recreating it. Deleting it produced an intermittent 500 in whichever test ran next — a live query still streaming to a page the previous test had only just closed would find its business missing.'
+				text: 'The reset is the real seed script, run as a child process with `DATABASE_URL` pointed at `e2e.db` — the same `scripts/seed.ts` you run by hand in chapter 13. So every test starts from exactly the demo studio a developer sees, with no second, test-only idea of what the data looks like to drift away from the first.'
 			},
 
 			{ type: 'h3', id: 'browser-errors', text: 'The fixture that finds bugs on its own' },
@@ -679,13 +680,33 @@ reportBrowserErrors: [
 				file: 'e2e/dashboard.e2e.ts',
 				lang: 'ts',
 				code: `
+page.once('dialog', (dialog) => void dialog.accept());
 await page.getByRole('button', { name: /Cancel Doomed Dora/ }).click();
-await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
-await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();`
+
+await expect(page.getByText('Doomed Dora')).toHaveCount(0, { timeout: 15_000 });
+
+// …
+
+test('sees only the sections they can use', async ({ page }) => {
+	await page.goto(MANAGE);
+	const nav = page.getByRole('navigation', { name: 'Dashboard sections' });
+
+	await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
+	await expect(nav.getByRole('link', { name: 'Hours' })).toBeVisible();
+
+	// Hiding the link is manners. The next three tests are the control.
+	await expect(nav.getByRole('link', { name: 'Services' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Team' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+});`
 			},
 			{
 				type: 'p',
 				text: 'Roles and accessible names, not CSS classes. A test written against `.btn-cancel` breaks when somebody renames a class and passes when somebody removes the button\'s label — exactly backwards. These break when the interface becomes unusable, which is when you want to hear about it.'
+			},
+			{
+				type: 'p',
+				text: 'The first half is the end of the cancel test. The diary asks `confirm()` before it cancels anything, and Playwright dismisses a dialog nobody has answered, so `page.once(\'dialog\', …)` accepts that one prompt before the click that raises it. The second half signs in as a member rather than the owner and asserts on the navigation by its name, "Dashboard sections", so the test reads like a description of the screen.'
 			},
 			{
 				type: 'warn',
@@ -795,6 +816,8 @@ grep -rn "export const .* = \\(query\\|command\\|form\\)(v\\.\\|export const .* 
 				code: `
 const SAFE_REDIRECT = /^\\/(?!\\/)[^\\s]{0,512}$/;
 
+// …
+
 redirectTo: v.optional(
 	v.pipe(
 		v.string(),
@@ -889,7 +912,7 @@ return response;`
 				items: [
 					'`referrer-policy` matters more than usual here: without it, a manage link\'s **token** travels in the `Referer` header to any external site the page links to.',
 					'CSRF is handled by SvelteKit via `paths.origin` — which is why getting that setting right in chapter 15 was a security fix, not only a bug fix.',
-					'Cookies are `httpOnly`, `sameSite: \'lax\'` and `secure` in production, all from Better Auth\'s defaults. Verify them rather than assuming them.'
+					'Cookies are `httpOnly` and `sameSite: \'lax\'` by Better Auth\'s defaults, and `secure` whenever `ORIGIN` is https, because `auth.ts` sets `useSecureCookies` from it. Verify all three in the browser rather than assuming them.'
 				]
 			},
 
@@ -949,7 +972,7 @@ return response;`
 			{ type: 'h3', id: 'origin', text: '2. The adapter setting that ruins your day' },
 			{
 				type: 'warn',
-				text: '`@sveltejs/adapter-node` v6 no longer reads an `ORIGIN` environment variable at runtime. The trusted origin is baked in at **build time** from `kit.paths.origin`, and the header fallback assumes `https`. Deploy behind a proxy that terminates TLS and forwards plain HTTP without the right headers, and every form post returns 403 "Cross-site remote requests are forbidden" — with a perfectly healthy-looking app behind it.'
+				text: 'Up to v5, `@sveltejs/adapter-node` read the trusted origin from an `ORIGIN` environment variable at runtime. v6, the adapter for SvelteKit 3, no longer does: the origin is baked in at **build time** from `paths.origin` in the `sveltekit()` options. Leave that unset and the adapter rebuilds the origin from request headers, assuming `https` unless `PROTOCOL_HEADER` says otherwise. Serve the build over plain HTTP — a preview on localhost, a container on a private network — and the server computes `https://…` while the browser sends `http://…`, so every form post and remote call returns 403 "Cross-site remote requests are forbidden", from a perfectly healthy-looking app. Behind a proxy that terminates TLS, setting `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host` is the other way out.'
 			},
 			{
 				type: 'code',
@@ -966,11 +989,32 @@ sveltekit({
 				type: 'p',
 				text: 'Because it is baked in at build time, `PUBLIC_ORIGIN` must be correct **when you build**, not when you start. That catches people whose CI builds an artefact and whose deploy step sets the environment.'
 			},
+			{
+				type: 'p',
+				text: 'That same CI job has a second surprise waiting. Give the build only the two public variables and it stops at `Analysing routes` with `SvelteKit error: env_invalid`, naming `DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET`. That `ORIGIN` is the app\'s own variable from `src/env.ts`, the base URL Better Auth signs cookies against, not the adapter setting the warning above retired. The SvelteKit docs explain why in two sentences: "If a value is invalid, the app will fail to start (or build)", and "SvelteKit analyses your app during the `build` step by running it". **Every** variable in `src/env.ts` is validated when you build, static or not.'
+			},
+			{
+				type: 'p',
+				text: 'What differs is where the value goes next. For the two `static: true` variables "the build time value is inlined into the bundle", so they have to be the real ones. `DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET` are dynamic, the default, where "the value is read from the environment when the app starts". None of them ends up in `build/`, and the server reads and validates the real values again when it boots. For `ORIGIN` and the secret, a placeholder that passes the schema is all the build needs. (`DATABASE_AUTH_TOKEN` is private and dynamic too, and can be left out entirely, because its schema returns `undefined`.)'
+			},
+			{
+				type: 'p',
+				text: '`DATABASE_URL` is the exception, because the build does more than validate it. Analysing the app imports `src/lib/server/db/index.ts`, which hands the URL to libSQL\'s `createClient` the moment the module loads. Its schema accepts any non-empty string, but the value must also be a URL libSQL can parse: `:memory:`, `file:`, `libsql:`, `http(s):` or `ws(s):`. `DATABASE_URL=placeholder` gets past `env_invalid` and then fails the build with `LibsqlError: URL_INVALID`, from inside a generated chunk. And a URL libSQL can parse gets used, not just checked: a `file:` URL creates the file, and a remote one can be sent the WAL pragma, so a build pointed at production can talk to production. `:memory:` parses and leaves nothing behind, a database that disappears when the build ends:'
+			},
+			{
+				type: 'terminal',
+				code: `PUBLIC_ORIGIN=https://halfpast.example \\
+PUBLIC_DEFAULT_TIME_ZONE=Europe/London \\
+DATABASE_URL=:memory: \\
+ORIGIN=https://halfpast.example \\
+BETTER_AUTH_SECRET=build-time-placeholder-never-read-at-runtime \\
+pnpm run build`
+			},
 
 			{ type: 'h3', id: 'deps', text: '3. Dependencies versus devDependencies' },
 			{
 				type: 'p',
-				text: 'Vite bundles `devDependencies` into the server build. `@libsql/client` loads a native binary at runtime and cannot be bundled.'
+				text: '`adapter-node` bundles `devDependencies` into the server build, with Rolldown since v6, and leaves `dependencies` to be installed beside it. `@libsql/client` loads a native binary at runtime and cannot be bundled.'
 			},
 			{
 				type: 'code',

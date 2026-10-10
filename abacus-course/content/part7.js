@@ -38,7 +38,7 @@ export const part7 = [
 			{
 				type: 'terminal',
 				code: `
-$ pnpm run test:unit -- --run
+$ pnpm run test:unit --run
  ✓ [server] src/lib/formula/formula.spec.ts (20 tests)
  ✓ [server] src/lib/engine/engine.spec.ts (20 tests)
  ✓ [server] src/lib/engine/engine.property.spec.ts (4 tests)

@@ -1,5 +1,5 @@
 /**
- * PART 2 — The log, and making it durable (chapters 12–17)
+ * PART 2 — The log, and making it durable (chapters 12–16)
  *
  * The engine is a pure function. This part gives it somewhere to read from and
  * somewhere to write to, and makes both survive the process being killed.
@@ -34,12 +34,14 @@ export const part2 = [
 				code: `
 -- Commands, in the order the sequencer accepted them.
 --
--- \`seq\` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
+-- \\\`seq\\\` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
 -- because the sequencer owns it. Letting SQLite choose would mean the ordering
 -- authority lived in two places, and the day they disagree is the day replay
 -- stops reproducing history.
 --
--- …
+-- There are no UPDATE or DELETE statements against this table anywhere in the
+-- codebase. A trigger below enforces that, because "we agreed not to" is not an
+-- enforcement mechanism.
 CREATE TABLE IF NOT EXISTS command_log (
 	seq INTEGER PRIMARY KEY,
 
@@ -61,11 +63,11 @@ CREATE TABLE IF NOT EXISTS command_log (
 	body TEXT NOT NULL
 ) STRICT;
 
--- …
+CREATE INDEX IF NOT EXISTS command_log_firm_idx ON command_log (firm_id, seq);
 
 -- Events, in the order the engine produced them.
 --
--- \`caused_by\` points at the command that produced this event. It is the single
+-- \\\`caused_by\\\` points at the command that produced this event. It is the single
 -- most useful column in the database during an incident: every event knows its
 -- cause, and every derived identifier contains its own sequence number, so
 -- "why did this happen" is a lookup rather than an investigation.
@@ -78,6 +80,10 @@ CREATE TABLE IF NOT EXISTS event_log (
 	instrument_id TEXT,
 	body TEXT NOT NULL
 ) STRICT;`
+			},
+			{
+				type: 'p',
+				text: 'The SQL lives inside a `String.raw` template literal in `schema.ts` rather than in a `.sql` file — the file\'s header tells the story of the production build that could not find `schema.sql` — which is why every backtick in its comments is preceded by a backslash.'
 			},
 			{
 				type: 'note',
@@ -130,7 +136,9 @@ const client = createClient({
 	 *
 	 * The option is applied by the client to every connection it opens,
 	 * including the ones it opens later for transactions. The pragma reaches
-	 * only whichever connection happened to run it, …
+	 * only whichever connection happened to run it, and a venue where three
+	 * connections wait politely and the fourth fails instantly with
+	 * \`SQLITE_BUSY\` is a venue with a bug that reproduces one time in four.
 	 */
 	timeout: BUSY_TIMEOUT_MS,
 	concurrency: POOL_SIZE
@@ -168,7 +176,9 @@ await configurePool(client, url);`
  * once and remembered. These two are properties of the connection, and SQLite
  * forgets them the moment it is closed.
  *
- * …
+ * \`foreign_keys = ON\` — the log's \`caused_by\` and the ledger's postings point at
+ * other rows, and an event whose command does not exist must fail to commit. A
+ * test in \`log.spec.ts\` depends on exactly that.
  *
  * \`synchronous = FULL\` rather than \`NORMAL\` — NORMAL lets the OS decide when to
  * flush, which means a machine that loses power can lose the last few commits.
@@ -182,7 +192,7 @@ await configurePool(client, url);`
  */
 const CONNECTION_PRAGMAS = ['PRAGMA foreign_keys = ON', 'PRAGMA synchronous = FULL'];
 
-/* … */
+// …
 async function configurePool(client: Client, url: string): Promise<void> {
 	const pooled = url.startsWith('file:') && !url.includes(':memory:');
 
@@ -191,22 +201,20 @@ async function configurePool(client: Client, url: string): Promise<void> {
 		return;
 	}
 
-	// The only thing that holds a connection across an \`await\` is a
-	// transaction, so POOL_SIZE transactions at once forces POOL_SIZE distinct
-	// connections into existence.
 	const held: Transaction[] = [];
 	for (let index = 0; index < POOL_SIZE; index += 1) {
 		held.push(await client.transaction('deferred'));
 	}
 
-	// \`PRAGMA foreign_keys\` is a no-op inside a transaction, so each connection
-	// ends its own — there is nothing to roll back — and then applies the
-	// pragmas, in the one call that does not re-check between statements.
 	for (const transaction of held) {
 		await transaction.executeMultiple(['ROLLBACK', ...CONNECTION_PRAGMAS].join(';\\n') + ';');
 		transaction.close();
 	}
 }`
+			},
+			{
+				type: 'p',
+				text: 'Two details carry the weight, and the doc comment on `configurePool` spells both out. `PRAGMA foreign_keys` is a documented no-op inside a transaction, so each held connection first runs `ROLLBACK` — there is nothing to roll back — and then the pragmas, in one `executeMultiple`: the one method on a transaction that does not check the transaction is still open between statements. Then `close()` hands the configured connection back to the pool, where it is reused ahead of any new one. An in-memory database or a remote libSQL server is not a pool this can reach, so it takes the plain branch at the top and the pragmas run once.'
 			},
 			{
 				type: 'warn',
@@ -244,7 +252,7 @@ export class Sequencer {
 	#next: number | undefined;
 	readonly #client: Client;
 
-	/* … */
+	// …
 	constructor(client: Client) {
 		this.#client = client;
 	}
@@ -263,6 +271,8 @@ export class Sequencer {
 		);
 		this.#next = Number(result.rows[0]?.['high'] ?? 0) + 1;
 	}
+
+	// …
 }`
 			},
 
@@ -453,7 +463,7 @@ export async function appendEvents(
 	version: number,
 	events: readonly Event[]
 ): Promise<void> {
-	/* … */
+	// …
 	await withTransaction(client, async (tx) => {
 		for (const body of events) {
 			await tx.execute({
@@ -673,31 +683,36 @@ TypeError: body.instruments is not iterable
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
-	/*
-	 * A snapshot that will not parse is treated as **absent**, not as an error.
-	 *
-	 * …
-	 *
-	 * Returning \`undefined\` makes recovery fall back to replaying from genesis,
-	 * which is slower and correct. That is the trade the whole architecture was
-	 * built to be able to make, and it does not exist unless this \`catch\` does.
-	 *
-	 * It is logged rather than swallowed silently: a venue that quietly replays
-	 * from genesis every start is one whose snapshots have been broken for
-	 * months and whose boot time nobody has questioned.
-	 */
-	try {
-		return {
-			state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
-			fingerprint: String(row['fingerprint'])
-		};
-	} catch (thrown) {
-		console.error(
-			\`[engine] snapshot at seq \${Number(row['seq'])} is unreadable; replaying from genesis instead.\`,
-			thrown
-		);
-		return undefined;
-	}`
+/*
+ * A snapshot that will not parse is treated as **absent**, not as an error.
+ *
+ * This is the difference between a claim and a property. Everywhere in this
+ * codebase says the snapshot is an optimisation and the log is the system of
+ * record — and until a fault-injection test wrote nonsense into the table,
+ * that was only a claim: \`deserialise\` threw \`body.instruments is not
+ * iterable\`, the exception escaped \`recover\`, and the engine would not start.
+ * A corrupt cache took the venue down.
+ *
+ * Returning \`undefined\` makes recovery fall back to replaying from genesis,
+ * which is slower and correct. That is the trade the whole architecture was
+ * built to be able to make, and it does not exist unless this \`catch\` does.
+ *
+ * It is logged rather than swallowed silently: a venue that quietly replays
+ * from genesis every start is one whose snapshots have been broken for
+ * months and whose boot time nobody has questioned.
+ */
+try {
+	return {
+		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
+		fingerprint: String(row['fingerprint'])
+	};
+} catch (thrown) {
+	console.error(
+		\`[engine] snapshot at seq \${Number(row['seq'])} is unreadable; replaying from genesis instead.\`,
+		thrown
+	);
+	return undefined;
+}`
 			},
 
 			{ type: 'h3', id: 'vacuous', text: 'And one more test, so the others mean something' },
@@ -922,24 +937,6 @@ SQLITE_ERROR: cannot commit - no transaction is active
 				file: 'packages/store/src/client.ts',
 				lang: 'ts',
 				code: `
-/**
- * Run a function inside a transaction, serialised with every other one on this
- * client.
- *
- * …
- *
- * ## Why the queue matters *more* with a pool, not less
- *
- * Two overlapping transactions on one connection used to interleave into a
- * single transaction and commit together — not a deadlock, not an error, and
- * completely wrong. Two overlapping transactions on a pool each get their own
- * connection, and the second \`BEGIN IMMEDIATE\` waits for the first's write lock
- * — inside a synchronous native call, which blocks the event loop, which is the
- * only thing that could have let the first transaction finish. That is a
- * deadlock with a five-second timeout on it. The chain means the second caller
- * waits in JavaScript, where waiting is free, and only ever contends for the
- * lock with *other processes*.
- */
 export async function withTransaction<T>(
 	client: Client,
 	work: (tx: Executor) => Promise<T>
@@ -954,7 +951,7 @@ export async function withTransaction<T>(
 			await transaction.commit();
 			return result;
 		} catch (thrown) {
-			/* … */
+			// …
 			try {
 				await transaction.rollback();
 			} catch {
@@ -980,7 +977,7 @@ export async function withTransaction<T>(
 			},
 			{
 				type: 'note',
-				text: 'The promise chain is not decoration. In `apps/engine` the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript.'
+				text: 'The promise chain is not decoration. In `apps/engine` the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript. The function\'s own doc comment tells this whole story — 0.17.4, the workaround, 0.18 — so the next person to touch it meets the history before they meet the code.'
 			},
 			{
 				type: 'why',

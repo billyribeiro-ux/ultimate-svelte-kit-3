@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:1-28</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:1-29</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -68,7 +68,8 @@
  *      is set up before any application code runs.
  *
  * Everything after step 2 is about *this* adapter. Everything up to it is
- * every adapter.</code></pre>
+ * every adapter.
+ */</code></pre>
 </figure>
 <p>An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Everything up to step 2 in that list is *every* adapter; everything after it is this one. It targets a plain Node process, like <code>adapter-node</code>, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.</p>
 
@@ -410,7 +411,7 @@ if (initializer) {
 	});
 }</code></pre>
 </figure>
-<p>Three more things an adapter can declare. <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code> and <code>vite preview</code>, with the same shape the runtime produces, so nothing has to guard against <code>undefined</code>. <code>supports</code> says what the runtime can do — <code>read()</code> from <code>$app/server</code>, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, <code>pre</code> or <code>post</code>: this one provides <code>virtual:adapter</code>, which the diagnostics page imports.</p>
+<p>Three more things an adapter can declare. <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code>, <code>vite build</code> and <code>vite preview</code>, with the same shape the runtime produces, so nothing has to guard against <code>undefined</code>. <code>supports</code> says what the runtime can do — <code>read()</code> from <code>$app/server</code>, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, <code>pre</code> or <code>post</code>: this one provides <code>virtual:adapter</code>, which the diagnostics page imports.</p>
 
 <figure class="code">
 	<figcaption>
@@ -489,6 +490,7 @@ if (initializer) {
 	startedAt: number;
 }</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The two comments disagree. The type’s says <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code> and <code>vite preview</code>; the adapter’s, above it, says <code>vite dev</code>, <code>vite build</code> and <code>vite preview</code>. The adapter’s is right, and the SvelteKit docs on writing adapters agree: the build prerenders the landing page, and a prerendered page gets its <code>event.platform</code> from <code>emulate()</code> as well. The type’s comment is simply older than the prerendering.</p></aside>
 <h3 id="the-runtime">The runtime: four steps per request</h3>
 
 <figure class="code">

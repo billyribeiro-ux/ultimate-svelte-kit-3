@@ -62,26 +62,55 @@ export const getMyOrders = query(async () =&gt; {
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row: Row) =&gt; ({ /* … */ }));
+	return result.rows.map((row: Row) =&gt; ({
+		orderId: String(row['order_id']),
+		clientOrderId: String(row['client_order_id']),
+		instrumentId: String(row['instrument_id']),
+		side: String(row['side']),
+		price: row['price'] === null ? null : Number(row['price']),
+		priceLabel:
+			row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
+		quantity: Number(row['quantity']),
+		filled: Number(row['filled']),
+		timeInForce: String(row['time_in_force']),
+		status: String(row['status']),
+		cancelReason: row['cancel_reason'] === null ? null : String(row['cancel_reason']),
+		updatedAt: Number(row['updated_at'])
+	}));
 });</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { getMyOrders } from './market.remote.ts';
+	// …
+	import {
+		cancelOrder,
+		getInstruments,
+		getMyOrders,
+		getMyPositions,
+		placeOrder,
+		watchMarket
+	} from './market.remote.ts';
 
+	// …
 	const orders = $derived(await getMyOrders());
+	// …
 &lt;/script&gt;
 
+&lt;!-- … --&gt;
 {#each orders as order (order.orderId)}
-	&lt;tr&gt;…&lt;/tr&gt;
+	&lt;tr&gt;
+		&lt;!-- … --&gt;
+	&lt;/tr&gt;
+{:else}
+	&lt;tr&gt;&lt;td colspan=&quot;7&quot; class=&quot;muted small&quot;&gt;Nothing sent yet.&lt;/td&gt;&lt;/tr&gt;
 {/each}</code></pre>
 </figure>
-<p>That is the whole thing. <code>await</code> inside <code>$derived</code> is the <code>experimental.async</code> flag from the last chapter, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls <code>.refresh()</code> on it.</p>
+<p>That is all a component needs: import the function, await it inside <code>$derived</code>, use the result. <code>await</code> inside <code>$derived</code> is the <code>compilerOptions.experimental.async</code> flag from chapter 22, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls <code>.refresh()</code> on it.</p>
 <h3 id="schemas">Every argument gets a schema</h3>
 <p>A remote function that takes arguments takes a valibot schema first. This is not optional and it is not a style preference.</p>
 
@@ -98,7 +127,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 	<h4>The caller is not your page</h4>
 	<p>It is tempting to think &quot;the only thing that calls this is my own component, which always sends a valid symbol&quot;. The generated endpoint is a <strong>public HTTP route</strong>. Anybody can <code>curl</code> it with anything, and on a trading venue somebody eventually will, four hundred times a second, with a symbol containing a SQL fragment. The schema is the boundary, and it is the same boundary as the protocol codecs and the environment variables — the pattern of this entire codebase is *validate once, at the edge*.</p>
 </aside>
-<aside class="callout callout--note"><p>SvelteKit enforces the discipline for you: inside a remote function, <code>event.url</code> and <code>event.params</code> <strong>throw</strong> if you read them. A remote function is not a route, so it has no URL to read, and the framework refuses to let you pretend otherwise. Everything that varies must arrive as a validated argument.</p></aside>
+<aside class="callout callout--note"><p>SvelteKit enforces part of the discipline for you: inside a <code>query</code> (and a <code>query.live</code>), reading <code>event.url</code>, <code>event.params</code> or <code>event.route</code> <strong>throws</strong>. A query is cached by its arguments and is not re-run when somebody navigates, so anything it read from the URL would go stale without the cache noticing. In a <code>command</code> or a <code>form</code> those properties describe the page that made the call — which is part of the request, so it can be forged and must never decide what somebody is allowed to do. Either way, everything that varies must arrive as a validated argument.</p></aside>
 <h3 id="command">command — writing</h3>
 
 <figure class="code">
@@ -160,16 +189,16 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">apps/web/src/routes/+layout.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;form {...signOut}&gt;
-	&lt;button type=&quot;submit&quot;&gt;Sign out&lt;/button&gt;
+	&lt;button type=&quot;submit&quot; class=&quot;link&quot;&gt;Sign out&lt;/button&gt;
 &lt;/form&gt;</code></pre>
 </figure>
 <p>With JavaScript, that posts in the background and updates in place. Without it, the browser does a normal form submission and the <code>redirect(303, …)</code> sends you to the sign-in page. Same code, both worlds. Signing in and signing out are the two things that must never depend on a bundle having loaded, which is why they are forms and not commands.</p>
 <h3 id="live">query.live — streaming</h3>
-<p>The last kind takes an <strong>async generator</strong>, and everything it yields is pushed to every browser subscribed with the same arguments.</p>
+<p>The last kind takes an <strong>async generator</strong>, and everything it yields is streamed to the browser for as long as a component on the page is using it. Several components using the same live query share one connection; when the last of them goes away, the stream disconnects and the generator on the server is stopped.</p>
 
 <figure class="code">
 	<figcaption>

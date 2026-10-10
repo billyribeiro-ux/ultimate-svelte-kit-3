@@ -144,7 +144,7 @@ class Reader {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:92-121</span></span>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:92-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function encodePattern(pattern: Pattern): string {
@@ -171,20 +171,20 @@ class Reader {
 	}
 
 	return base64url(w.finish());
-}
-
-/**
- * Throws on anything malformed. The caller — the studio's load — catches it and
- * opens an empty pattern with a message, because a person who pasted a link
- * that got cut in half should see &quot;that link is damaged&quot;, not a blank screen.</code></pre>
+}</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:123-170</span></span>
+		<span class="code__file">src/lib/pattern/codec.ts<span class="code__lines">:118-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function decodePattern(text: string): Pattern {
+	<pre><code class="lang-ts">/**
+ * Throws on anything malformed. The caller — the studio's load — catches it and
+ * opens an empty pattern with a message, because a person who pasted a link
+ * that got cut in half should see &quot;that link is damaged&quot;, not a blank screen.
+ */
+export function decodePattern(text: string): Pattern {
 	const r = new Reader(fromBase64url(text));
 
 	const version = r.byte();
@@ -228,10 +228,7 @@ class Reader {
 	}
 
 	return { title, bpm, swing, tracks };
-}
-
-/*
- * base64url: base64 with `+/` swapped for `-_` and no `=` padding, so the result</code></pre>
+}</code></pre>
 </figure>
 <p>Track ids are not encoded — they are regenerated on decode. They exist only to key an <code>{#each}</code> and mean nothing to another browser; encoding them would be twelve bytes per track of nothing.</p>
 <h3 id="base64url">base64url</h3>

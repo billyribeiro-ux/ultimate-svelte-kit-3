@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Sheet class, and where the reactivity line is — Building Abacus</title>
-<meta name="description" content="A class in a `.svelte.ts` file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one `$state` number, `version`, is the whole contract between them.">
+<meta name="description" content="A class in a .svelte.ts file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one $state number, version, is the whole contract between them.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -70,6 +70,7 @@
  */</code></pre>
 </figure>
 <p>The header states the two ideas of the class. The engine is plain <code>Map</code>s; this class publishes one number. Undo is commands with inverses rather than snapshots, because a sheet can be megabytes and project 6’s two-kilobyte snapshots would not survive contact with it.</p>
+<aside class="callout callout--note"><p>The header’s “chapter 10” is the project’s own numbering for the hand-written engine, which is chapter 09 here. The note in chapter 08 has the whole mapping.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -193,7 +194,7 @@ display(row: number, col: number): string {
 
 <aside class="callout callout--why">
 	<h4>Why four methods read a number they do not use</h4>
-	<p>The grid renders <code>{sheet.display(r, c)}</code> for ten thousand cells. In Svelte 5 that text is its own tiny effect, and it re-runs only when something it *read* changes. <code>this.engine.get(...)</code> reads a plain <code>Map</code> — nothing reactive — so without the <code>void this.version</code> on the first line, a cell that depends on another cell would show its old value forever. The first end-to-end run found exactly that: <code>=SUM(A1:A2)</code> stayed at 84 after A1 changed. Reading <code>version</code> subscribes every visible cell to one signal that changes once per batch. That is a few thousand cheap re-reads per edit instead of ten thousand signals — and it is the reason the engine can stay a plain <code>Map</code>.</p>
+	<p>The grid renders <code>{sheet.display(r, c)}</code> for ten thousand cells. In Svelte 5 that text is its own tiny effect, and it re-runs only when something it <em>read</em> changes. <code>this.engine.get(...)</code> reads a plain <code>Map</code> — nothing reactive — so without the <code>void this.version</code> on the first line, a cell that depends on another cell would show its old value forever. The first end-to-end run found exactly that: <code>=SUM(A1:A2)</code> stayed at 84 after A1 changed. Reading <code>version</code> subscribes every visible cell to one signal that changes once per batch. That is a few thousand cheap re-reads per edit instead of ten thousand signals — and it is the reason the engine can stay a plain <code>Map</code>.</p>
 </aside>
 <p>The alternative — a <code>$state</code> per cell — is what the reactivity lesson in chapter 17 builds, for nine cells. It is the right design for nine and the wrong one for a million, and the difference is not taste: a proxy per cell is memory and a signal write per cell per recalculation is time, and a spreadsheet has more cells than anything else in this course.</p>
 <h3 id="editing">The edit session</h3>
@@ -303,7 +304,7 @@ setFormat(format: CellFormat, target: Rect = this.selection): void {
 	this.edit(edits, 'Format');
 }</code></pre>
 </figure>
-<p><code>edit</code> is the one door every change goes through: prepare the edits (an implied format, ch. 13), snapshot what the cells held, and run a command whose <code>revert</code> applies the snapshot. <code>setFormat</code> refuses more than twenty thousand cells, because a format on an empty cell is *kept* — so selecting a column and pressing “Currency” would otherwise create a million entries.</p>
+<p><code>edit</code> is the one door every change goes through: prepare the edits (an implied format, ch. 13), snapshot what the cells held, and run a command whose <code>revert</code> applies the snapshot. <code>setFormat</code> refuses more than twenty thousand cells, because a format on an empty cell is <em>kept</em> — so selecting a column and pressing “Currency” would otherwise create a million entries.</p>
 <h3 id="documents">In and out: documents and remote operations</h3>
 
 <figure class="code">
@@ -385,7 +386,7 @@ applyRemote(op: Op): void {
 	this.#sync();
 }</code></pre>
 </figure>
-<p><code>applyRemote</code> is somebody else’s change: applied to the engine with no undo entry — you cannot undo another person’s typing — and flashed, so a cell that changed under you is briefly highlighted. <code>load</code> ends by setting <code>dirty</code> back to false *after* <code>#sync</code>, because what was just loaded is, by definition, what is saved; the browser test that asserts it caught the first version doing that in the wrong order.</p>
+<p><code>applyRemote</code> is somebody else’s change: applied to the engine with no undo entry — you cannot undo another person’s typing — and flashed, so a cell that changed under you is briefly highlighted. <code>load</code> ends by setting <code>dirty</code> back to false <em>after</em> <code>#sync</code>, because what was just loaded is, by definition, what is saved; the browser test that asserts it caught the first version doing that in the wrong order.</p>
 
 <figure class="code">
 	<figcaption>

@@ -66,7 +66,7 @@ node build/index.js</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts</span>
+		<span class="code__file">swapping the adapter</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import adapter from '@sveltejs/adapter-vercel';     // or -cloudflare, -netlify, -static
@@ -77,16 +77,18 @@ export default defineConfig({
 </figure>
 <aside class="callout callout--warn"><p>You cannot use <code>adapter-static</code> for this project as built. Two pages are server-rendered on purpose (<code>/guide</code> and <code>/guide/thank-you</code>) and the download endpoint runs per request. If you need a fully static build, replace the remote form with a third-party form service and drop the gated download.</p></aside>
 <h3 id="env-prod">Environment, before anything else</h3>
+<p>The project's <code>.env.example</code> documents every variable <code>src/env.ts</code> declares. In production, give each one a real value:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">production .env</span>
+		<span class="code__file">production values</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-bash">PUBLIC_SITE_URL=&quot;https://strikeflow.io&quot;
 LEADS_DIR=&quot;/var/lib/strikeflow/leads&quot;
 EBOOK_TOKEN_SECRET=&quot;&lt;64 hex characters&gt;&quot;</code></pre>
 </figure>
+<p>For the secret, let Node generate the 64 random hex characters:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -95,9 +97,19 @@ EBOOK_TOKEN_SECRET=&quot;&lt;64 hex characters&gt;&quot;</code></pre>
 	</figcaption>
 	<pre><code>node -e &quot;console.log(crypto.randomBytes(32).toString('hex'))&quot;</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><code>PUBLIC_SITE_URL</code> is <code>static: true</code>, which means it is <strong>baked in at build time</strong>. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build.</p></aside>
+<p>Where you put those values depends on when each one is read. <code>LEADS_DIR</code> and <code>EBOOK_TOKEN_SECRET</code> are read when the server starts, and the server <code>adapter-node</code> builds does <strong>not</strong> load a <code>.env</code> file on its own — only <code>pnpm dev</code>, <code>pnpm preview</code> and the build do that. So either set them in your host's environment settings, or keep them in a <code>.env</code> file beside the build and start the server with Node's <code>--env-file</code> flag:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>node --env-file=.env build/index.js</code></pre>
+</figure>
+<p>Start it with plain <code>node build/index.js</code> and no host settings, and the server never sees either value: it falls back to a throwaway signing key, so every download link dies on the next restart, and it writes leads to <code>.data</code> in whatever directory it was started from.</p>
+<aside class="callout callout--warn"><p><code>PUBLIC_SITE_URL</code> is <code>static: true</code>, which means it is <strong>baked in at build time</strong>. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build, in <code>.env</code> (which the build does read) or in the shell that runs <code>pnpm run build</code>.</p></aside>
 <h3 id="checklist">Pre-launch checklist</h3>
-<ol><li><code>PUBLIC_SITE_URL</code> is the real domain and was set <strong>before</strong> the build.</li><li><code>EBOOK_TOKEN_SECRET</code> is set — otherwise download links die on every restart.</li><li><code>curl https://yourdomain.com/robots.txt</code> returns the real domain in the <code>Sitemap:</code> line.</li><li><code>curl https://yourdomain.com/sitemap.xml</code> lists real URLs, and each returns 200.</li><li>View source on the home page: exactly one <code>&lt;title&gt;</code>, one canonical, one <code>&lt;h1&gt;</code>.</li><li>Paste a page into the <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">Rich Results Test</a> and confirm the graph parses.</li><li>Paste a URL into Slack or LinkedIn and check the share card renders with the right image.</li><li>Run Lighthouse on mobile. Watch CLS especially — it should be 0.</li><li>Tab through the home page. The skip link appears first, focus is always visible, nothing is unreachable.</li><li>Turn off JavaScript and submit the signup form.</li><li>Submit an expired token to <code>/guide/download</code> and confirm a 403.</li><li>Submit the form six times in a minute and confirm the rate limit fires.</li><li>Verify Search Console ownership and submit the sitemap.</li></ol>
+<ol><li><code>PUBLIC_SITE_URL</code> is the real domain and was set <strong>before</strong> the build.</li><li><code>EBOOK_TOKEN_SECRET</code> and <code>LEADS_DIR</code> reach the running server, from your host's settings or <code>node --env-file=.env</code> — otherwise download links die on every restart and leads land in <code>.data</code>.</li><li><code>curl https://yourdomain.com/robots.txt</code> returns the real domain in the <code>Sitemap:</code> line.</li><li><code>curl https://yourdomain.com/sitemap.xml</code> lists real URLs, and each returns 200.</li><li>View source on the home page: exactly one <code>&lt;title&gt;</code>, one canonical, one <code>&lt;h1&gt;</code>.</li><li>Paste a page into the <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">Rich Results Test</a> and confirm the graph parses.</li><li>Paste a URL into Slack or LinkedIn and check the share card renders with the right image.</li><li>Run Lighthouse on mobile. Watch CLS especially — it should be 0.</li><li>Tab through the home page. The skip link appears first, focus is always visible, nothing is unreachable.</li><li>Turn off JavaScript and submit the signup form.</li><li>Submit an expired token to <code>/guide/download</code> and confirm a 403.</li><li>Submit the form six times in a minute and confirm the rate limit fires.</li><li>Verify Search Console ownership and submit the sitemap.</li></ol>
 <h3 id="leads">One thing to change before real traffic</h3>
 <aside class="callout callout--warn"><p>The file-backed <code>LeadStore</code> is a teaching implementation. Concurrent appends from multiple processes can interleave, and there is no backup. Before real signups, write a second <code>LeadStore</code> implementation that posts to your email provider or a database. Because everything upstream depends on the <strong>interface</strong>, that is one line changed in <code>leads.ts</code>.</p></aside>
 <h3 id="done">What you've built</h3>

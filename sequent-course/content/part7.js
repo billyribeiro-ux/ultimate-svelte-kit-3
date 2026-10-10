@@ -1,5 +1,5 @@
 /**
- * PART 7 — Running it (chapters 39–43)
+ * PART 7 — Running it (chapters 38–42)
  *
  * The work that separates a project that demos from one somebody can operate:
  * changing the schema without an outage, turning a feature off without a
@@ -473,6 +473,7 @@ export async function usageFor(
 			{ type: 'h3', id: 'property', text: 'Property-based testing' },
 			{
 				type: 'code',
+				file: 'packages/core/src/invariants.spec.ts',
 				lang: 'ts',
 				code: `
 it('never leaves a crossed book during continuous trading', () => {
@@ -481,6 +482,8 @@ it('never leaves a crossed book during continuous trading', () => {
 			const { state } = run(steps);
 			const instrument = state.instruments.get(VOD)!;
 
+			// A crossed book is two participants who agree on a price and have
+			// not been matched. Outside an auction it must never happen.
 			if (instrument.phase === 'continuous') {
 				expect(isCrossed(instrument.book)).toBe(false);
 			}
@@ -514,6 +517,13 @@ it('never leaves a crossed book during continuous trading', () => {
  * Those are the only failures that matter in production, and they are the only
  * ones a developer never sees, because a developer's machine does not lose
  * power and does not run two copies of the engine by accident during a deploy.
+ *
+ * ## The invariant every test here checks
+ *
+ * However the venue is interrupted, **replaying the log produces the same
+ * state**. Not similar; identical, down to a fingerprint. That is the property
+ * event sourcing is *for*, and it is worth nothing unless something proves it
+ * survives contact with a crash.
  */`
 			},
 			{
@@ -521,19 +531,14 @@ it('never leaves a crossed book during continuous trading', () => {
 				text: 'One of these found a genuinely dangerous bug. The test handed the engine a **corrupt snapshot** — a truncated JSON body — and asserted it still recovered. It did not: `deserialise` threw `body.instruments is not iterable`, the error escaped `recover()`, and the engine refused to start. A file that exists purely as an *optimisation* had become a single point of failure for the whole venue.'
 			},
 			{
+				type: 'p',
+				text: 'The fix, which chapter 15 walks through with its full comment, treats a snapshot that will not parse as **absent**: recovery replays from genesis instead, more slowly and correctly. It logs as it does so, because a venue that quietly replays from genesis on every start is one whose snapshots have been broken for months.'
+			},
+			{
 				type: 'code',
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
-/*
- * A snapshot that will not parse is treated as **absent**, not as an error.
- *
- * …
- *
- * It is logged rather than swallowed silently: a venue that quietly replays
- * from genesis every start is one whose snapshots have been broken for
- * months and whose boot time nobody has questioned.
- */
 try {
 	return {
 		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
@@ -569,7 +574,16 @@ try {
  *   are the same ones the small suites make — the books balance, no order is
  *   overfilled — and they are the point. The timing is context.
  *
- * …
+ * ## Why the numbers here are deliberately modest
+ *
+ * These run on whatever machine CI happens to give us, against SQLite on a
+ * temp filesystem. Ten thousand orders is enough to shake out an ordering bug
+ * and short enough that nobody skips the suite. A throughput assertion tuned to
+ * a fast laptop is a test that fails on a busy CI box for no reason, which is
+ * how a suite gets an \`it.skip\` nobody removes.
+ *
+ * So the assertions are about **correctness and completeness**, and the timings
+ * are printed rather than asserted.
  */`
 			},
 			{
@@ -602,8 +616,11 @@ BEGIN / COMMIT           35 descriptors`
 				lang: 'ts',
 				code: `
 export type Executor = Pick<Transaction, 'execute'>;
+
+// …
 const chains = new WeakMap<Client, Promise<unknown>>();
 
+// …
 export async function withTransaction<T>(
 	client: Client,
 	work: (tx: Executor) => Promise<T>

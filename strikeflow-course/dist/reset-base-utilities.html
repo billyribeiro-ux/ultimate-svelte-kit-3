@@ -43,11 +43,29 @@
 		<span class="code__file">src/lib/styles/reset.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">*, *::before, *::after { box-sizing: border-box; }
-* { margin: 0; }
+	<pre><code class="lang-css">/* `border-box` means &quot;when I say width: 300px, I mean 300px&quot; — padding and border
+   are included rather than added on top. This is what everyone assumes the box model
+   does, and it isn't the default only for historical reasons. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/* Browsers apply margins to headings, paragraphs and lists that vary between
+   engines. We zero everything and re-apply margin intentionally in base.css. */
+* {
+	margin: 0;
+}
 
 html {
+	/* … */
+	/* Sticky headers overlap anchor targets. This tells the browser to stop
+	   scrolling a header's height early so the heading isn't hidden underneath.
+	   Unlike smooth scrolling, this is pure layout and has no timing behaviour. */
 	scroll-padding-top: calc(var(--header-height) + var(--space-4));
+
+	/* Prevent iOS Safari from silently inflating text in landscape. */
 	-webkit-text-size-adjust: 100%;
 }
 
@@ -59,12 +77,23 @@ body {
 	text-rendering: optimizeLegibility;
 }
 
-img, picture, video, canvas, svg {
+/* Media elements are inline by default, which leaves a mysterious ~4px gap under
+   them (it's the space for a text descender). `block` removes it. `max-width`
+   stops any asset from forcing a horizontal scrollbar on a phone. */
+img,
+picture,
+video,
+canvas,
+svg {
 	display: block;
 	max-width: 100%;
 }
 
-input, button, textarea, select {
+/* Form controls don't inherit typography from the page. They should. */
+input,
+button,
+textarea,
+select {
 	font: inherit;
 	color: inherit;
 	letter-spacing: inherit;
@@ -75,26 +104,47 @@ button {
 	border: none;
 	padding: 0;
 	cursor: pointer;
+	/* iOS renders buttons with its own rounded chrome unless told otherwise. */
 	-webkit-appearance: none;
 	appearance: none;
 }
 
-p, h1, h2, h3, h4, h5, h6, li, dd, dt { overflow-wrap: break-word; }
+/* Long unbroken strings (a URL, a stray hash) can blow out a mobile layout.
+   `overflow-wrap` lets the browser break them as a last resort. */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+dd,
+dt {
+	overflow-wrap: break-word;
+}
 
-ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
+ul[role='list'],
+ol[role='list'] {
+	list-style: none;
+	padding: 0;
+}
 
+/* Anything focused via keyboard gets our one ring. `:focus-visible` (rather than
+   `:focus`) means mouse users don't see a ring on click, but keyboard users always do. */
 :focus-visible {
 	outline: none;
 	box-shadow: var(--focus-ring);
 	border-radius: var(--radius-sm);
 }
 
+/* Root stacking context for the app shell. */
 #svelte-app {
 	isolation: isolate;
 }</code></pre>
 </figure>
 <ul><li><code>box-sizing: border-box</code> — when you say <code>width: 300px</code>, you mean 300px. Padding and border included.</li><li><code>display: block</code> on media — kills the mysterious 4px gap under images (it is space for a text descender).</li><li><code>font: inherit</code> on form controls — they do not inherit typography by default. They should.</li><li><code>:focus-visible</code> rather than <code>:focus</code> — mouse users get no ring on click, keyboard users always do.</li></ul>
-<aside class="callout callout--warn"><p><strong>Do not add <code>scroll-behavior: smooth</code> to <code>html</code>.</strong> It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 36 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: <code>element.scrollIntoView({ behavior: 'smooth' })</code>.</p></aside>
+<aside class="callout callout--warn"><p><strong>Do not add <code>scroll-behavior: smooth</code> to <code>html</code>.</strong> It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 36 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: <code>element.scrollIntoView({ behavior: 'smooth' })</code>. (The <code>/* … */</code> inside the <code>html</code> rule above stands for the long comment in the real file that records exactly this, so the next person does not add it back.)</p></aside>
 <p>Finally, respect the operating system &quot;reduce motion&quot; setting. For people with vestibular disorders, large transitions can cause genuine nausea:</p>
 
 <figure class="code">
@@ -103,7 +153,9 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">@media (prefers-reduced-motion: reduce) {
-	*, *::before, *::after {
+	*,
+	*::before,
+	*::after {
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
@@ -132,13 +184,21 @@ body {
 	font-synthesis-weight: none;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* ---------------------------------------------------------------
+ * HEADINGS — Montserrat, tight and confident.
+ * --------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	font-family: var(--font-heading);
 	color: var(--text-primary);
 	font-weight: var(--weight-bold);
 	line-height: var(--lh-snug);
 	letter-spacing: var(--tracking-snug);
-	text-wrap: balance;
+	text-wrap: balance; /* stops a heading ending in one orphaned word */
 }
 
 h1 {
@@ -155,13 +215,34 @@ h2 {
 	letter-spacing: var(--tracking-tight);
 }
 
-h3 { font-size: var(--fs-xl); }
+h3 {
+	font-size: var(--fs-xl);
+}
 
-p { text-wrap: pretty; }
+h4 {
+	font-size: var(--fs-lg);
+	font-weight: var(--weight-semibold);
+}
+
+h5,
+h6 {
+	font-size: var(--fs-md);
+	font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------------
+ * PROSE
+ * --------------------------------------------------------------- */
+p {
+	text-wrap: pretty; /* avoids single-word last lines */
+}
 
 /* `ch` units measure character width, so this caps a paragraph at roughly
    70 characters — the range typographers consider most readable. */
-p, li { max-width: 70ch; }</code></pre>
+p,
+li {
+	max-width: 70ch;
+}</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -177,28 +258,76 @@ p, li { max-width: 70ch; }</code></pre>
 		<span class="code__file">src/lib/styles/utilities.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">.container {
+	<pre><code class="lang-css">/* ---------------------------------------------------------------
+ * CONTAINER — horizontal centring with responsive gutters.
+ * --------------------------------------------------------------- */
+.container {
 	width: 100%;
 	max-width: var(--container-max);
 	margin-inline: auto;
 	padding-inline: var(--gutter);
 }
 
-.section { padding-block: var(--section-y); }
+.container--narrow {
+	max-width: var(--container-narrow);
+}
 
-/* `&gt; * + *` reads as &quot;every child that follows another child&quot;. It adds space
-   *between* items without adding a trailing margin after the last one, which is
-   what you actually want and what `margin-bottom` on every child gets wrong. */
-.stack &gt; * + * { margin-block-start: var(--stack-space, var(--space-4)); }
+.container--wide {
+	max-width: var(--container-wide);
+}
 
-/* `auto-fit` + `minmax()` lets the grid decide how many columns fit. On a phone
-   … */
+/* ---------------------------------------------------------------
+ * SECTION — consistent vertical rhythm between page bands.
+ * --------------------------------------------------------------- */
+.section {
+	padding-block: var(--section-y);
+}
+
+.section--tight {
+	padding-block: calc(var(--section-y) * 0.6);
+}
+
+/* ---------------------------------------------------------------
+ * STACK — vertical spacing via the owl selector.
+ *
+ * `&gt; * + *` reads as &quot;every child that follows another child&quot;. It adds space
+ * *between* items without adding a trailing margin after the last one, which is
+ * what you actually want and what `margin-bottom` on every child gets wrong.
+ * --------------------------------------------------------------- */
+.stack &gt; * + * {
+	margin-block-start: var(--stack-space, var(--space-4));
+}
+
+.stack-sm {
+	--stack-space: var(--space-2);
+}
+.stack-md {
+	--stack-space: var(--space-6);
+}
+.stack-lg {
+	--stack-space: var(--space-10);
+}
+
+/* ---------------------------------------------------------------
+ * AUTO GRID — responsive columns with no media queries at all.
+ *
+ * `auto-fit` + `minmax()` lets the grid decide how many columns fit. On a phone
+ * that's one; on a desktop it's however many clear the minimum width. This is
+ * more robust than breakpoints because it responds to the *container*, not the
+ * viewport — so it still works if you drop the grid into a narrow sidebar.
+ *
+ * `min()` guards the one failure case: if --grid-min is wider than the screen,
+ * plain minmax() would overflow. min(100%, ...) clamps it.
+ * --------------------------------------------------------------- */
 .auto-grid {
 	display: grid;
 	gap: var(--grid-gap, var(--space-6));
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min, 17rem)), 1fr));
 }
 
+/* ---------------------------------------------------------------
+ * CLUSTER — horizontal group that wraps gracefully.
+ * --------------------------------------------------------------- */
 .cluster {
 	display: flex;
 	flex-wrap: wrap;
@@ -218,8 +347,18 @@ p, li { max-width: 70ch; }</code></pre>
 		<span class="code__file">src/lib/styles/utilities.css (continued)</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* Do NOT use `display: none` or `visibility: hidden` for this — both remove the
-   … */
+	<pre><code class="lang-css">/* ---------------------------------------------------------------
+ * ACCESSIBILITY HELPERS
+ * --------------------------------------------------------------- */
+
+/*
+ * Visually hidden, but still read by screen readers.
+ *
+ * Do NOT use `display: none` or `visibility: hidden` for this — both remove the
+ * element from the accessibility tree, which defeats the entire purpose. This
+ * clip-based recipe is the accepted way to hide something visually while keeping
+ * it announced.
+ */
 .visually-hidden:not(:focus):not(:active) {
 	position: absolute;
 	width: 1px;
@@ -232,8 +371,13 @@ p, li { max-width: 70ch; }</code></pre>
 	border: 0;
 }
 
-/* Skip link — the first focusable thing on the page.
-   … */
+/*
+ * Skip link — the first focusable thing on the page.
+ *
+ * A keyboard user landing on a page shouldn't have to tab through the whole nav
+ * on every single page to reach the content. This is off-screen until focused,
+ * then flies in. WCAG 2.4.1.
+ */
 .skip-link {
 	position: absolute;
 	top: var(--space-2);
@@ -250,7 +394,9 @@ p, li { max-width: 70ch; }</code></pre>
 	transition: transform var(--dur-base) var(--ease-out);
 }
 
-.skip-link:focus { transform: translateY(0); }</code></pre>
+.skip-link:focus {
+	transform: translateY(0);
+}</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>Never use <code>display: none</code> or <code>visibility: hidden</code> to hide something you still want announced. Both remove the element from the accessibility tree entirely, which defeats the whole purpose. The clip-based recipe above is the accepted way.</p></aside>
 <h3 id="entry">One stylesheet to import them all</h3>

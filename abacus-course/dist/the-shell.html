@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The shell: layouts, tokens, toasts — Building Abacus</title>
-<meta name="description" content="A root layout that is almost empty so the embed can reset to it, an app layout with the header and the “new version” banner, design tokens that are light first with `light-dark()`, forced colours, print, and toasts mounted imperatively.">
+<meta name="description" content="A root layout that is almost empty so the embed can reset to it, an app layout with the header and the “new version” banner, design tokens that are light first with light-dark(), forced colours, print, and toasts mounted imperatively.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -92,7 +92,7 @@
 	});
 &lt;/script&gt;</code></pre>
 </figure>
-<p>The root layout is deliberately almost empty, so that a page which must have *no* chrome — the embed — can reset to it with <code>+page@.svelte</code>. What it does own is the view transition: <code>onNavigate</code> returns a promise SvelteKit awaits, <code>startViewTransition</code> gives the browser both states to cross-fade, and a fallback timer makes sure a transition can never hold a navigation hostage.</p>
+<p>The root layout is deliberately almost empty, so that a page which must have <em>no</em> chrome — the embed — can reset to it with <code>+page@.svelte</code>. What it does own is the view transition: <code>onNavigate</code> returns a promise SvelteKit awaits, <code>startViewTransition</code> gives the browser both states to cross-fade, and a fallback timer makes sure a transition can never hold a navigation hostage.</p>
 
 <figure class="code">
 	<figcaption>
@@ -233,17 +233,17 @@
 	{@render children()}
 &lt;/main&gt;</code></pre>
 </figure>
-<p>Every <code>href</code> in the app goes through <code>resolve()</code> from <code>$app/paths</code>, with a *route id* — <code>/(app)/sheets</code>, the folder under <code>src/routes</code> with its layout group in it — rather than a string. A route id is checked against the routes that exist, so renaming a folder is a type error in every link to it rather than a 404 a reader finds; a dynamic segment takes its params as a second argument, by name. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> holds every link and <code>goto()</code> to it, and the rule stays on, because a link is the one place a typo ships silently. (SvelteKit 3 also accepts a plain pathname, now without its leading slash — <code>resolve('sheets')</code> — which is why only route ids appear here.)</p>
+<p>Every <code>href</code> in the app goes through <code>resolve()</code> from <code>$app/paths</code>, with a <em>route id</em> — <code>/(app)/sheets</code>, the folder under <code>src/routes</code> with its layout group in it — rather than a string. A route id is checked against the routes that exist, so renaming a folder is a type error in every link to it rather than a 404 a reader finds; a dynamic segment takes its params as a second argument, by name. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> holds every link and <code>goto()</code> to it, and the rule stays on, because a link is the one place a typo ships silently. (SvelteKit 3 also accepts a plain pathname, now without its leading slash — <code>resolve('sheets')</code> — which is why only route ids appear here.)</p>
 
 <aside class="callout callout--why">
 	<h4>Why the header asks whoAmI instead of reading layout data</h4>
-	<p>The person’s name could be layout <code>data</code>. It is a remote query instead, awaited in markup inside a boundary, because the passkey commands and the sign-out form call <code>whoAmI().refresh()</code> — and a query awaited in a component updates in place, in the same response, while layout data would need a page invalidation. <code>$state.eager(pathname)</code> on the current-link class is the one place the *incoming* pathname is wanted before the new page’s awaits settle.</p>
+	<p>The person’s name could be layout <code>data</code>. It is a remote query instead, awaited in markup inside a boundary, because the passkey commands and the sign-out form call <code>whoAmI().refresh()</code> — and a query awaited in a component updates in place, in the same response, while layout data would need a page invalidation. <code>$state.eager(pathname)</code> on the current-link class is the one place the <em>incoming</em> pathname is wanted before the new page’s awaits settle.</p>
 </aside>
 <h3 id="tokens">Tokens</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-60</span></span>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-62</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -305,7 +305,9 @@
 
 	/* ---- Status ------------------------------------------------------ */
 	--ok: light-dark(#1f8a5b, #5fd39a);
-	--warn: light-dark(#b8860b, #f0b90b);</code></pre>
+	--warn: light-dark(#b8860b, #f0b90b);
+	--danger: light-dark(#c62f2f, #ff7b7b);
+	--danger-soft: light-dark(#fde8e8, #3d1d1d);</code></pre>
 </figure>
 <p>A spreadsheet is a sheet of paper, so the light theme is the design and the dark theme is a translation — the opposite of project 6, for the same reason: design the one people will live in. Every colour is a <code>light-dark()</code> pair and the browser picks by system setting. Windows High Contrast replaces every colour with a system one, so the rules that matter are restated in <code>forced-colors</code> with keywords that survive.</p>
 

@@ -215,13 +215,17 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');`
 }
 
 /* … */
-
 /* Hero parts are choreographed by \`motion/hero.ts\`, which sets its own start
    positions. They just need to be invisible until it does. */
 .motion-pending [data-hero] {
 	opacity: 0;
 }
 
+/*
+ * Belt and braces. If the media query somehow evaluates differently to the inline
+ * script's \`matchMedia\` check, this guarantees a reduced-motion user is never
+ * looking at a hidden element.
+ */
 @media (prefers-reduced-motion: reduce) {
 	.motion-pending [data-reveal],
 	.motion-pending [data-hero] {
@@ -252,7 +256,7 @@ timeline.to(lede,    { opacity: 1 }, '-=0.85');`
 	opacity: 0,
 	...offset,
 	...(scale ? { scale: 0.97 } : {}),
-	/* … */
+	// …
 	force3D: true
 });
 
@@ -290,20 +294,22 @@ gsap.to(targets, {
 				lang: 'ts',
 				code: `export function loadMotion(): Promise<MotionApi | null> {
 	if (!browser || prefersReducedMotion()) {
+		// …
 		releaseMotionGate();
-		return Promise.resolve(null);   // never even imports GSAP
+		return Promise.resolve(null);
 	}
 
 	motionPromise ??= (async () => {
-		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] =
-			await Promise.all([
-				import('gsap'),
-				import('gsap/ScrollTrigger'),
-				import('gsap/SplitText'),
-				import('gsap/CustomEase')
-			]);
+		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] = await Promise.all([
+			import('gsap'),
+			import('gsap/ScrollTrigger'),
+			import('gsap/SplitText'),
+			import('gsap/CustomEase')
+		]);
+
 		gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
-		// ...
+		// …
+		return { gsap, ScrollTrigger, SplitText, duration, stagger, travel, trigger };
 	})();
 
 	return motionPromise;
@@ -316,7 +322,7 @@ gsap.to(targets, {
 			},
 			{
 				type: 'note',
-				text: 'Returning `null` rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget.'
+				text: 'Returning `null` rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The first `// …` in the listing is a comment on that `releaseMotionGate()` call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The second stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.'
 			},
 			{ type: 'h3', id: 'attachment', text: 'The reveal, as a Svelte attachment' },
 			{
@@ -326,9 +332,12 @@ gsap.to(targets, {
 				code: `export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 	return (node) => {
 		let cancelled = false;
+		/** GSAP's Context: cleans up every tween and ScrollTrigger created inside it. */
 		let context: { revert: () => void } | undefined;
 
 		void loadMotion().then((motion) => {
+			// \`null\` means reduced motion or SSR. The CSS gate has already been
+			// released by the inline script in that case, so content is visible.
 			if (!motion || cancelled) return;
 
 			const { gsap } = motion;
@@ -336,10 +345,12 @@ gsap.to(targets, {
 			// …
 
 			context = gsap.context(() => {
+				// …
 				gsap.set(targets, {
 					opacity: 0,
 					...offset,
 					...(scale ? { scale: 0.97 } : {}),
+					// …
 					force3D: true
 				});
 
@@ -353,6 +364,7 @@ gsap.to(targets, {
 					duration: dur,
 					delay,
 					stagger: items ? staggerAmount : 0,
+					// …
 					clearProps: 'transform',
 					scrollTrigger: {
 						trigger: node,
@@ -365,6 +377,7 @@ gsap.to(targets, {
 
 		return () => {
 			cancelled = true;
+			// …
 			context?.revert();
 		};
 	};
@@ -373,6 +386,7 @@ gsap.to(targets, {
 			{
 				type: 'ul',
 				items: [
+					'The first `// …` stands for reading the options and working out the start offset from `from` and `distance`; the others are the comments the real file carries on the points below.',
 					'`cancelled` guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.',
 					'`gsap.context()` scopes everything created inside it. One `revert()` kills every tween and ScrollTrigger — no manual bookkeeping.',
 					'`clearProps: \'transform\'` strips the inline transform when the tween finishes. A leftover `translate3d(0,0,0)` creates a containing block that quietly breaks any `position: fixed` descendant.',
@@ -420,9 +434,9 @@ gsap.to(targets, {
 	type: by,
 	mask: by,
 	linesClass: 'split-line',
-	/* … */
+	// …
 	autoSplit: true,
-	/* … */
+	// …
 	aria: 'auto'
 });
 
@@ -438,7 +452,7 @@ gsap.to(targets, {
 	duration: dur,
 	delay,
 	stagger: staggerAmount,
-	/* … */
+	// …
 });`
 			},
 			{
@@ -581,27 +595,32 @@ if (actions?.children.length) {
 				code: `const hasFinePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
 if (!hasFinePointer) return;
 
+const { gsap } = motion;
+const { strength = 7, radius = 28 } = options;
+// …
 const moveX = gsap.quickTo(node, 'x', { duration: 0.45, ease: 'power3.out' });
 const moveY = gsap.quickTo(node, 'y', { duration: 0.45, ease: 'power3.out' });
 
 function handleMove(event: PointerEvent) {
 	const rect = node.getBoundingClientRect();
 
-	// …
+	// Cursor offset from the element's centre.
 	const offsetX = event.clientX - (rect.left + rect.width / 2);
 	const offsetY = event.clientY - (rect.top + rect.height / 2);
 
-	// …
+	// Normalise to roughly -1..1 across the element plus its radius, so the
+	// pull is proportional to how close the cursor is rather than absolute.
 	const normalX = offsetX / (rect.width / 2 + radius);
 	const normalY = offsetY / (rect.height / 2 + radius);
 
-	// …
+	// Clamp, so a fast cursor sweeping past cannot fling the button.
 	moveX(gsap.utils.clamp(-1, 1, normalX) * strength);
 	moveY(gsap.utils.clamp(-1, 1, normalY) * strength);
 }
 
 function handleLeave() {
-	// …
+	// A gentle overshoot on the way back reads as elasticity. This is the
+	// one place in the project where a bounce is warranted.
 	gsap.to(node, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.45)' });
 }`
 			},
@@ -636,7 +655,7 @@ function handleLeave() {
 				type: 'code',
 				file: 'src/lib/motion/counter.ts',
 				lang: 'ts',
-				code: `/* … */
+				code: `// …
 const accessible = document.createElement('span');
 accessible.className = 'visually-hidden';
 accessible.textContent = raw;
@@ -691,6 +710,15 @@ node.append(accessible, visual);`
 				file: 'src/routes/+layout.svelte',
 				lang: 'ts',
 				code: `onNavigate((navigation) => {
+	// Kit 3 runs the navigation hooks for shallow navigations too — a
+	// \`goto(url, { shallow: true })\` that only changes \`page.state\`. Nothing on
+	// screen is replaced by one, so a full-page cross-fade would be a flash for
+	// no reason. Same guard as the header drawer; the site has no shallow routing
+	// today, so this is insurance rather than a fix.
+	if (navigation.shallow) return;
+
+	// Not supported in every browser, and correctly skipped for reduced motion.
+	// Returning nothing lets SvelteKit navigate normally.
 	if (!document.startViewTransition || prefersReducedMotion()) return;
 
 	return new Promise((resolve) => {

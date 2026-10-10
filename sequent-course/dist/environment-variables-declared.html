@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Environment variables, declared — Building Sequent</title>
-<meta name="description" content="src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.">
+<meta name="description" content="src/env.ts replaces Kit 2's four $env modules, and makes leaking a secret into the browser a build error.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,10 +33,10 @@
 		<article>
 			<p class="eyebrow">Chapter 23</p>
 			<h1>Environment variables, declared</h1>
-			<p class="lede">src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.</p>
+			<p class="lede">src/env.ts replaces Kit 2's four $env modules, and makes leaking a secret into the browser a build error.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Declare every variable the app reads, with a valibot schema on each.</p></aside>
 			<p>Kit 2 had four magic modules: <code>$env/static/private</code>, <code>$env/static/public</code>, <code>$env/dynamic/private</code>, <code>$env/dynamic/public</code>. They worked, but they had two problems. Nothing told you which variables an app actually needed until it crashed, and the only thing standing between a secret and the browser bundle was remembering which of four import paths you were typing.</p>
-<p>Kit 3 replaces all four with one file you write.</p>
+<p>Kit 3 deprecates all four — they are due to be removed in Kit 4 — in favour of one file you write.</p>
 
 <figure class="code">
 	<figcaption>
@@ -67,7 +67,7 @@ export const variables = defineEnvVars({
 </figure>
 <p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;returns undefined&quot; — the import does not typecheck. That single change moves an entire class of production incident to the moment you type the wrong name.</p>
 <h3 id="the-three-flags">The three things you declare</h3>
-<ul><li><strong><code>schema</code></strong> — a valibot schema. It runs at startup, so <code>DATABASE_URL=&quot;&quot;</code> fails immediately with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.</li><li><strong><code>static: true</code></strong> — inlined at build time rather than read from <code>process.env</code> at request time. Faster, and it means the value cannot change under a running process. Use it for things that genuinely do not vary between restarts.</li></ul>
+<ul><li><strong><code>schema</code></strong> — a valibot schema. It runs when the app starts, and during the build, so <code>DATABASE_URL=&quot;&quot;</code> fails immediately with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.</li><li><strong><code>static: true</code></strong> — inlined into the bundle at build time, rather than read from the environment when the app starts. That allows dead-code elimination, and it means changing the value needs a <strong>rebuild</strong>, not a restart. Use it for things that are fixed for the life of a build — <code>PUBLIC_ORIGIN</code> is one, since <code>paths.origin</code> is baked in at build time anyway.</li></ul>
 <p>Note what the <code>PUBLIC_ORIGIN</code> schema does beyond checking: <code>v.transform</code> strips trailing slashes. <code>https://sequent.exchange/</code> and <code>https://sequent.exchange</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalising it once here is better than remembering to normalise it at every use.</p>
 
 <aside class="callout callout--why">

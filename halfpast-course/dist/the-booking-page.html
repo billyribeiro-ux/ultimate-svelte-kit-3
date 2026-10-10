@@ -87,11 +87,17 @@ function pickService(slug: string | null) {
 	<pre><code class="lang-svelte">{#if selectedStart !== null}
 	&lt;section class=&quot;step details&quot; {@attach reveal({ y: 14 })}&gt;
 		&lt;h3&gt;Your details&lt;/h3&gt;
-		&lt;!-- … name, email, phone, note … --&gt;
+
+		&lt;!-- … --&gt;
+
+		&lt;Button type=&quot;submit&quot; size=&quot;lg&quot; full loading={book.pending &gt; 0}&gt;Book this time&lt;/Button&gt;
+
+		&lt;!-- … --&gt;
 	&lt;/section&gt;
 {/if}</code></pre>
 </figure>
-<p>A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. It appears when a time is chosen and animates in, which also tells the customer *something happened* without a message saying so.</p>
+<p>Between the heading and the button sit a one-line summary of the chosen time, the error alert from the end of this chapter, and the four fields: name, email, phone and a note. The submit button is inside the same <code>{#if}</code>, so there is nothing to press until there is something to book.</p>
+<p>A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. It appears when a time is chosen and animates in, which also tells the customer <em>something happened</em> without a message saying so.</p>
 <h3 id="only-one">Not asking questions with one answer</h3>
 
 <figure class="code">
@@ -113,12 +119,24 @@ function pickService(slug: string | null) {
 			&gt;
 				Anyone
 			&lt;/button&gt;
-			&lt;!-- … one button per person who offers this service … --&gt;
+			{#each shop.team.filter( (person) =&gt; service.staffIds.includes(person.id) ) as person (person.id)}
+				&lt;button
+					type=&quot;button&quot;
+					role=&quot;radio&quot;
+					aria-checked={staffId === person.id}
+					class=&quot;who-option&quot;
+					class:selected={staffId === person.id}
+					onclick={() =&gt; (staffId = person.id)}
+				&gt;
+					{person.displayName}
+				&lt;/button&gt;
+			{/each}
 		&lt;/div&gt;
 	&lt;/section&gt;
 {/if}</code></pre>
 </figure>
 <p>If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.</p>
+<p>When there is a question, it is an &quot;Anyone&quot; button followed by one button per person who offers this service. Each is a <code>role=&quot;radio&quot;</code> button whose <code>aria-checked</code> says whether it is the current choice, inside a <code>role=&quot;radiogroup&quot;</code> with a label, so a screen reader announces one choice between several people rather than a row of unrelated buttons. The odd spacing inside <code>filter( … )</code> is Prettier's, not a typo.</p>
 <h3 id="zones">Two clocks, honestly labelled</h3>
 
 <figure class="code">
@@ -153,7 +171,7 @@ function pickService(slug: string | null) {
 	&lt;/Alert&gt;
 {/if}</code></pre>
 </figure>
-<p>For a lost race the message comes from the server: &quot;That time was just taken.&quot; — or, when the race is lost at the claim itself, &quot;Sorry — that time was booked moments ago.&quot; And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.</p>
+<p>For a lost race the message comes from the server: &quot;That time was just taken.&quot; — or, when the race is lost at the claim itself, &quot;Sorry — that time was booked moments ago.&quot; And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened <em>and</em> seeing the world agree is what makes an error feel like an event rather than a fault.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

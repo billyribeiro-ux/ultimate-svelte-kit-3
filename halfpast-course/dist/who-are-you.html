@@ -40,7 +40,7 @@
 
 <aside class="callout callout--why">
 	<h4>Why customers get no account</h4>
-	<p>Asking somebody to invent a password to book a haircut is how you lose the booking. It is also a liability: you now store credentials for people who will never return, and you owe them a password-reset flow, a breach notification plan, and a deletion process. The booking link is simpler *and* safer.</p>
+	<p>Asking somebody to invent a password to book a haircut is how you lose the booking. It is also a liability: you now store credentials for people who will never return, and you owe them a password-reset flow, a breach notification plan, and a deletion process. The booking link is simpler <em>and</em> safer.</p>
 </aside>
 <h3 id="better-auth">Better Auth, in minimal form</h3>
 
@@ -142,6 +142,8 @@ export const handle: Handle = sequence(handleAuth, handleHeaders);</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">import type { User, Session } from 'better-auth';
 
+// …
+
 declare global {
 	namespace App {
 		interface Locals {
@@ -151,11 +153,19 @@ declare global {
 		}
 
 		// …
+
+		interface Error {
+			message: string;
+			id?: string;
+		}
+
+		// …
 	}
 }
 
 export {};</code></pre>
 </figure>
+<p><code>Locals</code> is what the hook fills in, so every server file that reads <code>event.locals.user</code> is checked against it, and has to cope with it being absent. <code>Error</code> is the shape of what <code>+error.svelte</code> receives: <code>message</code> is SvelteKit's and is always there, alongside a <code>status</code> it adds itself, and <code>id</code> is ours, for the reason the next section gives.</p>
 <h3 id="errors">Errors that say what kind they are</h3>
 <p>SvelteKit 3 changed the shape of <code>handleError</code>. It now receives a <code>kind</code>, and that is the whole value of the hook — it says where the error came from:</p>
 <ul><li><strong><code>app</code></strong> — we threw it ourselves with <code>error(404, …)</code>. Intentional.</li><li><strong><code>framework</code></strong> — SvelteKit generated it, e.g. a 404. Expected.</li><li><strong><code>validation</code></strong> — a remote function was called with arguments that failed its schema. Usually a stale client, occasionally somebody poking.</li><li><strong><code>unknown</code></strong> — something genuinely broke. This is the only one that is a bug.</li></ul>
@@ -199,15 +209,27 @@ export {};</code></pre>
 	v.regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, 'That link does not look right')
 );
 
+// …
+
 export const getManagedBooking = query(tokenSchema, async (token): Promise&lt;ManagedBooking&gt; =&gt; {
 	const found = await loadBookingByToken(token);
 	if (!found) error(404, 'We could not find that booking.');
 
-	// … noticeMs, then the flat object below
-	return { /* … only the fields this page needs … */ };
+	const noticeMs = found.business.cancellationNoticeHours * 3_600_000;
+
+	return {
+		reference: found.reference,
+		status: found.status,
+		businessName: found.business.name,
+		// …
+		customerName: found.customer.name,
+		customerNote: found.customerNote,
+		cancellationNoticeHours: found.business.cancellationNoticeHours,
+		canCancel: found.status === 'confirmed' &amp;&amp; found.startsAt.getTime() - Date.now() &gt;= noticeMs
+	};
 });</code></pre>
 </figure>
-<ul><li><strong>Shape first, database second.</strong> The schema rejects a malformed token before it becomes a query — so &quot;badly formed&quot; and &quot;not found&quot; cannot be told apart by timing.</li><li><strong>130 bits of CSPRNG output</strong>, looked up by a unique index. Not guessable, and no prefix matching to leak length through timing either.</li><li><strong>Only the fields this page needs.</strong> The query returns the whole booking row with four relations joined; the remote function hands back a flat object with no ids, no <code>manageToken</code>, and nothing about other customers.</li><li><strong>404, not 403.</strong> &quot;That token exists but is not yours&quot; is not a sentence we ever want to say.</li><li><strong><code>noindex</code> on the page.</strong> The URL contains a credential; a search engine indexing it would be a breach delivered by Google.</li></ul>
+<ul><li><strong>Shape first, database second.</strong> The schema rejects a malformed token before it becomes a query — so &quot;badly formed&quot; and &quot;not found&quot; cannot be told apart by timing.</li><li><strong>130 bits of CSPRNG output</strong>, looked up by a unique index. Not guessable, and no prefix matching to leak length through timing either.</li><li><strong>Only the fields this page needs.</strong> The query returns the whole booking row with four relations joined; the remote function hands back a flat object with no ids, no <code>manageToken</code>, and nothing about other customers.</li><li><strong><code>canCancel</code> is decided on the server.</strong> The cancellation notice is converted to milliseconds once, as <code>noticeMs</code>, and the page is told yes or no rather than being trusted to do the arithmetic with its own clock.</li><li><strong>404, not 403.</strong> &quot;That token exists but is not yours&quot; is not a sentence we ever want to say.</li><li><strong><code>noindex</code> on the page.</strong> The URL contains a credential; a search engine indexing it would be a breach delivered by Google.</li></ul>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

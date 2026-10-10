@@ -11,6 +11,8 @@
  *   - It works with JavaScript off
  *
  * Run:  node strikeflow-course/build.js
+ * Then: node strikeflow-course/verify.js — checks every quoted block in the
+ *       built pages against ../strikeflow-site (see that file's header).
  */
 
 import { mkdir, writeFile, rm, cp } from 'node:fs/promises';

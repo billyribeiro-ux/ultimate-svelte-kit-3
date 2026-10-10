@@ -17,7 +17,7 @@ export const part4 = [
 		title: 'The schema, and the environment',
 		summary:
 			'Four tables in Drizzle, a pattern as one JSON column, relations for the query builder, one libSQL client with WAL, and every environment variable declared once with a valibot schema.',
-		goal: 'Read a small schema and know why it is small; understand what `relations()` is for; and see how SvelteKit 3 replaced `$env/*` with a typed, validated declaration.',
+		goal: 'Read a small schema and know why it is small; understand what `relations()` is for; and see how SvelteKit 3 replaces the deprecated `$env/*` modules with a typed, validated declaration in one file.',
 		blocks: [
 			{
 				type: 'p',
@@ -46,7 +46,7 @@ export const part4 = [
 			{ type: 'h3', id: 'the-environment', text: 'The environment, declared' },
 			{
 				type: 'p',
-				text: 'SvelteKit 3 replaced the `$env/static/*` and `$env/dynamic/*` modules with one file: `src/env.ts` calls `defineEnvVars` with every variable the app reads, each with a description, a schema and — if the browser may see it — `public: true`. A variable not declared here cannot be imported. `DATABASE_URL` comes in through `$app/env/private`; `PUBLIC_ORIGIN` through `$app/env/public`.'
+				text: 'In SvelteKit 2 environment variables came from the `$env/static/*` and `$env/dynamic/*` modules. SvelteKit 3 deprecates them — they are removed in SvelteKit 4 — in favour of one file: `src/env.ts` calls `defineEnvVars` with every variable the app reads, each with a description, a schema and — if the browser may see it — `public: true`. A variable not declared here cannot be imported. `DATABASE_URL` comes in through `$app/env/private`; `PUBLIC_ORIGIN` through `$app/env/public`.'
 			},
 			code('src/env.ts', 23, 40),
 			code('src/env.ts', 47, 65),
@@ -181,7 +181,7 @@ export const part4 = [
 			code('src/lib/remote/patterns.remote.ts', 81, 99),
 			{
 				type: 'p',
-				text: '`requested(getCounts, 8).refreshAll()` is the server half of an optimistic update. The browser called `recordPlay(id).updates(getCounts(id).withOverride(...))` — bump the number on screen now, and *name* the query it wants refreshed. `requested` refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number. And since 3.0 it is not optional — the check shipped in the late prereleases and is in 3.0.0, so it is new to this project since the next.25 it was written on, not since 3.0.1: a refresh the client asked for and the server did not answer fails that query on the *client*, once the response is back, with a 400 `HttpError`, “Requested update was not handled by the remote function”. The server did nothing wrong by its own lights; the browser notices that the key it asked for is missing from the answer. So every command or form that a caller drives with `.updates(…)` either refreshes what was named — `requested(…).refreshAll()` here, `getMine().refresh()` in `remove` — or says `ignore()` on purpose.'
+				text: '`requested(getCounts, 8).refreshAll()` is the server half of an optimistic update. The browser called `recordPlay(id).updates(getCounts(id).withOverride(...))` — bump the number on screen now, and *name* the query it wants refreshed. `requested` refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number. And in SvelteKit 3 it is not optional: a refresh the client asked for and the server did not answer fails that query on the *client*, once the response is back, with a 400 `HttpError`, “Requested update was not handled by the remote function”. The server did nothing wrong by its own lights; the browser notices that the key it asked for is missing from the answer. So every command or form that a caller drives with `.updates(…)` either refreshes what was named — `requested(…).refreshAll()` here, `getMine().refresh()` in `remove` — or says `ignore()` on purpose.'
 			},
 			{
 				type: 'note',
@@ -302,7 +302,7 @@ export const part4 = [
 			code('src/hooks.server.ts', 1, 31),
 			{
 				type: 'warn',
-				text: 'The hook *types* come from `@sveltejs/kit/hooks` in SvelteKit 3. Importing `Handle` from `@sveltejs/kit` still compiles — as `any` for every destructured argument — so the file keeps working and every parameter silently loses its type. It is the kind of regression that only a `noImplicitAny` error on the next edit would reveal.'
+				text: 'The hook *types* come from `@sveltejs/kit/hooks` in SvelteKit 3; `@sveltejs/kit` no longer exports `Handle` at all. The comment above is about the build: Vite strips a type-only import without checking it, so with the old import the dev server and `vite build` carry on and every destructured argument is `any`. TypeScript does notice — `svelte-check` reports `Module \'"@sveltejs/kit"\' has no exported member \'Handle\'` — which is one more reason the `check` script is the first step of `verify` (ch. 39).'
 			},
 			{ type: 'h3', id: 'identity-and-security', text: 'Identity, then security' },
 			code('src/hooks.server.ts', 33, 48),

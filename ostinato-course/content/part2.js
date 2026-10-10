@@ -22,27 +22,28 @@ export const part2 = [
 				type: 'p',
 				text: 'Every sound in Ostinato is built when it is needed, from parts the browser provides. That is a deliberate choice for a project about a framework: a synthesised kit is a few hundred readable lines, and a sample pack is two hundred megabytes nobody can read.'
 			},
-			code('src/lib/audio/voices.ts', 1, 47),
+			code('src/lib/audio/voices.ts', 1, 48),
 			{
 				type: 'p',
 				text: 'The header makes the one promise every function keeps: nothing plays *now*; everything plays *then*. Each voice takes a `time` on the context’s clock and schedules its nodes to start there. That is how Web Audio wants to be used — chapter 12 explains why — and it is also what lets the same functions render a whole pattern to a file through an `OfflineAudioContext`, which is a `BaseAudioContext` like the live one except that it runs as fast as it can.'
 			},
 
 			{ type: 'h3', id: 'noise-and-envelopes', text: 'Noise and envelopes' },
-			code('src/lib/audio/voices.ts', 50, 92),
+			code('src/lib/audio/voices.ts', 50, 84),
 			{
 				type: 'p',
 				text: 'Two helpers. The noise buffer is made once per context and kept in a `WeakMap`, because an `OfflineAudioContext` is created per export and thrown away — a plain `Map` would keep every one of them alive. The envelope is a gain that opens instantly and closes exponentially, and the `0.0001` is not a typo: exponential ramps cannot reach zero, so the target is a value quiet enough to be silence and the node is stopped just after.'
 			},
 
 			{ type: 'h3', id: 'drums', text: 'How a drum is made' },
-			code('src/lib/audio/voices.ts', 94, 112),
+			code('src/lib/audio/voices.ts', 86, 105),
 			{
 				type: 'p',
 				text: 'A kick is a sine wave whose pitch falls from about 150Hz to 40Hz in a few dozen milliseconds. The fall *is* the click at the front; the tail is the sine settling at its low pitch and fading. `tone` sets how high the pitch starts, `decay` how long the tail lasts. Every drum below is the same three questions with different answers.'
 			},
-			code('src/lib/audio/voices.ts', 114, 136),
-			code('src/lib/audio/voices.ts', 166, 195),
+			code('src/lib/audio/voices.ts', 107, 136),
+			code('src/lib/audio/voices.ts', 138, 156),
+			code('src/lib/audio/voices.ts', 158, 188),
 			{
 				type: 'why',
 				title: 'Why a clap is four bursts',
@@ -50,10 +51,11 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'synths', text: 'Bass and lead' },
-			code('src/lib/audio/voices.ts', 197, 232),
+			code('src/lib/audio/voices.ts', 190, 225),
+			code('src/lib/audio/voices.ts', 227, 260),
 			{
 				type: 'p',
-				text: 'A sawtooth through a low-pass filter whose cutoff *moves* — open with the note, closing as it decays. That moving filter is the sound of every analogue synth bass ever recorded, and `tone` is how far it opens. The lead is two square waves detuned a few cents apart, which is where its width comes from.'
+				text: 'A sawtooth through a low-pass filter whose cutoff *moves* — open with the note, closing as it decays. That moving filter is the sound of every analogue synth bass ever recorded, and `tone` is how far it opens. The lead is two square waves, one six cents flat and one six cents sharp — which is where its width comes from — through a gentler filter than the bass.'
 			},
 			{
 				type: 'checkpoint',
@@ -73,12 +75,12 @@ export const part2 = [
 			'The function both players share: given a pattern, a step index and a time, schedule every hit. Sharing it is what makes “the file sounds like the studio” a property rather than a hope.',
 		goal: 'Factor the one piece of logic two different callers need into a pure function with a narrow interface, and make an exhaustive switch fail to compile when a case is missing.',
 		blocks: [
-			code('src/lib/audio/schedule.ts', 1, 31),
+			code('src/lib/audio/schedule.ts', 1, 25),
 			{
 				type: 'p',
 				text: '`Outputs` is the whole of what the function needs from its caller: where a track’s sound goes, and the decoded file for a sample track. The live engine answers with a channel strip; the offline renderer answers with a plain gain. Neither knows about the other.'
 			},
-			code('src/lib/audio/schedule.ts', 33, 88),
+			code('src/lib/audio/schedule.ts', 27, 88),
 			{
 				type: 'why',
 				title: 'Why `satisfies never` at the bottom of the switch',
@@ -120,14 +122,14 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'setter-not-effect', text: 'A setter, not an effect' },
-			code('src/lib/audio/engine.svelte.ts', 111, 135),
+			code('src/lib/audio/engine.svelte.ts', 111, 126),
 			{
 				type: 'p',
 				text: 'The obvious way to connect `volume` to the gain node is an `$effect` that watches one and pokes the other. The setter is better: the value and its consequence change in the same place, there is nothing to synchronise, and `setTargetAtTime` gives the fader a twenty-millisecond glide so it never clicks. “Use `$effect` to sync state” is the first habit to unlearn in Svelte 5, and this is the pattern that replaces it.'
 			},
 
 			{ type: 'h3', id: 'getorinsertcomputed', text: 'getOrInsertComputed (Svelte 5.57)' },
-			code('src/lib/audio/engine.svelte.ts', 137, 165),
+			code('src/lib/audio/engine.svelte.ts', 128, 165),
 			{
 				type: 'p',
 				text: 'The old spelling was `get`, an `if`, a `new` and a `set` — and the old bug was building a second strip because two callers raced through the `if`. A track with two outputs plays at double volume, which is a good bug to never write again. `getOrInsertComputed` is exactly “look it up, and if it is not there, build it once and keep it”. `channels` is a `SvelteMap` because the mixer reads `has(track.id)` to decide whether to draw a meter, and a meter that appears on its own the first time a track sounds is nicer than one that waits for a re-render.'
@@ -166,8 +168,8 @@ export const part2 = [
 				title: 'Why the pattern is a getter',
 				text: 'The scheduler is built with `() => session.pattern`, not `session.pattern`. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading `$state` inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second.'
 			},
-			code('src/lib/audio/scheduler.svelte.ts', 81, 111),
-			code('src/lib/audio/scheduler.svelte.ts', 112, 141, { partial: true }),
+			code('src/lib/audio/scheduler.svelte.ts', 81, 109),
+			code('src/lib/audio/scheduler.svelte.ts', 111, 141, { partial: true }),
 			{
 				type: 'p',
 				text: 'The tick loop schedules steps until it is 100ms ahead; tempo is read per step, so a BPM change lands on the next sixteenth rather than the next bar. Each scheduled step is pushed onto a queue with its audio time, and a `requestAnimationFrame` loop pops the ones whose time has come and sets `step` — which *is* `$state`, so the grid highlights the right column on the frame it starts. The queue itself is a plain array: nothing renders from it, and a proxy around something touched a hundred times a second would be a hundred signal writes to notify nobody.'

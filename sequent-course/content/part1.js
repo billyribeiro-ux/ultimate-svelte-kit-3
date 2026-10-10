@@ -343,7 +343,7 @@ export interface RestingOrder {
 	readonly expiresAtClose: boolean;
 }
 
-/* … */
+// …
 
 /**
  * Every order resting at one price, in arrival order.
@@ -469,11 +469,11 @@ export function rest(book: Book, order: RestingOrder): number {
 			{ type: 'h3', id: 'matching', text: 'Matching' },
 			{
 				type: 'p',
-				text: 'The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A `MatchRequest` carries the side, the quantity, an optional `limitPrice` — absent for a market order — the sender\'s `firmId` and self-trade-prevention choice, and a `dryRun` flag the fill-or-kill check uses. Self-trade prevention is elided here; it gets its own chapter.'
+				text: 'The core loop. An aggressive order walks the opposite side, taking whatever it can, best price first. A `MatchRequest` carries the side, the quantity, an optional `limitPrice` — absent for a market order — the sender\'s `firmId` and self-trade-prevention choice, and a `dryRun` flag the fill-or-kill check uses. Each `// …` below is a cut: the doc comment on `match`, the self-trade-prevention bookkeeping and the check itself (they get their own chapter), and the `dryRun` branch, which records the fill and moves on without touching the book.'
 			},
 			{
 				type: 'code',
-				file: 'packages/core/src/book.ts (simplified)',
+				file: 'packages/core/src/book.ts (abridged)',
 				lang: 'ts',
 				code: `
 /**
@@ -488,8 +488,7 @@ function crosses(restingPrice: Price, side: Side, limitPrice: Price | undefined)
 	return side === 'buy' ? restingPrice <= limitPrice : restingPrice >= limitPrice;
 }
 
-/* … */
-
+// …
 export function match(book: Book, request: MatchRequest): MatchResult {
 	const opposite = request.side === 'buy' ? book.asks : book.bids;
 	const fills: Fill[] = [];
@@ -498,8 +497,7 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 	let remaining: number = request.quantity;
 	let levelIndex = 0;
 
-	// … (self-trade-prevention bookkeeping — the next chapter's subject)
-
+	// …
 	outer: while (remaining > 0 && levelIndex < opposite.length) {
 		const level = opposite[levelIndex]!;
 
@@ -508,14 +506,12 @@ export function match(book: Book, request: MatchRequest): MatchResult {
 		for (let i = 0; i < level.orders.length && remaining > 0;) {
 			const resting = level.orders[i]!;
 
-			// … (the self-trade check lives here)
-
+			// …
 			const traded = Math.min(remaining, resting.remaining);
 			fills.push({ restingOrder: resting, price: level.price, quantity: traded as Quantity });
 			remaining -= traded;
 
-			// … (a dry run moves on without touching anything)
-
+			// …
 			resting.remaining = (resting.remaining - traded) as Quantity;
 			level.total -= traded;
 
@@ -667,6 +663,10 @@ export function apply(state: EngineState, sequenced: SequencedCommand): Event[] 
 
 			{ type: 'h3', id: 'place', text: 'Placing an order' },
 			{
+				type: 'p',
+				text: 'Abridged, and each `// …` stands for something this chapter does not need yet: a `refuse` helper that wraps a refusal in an `order_rejected` event, the comment explaining why the duplicate check comes first, the refusal of a market order outside continuous trading, building the `LiveOrder` (a market order gets a sentinel price at the extreme of its side, so one comparison in the book handles both kinds), and the tail that reports pulled orders and fills before resting or cancelling whatever is left.'
+			},
+			{
 				type: 'code',
 				file: 'packages/core/src/apply.ts (abridged)',
 				lang: 'ts',
@@ -678,8 +678,7 @@ function placeOrder(
 ): Event[] {
 	const instrument = state.instruments.get(command.instrumentId);
 
-	// … (a \`refuse\` helper wraps a Refusal in an \`order_rejected\` event)
-
+	// …
 	if (findLive(state, command.firmId, command.clientOrderId)) {
 		return refuse({
 			reason: 'duplicate_client_order_id',
@@ -693,8 +692,7 @@ function placeOrder(
 	// \`checkOrder\` proved this, but the compiler has not been told.
 	const found = instrument!;
 
-	// … (a market order outside continuous trading is refused here)
-
+	// …
 	if (found.phase === 'continuous') {
 		const bookRefusal = checkAgainstBook(found.book, {
 			...command,
@@ -705,8 +703,7 @@ function placeOrder(
 	}
 
 	const orderId = orderIdFor(seq);
-	// … (build the order; a market order gets a sentinel price that never rests)
-
+	// …
 	const events: Event[] = [];
 
 	// During pre-open and auction the book accumulates and nothing matches. The
@@ -726,7 +723,7 @@ function placeOrder(
 		...(command.price !== undefined ? { limitPrice: command.price } : {})
 	});
 
-	// … (report the pulls and the fills, then rest or cancel the remainder)
+	// …
 }`
 			},
 			{
@@ -1115,7 +1112,7 @@ if (resting.firmId === request.firmId) {
 			toPull.push(resting);
 			// Stop matching, cancel the aggressor too.
 			return { fills: [], remaining, aggressorCancelled: true };
-		// ...
+		// …
 	}
 }`
 			},
