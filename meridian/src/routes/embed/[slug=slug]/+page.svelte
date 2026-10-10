@@ -44,7 +44,7 @@
 
 	<ol class="embed__stops">
 		{#each scheduled as stop (stop.id)}
-			<li>
+			<li data-kind={stop.kind}>
 				<span>{stop.name}</span>
 				{#if stop.date}<span class="muted">{formatDate(stop.date, locale, 'short')}</span>{/if}
 			</li>
@@ -73,20 +73,52 @@
 		font-size: var(--text-lg);
 	}
 
+	/*
+	 * The numbers are drawn, not the list's own markers: each row is a grid,
+	 * and an item that is not `display: list-item` has no marker. A counter
+	 * puts the route number in a disc of the stop's kind colour, the way the
+	 * itinerary and the map number it. The list's own indent goes as well —
+	 * the browser gives an `<ol>` 40px of padding for markers it no longer
+	 * draws — so the discs line up with the title and the thumbnail above.
+	 */
 	.embed__stops {
 		display: grid;
 		gap: var(--space-1);
-		padding-inline-start: 1.2em;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: stop;
 		font-size: var(--text-sm);
 	}
 
 	.embed__stops li {
-		display: flex;
-		justify-content: space-between;
+		display: grid;
+		grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+		align-items: center;
 		gap: var(--space-2);
+		counter-increment: stop;
 	}
 
+	.embed__stops li::before {
+		content: counter(stop);
+		display: grid;
+		place-items: center;
+		width: 1.25rem;
+		height: 1.25rem;
+		border-radius: 50%;
+		background: var(--kind, var(--sea));
+		color: var(--on-fill);
+		font-size: var(--text-xs);
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Small type, a full-size target: the frame is often on a phone. */
 	.embed__powered {
+		display: inline-flex;
+		align-items: center;
+		justify-self: start;
+		min-height: var(--control);
 		font-size: var(--text-xs);
 	}
 </style>

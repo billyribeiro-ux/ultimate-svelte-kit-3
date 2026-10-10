@@ -160,7 +160,7 @@ export type Tab = (typeof TABS)[number];</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:39-71</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:40-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Props {
@@ -201,7 +201,7 @@ const tab: Tab = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:166-203</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:217-254</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -278,7 +278,36 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:232-283</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:92-113</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * THE LIVE CHIP
+ * -------------
+ * Three states, not two. For the first three seconds a stream that is
+ * not up yet is still connecting, and the chip says &quot;Connecting…&quot; in the
+ * quiet grey. After that, a stream that is not up has failed or dropped,
+ * and &quot;Reconnect&quot;, the coral button, offers to try again. Shown the
+ * moment the page hydrated, as it first was, it told everybody on a slow
+ * network that something had failed when nothing had. All three sit in
+ * one slot as wide as the widest of them (the `.status` rules say how),
+ * so the palette and the settings button beside it never move.
+ */
+let patient = $state(true);
+
+$effect(() =&gt; {
+	const timer = setTimeout(() =&gt; (patient = false), 3000);
+	return () =&gt; clearTimeout(timer);
+});
+
+const status: 'live' | 'connecting' | 'lost' = $derived(
+	live.connected ? 'live' : patient ? 'connecting' : 'lost'
+);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:283-347</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -306,24 +335,37 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 		&lt;div class=&quot;trip__status cluster&quot;&gt;
 			&lt;Presence {view} viewerId={initial.viewerId} /&gt;
 			&lt;CommandPalette {view} {editable} onadd={() =&gt; (dialog = { kind: 'add', date: null })} /&gt;
-			{#if live.connected}
-				&lt;span class=&quot;chip chip--sea live&quot; title={m.live_connected()}&gt;
-					&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
-					{m.live_connected()}
+			&lt;!-- The sizer is invisible and holds the three labels as generated text, so the slot is as wide as the widest. --&gt;
+			&lt;span class=&quot;status&quot;&gt;
+				&lt;span class=&quot;status__sizer&quot; aria-hidden=&quot;true&quot;&gt;
+					&lt;span data-label={m.live_connected()}&gt;&lt;/span&gt;
+					&lt;span data-label={m.live_connecting()}&gt;&lt;/span&gt;
+					&lt;span data-label={m.live_reconnect()}&gt;&lt;/span&gt;
 				&lt;/span&gt;
-			{:else if live.current}
-				&lt;button
-					class=&quot;btn btn--sm btn--ghost btn--danger&quot;
-					type=&quot;button&quot;
-					onclick={() =&gt; live.reconnect()}
-				&gt;
-					{m.live_reconnect()}
-				&lt;/button&gt;
-			{/if}
+				{#if status === 'live'}
+					&lt;span class=&quot;chip chip--sea live&quot; title={m.live_connected()}&gt;
+						&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+						{m.live_connected()}
+					&lt;/span&gt;
+				{:else if status === 'connecting'}
+					&lt;span class=&quot;chip live live--connecting&quot; title={m.live_connecting()}&gt;
+						&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+						{m.live_connecting()}
+					&lt;/span&gt;
+				{:else}
+					&lt;button
+						class=&quot;btn btn--sm btn--ghost btn--danger&quot;
+						type=&quot;button&quot;
+						onclick={() =&gt; live.reconnect()}
+					&gt;
+						{m.live_reconnect()}
+					&lt;/button&gt;
+				{/if}
+			&lt;/span&gt;
 			{#if owner}
 				&lt;!-- Icon-only on a phone; the word is still the link's name, visually hidden there. --&gt;
 				&lt;a
-					class=&quot;btn btn--sm btn--ghost trip__settings&quot;
+					class=&quot;btn btn--sm btn--ghost btn--icon trip__settings&quot;
 					href={href('/(site)/t/[slug=slug]/settings', { slug })}
 					title={m.trip_settings()}
 				&gt;
@@ -334,10 +376,12 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 		&lt;/div&gt;
 	&lt;/header&gt;</code></pre>
 </figure>
+<p>The header shows the live status, in three states rather than two: a pulsing chip while the stream is up, a quiet “Connecting…” for the first three seconds while it is not up *yet*, and only after that the coral “Reconnect” button — <code>live.reconnect()</code> is the method SvelteKit gives every live query. The first version had two states, and showed “Reconnect” the moment the page hydrated, before the stream had had a chance: everybody on a slow network was told something had failed when nothing had. The three share one slot as wide as the widest label, so the palette and settings beside it never move. The width comes from an invisible sizer in the same grid cell whose labels are generated text — <code>content: attr(data-label)</code> — so they are in nobody’s way: not in the accessibility tree, not in the page’s text, not a second “Live” for a test to find. The slot is that wide and the chip is not: a grid item stretches to its cell by default, and “Live” sat in a pill two and a half times its width, crowded to one side. <code>justify-self</code> puts the chip at the slot’s leading edge on a phone, where the tools read from the left, and at its trailing edge beside the name, where they are set against the right — so the edge beside the settings button is the one that stays put when the label changes.</p>
+<p>On a phone the trip’s name has the full width and the status tools are a row of their own under the lede; from 40em they move up beside the name. Sharing the name’s row at every width, as the first version did, left a real trip name 177px of a 328px column, and “A long weekend in the Douro valley with the cousins” ran to five ragged lines of display type. On a phone the palette button is a magnifier and the settings link an icon, its word still its name, visually hidden.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:285-320</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:349-385</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -348,40 +392,41 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 	only warns about the old names in development: it no longer reads them.
 
 	The strip is sticky under the header, so on a long itinerary the tabs
-	stay in reach; `data-overflow` turns the edge fade on while there is
-	more strip to scroll to.
+	stay in reach. The frame around it carries the paper and the two edge
+	fades, which show only while there is more strip that way.
 --&gt;
-&lt;nav
-	class=&quot;tabs no-print&quot;
-	aria-label={m.app_name()}
-	bind:this={strip}
-	data-overflow={overflowing ? '' : undefined}
+&lt;div
+	class=&quot;tabs-frame no-print&quot;
+	data-fade-start={fadeStart ? '' : undefined}
+	data-fade-end={fadeEnd ? '' : undefined}
 &gt;
-	{#each TABS as name (name)}
-		{@const Icon = tabIcons[name]}
-		&lt;a
-			class=&quot;tabs__link&quot;
-			href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
-			aria-current={tab === name ? 'page' : undefined}
-			data-sveltekit-reset=&quot;false&quot;
-		&gt;
-			&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
-			{tabLabels[name]()}
-		&lt;/a&gt;
-	{/each}
-	&lt;span
-		class=&quot;tabs__indicator&quot;
-		aria-hidden=&quot;true&quot;
-		style:--x=&quot;{indicator.current.x}px&quot;
-		style:--w=&quot;{indicator.current.w}px&quot;
-	&gt;&lt;/span&gt;
-&lt;/nav&gt;</code></pre>
+	&lt;nav class=&quot;tabs&quot; aria-label={m.app_name()} bind:this={strip} onscroll={edges}&gt;
+		{#each TABS as name (name)}
+			{@const Icon = tabIcons[name]}
+			&lt;a
+				class=&quot;tabs__link&quot;
+				href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
+				aria-current={tab === name ? 'page' : undefined}
+				data-sveltekit-reset=&quot;false&quot;
+			&gt;
+				&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
+				{tabLabels[name]()}
+			&lt;/a&gt;
+		{/each}
+		&lt;span
+			class=&quot;tabs__indicator&quot;
+			aria-hidden=&quot;true&quot;
+			style:--x=&quot;{indicator.current.x}px&quot;
+			style:--w=&quot;{indicator.current.w}px&quot;
+		&gt;&lt;/span&gt;
+	&lt;/nav&gt;
+&lt;/div&gt;</code></pre>
 </figure>
-<p>The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — <code>live.reconnect()</code> is the method SvelteKit gives every live query. The status tools share the name’s row at every width, top right; on a phone that row of its own cost the map 60px, so there the palette button is a magnifier and the settings link an icon, its word still its name, visually hidden. The tabs are links to the same route with a different <code>?tab=</code> — <code>href()</code> with a route id that carries its search string — marked <code>data-sveltekit-reset=&quot;false&quot;</code> so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old <code>noscroll</code> and <code>keepfocus</code> attributes into that one <code>reset</code>, and only warns about the old names in development, it no longer reads them. The strip is sticky under the header, so the tabs stay in reach down a long itinerary, and it scrolls sideways on a phone, where six tabs do not fit.</p>
+<p>The strip itself. The tabs are links to the same route with a different <code>?tab=</code> — <code>href()</code> with a route id that carries its search string — marked <code>data-sveltekit-reset=&quot;false&quot;</code> so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old <code>noscroll</code> and <code>keepfocus</code> attributes into that one <code>reset</code>, and only warns about the old names in development, it no longer reads them. The strip is sticky under the header, so the tabs stay in reach down a long itinerary, and it scrolls sideways on a phone, where six tabs do not fit. The frame around it carries the paper and two edge fades, <code>::before</code> and <code>::after</code> gradients from <code>--paper</code> to transparent, each shown only while there is more strip that way. The first version faded the strip with a <code>mask-image</code>, which faded whatever was *behind* the strip too — the page scrolling under a sticky element — and faded the current tab whenever it sat at an edge.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:91-133</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:115-184</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -390,49 +435,76 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
  * One 2px bar under the current tab, positioned from the current link's
  * `offsetLeft` and `offsetWidth`. Its position is a `Tween` from
  * `svelte/motion`: a value that, when set, moves to the new one over a
- * duration — 160ms with the `--ease-out` curve, or 0 under reduced
- * motion — and the markup reads `.current` every frame. The first
- * position is set with `{ duration: 0 }`, so the bar starts under the
- * tab instead of sliding in from the left edge.
+ * duration — 160ms with `cubicOut`, the nearest built-in curve to the
+ * `--ease-out` token, or 0 under reduced motion — and the markup reads
+ * `.current` every frame. The first position is set with
+ * `{ duration: 0 }`, so the bar starts under the tab instead of sliding
+ * in from the left edge.
  *
  * The effect reads `tab`, so it re-runs on every switch, and nothing
- * else reactive, so it does not run when the document changes. The
- * strip scrolls sideways on a phone, so the current link is also
- * scrolled into view — `inline: 'nearest'`, not `smooth`: the reset
- * stylesheet says why programmatic scrolls do not glide here.
+ * else reactive, so it does not run when the document changes. When the
+ * strip or a tab changes size — a rotation, a resize, a font arriving —
+ * the observer below measures again, with no slide: the bar is moved to
+ * where the tab now is, not animated there.
+ *
+ * The strip scrolls sideways on a phone, so the current tab is scrolled
+ * into view too — by hand, to a position that leaves 32px clear on
+ * either side of it. `scrollIntoView({ inline: 'nearest' })` stopped at
+ * the strip's edge, which is where the fade is, and left &quot;Notes&quot; with
+ * its last letter and its bar faded out.
  */
 let strip = $state&lt;HTMLElement&gt;();
 const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
 let settled = false;
-let overflowing = $state(false);
+let fadeStart = $state(false);
+let fadeEnd = $state(false);
 
-$effect(() =&gt; {
-	void tab;
+const INSET = 32;
+
+function measure(animate: boolean) {
 	const current = strip?.querySelector&lt;HTMLElement&gt;('[aria-current=&quot;page&quot;]');
 	if (!current || !strip) return;
 	const target = { x: current.offsetLeft, w: current.offsetWidth };
-	const instant = !settled || untrack(() =&gt; reducedMotion.current);
+	const instant = !animate || !settled || untrack(() =&gt; reducedMotion.current);
 	void indicator.set(target, instant ? { duration: 0 } : undefined);
 	settled = true;
-	current.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+
+	const left = current.offsetLeft - INSET;
+	const right = current.offsetLeft + current.offsetWidth + INSET - strip.clientWidth;
+	if (strip.scrollLeft &gt; left) strip.scrollLeft = Math.max(0, left);
+	else if (strip.scrollLeft &lt; right) strip.scrollLeft = right;
+}
+
+/* Each edge fades only while there is more strip beyond it. */
+function edges() {
+	if (!strip) return;
+	fadeStart = strip.scrollLeft &gt; 1;
+	fadeEnd = strip.scrollLeft + strip.clientWidth &lt; strip.scrollWidth - 1;
+}
+
+$effect(() =&gt; {
+	void tab;
+	measure(true);
+	edges();
 });
 
-/* The strip fades at its edges while there is more of it to scroll to. */
 $effect(() =&gt; {
 	if (!strip) return;
 	const element = strip;
 	const observer = new ResizeObserver(() =&gt; {
-		overflowing = element.scrollWidth &gt; element.clientWidth + 1;
+		measure(false);
+		edges();
 	});
 	observer.observe(element);
+	for (const link of element.querySelectorAll('a')) observer.observe(link);
 	return () =&gt; observer.disconnect();
 });</code></pre>
 </figure>
-<p>One bar slides under the current tab instead of each link drawing its own border, and its position is a <code>Tween</code> from <code>svelte/motion</code>: a value that, when <code>set</code>, moves to the new one over a duration, with <code>.current</code> read by the markup on every frame. The effect reads <code>tab</code> and so re-runs on every switch; the first <code>set</code> passes <code>{ duration: 0 }</code> so the bar starts under the tab rather than sliding in from the edge, and reduced motion — read with <code>untrack</code>, because the effect should not re-run when the setting changes — makes every move instant. The second effect is a <code>ResizeObserver</code> that turns the edge fade on only while the strip is wider than the screen. The bar sits inside the strip — <code>overflow-y: hidden</code>, the hairline under the tabs an inset shadow — because a scroll container clips at its padding box: a bar placed on the border was cut to 1px and let the strip scroll a pixel up and down.</p>
+<p>One bar slides under the current tab instead of each link drawing its own border, and its position is a <code>Tween</code> from <code>svelte/motion</code>: a value that, when <code>set</code>, moves to the new one over a duration, with <code>.current</code> read by the markup on every frame. The effect reads <code>tab</code> and so re-runs on every switch; the first <code>set</code> passes <code>{ duration: 0 }</code> so the bar starts under the tab rather than sliding in from the edge, and reduced motion — read with <code>untrack</code>, because the effect should not re-run when the setting changes — makes every move instant. The second effect is a <code>ResizeObserver</code> on the strip and on every link: a rotation, a resize or a late font changes a tab’s width, and the bar is measured again — moved, not animated, because nothing was chosen. The current tab is also scrolled into view by hand, to a position that leaves 32px clear on either side, because <code>scrollIntoView({ inline: 'nearest' })</code> stops exactly at the strip’s edge, which is where the fade is: “Notes” was left with its last letter and its bar faded out. And there is no scroll snapping — proximity snapping took a tab scrolled into view by hand and re-aligned it to the edge, under the fade again. The bar sits inside the strip — <code>overflow-y: hidden</code>, the hairline under the tabs an inset shadow — because a scroll container clips at its padding box: a bar placed on the border was cut to 1px and let the strip scroll a pixel up and down.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:135-164</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:186-215</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -466,11 +538,11 @@ $effect(() =&gt; {
 	};
 });</code></pre>
 </figure>
-<p>The map and the globe fill what is left of the screen below the tabs, so their bottom edge — the map’s status pill, the globe’s “Fly the route” — is on screen without a scroll, at 1440×900 and on a phone alike. A fixed <code>72dvh</code> did not manage that, because how much is left depends on the header, and the header depends on the trip’s name, the width and the language. So the effect measures the panel’s top in page coordinates whenever the header changes size, writes it to <code>--frame-top</code>, and the CSS does the rest: <code>clamp(20rem, calc(100dvh - var(--frame-top) - var(--space-4)), 46rem)</code>.</p>
+<p>The map and the globe fill what is left of the screen below the tabs, so their bottom edge — the map’s status pill, the globe’s “Fly the route” — is on screen without a scroll, at 1440×900 and on a phone alike. A fixed <code>72dvh</code> did not manage that, because how much is left depends on the header, and the header depends on the trip’s name, the width and the language. So the effect measures the panel’s top in page coordinates whenever the header changes size, writes it to <code>--frame-top</code>, and the CSS does the rest: <code>clamp(20rem, calc(100dvh - var(--frame-top, var(--frame-guess)) - var(--space-4)), 46rem)</code>. Until the script has measured — on the server, and in the first frame — the top is <code>--frame-guess</code>, a guess for the width: 21rem on a phone, where the status tools are a row of their own, 18rem beside them from 40em. A guess that matches the measurement is a frame that does not change height under a map that has already started, which the map in chapter 27 had to be taught to survive.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:322-362</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:387-427</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The panel has its own transition name: the tabs and the header hold still while it changes. --&gt;
@@ -518,7 +590,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:211-217</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:262-268</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -533,7 +605,7 @@ const wide = new MediaQuery('(min-width: 64em)');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:411-419</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:476-484</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}

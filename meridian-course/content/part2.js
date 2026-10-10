@@ -170,27 +170,36 @@ export const part2 = [
 				type: 'p',
 				text: 'A remote function is an HTTP endpoint, whatever it looks like in a component, and anybody can call it with anything. SvelteKit’s answer is that the first argument to `query`, `form` and `command` is a Standard Schema, and the function body never runs on input that failed it. These schemas are the contract, and they live in `domain/` rather than `server/` because the browser runs them too — to disable a button before a request is sent.'
 			},
-			code(`${DOMAIN}/schemas.ts`, 1, 36),
+			code(`${DOMAIN}/schemas.ts`, 1, 63),
 			{
 				type: 'p',
-				text: 'valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches `SLUG`, a date is an ISO string that `isIsoDate` accepts, a longitude is a number in range. `shortText` and `optionalText` are the two shapes of a text field, with `trim()` built in so `"  Lisbon "` is stored as `"Lisbon"` without every form remembering to do it.'
+				text: 'valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches `SLUG`, a date is an ISO string that `isIsoDate` accepts, a longitude is a number in range. `shortText` and `optionalText` are the two shapes of a text field, with `trim()` built in so `"  Lisbon "` is stored as `"Lisbon"` without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s `required` is satisfied by three spaces; this is not.'
 			},
-			code(`${DOMAIN}/schemas.ts`, 38, 65),
+			{
+				type: 'p',
+				text: 'Now look at the second argument of almost every validator: not a string but a function, `() => m.issue_date()`. That is how a schema speaks three languages. valibot accepts a message as either, and calls the function only when the issue actually happens. By then the request is being handled, Paraglide’s middleware has stored that request’s locale (chapter 14 shows where), and `m.issue_date()` reads it — so the one schema object, created once when the module loaded, answers “Wähle ein Datum” to a form on `/de/trips/new` and “Pick a date” to one on `/trips/new`. A plain string would have been decided at import time, in English, for everybody; that is what this file did until a German sign-in page answered “Enter an email address”.'
+			},
+			{
+				type: 'why',
+				title: 'Why not translate on the client instead?',
+				text: 'Because the message is decided where the check runs, and the check runs on the server for every form, with JavaScript or without. A form that posts with JavaScript off gets its issues back in the HTML the server renders; there is no client code to do any translating. Putting the locale-aware message in the schema makes the server’s answer right first time, and the browser, when it runs the same schema as a preflight (chapter 29), gets the same words for free. The messages that stay plain strings — “Expected an id” — are the ones no person should ever see: they mean a bug or somebody probing the endpoint, and `handleError` replaces them with a sentence of its own anyway.'
+			},
+			code(`${DOMAIN}/schemas.ts`, 65, 95),
 			{
 				type: 'p',
 				text: '`TripInputSchema` has the pattern for a rule that involves two fields. `v.check` on the object can say “the end is not before the start”, but an error on the *object* would have nowhere to appear in a form. `v.forward(..., ["endDate"])` moves the issue onto the `endDate` field, so `createTrip.fields.endDate.issues()` shows it under the picker. The type on the line after is the other half of the contract: `InferOutput` gives the *validated* type — trimmed strings, the currency as a union — so the function body and the component agree on exactly what arrives.'
 			},
-			code(`${DOMAIN}/schemas.ts`, 67, 111),
+			code(`${DOMAIN}/schemas.ts`, 97, 147),
 			{
 				type: 'p',
 				text: 'Look at `STOP_KINDS`: an `as const` array, a `picklist` built from it, and a type inferred from the picklist. One list drives the validation, the TypeScript union, the `<select>` options and the icon table in `kinds.ts`. Add a kind and every one of those follows or fails to compile. `PlacementSchema` and `MoveStopSchema` are chapter 11’s `place()` at the wire: what a drop sends is a day and an index, and what comes back is a list of placements.'
 			},
-			code(`${DOMAIN}/schemas.ts`, 113, 150),
+			code(`${DOMAIN}/schemas.ts`, 149, 216),
 			{
 				type: 'p',
-				text: 'The messages on the expense schema are the ones a person sees — `Enter an amount`, `Somebody has to share it` — because a form field shows the first issue it has. `NoteDocSchema` is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.'
+				text: 'The expense has two schemas, and the difference is the boundary. `ExpenseInputSchema` is the stored shape, in whole minor units. `ExpenseFormSchema` is what the “Add an expense” form sends — an amount in euros, the fields as the form names them — and it lives here rather than in `expenses.remote.ts` because the browser runs it too, as the form’s *preflight* (chapter 29): a remote module may export nothing but remote functions. Its messages are the ones a person sees, “Enter an amount”, “Somebody has to share it”, each a Paraglide function like the rest. `NoteDocSchema` is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.'
 			},
-			code(`${DOMAIN}/schemas.ts`, 152, 208),
+			code(`${DOMAIN}/schemas.ts`, 218, 280),
 			{
 				type: 'p',
 				text: '`EmailSchema` lowercases and trims before it validates, so `Ana@Example.com ` and `ana@example.com` are one account. `PasswordSchema` has a minimum and a maximum and no rule about symbols, because length is the one password rule that reliably helps — Better Auth is configured to agree in chapter 15. `TripPatchSchema` is the update shape: every field optional, and the cross-field check written so it only fires when both dates are present.'

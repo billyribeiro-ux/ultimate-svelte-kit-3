@@ -1,13 +1,21 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
+	import * as v from 'valibot';
 	import { MediaQuery } from 'svelte/reactivity';
-	import { XIcon } from 'phosphor-svelte';
+	import { browser } from '$app/env';
+	import { WarningCircleIcon, XIcon } from 'phosphor-svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { fromIso } from '#lib/domain/dates.ts';
-	import { STOP_KINDS, type StopKind } from '#lib/domain/schemas.ts';
-	import type { Place } from '#lib/remote/geo.remote.ts';
+	import {
+		STOP_KINDS,
+		StopInputSchema,
+		StopPatchSchema,
+		type StopKind
+	} from '#lib/domain/schemas.ts';
+	import { places, type Place } from '#lib/remote/geo.remote.ts';
 	import { addStop, moveStop, updateStop } from '#lib/remote/stops.remote.ts';
 	import type { Stop } from '#lib/server/db/schema.ts';
 	import { KIND_ICONS, KIND_LABELS } from './kinds.ts';
@@ -27,9 +35,10 @@
 	 * function a drag uses, so "move to Thursday" means one thing in the
 	 * whole application.
 	 *
-	 * The shell — `.overlay`, `.dialog`, the header, the grabber — is shared
-	 * CSS in `base.css`: on a phone it is a bottom sheet, from 40em a centred
-	 * panel, and the command palette wears the same classes.
+	 * The shell — `.overlay`, `.dialog`, the header, the grabber — is CSS in
+	 * `base.css`, because it is the product's dialog pattern: on a phone a
+	 * bottom sheet, from 40em a centred panel. Today this dialog is the one
+	 * that wears it; the command palette shares only the scrim, and says why.
 	 */
 	export type Mode =
 		| { kind: 'add'; date: string | null; point?: { lng: number; lat: number } }
@@ -95,12 +104,74 @@
 	 */
 	let adjusting = $derived(mode?.kind === 'add');
 
+	/*
+	 * THE GAZETTEER, BEFORE ANYBODY ASKS
+	 * ----------------------------------
+	 * The place search needs the hundred places the moment the dialog opens.
+	 * Asking for them here — this component is mounted with the trip page,
+	 * long before it is opened — starts the fetch of the prerendered file
+	 * while the person is still reading the itinerary, and `.current` hands
+	 * the search whatever has arrived without suspending anything: no
+	 * `await`, so the dialog's first frame is its finished layout. In the
+	 * browser only; a dialog that is closed has nothing to server-render.
+	 */
+	const gazetteer = browser ? places() : undefined;
+
 	/* Search first from 40em; on a phone the sheet opens without a keyboard over it. */
 	const wide = new MediaQuery('(min-width: 40em)');
 	const searchId = $props.id();
 	let nameInput = $state<HTMLInputElement>();
 
 	let saving = $state(false);
+
+	/*
+	 * ISSUES, ON THE FIELD THEY BELONG TO
+	 * -----------------------------------
+	 * The save runs the same schema the server will, first, in the browser:
+	 * a name of three spaces passes `required` and fails the server's trim,
+	 * and the answer used to come back as a toast of raw JSON. Now each issue
+	 * is a line under its field, the field is `aria-invalid`, and nothing is
+	 * sent. The coordinates also listen for the browser's own `invalid`
+	 * event: they can sit in a closed `<details>`, and a required field
+	 * folded out of sight stops the form without a word — so an invalid
+	 * coordinate unfolds the row and says what is wrong.
+	 */
+	interface Issues {
+		readonly name?: string | undefined;
+		readonly coords?: string | undefined;
+		readonly notes?: string | undefined;
+	}
+
+	// Like the fields above: assignable, and reset to none whenever the dialog opens for something else.
+	let issues: Issues = $derived.by(() => {
+		void mode;
+		return {};
+	});
+
+	function check(): boolean {
+		const result =
+			mode?.kind === 'edit'
+				? v.safeParse(StopPatchSchema, { id: mode.stop.id, name, kind, lng, lat, notes })
+				: v.safeParse(StopInputSchema, { tripId, name, kind, lng, lat, date, notes, placeId });
+		if (result.success) {
+			issues = {};
+			return true;
+		}
+		const nested = v.flatten(result.issues).nested ?? {};
+		issues = {
+			name: nested.name?.[0],
+			coords: nested.lng || nested.lat ? m.issue_coordinates() : undefined,
+			notes: nested.notes?.[0]
+		};
+		if (issues.coords) adjusting = true;
+		return false;
+	}
+
+	/* The browser refused a coordinate: unfold the row, and say what it wants. */
+	function coordsInvalid() {
+		adjusting = true;
+		issues = { ...issues, coords: m.issue_coordinates() };
+	}
 
 	function fromPlace(place: Place) {
 		if (!name.trim()) name = place.name;
@@ -113,6 +184,7 @@
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
 		if (!mode || saving || lng == null || lat == null) return;
+		if (!check()) return;
 		saving = true;
 		try {
 			if (mode.kind === 'add') {
@@ -129,7 +201,7 @@
 			}
 			onclose();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		} finally {
 			saving = false;
 		}
@@ -162,12 +234,26 @@
 			<form class="stack" onsubmit={save}>
 				<div class="field">
 					<label class="label" for={searchId}>{m.stop_place()}</label>
-					<PlaceSearch id={searchId} onpick={fromPlace} />
+					<PlaceSearch id={searchId} places={gazetteer?.current ?? []} onpick={fromPlace} />
 				</div>
 
 				<label class="field">
 					<span class="label">{m.stop_name()}</span>
-					<input class="input" bind:value={name} bind:this={nameInput} maxlength="120" required />
+					<input
+						class="input"
+						bind:value={name}
+						bind:this={nameInput}
+						maxlength="120"
+						required
+						aria-invalid={issues.name ? 'true' : undefined}
+						aria-describedby={issues.name ? `${searchId}-name-issue` : undefined}
+					/>
+					{#if issues.name}
+						<span class="issue" id="{searchId}-name-issue">
+							<WarningCircleIcon size={14} aria-hidden="true" />
+							{issues.name}
+						</span>
+					{/if}
 				</label>
 
 				<!--
@@ -222,37 +308,64 @@
 							<span class="coords__unset">{m.stop_coordinates_unset()}</span>
 						{/if}
 					</summary>
+					<!--
+						`step="any"`: a click on the map, or a dragged pin, gives a
+						coordinate to many more places than four, and a step of 0.0001
+						made the browser refuse it as a "step mismatch".
+					-->
 					<div class="coords__row">
 						<input
 							class="input tabular"
 							type="number"
 							inputmode="decimal"
-							step="0.0001"
+							step="any"
 							min="-90"
 							max="90"
 							aria-label={m.stop_latitude()}
 							placeholder={m.stop_latitude()}
 							required
+							aria-invalid={issues.coords ? 'true' : undefined}
+							aria-describedby={issues.coords ? `${searchId}-coords-issue` : undefined}
+							oninvalid={coordsInvalid}
 							bind:value={lat}
 						/>
 						<input
 							class="input tabular"
 							type="number"
 							inputmode="decimal"
-							step="0.0001"
+							step="any"
 							min="-180"
 							max="180"
 							aria-label={m.stop_longitude()}
 							placeholder={m.stop_longitude()}
 							required
+							aria-invalid={issues.coords ? 'true' : undefined}
+							aria-describedby={issues.coords ? `${searchId}-coords-issue` : undefined}
+							oninvalid={coordsInvalid}
 							bind:value={lng}
 						/>
 					</div>
 				</details>
+				{#if issues.coords}
+					<span class="issue" id="{searchId}-coords-issue">
+						<WarningCircleIcon size={14} aria-hidden="true" />
+						{issues.coords}
+					</span>
+				{/if}
 
 				<label class="field">
 					<span class="label">{m.stop_notes()}</span>
-					<textarea class="textarea notes" bind:value={notes} maxlength="1000"></textarea>
+					<textarea
+						class="textarea notes"
+						bind:value={notes}
+						maxlength="1000"
+						aria-invalid={issues.notes ? 'true' : undefined}></textarea>
+					{#if issues.notes}
+						<span class="issue">
+							<WarningCircleIcon size={14} aria-hidden="true" />
+							{issues.notes}
+						</span>
+					{/if}
 				</label>
 
 				<div class="cluster dialog__actions">
@@ -299,6 +412,13 @@
 
 	.kinds__option :global(svg) {
 		flex-shrink: 0;
+	}
+
+	/* Under a finger the segments are 44px tall: two pixels apart, there is no room for a hit area to reach. */
+	@media (pointer: coarse) {
+		.kinds__option {
+			min-height: var(--control);
+		}
 	}
 
 	/* The chosen kind: a tier-3 pill with a 3:1 edge, because the tier step alone does not show. */

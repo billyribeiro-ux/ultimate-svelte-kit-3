@@ -10,7 +10,15 @@
  * `app.html`, which the browser reads before any stylesheet — and each of
  * those says so where it is written. Two more are not copies: print, in
  * `base.css`, is black on white whatever the theme, and `#000` in a
- * `mask-image` gradient is not a colour at all — it means "opaque".
+ * `mask-image` gradient is not a colour at all — it means "opaque". (The
+ * hex codes in `design/contrast.spec.ts` are test data for the arithmetic,
+ * not colours anybody sees.)
+ *
+ * Every ratio quoted below is checked, not remembered: `pnpm run lint` ends
+ * with `scripts/contrast.ts`, which reads this file, resolves both sides of
+ * every pair the design puts on top of each other, and fails under the
+ * floor — 4.5:1 for text, 3:1 for an edge or a ring. `--report` prints the
+ * table.
  *
  * Colour is done with `light-dark()`: each token holds its light value and
  * its dark value, and the browser picks by `color-scheme` — which follows
@@ -75,7 +83,8 @@
 	/*
 	 * Text on any saturated fill: pins, route numbers, avatars. Dark kind
 	 * colours are pastel, so white on them fails (1.86:1 on dark `--sea`);
-	 * near-black ink reads at 6:1 or better on every one.
+	 * near-black ink reads at 6.19:1 or better on every one. In light the
+	 * kinds are deep enough for white, at 5.17:1 or better.
 	 */
 	--on-fill: light-dark(#ffffff, #0b1220);
 
@@ -212,6 +221,8 @@
 	--dur-3: 240ms;
 	--dur-4: 400ms;
 	--dur-5: 700ms;
+	/* The gap between items arriving one after another: the nav sheet's links. */
+	--stagger: 30ms;
 	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 	--ease-in: cubic-bezier(0.4, 0, 1, 1);
 	--ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
@@ -253,5 +264,6 @@
 		--dur-3: 0ms;
 		--dur-4: 0ms;
 		--dur-5: 0ms;
+		--stagger: 0ms;
 	}
 }

@@ -15,6 +15,7 @@
 
 import { MediaQuery } from 'svelte/reactivity';
 import { browser } from '$app/env';
+import { THEME_COOKIE } from './theme-cookie.ts';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -50,6 +51,25 @@ class ThemeState {
 		}
 		if (next === 'system') delete document.documentElement.dataset.theme;
 		else document.documentElement.dataset.theme = next;
+
+		/*
+		 * The two things outside the stylesheet that follow the choice, the
+		 * same way the boot script in `app.html` sets them on load: the
+		 * browser chrome's `theme-color`, and the cookie the server reads.
+		 */
+		for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+			const scheme = meta.dataset.scheme;
+			meta.media =
+				next === 'system'
+					? `(prefers-color-scheme: ${scheme})`
+					: scheme === next
+						? 'all'
+						: 'not all';
+		}
+		document.cookie =
+			next === 'system'
+				? `${THEME_COOKIE}=; path=/; max-age=0; samesite=lax`
+				: `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
 	}
 }
 

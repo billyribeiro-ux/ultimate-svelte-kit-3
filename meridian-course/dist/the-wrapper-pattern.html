@@ -37,65 +37,68 @@
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Decide, for an imperative library, whether to reach for a wrapper or write an attachment, and know what each shape asks of you.</p></aside>
 			<p>An imperative library exposes objects with methods: a <code>Map</code> you add layers to, a <code>Scene</code> you add meshes to, an <code>Editor</code> you send commands to, a <code>Timeline</code> you play. Svelte can meet it two ways. A <strong>wrapper</strong> turns the objects into components so the template builds the object tree; an <strong>attachment</strong> hands the library an element and gets out of the way. The project uses both, deliberately, and the line between them is the shape of the state.</p>
 <h3 id="the-line">The line</h3>
-<ul><li><strong>The library’s objects form a tree that your template already has</strong> — thirty markers for thirty stops, a mesh per stop, a layer per data set — use a wrapper. <code>{#each stops}&lt;Marker&gt;</code> and <code>{#each markers}&lt;T.Mesh&gt;</code> are the whole argument: add a stop and a marker exists; remove one and it is disposed; the mapping is the template.</li><li><strong>The library wants one element and owns everything inside it</strong> — an editor, a tween on a container, a video player, a code editor — write an attachment. Eleven lines, a cleanup, no dependency.</li><li><strong>The library exposes a value that changes over time</strong> — a position watch, a media query, a resize observer — neither: use <code>createSubscriber</code>, which chapter 40 covers.</li></ul>
+<ul><li><strong>The library’s objects form a tree that your template already has</strong> — thirty markers for thirty stops, a mesh per stop, a layer per data set — use a wrapper. <code>{#each stops}&lt;Marker&gt;</code> and <code>{#each markers}&lt;T.Mesh&gt;</code> are the whole argument: add a stop and a marker exists; remove one and it is disposed; the mapping is the template.</li><li><strong>The library wants one element and owns everything inside it</strong> — an editor, a tween on a container, a video player, a code editor — write an attachment. Twenty-odd lines, a cleanup, no dependency.</li><li><strong>The library exposes a value that changes over time</strong> — a position watch, a media query, a resize observer — neither: use <code>createSubscriber</code>, which chapter 40 covers.</li></ul>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:151-192</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:445-489</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;GeoJSON id=&quot;route&quot; data={route}&gt;
-	&lt;LineLayer
-		paint={{ 'line-color': palette.routeHalo, 'line-width': 5 }}
-		layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-	/&gt;
-	&lt;LineLayer
-		paint={{
-			'line-color': palette.route,
-			'line-width': 2.5,
-			'line-dasharray': [2, 1.5]
-		}}
-		layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-	/&gt;
-&lt;/GeoJSON&gt;
-
-&lt;!--
+	<pre><code class="lang-svelte">&lt;!--
 	The selected pin is drawn above its neighbours. Each marker is its
 	own positioned element with a transform, so a z-index on the pin
-	inside it cannot climb out; the marker itself carries it. Without
-	this, pins that share a city paint in list order, and the ring
-	around &quot;1&quot; showed a &quot;5&quot;.
+	inside it cannot climb out; the marker itself carries it. A bubble
+	sits between the two.
 --&gt;
-{#each stops as stop, i (stop.id)}
-	&lt;Marker
-		lngLat={[stop.lng, stop.lat]}
-		zIndex={stop.id === selected ? 10 : 1}
-		draggable={editable}
-		asButton
-		onclick={() =&gt; onselect?.(stop.id)}
-		ondragend={(e) =&gt; onmove?.(stop.id, { lng: e.lngLat[0], lat: e.lngLat[1] })}
-	&gt;
-		&lt;span
-			class=&quot;pin&quot;
-			class:pin--selected={stop.id === selected}
-			class:pin--draggable={editable}
-			data-kind={stop.kind}
-			title={stop.name}
+{#each groups as group (group.key)}
+	{#if group.members.length === 1}
+		{@const { stop, number } = group.members[0]!}
+		&lt;Marker
+			lngLat={group.lngLat}
+			zIndex={stop.id === selected ? 10 : 1}
+			draggable={editable}
+			asButton
+			onclick={() =&gt; onselect?.(stop.id)}
+			ondragend={(e) =&gt; onmove?.(stop.id, { lng: round(e.lngLat[0]), lat: round(e.lngLat[1]) })}
 		&gt;
-			{i + 1}
-		&lt;/span&gt;
-	&lt;/Marker&gt;
+			&lt;!--
+				A pin is named by its number, the number the itinerary gives the
+				stop; the stop's name is the title a pointer shows. The bubble
+				below keeps its stops' names in its title for the same reason:
+				its first draft spelled them out in its hidden text, which made a
+				second button called &quot;Alfama&quot; beside the itinerary's own.
+			--&gt;
+			&lt;span
+				class=&quot;pin&quot;
+				class:pin--selected={stop.id === selected}
+				class:pin--draggable={editable}
+				data-kind={stop.kind}
+				title={stop.name}
+			&gt;
+				{number}
+			&lt;/span&gt;
+		&lt;/Marker&gt;
+	{:else}
+		{@const names = group.members.map((member) =&gt; member.stop.name).join(', ')}
+		&lt;Marker lngLat={group.lngLat} zIndex={5} asButton onclick={() =&gt; zoomInto(group)}&gt;
+			&lt;span class=&quot;pin pin--cluster tabular&quot; title={names}&gt;
+				{group.label}&lt;span class=&quot;visually-hidden&quot;
+					&gt;: {m.map_cluster({ count: group.members.length })}&lt;/span
+				&gt;
+			&lt;/span&gt;
+		&lt;/Marker&gt;
+	{/if}
 {/each}</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:284-300</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:299-315</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each arcs as geometry, index (index)}
 	&lt;T.Line {geometry}&gt;
-		&lt;T.LineBasicMaterial color=&quot;#f59e0b&quot; linewidth={2} /&gt;
+		&lt;T.LineBasicMaterial color={ROUTE} linewidth={2} /&gt;
 	&lt;/T.Line&gt;
 {/each}
 
@@ -107,7 +110,7 @@
 		onclick={() =&gt; onselect(stop.id)}
 	&gt;
 		&lt;T.SphereGeometry args={[0.011, 16, 16]} /&gt;
-		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#fb7185'} /&gt;
+		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : KIND[stop.kind]} /&gt;
 	&lt;/T.Mesh&gt;
 {/each}</code></pre>
 </figure>
@@ -115,7 +118,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:50-72</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:51-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function tiptap(): Attachment&lt;HTMLElement&gt; {
@@ -145,12 +148,17 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:30-51</span></span>
+		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:37-63</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function hero(): Attachment&lt;HTMLElement&gt; {
+	<pre><code class="lang-ts">import type { Attachment } from 'svelte/attachments';
+import { gsap } from 'gsap';
+import { reducedMotion } from './prefers.svelte.ts';
+
+export function hero(): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
 		if (reducedMotion.current) return;
+		if (alreadySeen()) return;
 
 		const copy = Array.from(node.querySelectorAll&lt;HTMLElement&gt;('[data-hero-copy] &gt; *'));
 		const image = node.querySelector&lt;HTMLElement&gt;('[data-hero-image]');

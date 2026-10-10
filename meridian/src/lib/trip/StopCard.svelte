@@ -109,17 +109,19 @@
 	 * look like it was already being dragged.
 	 */
 	/*
-	 * Named areas, so the name shares its row with the actions and the meta
-	 * and notes run underneath both: on a touch screen the two buttons are
-	 * always there, and a notes column that stopped at them would clip a
-	 * sentence beside empty space.
+	 * Named areas. On a phone the name has the whole first row and the two
+	 * actions sit at the end of the second, beside the kind chip: with the
+	 * buttons on the name's row, a 360px screen left the name 108px — the
+	 * most important words on the screen broken over two lines by two grey
+	 * icons. From 40em there is room, and the actions move up beside the
+	 * name. The notes always run the full width under both.
 	 */
 	.stop {
 		display: grid;
 		grid-template-columns: auto auto minmax(0, 1fr) auto;
 		grid-template-areas:
-			'grip number name actions'
-			'. . meta meta'
+			'grip number name name'
+			'. . meta actions'
 			'. . notes notes';
 		align-items: start;
 		gap: var(--space-1) var(--space-2);
@@ -132,6 +134,15 @@
 		transition:
 			box-shadow var(--dur-2) var(--ease-out),
 			border-color var(--dur-2) var(--ease-out);
+	}
+
+	@media (min-width: 40em) {
+		.stop {
+			grid-template-areas:
+				'grip number name actions'
+				'. . meta meta'
+				'. . notes notes';
+		}
 	}
 
 	/* Grip and actions come and go together (both are an editor's), so a viewer's card has neither column. */
@@ -246,6 +257,7 @@
 
 	.stop__meta {
 		grid-area: meta;
+		align-self: center;
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-1);
@@ -285,10 +297,15 @@
 	 * always shown. Hidden by opacity, not display, so the buttons keep
 	 * their place and a keyboard reaches them.
 	 */
+	/*
+	 * 12px apart: each button's 44px hit area reaches 4px past what it
+	 * draws, and two reaches 8px apart would meet exactly — on a screen of
+	 * fractional device pixels, a press on the seam could go to either.
+	 */
 	.stop__actions {
 		grid-area: actions;
 		display: flex;
-		gap: var(--space-1);
+		gap: var(--space-3);
 		margin-inline-end: calc(-1 * var(--space-1));
 	}
 

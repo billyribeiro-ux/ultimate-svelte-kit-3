@@ -37,32 +37,40 @@ export const part3 = [
 			},
 
 			{ type: 'h3', id: 'the-sequence', text: 'Three handlers, in order' },
-			code('src/hooks.server.ts', 1, 36, { partial: true }),
+			code('src/hooks.server.ts', 1, 38, { partial: true }),
 			{
 				type: 'p',
 				text: 'The types come from `@sveltejs/kit/hooks`, and the comment says why it matters: importing them from `@sveltejs/kit` compiles to `any` for every destructured argument, which is not an error, so the file keeps working and every parameter silently loses its type. That is a SvelteKit 3 change worth knowing by heart.'
 			},
-			code('src/hooks.server.ts', 38, 66),
+			code('src/hooks.server.ts', 40, 83),
 			{
 				type: 'p',
-				text: 'Paraglide first, because everything after it — a redirect message, an error page, a remote function — may speak. The middleware decides the locale from the URL, the cookie or `Accept-Language` in the order the config gave, stores it in an `AsyncLocalStorage` so `m.some_message()` anywhere in this request speaks the right language, and fills the two placeholders in `app.html` through `transformPageChunk`. The comment about `replaceAll` records a real bug: with a string pattern, `replace` swaps the first match, and the first match was in a comment above the `<html>` tag.'
+				text: 'Paraglide first, because everything after it — a redirect message, an error page, a remote function, a schema that refuses a field — may speak. The middleware decides the locale from the URL, the cookie or `Accept-Language` in the order the config gave, stores it in an `AsyncLocalStorage` so `m.some_message()` anywhere in this request speaks the right language, and fills the two placeholders in `app.html` through `transformPageChunk`. The comment about `replaceAll` records a real bug: with a string pattern, `replace` swaps the first match, and the first match was in a comment above the `<html>` tag.'
 			},
-			code('src/hooks.server.ts', 68, 85),
+			{
+				type: 'p',
+				text: 'The third argument records another. A remote form is not posted to its page: the browser sends it to `/_app/remote/…`, a URL with no `/de` in it, and tells the server which page it came from in a header that SvelteKit turns back into `event.url`. The middleware reads the request’s own URL unless it is told otherwise, and the URL strategy does not answer “I cannot tell” for a URL with no prefix — it answers English, the base locale, and the cookie is never asked. So a German sign-in page answered a malformed email in English, because the schema’s message was the one sentence produced inside that request. `effectiveRequestUrl` is Paraglide’s documented option for exactly this, the URL the person is on rather than the one the bytes went to, and `localeUrl()` works out what to give it: the calling page for a form or a command, and for a `query` — which sends no such header, so SvelteKit has no page to put back — the endpoint under the cookie’s language. Chapter 20 quotes it; chapter 42 has the test that types a bad address into `/de/signin` and expects German back.'
+			},
+			{
+				type: 'why',
+				text: 'Why not leave the cookie to decide? Because the cookie is the language of the last page someone *chose*, and the URL is the language of the page they are *on*. They differ the moment a German link is opened in a browser that last visited the English site — and a form that answers in a different language from the page it sits on reads as broken, whichever language is right.'
+			},
+			code('src/hooks.server.ts', 85, 102),
 			{
 				type: 'p',
 				text: 'Identity second: read the session once onto `locals`, so no page has to ask and — more importantly — no page has to remember to ask. `svelteKitHandler` wraps `resolve` because Better Auth owns `/api/auth/*`; those are not SvelteKit routes, and the handler answers them and passes everything else on. `building` is passed so it stays quiet during prerendering.'
 			},
-			code('src/hooks.server.ts', 87, 150),
+			code('src/hooks.server.ts', 104, 167),
 			{
 				type: 'p',
 				text: 'Security last, because it acts on the *response*. The `preload` callback is the one that arrived late in the SvelteKit 3 prereleases and shipped in 3.0: a `font` input carries its source `filename`, so the two latin subsets the first paint needs can be named exactly, rather than guessed at from a hashed URL. Then the headers, and the one route that may be framed: `/embed/<slug>` gets `frame-ancestors *` by replacing the directive SvelteKit built, because the CSP in the config is the right default for every other page. `Vary: Cookie` is there because the header shows a name and the locale cookie changes the language, and a shared cache must not serve one person’s page to another.'
 			},
 
 			{ type: 'h3', id: 'fetch-errors-init', text: 'Fetch, errors, boot' },
-			code('src/hooks.server.ts', 152, 204),
+			code('src/hooks.server.ts', 169, 224),
 			{
 				type: 'p',
-				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404)`, `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
+				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404)`, `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
 			},
 			code('src/hooks.ts', 1, 35),
 			{
@@ -203,38 +211,42 @@ export const part3 = [
 				type: 'p',
 				text: '`createTrip` and `deleteTrip` redirect, because after them the person should be somewhere else — and a `redirect` thrown inside a `form` is followed by the browser whether or not JavaScript ran. `updateTrip` is a `command`, and its last line is the single-flight idea: the client that sends the command asks, in the same request, for `tripBySlug` to be refreshed, and `requested(tripBySlug, 1).refreshAll()` refreshes exactly the instances that client is holding — at most one here, and the limit is required because the list is client-controlled. The settings form in chapter 31 is the other half: `updateTrip(patch).updates(tripBySlug(slug))`.'
 			},
-			code(`${REMOTE}/stops.remote.ts`, 1, 42),
+			code(`${REMOTE}/stops.remote.ts`, 1, 43),
 			{
 				type: 'p',
-				text: '`addStop` reads `STOP_LIMIT` — a number, by chapter 14 — and answers 422 when a trip is full. `nextPosition` from the domain puts the new stop after the last one on its day. `returning()` gives the row back so the client can select it immediately. And `bump` wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.'
+				text: '`addStop` reads `STOP_LIMIT` — a number, by chapter 14 — and answers 422 when a trip is full, with a sentence the toast can show as it is: `m.stop_limit({ limit: STOP_LIMIT })` is a Paraglide message with a parameter, so the limit reads “Eine Reise hat höchstens 500 Halte” on a German page. `nextPosition` from the domain puts the new stop after the last one on its day. `returning()` gives the row back so the client can select it immediately. And `bump` wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.'
 			},
-			code(`${REMOTE}/stops.remote.ts`, 44, 84),
+			code(`${REMOTE}/stops.remote.ts`, 45, 85),
 			{
 				type: 'p',
 				text: '`moveStop` is chapter 11 at the wire. It takes where the card was dropped, asks `place()` what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. `updateStop` looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. `me` is a command with no argument, for the presence chip to tell its own entry apart.'
 			},
 
 			{ type: 'h3', id: 'forms-and-fields', text: 'A form whose fields carry their types' },
-			code(`${REMOTE}/expenses.remote.ts`, 1, 40, { partial: true }),
+			code(`${REMOTE}/expenses.remote.ts`, 1, 31, { partial: true }),
 			{
 				type: 'p',
 				text: 'The doc comment is the lesson. A form sends strings, unless a field was rendered with `fields.amount.as("number")`, in which case its name carries a prefix and SvelteKit coerces the value before the schema runs; a set of checkboxes rendered with `fields.participants.as("checkbox", id)` arrives as a `string[]`. So the schema is typed by the form, and the component’s `as()` calls are checked against it — a checkbox for a field the schema says is a number is a compile error. The amount is a decimal *here*, and becomes minor units once, with the trip’s currency, on the way into the database.'
 			},
-			code(`${REMOTE}/expenses.remote.ts`, 41, 76, { partial: true }),
 			{
 				type: 'p',
-				text: '`invalid(issue.participants("Pick a companion"))` is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and `invalid` with a field-bound issue lands the message under that field in the form as if the schema had produced it. The transaction writes the expense and its shares together, `bump` wakes the room, and the same `requested().refreshAll()` gives the submitting client its updated `tripBySlug` in the same response.'
+				text: 'The schema itself is not in this file. `ExpenseFormSchema` lives in `domain/schemas.ts` (chapter 12), because the form in the browser runs the very same object as a *preflight* before it sends anything (chapter 29) — and a `.remote.ts` module may export remote functions and nothing else, so a schema defined here could not be imported there. One schema, two places it runs, no copy to drift.'
+			},
+			code(`${REMOTE}/expenses.remote.ts`, 32, 67, { partial: true }),
+			{
+				type: 'p',
+				text: '`invalid(issue.participants(m.issue_participants_member()))` is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and `invalid` with a field-bound issue lands the message under that field in the form as if the schema had produced it — in the request’s language, because `m` reads the locale the middleware stored. A payer who is not on the trip is the same kind of answer, `issue.paidBy(…)`, rather than a bare 400 that would have thrown the whole form away. The transaction writes the expense and its shares together, `bump` wakes the room, and the same `requested().refreshAll()` gives the submitting client its updated `tripBySlug` in the same response.'
 			},
 			code(`${REMOTE}/notes.remote.ts`, 13, 34),
 			{
 				type: 'p',
 				text: 'The note is one `command` and one upsert — `onConflictDoUpdate` on the trip id — because a note is a page and last-writer-wins on a page two people rarely edit at the same moment is the honest trade against a CRDT nobody asked for. The doc comment says so and points at project 4, which built the CRDT.'
 			},
-			code(`${REMOTE}/auth.remote.ts`, 26, 46),
-			code(`${REMOTE}/auth.remote.ts`, 48, 73),
+			code(`${REMOTE}/auth.remote.ts`, 29, 49),
+			code(`${REMOTE}/auth.remote.ts`, 51, 79),
 			{
 				type: 'p',
-				text: 'The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses `//evil.example` — a protocol-relative URL that starts with a slash and still leaves the site.'
+				text: 'The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses `//evil.example` — a protocol-relative URL that starts with a slash and still leaves the site. The password’s messages are functions, `() => m.issue_password_missing()`, for the reason chapter 12 gave: valibot calls a message function when the check fails, which is inside the request, where Paraglide knows the language.'
 			},
 			{
 				type: 'checkpoint',

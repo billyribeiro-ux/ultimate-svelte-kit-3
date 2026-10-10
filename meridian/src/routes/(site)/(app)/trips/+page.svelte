@@ -151,7 +151,11 @@
 		box-shadow: var(--shadow-1);
 	}
 
+	/* At least a compact control tall, though its pseudo-element makes the whole card the target. */
 	.trip__link {
+		display: flex;
+		align-items: center;
+		min-height: var(--control-sm);
 		text-decoration: none;
 		color: inherit;
 	}

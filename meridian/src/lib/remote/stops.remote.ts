@@ -19,6 +19,7 @@ import { command, getRequestEvent } from '$app/server';
 import { STOP_LIMIT } from '$app/env/private';
 import { and, eq } from 'drizzle-orm';
 import { nextPosition, place } from '#lib/domain/itinerary.ts';
+import { m } from '#lib/paraglide/messages.js';
 import { IdSchema, MoveStopSchema, StopInputSchema, StopPatchSchema } from '#lib/domain/schemas.ts';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
@@ -28,7 +29,7 @@ export const addStop = command(StopInputSchema, async (input) => {
 	const { user, trip } = await requireMember(input.tripId, 'editor');
 
 	if ((await trips.countStops(trip.id)) >= STOP_LIMIT) {
-		error(422, `A trip holds at most ${STOP_LIMIT} stops`);
+		error(422, m.stop_limit({ limit: STOP_LIMIT }));
 	}
 
 	const position = nextPosition(await trips.listStops(trip.id), input.date);

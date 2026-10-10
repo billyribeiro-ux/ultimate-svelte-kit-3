@@ -14,13 +14,19 @@
 	let { tripId }: Props = $props();
 </script>
 
-<!-- A remote form: deleting works with JavaScript off, and asks first when it is on. -->
+<!--
+	A remote form: deleting works with JavaScript off, and asks first when it
+	is on. The question is asked inside `enhance`, the remote form's own hook,
+	and the submission happens only if the answer is yes. An `onsubmit` that
+	calls `preventDefault()` does not stop it: the form's attachment has a
+	submit listener of its own that never looks at `defaultPrevented`, so
+	"Cancel" deleted the trip anyway.
+-->
 <form
 	class="card card--pad danger stack"
-	{...deleteTrip}
-	onsubmit={(event) => {
-		if (!confirm(m.trip_delete_confirm())) event.preventDefault();
-	}}
+	{...deleteTrip.enhance(async (form) => {
+		if (confirm(m.trip_delete_confirm())) await form.submit();
+	})}
 >
 	<input {...deleteTrip.fields.id.as('hidden', tripId)} />
 	<!-- An h2: a section of the page of its own, not a part of the embed section before it. -->

@@ -40,7 +40,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:286-357</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:289-363</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -73,6 +73,9 @@
 			optimizeDeps: {
 				include: [
 					'phosphor-svelte/lib/BedIcon',
+					'phosphor-svelte/lib/CalendarBlankIcon',
+					'phosphor-svelte/lib/CaretLeftIcon',
+					'phosphor-svelte/lib/CaretRightIcon',
 					'phosphor-svelte/lib/DotsSixVerticalIcon',
 					'phosphor-svelte/lib/ForkKnifeIcon',
 					'phosphor-svelte/lib/LightbulbIcon',
@@ -121,7 +124,7 @@
 
 <aside class="callout callout--why">
 	<h4>Why a real browser and not jsdom</h4>
-	<p>jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads <code>getBoundingClientRect</code> and listens for pointer events with real coordinates; <code>animate:flip</code> measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the seven component tests in this project in under five, which is a cheap price for tests that mean something.</p>
+	<p>jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads <code>getBoundingClientRect</code> and listens for pointer events with real coordinates; <code>animate:flip</code> measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the six component tests in this project in under five, which is a cheap price for tests that mean something.</p>
 </aside>
 <h3 id="logic">The logic: worked examples, not just properties</h3>
 
@@ -392,6 +395,223 @@ describe('distance', () =&gt; {
 });</code></pre>
 </figure>
 <p><code>Leg</code> is the component the Markdown guides embed (chapter 34). Its test does double duty: it proves the arithmetic and the compass point, and — because <code>Leg</code> imports the gazetteer and the geodesy package — it proves that the *workspace package* resolves from the app in a browser build. The second test is a rejection: <code>render()</code> of a component whose script throws returns a promise that rejects, and <code>rejects.toThrow(/atlantis/)</code> pins the message so a future refactor cannot turn a clear error into a blank component.</p>
+<h3 id="design-as-data">The design, tested as data</h3>
+<p>Three files test the design rather than the domain. Two are in the server project, in Node, not the browser, on purpose: each asks a question that has an answer without a page. The third is in the browser because the second could not answer its question on its own. The first is the contrast table from chapter 22.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/contrast.spec.ts<span class="code__lines">:5-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('the colour maths', () =&gt; {
+	it('reads hex, short and long', () =&gt; {
+		expect(parseHex('#fff')).toEqual([255, 255, 255]);
+		expect(parseHex('#0f766e')).toEqual([15, 118, 110]);
+		expect(() =&gt; parseHex('#ggg')).toThrow();
+	});
+
+	it('puts black at 0 and white at 1', () =&gt; {
+		expect(luminance([0, 0, 0])).toBe(0);
+		expect(luminance([255, 255, 255])).toBeCloseTo(1, 10);
+	});
+
+	it('runs from 1:1 to 21:1, whichever colour comes first', () =&gt; {
+		expect(ratio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 10);
+		expect(ratio([255, 255, 255], [0, 0, 0])).toBeCloseTo(21, 10);
+		expect(ratio([120, 60, 30], [120, 60, 30])).toBe(1);
+	});
+
+	it('agrees with the figures everybody quotes', () =&gt; {
+		// #767676 is the lightest grey that passes AA on white: 4.54:1.
+		expect(ratio(parseHex('#767676'), parseHex('#ffffff'))).toBeCloseTo(4.54, 2);
+		// #777777 is the first that fails: 4.48:1.
+		expect(ratio(parseHex('#777777'), parseHex('#ffffff'))).toBeCloseTo(4.48, 2);
+	});
+});</code></pre>
+</figure>
+<p>Arithmetic first, against figures anyone can check: black is luminance 0 and white is 1, the ratio runs from 1:1 to 21:1 whichever colour comes first, and <code>#767676</code> on white is 4.54:1 — the lightest grey that passes AA, a number quoted in every accessibility guide — while <code>#777777</code>, one step lighter, is 4.48:1 and fails. A contrast function that got the linearisation wrong would be off by a few hundredths, and those two greys sit on either side of the line by a few hundredths. That is what makes them the right examples: they test the function exactly where it matters.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/contrast.spec.ts<span class="code__lines">:31-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">describe('reading the tokens', () =&gt; {
+	const css = `
+		:root {
+			--paper: light-dark(#ffffff, #000000);
+			--ink: light-dark(#000000, #ffffff);
+			--sea: light-dark(#0f766e, #2dd4bf);
+			--kind-place: var(--sea);
+			--chained: var(--kind-place);
+			--night: #0a1220;
+			--shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+		}`;
+
+	it('resolves both sides of a pair, a plain hex, and aliases of aliases', () =&gt; {
+		const tokens = parseTokens(css);
+		expect(tokens.light.get('paper')).toEqual([255, 255, 255]);
+		expect(tokens.dark.get('paper')).toEqual([0, 0, 0]);
+		expect(tokens.dark.get('chained')).toEqual(parseHex('#2dd4bf'));
+		expect(tokens.light.get('night')).toEqual(tokens.dark.get('night'));
+		expect(tokens.light.has('shadow')).toBe(false);
+	});
+
+	it('fails a pair under its floor, and a pair with a missing token', () =&gt; {
+		const results = check(css, [
+			{ fg: 'ink', bg: 'paper', min: 4.5, note: 'text' },
+			{ fg: 'sea', bg: 'paper', min: 7, note: 'too strict for a teal' },
+			{ fg: 'nowhere', bg: 'paper', min: 3, note: 'missing' }
+		]);
+		expect(results.filter((r) =&gt; r.scheme === 'light').map((r) =&gt; r.ok)).toEqual([
+			true,
+			false,
+			false
+		]);
+		expect(results.find((r) =&gt; r.fg === 'nowhere')?.ratio).toBeNull();
+	});
+});
+
+describe('the real tokens', () =&gt; {
+	it('pass every pair the design promises, in both themes', () =&gt; {
+		const css = readFileSync('src/lib/styles/tokens.css', 'utf8');
+		const failures = check(css).filter((r) =&gt; !r.ok);
+		expect(failures).toEqual([]);
+	});
+});</code></pre>
+</figure>
+<p>Then the parser, on a stylesheet written in the test — a <code>light-dark()</code> pair, a plain hex, an alias of an alias, and a shadow that is not a colour and must be left out — and the two ways a pair fails: under its floor, and naming a token that does not exist, whose ratio is <code>null</code> rather than a crash. The last test reads the real <code>tokens.css</code> and expects no failures, which duplicates <code>scripts/contrast.ts</code> in <code>pnpm run lint</code> on purpose: the lint gate prints a table for a person, and the test fails in the same run as everything else when somebody runs only <code>vitest</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/date-segments.spec.ts<span class="code__lines">:1-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { segmentAttributes } from './date-segments.ts';
+
+/*
+ * The props Bits UI computes for a segment, as far as these attributes go:
+ * the English it writes, which `segmentAttributes` is spread over.
+ */
+const bits = (valuetext: string) =&gt; ({
+	role: 'spinbutton',
+	'aria-label': 'day, ',
+	'aria-valuetext': valuetext
+});
+
+describe('segmentAttributes', () =&gt; {
+	it('names the part in the page’s language, from the browser’s own data', () =&gt; {
+		expect(segmentAttributes(bits('Empty'), 'day', { locale: 'de', empty: 'Leer' })).toMatchObject({
+			'aria-label': 'Tag, '
+		});
+		expect(
+			segmentAttributes(bits('Empty'), 'month', { locale: 'pt-BR', empty: 'Vazio' })
+		).toMatchObject({ 'aria-label': 'mês, ' });
+	});
+
+	it('says &quot;Empty&quot; in the page’s language, and marks it for the stylesheet', () =&gt; {
+		const empty = segmentAttributes(bits('Empty'), 'day', { locale: 'de', empty: 'Leer' });
+		expect(empty['aria-valuetext']).toBe('Leer');
+		expect(empty['data-empty']).toBe('');
+
+		// A typed value is left as Bits wrote it, and is not a placeholder.
+		const typed = segmentAttributes(bits('3'), 'day', { locale: 'de', empty: 'Leer' });
+		expect(typed['aria-valuetext']).toBe('3');
+		expect(typed['data-empty']).toBeUndefined();
+	});
+
+	it('points an invalid segment at the issue line under the field', () =&gt; {
+		const invalid = segmentAttributes(bits('3'), 'day', {
+			locale: 'en',
+			empty: 'Empty',
+			issueId: 'issue-1'
+		});
+		expect(invalid['aria-invalid']).toBe('true');
+		expect(invalid['aria-describedby']).toBe('issue-1');
+
+		const valid = segmentAttributes(bits('3'), 'day', { locale: 'en', empty: 'Empty' });
+		expect(valid['aria-invalid']).toBeUndefined();
+		expect(valid['aria-describedby']).toBeUndefined();
+	});
+
+	it('leaves the separators alone', () =&gt; {
+		expect(segmentAttributes({}, 'literal', { locale: 'de', empty: 'Leer' })).toEqual({});
+	});
+});</code></pre>
+</figure>
+<p>The second is the function that localises Bits UI’s date segments (chapter 21). It is a pure function of the props Bits computed, so the test hands it what Bits writes — <code>aria-label=&quot;day, &quot;</code>, <code>aria-valuetext=&quot;Empty&quot;</code> — and checks what comes out: a German day is “Tag”, a Portuguese month “mês”, straight from <code>Intl.DisplayNames</code>; “Empty” becomes the page’s word and gains <code>data-empty</code>; a typed value is left as Bits wrote it; an issue makes the segment <code>aria-invalid</code> and points it at the issue line; and the separators are untouched. Node 24 ships full ICU, so <code>Intl</code> here knows every locale a browser does, and the test needs no browser to know what a screen reader will hear.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateField.svelte.test.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { afterEach, describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
+import { render } from 'vitest-browser-svelte';
+import { getLocale, overwriteGetLocale } from '#lib/paraglide/runtime.js';
+import DateField from './DateField.svelte';
+import DateRangeField from './DateRangeField.svelte';
+
+/**
+ * THE DATE FIELDS, THROUGH THE REAL LIBRARY
+ * =========================================
+ *
+ * `date-segments.spec.ts` tests the function that rewrites what Bits UI
+ * says about a segment, fed the props Bits computes as a hand-written stub.
+ * This renders the two fields themselves, with Bits doing the computing,
+ * on a German and a Brazilian page — so if a Bits release renames or
+ * translates the English it writes (&quot;Empty&quot;, &quot;day, &quot;, &quot;Previous&quot;), the
+ * stub would still pass and these would not.
+ *
+ * The page's language is Paraglide's `getLocale()`, which on a real page
+ * reads the URL; here it is overwritten for each test and put back after.
+ */
+const pageLocale = getLocale;
+afterEach(() =&gt; overwriteGetLocale(pageLocale));
+
+const segment = (container: HTMLElement, part: string) =&gt; {
+	const element = container.querySelector&lt;HTMLElement&gt;(`[data-segment=&quot;${part}&quot;]`);
+	expect(element, `a ${part} segment`).not.toBeNull();
+	return element!;
+};</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateField.svelte.test.ts<span class="code__lines">:32-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it('names an empty German segment in German, and marks it empty', async () =&gt; {
+	overwriteGetLocale(() =&gt; 'de');
+	const screen = await render(DateField, { label: 'Datum', name: 'date' });
+	const day = segment(screen.container, 'day');
+
+	expect(day.getAttribute('role')).toBe('spinbutton');
+	expect(day.getAttribute('aria-label')).toBe('Tag, ');
+	expect(day.getAttribute('aria-valuetext')).toBe('Leer');
+	expect(day.hasAttribute('data-empty')).toBe(true);
+});
+
+it('stops calling a segment empty once something is typed in it', async () =&gt; {
+	overwriteGetLocale(() =&gt; 'de');
+	const screen = await render(DateField, { label: 'Datum', name: 'date' });
+	const day = segment(screen.container, 'day');
+
+	await userEvent.click(day);
+	await userEvent.keyboard('3');
+	await expect.element(day).not.toHaveAttribute('data-empty');
+	expect(day.getAttribute('aria-valuetext')).toBe('3');
+});</code></pre>
+</figure>
+<p>And then the same promise kept a second way, because the first cannot keep it alone. The spec feeds the function a hand-written copy of what Bits writes; the function finds a blank segment by comparing Bits’ <code>aria-valuetext</code> with the literal “Empty”. If a Bits release renamed that word, or translated it, the copy in the spec would still say “Empty” and pass, while on the page <code>data-empty</code> silently went and Bits’ new word was announced. So this file, in the browser project, renders the two real fields with Bits doing the computing — on a German page and a Brazilian one, by overwriting Paraglide’s <code>getLocale()</code> for each test and putting the page’s own back after — and asks the segments what they say: “Tag, ”, “Leer”, <code>data-empty</code>, and after a “3” is typed, no longer empty. The last two tests open the calendar and ask for “Vorheriger Monat”, and read the segments of a range field in Portuguese. A mutation run made the point: with the function’s “Empty” changed to another word, the spec stayed green and two of these went red.</p>
+<aside class="callout callout--note"><p>The date field’s icons are listed in <code>optimizeDeps.include</code> in <code>vite.config.ts</code>, beside the ones the other component tests use. Without them Vite discovered three icons in the middle of the first run, bundled them again, and the test failed inside Bits with a <code>TypeError</code> from a second copy of Svelte’s runtime — the warning the comment in the config quotes is Vitest asking for exactly this.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why test a design decision at all</h4>
+	<p>Because the decisions that make an interface accessible are the ones nobody sees break. A token darkened for a brand refresh, a library upgrade that renames an attribute: the page still looks right to the person who changed it, and the first to notice is somebody who cannot read the grey or whose screen reader now speaks English on a German page. A test that pins the decision as data turns “somebody will notice eventually” into a red line in the run that made the change.</p>
+</aside>
 <h3 id="running">Running it</h3>
 
 <figure class="code">
@@ -402,7 +622,7 @@ describe('distance', () =&gt; {
 	<pre><code class="lang-json">&quot;test:unit&quot;: &quot;vitest&quot;,
 &quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
 &quot;test:e2e&quot;: &quot;playwright test&quot;,
-&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; node scripts/bundle-guard.ts &amp;&amp; npm run test:e2e&quot;,
 &quot;verify:package&quot;: &quot;pnpm --filter @meridian/waypoint run verify&quot;,</code></pre>
 </figure>
 
@@ -414,24 +634,28 @@ describe('distance', () =&gt; {
 	<pre><code>$ pnpm run test:unit -- --run
 
  ✓ |server| src/lib/domain/split.spec.ts (9 tests)
- ✓ |server| src/lib/domain/itinerary.spec.ts (6 tests)
+ ✓ |server| src/lib/domain/itinerary.spec.ts (8 tests)
+ ✓ |server| src/lib/design/contrast.spec.ts (7 tests)
+ ✓ |server| src/lib/domain/dates.spec.ts (6 tests)
+ ✓ |server| src/lib/domain/money.spec.ts (6 tests)
  ✓ |server| src/lib/domain/schemas.spec.ts (5 tests)
- ✓ |server| src/lib/domain/dates.spec.ts (4 tests)
- ✓ |server| src/lib/domain/money.spec.ts (4 tests)
+ ✓ |server| src/lib/ui/date-segments.spec.ts (4 tests)
+ ✓ |server| src/lib/server/locale-url.spec.ts (4 tests)
  ✓ |server| src/lib/server/geodata.spec.ts (3 tests)
- ✓ |client| src/lib/trip/StopCard.svelte.test.ts (2 tests)
- ✓ |client| src/lib/ui/RouteThumb.svelte.test.ts (2 tests)
- ✓ |client| src/lib/guides/Leg.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/ui/DateField.svelte.test.ts (5 tests)
+ ✓ |client (chromium)| src/lib/trip/StopCard.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/ui/RouteThumb.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/guides/Leg.svelte.test.ts (2 tests)
 
- Test Files  9 passed (9)
-      Tests  41 passed (41)</code></pre>
+ Test Files  13 passed (13)
+      Tests  63 passed (63)</code></pre>
 </figure>
 <p>The library has its own suite — <code>pnpm --filter @meridian/waypoint test</code> — with the geodesy properties, the <code>Route</code> class and the <code>Compass</code> component, and chapter 08 runs it as part of <code>verify:package</code>. Both suites are under a minute, which is the number that decides whether people run them before every push or only when the pipeline complains.</p>
 <aside class="callout callout--note"><p>What is *not* unit-tested, and why: the remote functions. They are thin — a schema, an authorisation check, a query — and every line of them is exercised by the end-to-end suite through the real HTTP path, the real cookie and the real database. A unit test would have to fake <code>getRequestEvent()</code>, the session and Drizzle, and would test the fakes. When the logic inside one grows past a screen, it moves into <code>src/lib/server/*.ts</code> where it can be called directly, which is what <code>listStops()</code> and the invite helpers already are.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say which project a new test file lands in from its name alone, and why the server project runs files one at a time.</li><li>You can write a browser test that mounts a component with a <code>vi.fn()</code> prop, clicks a role, and asserts the spy — with no markup selectors.</li><li>You can explain what <code>expect.requireAssertions</code> protects against, and what <code>flushSync</code> is for in a test of a runes class.</li></ul>
+	<ul><li>You can say which project a new test file lands in from its name alone, and why the server project runs files one at a time.</li><li>You can write a browser test that mounts a component with a <code>vi.fn()</code> prop, clicks a role, and asserts the spy — with no markup selectors.</li><li>You can explain what <code>expect.requireAssertions</code> protects against, and what <code>flushSync</code> is for in a test of a runes class.</li><li>You can say why the contrast examples are <code>#767676</code> and <code>#777777</code>, and why the date-segment test needs no browser.</li></ul>
 </aside>
 		</article>
 

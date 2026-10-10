@@ -59,11 +59,11 @@
 			color var(--dur-2) var(--ease-out);
 	}
 
-	/* A finger needs more than a pointer does. */
+	/* A finger needs more than a pointer does: 44px, the touch minimum, since the three sit edge to edge with no room to reach into. */
 	@media (pointer: coarse) {
 		.theme__option {
-			width: 2.25rem;
-			height: 2.25rem;
+			width: var(--control);
+			height: var(--control);
 		}
 	}
 

@@ -53,23 +53,46 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 
 			{ type: 'h3', id: 'two-halves', text: 'The two halves of a localised URL' },
 			code('src/hooks.ts', 23, 27),
-			code('src/hooks.server.ts', 38, 66),
+			code('src/hooks.server.ts', 40, 83),
 			{
 				type: 'p',
 				text: 'There is one `trips` route, not three. `reroute` — universal, so it runs on the server for the first request and in the browser for every navigation after — tells the router that `/de/trips` is served by `src/routes/trips`. The server middleware does the other half: decide the locale for the request, store it in an `AsyncLocalStorage` so every `m.*()` call in the request speaks it, and fill `%paraglide.lang%` in `app.html`. The middleware *offers* a rewritten request too, and it is not used: `event.request` is read-only in SvelteKit 3, and two mechanisms for one rewrite is how a redirect loop starts.'
 			},
+			{
+				type: 'p',
+				text: 'The third argument, `effectiveRequestUrl`, is what makes the server speak the page’s language and not just render it. A remote form posts to `/_app/remote/…`, not to the page it sits on, so the request’s own URL never has `/de` in it; SvelteKit reads the calling page from a header and gives it back as `event.url`. Read from the request instead, every sentence produced *inside* a form or command — a schema’s “Enter an email address”, an `error(422, …)`, the message `handleError` returns — came out in English on a German page. Not because the middleware fell through to the cookie: the URL strategy’s answer for a URL with no prefix is the base locale, so the cookie was never consulted at all.'
+			},
+			code('src/lib/server/locale-url.ts', 1, 41),
+			{
+				type: 'p',
+				text: '`localeUrl()` is what the hook passes. For a page and for a form or command it is `event.url`, which is the page. A `query` called from the browser is the case that is left: it sends no page header — SvelteKit’s own source says so — so its `event.url` is still the endpoint, and SvelteKit has nothing to put back. The test for that case is a comparison the public API allows: a remote request whose `event.url` has the same path as the request itself is one SvelteKit could not place. For it the language comes from what the browser does send — the cookie, which Paraglide’s client runtime writes as soon as a page reads its locale from its own URL, then `Accept-Language`, then English — through `extractLocaleFromRequestWithStrategies`, and `localizeUrl()` puts that locale into the URL, where the middleware’s URL strategy finds it first. A German page’s queries now fail in German; `locale-url.spec.ts` asks for all four cases.'
+			},
+			{
+				type: 'why',
+				title: 'Why not Paraglide’s per-route strategies',
+				text: 'Paraglide can be told to use a different strategy order for some routes — `routeStrategies`, cookie first for `/_app/remote/*` — and it is the more declarative answer. It is also a URL-pattern match at runtime, and the compiler adds a `URLPattern` polyfill to the runtime to do it, in the browser bundle as well as the server’s: every page would carry eighteen kilobytes of minified polyfill, and the URL-pattern matching that goes with it, to settle a question only the server asks. Twenty lines in a server module answer it for nothing on the client.'
+			},
+			{
+				type: 'p',
+				text: 'Those sentences are messages like any other. A schema’s message is written as a function, `() => m.issue_email()`, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter 12 has the schemas). An `error()` thrown by a remote function carries `m.stop_limit({ limit })`, a message with a parameter, and the toast shows its `body.message` as it is. So the rule for this app is short: *no sentence a person reads is a string literal in a `.ts` file*. The end-to-end suite holds it to that on one form, in chapter 42, by typing a bad address into `/de/signin` and expecting German back.'
+			},
+			{
+				type: 'why',
+				title: 'Why a function, and not the message itself',
+				text: '`v.email(m.issue_email())` would call the message function once, when `schemas.ts` is first imported — on the server that is boot, before any request has a locale, so every schema would speak the base language for the life of the process. Passing the function defers the call to the moment of failure. Valibot accepts either; the difference only shows on the second language, which is why it is easy to get wrong and worth a test.'
+			},
 			code('src/app.html', 1, 8),
 
 			{ type: 'h3', id: 'switching', text: 'Switching: three links' },
-			code('src/lib/ui/LocaleSwitcher.svelte', 1, 41),
-			code('src/lib/ui/LocaleSwitcher.svelte', 43, 65),
+			code('src/lib/ui/LocaleSwitcher.svelte', 1, 46),
+			code('src/lib/ui/LocaleSwitcher.svelte', 48, 71),
 			{
 				type: 'p',
 				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through `href()` from chapter 23: `here` is a pathname, not a route id, and there is nothing for `resolve()` to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.'
 			},
 			{
 				type: 'p',
-				text: 'The `keepSearch` prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading `url.search` while prerendering throws. The guides layout passes `keepSearch={false}`; the site header keeps `?tab=map` across a switch. `compact` is for a header that has a nav beside it: below 64em — a phone, a tablet — the links show EN, DE and PT, and from 64em the full names, where there is room. The name stays in each link, visually hidden rather than `display: none`, so the link is still called “Deutsch” to a screen reader and to the end-to-end suite; with the full names on a phone, the guides header had wrapped to three rows.'
+				text: 'The `keepSearch` prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading `url.search` while prerendering throws. The guides layout passes `keepSearch={false}`; the site header keeps `?tab=map` across a switch. `compact` is for a header that has a nav beside it: below 64em — a phone, a tablet — the links show EN, DE and PT, and from 64em the full names, where there is room. With the full names on a phone, the guides header had wrapped to three rows. A compact link is *named* with both — `aria-label="Português (PT)"` — and that is an accessibility rule, not a nicety: WCAG’s “label in name” says a control’s accessible name contains the words drawn on it, because a person using speech input says what they see. Named “Português” while it showed “PT”, the link could not be found by “click PT”; English and German only passed because their names happen to begin with their codes. The full name comes first, so the link is still “Deutsch” to a screen reader and to the end-to-end suite.'
 			},
 			{
 				type: 'why',
@@ -112,15 +135,29 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 			},
 
 			{ type: 'h3', id: 'the-picker', text: 'A date range picker that speaks the domain’s type' },
-			code('src/lib/ui/DateRangeField.svelte', 1, 49),
+			code('src/lib/ui/DateRangeField.svelte', 1, 56),
 			{
 				type: 'p',
 				text: 'Bits UI is headless: it renders the markup, the ARIA and the keyboard model of a date range picker — segmented inputs you can type into, arrow keys between segments, a calendar grid — and nothing visible. Its value is a pair of `CalendarDate`s from `@internationalized/date`, the type chapter 09 chose for the domain, so there is no conversion to get wrong. The `name` on each input renders a hidden `<input>` with the ISO date, which is how the value reaches a remote `form` and how it would reach a plain HTML form with JavaScript off.'
 			},
-			code('src/lib/ui/DateRangeField.svelte', 51, 88, { partial: true }),
+			code('src/lib/ui/DateRangeField.svelte', 58, 134, { partial: true }),
 			{
 				type: 'p',
 				text: 'The `locale` prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. `untrack` around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in `src/lib/styles/dates.css` rather than the component’s `<style>`, because an expense’s single date (chapter 29) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.'
+			},
+			{
+				type: 'p',
+				text: '`calendarLabel={label}` names the calendar grid; without it Bits UI calls every calendar in the app “Event”, in English. The two dates sit in one `datefield__dates` group that may wrap, and the calendar button stays outside it: at 360px “mm/dd/yyyy – mm/dd/yyyy” and a 36px button are wider than a card’s column, and a field that cannot shrink pokes out of the card. And each segment is rendered through the `child` snippet, which is the part worth slowing down for.'
+			},
+			code('src/lib/ui/date-segments.ts', 1, 31),
+			code('src/lib/ui/date-segments.ts', 57, 71),
+			{
+				type: 'p',
+				text: 'Bits UI writes two English words into every segment, with no prop to change them: `aria-label="day, "` and, until something is typed, `aria-valuetext="Empty"`. A German screen-reader user heard “day, Datum, Empty”. A headless library usually leaves a door for this, and here it is the `child` snippet — Bits computes the props, hands them over, and lets us render the element. `segmentAttributes` is spread *after* Bits’ props, so its values win: the part’s name from `Intl.DisplayNames` with `type: \'dateTimeField\'`, which is the browser’s own locale data (“Tag”, “mês”), “Empty” from the messages, a `data-empty` attribute so the stylesheet can grey a placeholder without matching an English word, and `aria-invalid` plus `aria-describedby` pointing at the issue line when the form has one — Bits only knows invalidity from its own `validate`, and nothing of the server’s. The calendar’s two month buttons had the same English, “Previous” and “Next”, written after any `aria-label` passed to them; the same `child` snippet renders each button with the page’s “Vorheriger Monat” after Bits’ props, so ours is the one that lands.'
+			},
+			{
+				type: 'why',
+				text: 'Why not patch the library, or post-process the DOM? A patch is a fork you maintain at every upgrade, and a script that rewrites attributes after render fights the library’s own updates. The `child` snippet is Bits’ documented extension point: when Bits renders those strings differently, or adds a prop for them, this function is the one place to change. Two tests hold it. `date-segments.spec.ts` pins the function — a German day is “Tag”, a typed value is left alone, the separators are untouched — fed a hand-written stand-in for Bits’ props, which by itself would pass forever: if a Bits release renamed “Empty”, the stub would still say “Empty”. So `DateField.svelte.test.ts` renders both fields in a real browser with Bits doing the computing, on a German and a Brazilian page, and asks the segments and the month buttons what they say (chapter 41).'
 			},
 
 			{ type: 'h3', id: 'transport', text: 'A `CalendarDate` across the wire' },
@@ -132,7 +169,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 
 			{ type: 'h3', id: 'money', text: 'Money in and out' },
 			code('src/lib/domain/money.ts', 39, 73),
-			code('src/lib/trip/Expenses.svelte', 530, 547),
+			code('src/lib/trip/Expenses.svelte', 551, 568),
 			{
 				type: 'p',
 				text: 'The amount field is `type="number"` with `inputmode="decimal"`, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes `v.number()` and the server converts to minor units with the trip’s currency. `formatMoney` on the way out uses `Intl.NumberFormat` with `style: "currency"`: “€12.60”, “12,60 €”, “R$ 12,60”. `parseAmount` exists for the one place a free-text amount is typed, and it discovers the separators from `Intl` rather than knowing them.'
@@ -140,7 +177,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 
 			{ type: 'h3', id: 'distances-and-countries', text: 'Distances, and a hundred country names for free' },
 			code('packages/waypoint/src/lib/geo/index.ts', 291, 326),
-			code('src/routes/(site)/explore/+page.svelte', 29, 31),
+			code('src/routes/(site)/explore/+page.svelte', 30, 32),
 			{
 				type: 'p',
 				text: 'Two more `Intl` APIs. `style: "unit"` formats a kilometre or a mile with the right abbreviation and spacing for the locale; a unit the code has never seen still comes out right. `Intl.DisplayNames` with `type: "region"` turns `PT` into “Portugal” and `JP` into “Japan”, “Japan” or “Japão” — a hundred country names in three languages that nobody translated, from the browser’s own locale data. The gazetteer stores a two-letter code and nothing else.'

@@ -11,9 +11,22 @@
  *
  * valibot, because it is a set of small functions the bundler can shake:
  * the browser gets the eight it uses, not a schema runtime.
+ *
+ * MESSAGES IN THE PERSON'S LANGUAGE
+ * ---------------------------------
+ * Every message a person can read is a *function* that returns a Paraglide
+ * message, never a string. valibot calls it when the issue happens, not
+ * when the schema is built — and `m.issue_email()` called during a request
+ * reads the locale that request's middleware stored (`hooks.server.ts`), so
+ * the same schema object answers in German for `/de/signin` and in English
+ * for `/signin`. A string here would be English for everybody, decided once
+ * when the module loaded. The messages that are only ever read by a
+ * developer — an id that is not a uuid, a link that is not a slug — stay
+ * plain strings: they mean a bug or an attack, not a typo.
  */
 
 import * as v from 'valibot';
+import { m } from '#lib/paraglide/messages.js';
 import { isIsoDate } from './dates.ts';
 import { CURRENCIES } from './money.ts';
 import { SLUG } from './ids.ts';
@@ -22,18 +35,32 @@ export const IdSchema = v.pipe(v.string(), v.uuid('Expected an id'));
 export const SlugSchema = v.pipe(v.string(), v.regex(SLUG, 'Expected a trip link'));
 
 export const IsoDateSchema = v.pipe(
-	v.string(),
-	v.check(isIsoDate, 'Expected a date like 2026-05-10')
+	v.string(() => m.issue_date()),
+	v.check(isIsoDate, () => m.issue_date())
 );
 
 export const LngSchema = v.pipe(v.number(), v.minValue(-180), v.maxValue(180));
 export const LatSchema = v.pipe(v.number(), v.minValue(-90), v.maxValue(90));
 
-const shortText = (max: number) => v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
+/* Trimmed first, so "   " is empty — the browser's `required` lets three spaces through. */
+const shortText = (max: number, missing: () => string = () => m.issue_required()) =>
+	v.pipe(
+		v.string(missing),
+		v.trim(),
+		v.minLength(1, missing),
+		v.maxLength(max, () => m.issue_too_long())
+	);
 const optionalText = (max: number) =>
-	v.optional(v.pipe(v.string(), v.trim(), v.maxLength(max)), '');
+	v.optional(
+		v.pipe(
+			v.string(),
+			v.trim(),
+			v.maxLength(max, () => m.issue_too_long())
+		),
+		''
+	);
 
-export const CurrencySchema = v.picklist(CURRENCIES, 'Pick a currency');
+export const CurrencySchema = v.picklist(CURRENCIES, () => m.issue_currency());
 
 /* ---------------------------------------------------------------------- */
 /* Trips                                                                   */
@@ -48,13 +75,16 @@ export const TripInputSchema = v.pipe(
 		currency: CurrencySchema
 	}),
 	v.forward(
-		v.check((trip) => trip.endDate >= trip.startDate, 'The trip cannot end before it starts'),
+		v.check(
+			(trip) => trip.endDate >= trip.startDate,
+			() => m.issue_trip_order()
+		),
 		['endDate']
 	),
 	v.forward(
 		v.check(
 			(trip) => new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime() < 366 * 864e5,
-			'A trip is at most a year'
+			() => m.issue_trip_length()
 		),
 		['endDate']
 	)
@@ -90,7 +120,13 @@ export const StopPatchSchema = v.object({
 	kind: v.optional(StopKindSchema),
 	lng: v.optional(LngSchema),
 	lat: v.optional(LatSchema),
-	notes: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(1000)))
+	notes: v.optional(
+		v.pipe(
+			v.string(),
+			v.trim(),
+			v.maxLength(1000, () => m.issue_too_long())
+		)
+	)
 });
 export type StopPatch = v.InferOutput<typeof StopPatchSchema>;
 
@@ -115,24 +151,54 @@ export type MoveStop = v.InferOutput<typeof MoveStopSchema>;
 /* ---------------------------------------------------------------------- */
 
 export const EXPENSE_CATEGORIES = ['food', 'lodging', 'transport', 'activity', 'other'] as const;
-export const ExpenseCategorySchema = v.picklist(EXPENSE_CATEGORIES);
+export const ExpenseCategorySchema = v.picklist(EXPENSE_CATEGORIES, () => m.issue_category());
 export type ExpenseCategory = v.InferOutput<typeof ExpenseCategorySchema>;
 
 export const ExpenseInputSchema = v.object({
 	tripId: IdSchema,
-	title: shortText(120),
+	title: shortText(120, () => m.issue_expense_title()),
 	amountMinor: v.pipe(
-		v.number(),
-		v.integer('Amounts are whole minor units'),
-		v.minValue(1, 'Enter an amount'),
-		v.maxValue(1_000_000_000, 'That is more than a trip costs')
+		v.number(() => m.issue_amount()),
+		v.integer(() => m.issue_amount_whole()),
+		v.minValue(1, () => m.issue_amount()),
+		v.maxValue(1_000_000_000, () => m.issue_amount_large())
 	),
 	category: ExpenseCategorySchema,
 	date: IsoDateSchema,
-	paidBy: v.string(),
-	participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
+	paidBy: v.string(() => m.issue_payer()),
+	participants: v.pipe(
+		v.array(v.string(), () => m.issue_participants()),
+		v.minLength(1, () => m.issue_participants())
+	)
 });
 export type ExpenseInput = v.InferOutput<typeof ExpenseInputSchema>;
+
+/**
+ * The "Add an expense" form, as the browser sends it: an amount in major
+ * units (euros, not cents — the server converts), and every other field as
+ * the form names it. It lives here, not in `expenses.remote.ts`, because
+ * the form also runs it in the browser as a *preflight* (`Expenses.svelte`),
+ * and a remote module may export nothing but remote functions.
+ */
+export const ExpenseFormSchema = v.object({
+	tripId: IdSchema,
+	title: shortText(120, () => m.issue_expense_title()),
+	amount: v.pipe(
+		v.number(() => m.issue_amount()),
+		v.minValue(0.01, () => m.issue_amount()),
+		v.maxValue(10_000_000, () => m.issue_amount_large())
+	),
+	category: ExpenseCategorySchema,
+	date: IsoDateSchema,
+	paidBy: v.pipe(
+		v.string(() => m.issue_payer()),
+		v.minLength(1, () => m.issue_payer())
+	),
+	participants: v.pipe(
+		v.array(v.string(), () => m.issue_participants()),
+		v.minLength(1, () => m.issue_participants())
+	)
+});
 
 /* ---------------------------------------------------------------------- */
 /* Notes                                                                   */
@@ -174,16 +240,16 @@ export type Presence = v.InferOutput<typeof PresenceSchema>;
 /* ---------------------------------------------------------------------- */
 
 export const EmailSchema = v.pipe(
-	v.string(),
+	v.string(() => m.issue_email()),
 	v.trim(),
 	v.toLowerCase(),
-	v.email('Enter an email address')
+	v.email(() => m.issue_email())
 );
 
 export const PasswordSchema = v.pipe(
-	v.string(),
-	v.minLength(12, 'Use at least twelve characters'),
-	v.maxLength(256)
+	v.string(() => m.issue_password_short()),
+	v.minLength(12, () => m.issue_password_short()),
+	v.maxLength(256, () => m.issue_too_long())
 );
 
 /** What the owner may change after the fact. Every field optional; the same checks when both dates are present. */
@@ -191,7 +257,13 @@ export const TripPatchSchema = v.pipe(
 	v.object({
 		id: IdSchema,
 		name: v.optional(shortText(80)),
-		description: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500))),
+		description: v.optional(
+			v.pipe(
+				v.string(),
+				v.trim(),
+				v.maxLength(500, () => m.issue_too_long())
+			)
+		),
 		startDate: v.optional(IsoDateSchema),
 		endDate: v.optional(IsoDateSchema),
 		currency: v.optional(CurrencySchema),
@@ -200,7 +272,7 @@ export const TripPatchSchema = v.pipe(
 	v.forward(
 		v.check(
 			(patch) => !patch.startDate || !patch.endDate || patch.endDate >= patch.startDate,
-			'The trip cannot end before it starts'
+			() => m.issue_trip_order()
 		),
 		['endDate']
 	)

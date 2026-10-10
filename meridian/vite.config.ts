@@ -1,10 +1,10 @@
 // `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
 // `loadEnv` is not re-exported from there, so it comes straight from Vite.
 import { defineConfig } from 'vitest/config';
-import { loadEnv } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
@@ -271,7 +271,10 @@ export default defineConfig(({ mode }) => {
 			 * parses its input as JavaScript, so putting it first hands it raw `.svelte`
 			 * source and it dies on the first `<h1>`.
 			 */
-			sveltePhosphorOptimize()
+			sveltePhosphorOptimize(),
+
+			// What went into each browser chunk, for `scripts/bundle-guard.ts`. See the function below.
+			bundleStats()
 		],
 
 		/*
@@ -313,6 +316,9 @@ export default defineConfig(({ mode }) => {
 					optimizeDeps: {
 						include: [
 							'phosphor-svelte/lib/BedIcon',
+							'phosphor-svelte/lib/CalendarBlankIcon',
+							'phosphor-svelte/lib/CaretLeftIcon',
+							'phosphor-svelte/lib/CaretRightIcon',
 							'phosphor-svelte/lib/DotsSixVerticalIcon',
 							'phosphor-svelte/lib/ForkKnifeIcon',
 							'phosphor-svelte/lib/LightbulbIcon',
@@ -393,4 +399,40 @@ function commitHash(): string | null {
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * WHAT IS IN EACH CHUNK
+ * =====================
+ *
+ * The bundle guard (`scripts/bundle-guard.ts`, run after the build in
+ * `pnpm run verify`) has two rules — GSAP only in the home page's chunk, no
+ * new chunk over 20 KB gzipped — and both need to know what a chunk *is*.
+ * Its file name is a hash and its manifest name is whichever module came
+ * first, so neither survives an edit. The bundler knows: at the end of the
+ * browser build this writes every chunk's file and the modules in it, with
+ * how many bytes of each made it into the output, to
+ * `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is
+ * not served.
+ */
+function bundleStats(): Plugin {
+	return {
+		name: 'meridian:bundle-stats',
+		apply: 'build',
+		generateBundle(_options, bundle) {
+			if (this.environment?.name !== 'client') return;
+			const chunks = Object.values(bundle)
+				.filter((output) => output.type === 'chunk')
+				.map((chunk) => ({
+					file: chunk.fileName,
+					entry: chunk.isEntry || chunk.isDynamicEntry,
+					facade: chunk.facadeModuleId,
+					modules: Object.fromEntries(
+						Object.entries(chunk.modules).map(([id, info]) => [id, info.renderedLength])
+					)
+				}));
+			mkdirSync('.svelte-kit', { recursive: true });
+			writeFileSync('.svelte-kit/bundle-stats.json', JSON.stringify(chunks));
+		}
+	};
 }

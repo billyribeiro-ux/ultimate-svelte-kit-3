@@ -84,17 +84,16 @@
 		page.url.pathname === target || page.url.pathname.startsWith(target + '/');
 
 	/*
-	 * The header does not offer what the page already is. On the trips list
-	 * the page's own "New trip" is a hundred pixels below, and on the new
-	 * trip form it is the page; on the sign-in and sign-up pages, "Sign in"
-	 * is the form you are looking at. One accent, spent once.
+	 * The header is the same on every page. The first version left out
+	 * whatever the page already was — "New trip" on the trips list and the
+	 * new-trip form, "Sign in" on the sign-in pages — and so the links, the
+	 * language switcher and the theme toggle jumped 130px sideways on the
+	 * most travelled path in the app, from the trips list into a trip. Now
+	 * the action is always there, and on its own page it says so with
+	 * `aria-current`, like a nav link.
 	 */
-	const onTrips = $derived(
-		page.route.id === '/(site)/(app)/trips' || page.route.id === '/(site)/(app)/trips/new'
-	);
-	const onAuth = $derived(
-		page.route.id === '/(site)/(auth)/signin' || page.route.id === '/(site)/(auth)/signup'
-	);
+	const onNewTrip = $derived(page.route.id === '/(site)/(app)/trips/new');
+	const onSignIn = $derived(page.route.id === '/(site)/(auth)/signin');
 </script>
 
 <svelte:window {onkeydown} />
@@ -138,20 +137,26 @@
 
 			<div class="nav__account" style:--i={links.length + 1}>
 				{#if user}
-					{#if !onTrips}
-						<a class="btn btn--primary" href={href('/(site)/(app)/trips/new')}>
-							<PlusIcon size={16} aria-hidden="true" />
-							{m.nav_new_trip()}
-						</a>
-					{/if}
+					<a
+						class="btn btn--primary"
+						href={href('/(site)/(app)/trips/new')}
+						aria-current={onNewTrip ? 'page' : undefined}
+					>
+						<PlusIcon size={16} aria-hidden="true" />
+						{m.nav_new_trip()}
+					</a>
 					<!-- A form, so signing out works with JavaScript off too. -->
 					<form {...signOut}>
 						<button class="btn btn--ghost" type="submit" title={user.name}>
 							{m.auth_sign_out()}
 						</button>
 					</form>
-				{:else if !onAuth}
-					<a class="btn" href={href('/(site)/(auth)/signin')}>{m.auth_sign_in()}</a>
+				{:else}
+					<a
+						class="btn"
+						href={href('/(site)/(auth)/signin')}
+						aria-current={onSignIn ? 'page' : undefined}>{m.auth_sign_in()}</a
+					>
 				{/if}
 			</div>
 		</nav>
@@ -214,10 +219,12 @@
 		min-height: var(--header-h);
 	}
 
+	/* 44px tall, like every other target in the header, though the wordmark draws at 28. */
 	.brand {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
+		min-height: var(--control);
 		font-family: var(--font-display);
 		font-size: var(--text-lg);
 		font-weight: 600;
@@ -266,9 +273,10 @@
 		transition: opacity var(--dur-2) var(--ease-out);
 	}
 
+	/* `--stagger` is 30ms, and 0 under reduced motion, like every duration: the links arrive together. */
 	.nav--open > * {
 		opacity: 1;
-		transition-delay: calc(var(--i, 0) * 30ms);
+		transition-delay: calc(var(--i, 0) * var(--stagger));
 	}
 
 	.nav__link {

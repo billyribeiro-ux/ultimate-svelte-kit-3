@@ -5,6 +5,7 @@
 	import type { PerspectiveCamera } from 'three';
 	import type { FeatureCollection, Geometry, Position } from 'geojson';
 	import { arc, distance, interpolate, type LngLat } from '@meridian/waypoint/geo';
+	import type { StopKind } from '#lib/domain/schemas.ts';
 
 	/**
 	 * THE SCENE
@@ -32,9 +33,29 @@
 	export interface GlobeStop {
 		readonly id: string;
 		readonly name: string;
+		readonly kind: StopKind;
 		readonly lng: number;
 		readonly lat: number;
 	}
+
+	/*
+	 * The route and the stops in the colours the map gives them: the route
+	 * in the sea, each stop in its kind's hue — the dark theme's values,
+	 * because the globe is a night scene whatever the page's theme. Copied
+	 * from `tokens.css` by hand, because a WebGL material cannot read a
+	 * token. The first version drew the arc in `--sun` and every stop in
+	 * `--coral`: the same route in two colours on two neighbouring tabs,
+	 * and two state colours spent as decoration.
+	 */
+	const ROUTE = '#2dd4bf';
+	const KIND: Record<StopKind, string> = {
+		place: '#2dd4bf',
+		lodging: '#a78bfa',
+		food: '#f59e0b',
+		transport: '#60a5fa',
+		activity: '#fb7185',
+		idea: '#8b95a5'
+	};
 
 	interface Props {
 		stops: readonly GlobeStop[];
@@ -274,16 +295,10 @@
 	<T.LineBasicMaterial color="#9cc4dc" transparent opacity={0.55} />
 </T.LineSegments>
 
-<!--
-	The route and the stops wear the dark theme's state colours — `--sun` for
-	the arc, `--coral` for a stop — by hand, because a WebGL material cannot
-	read a token and the globe is a night scene whatever the page's theme.
-	The selected stop is white: the one thing lit.
--->
-<!-- The route -->
+<!-- The route, in the sea; the selected stop is white, the one thing lit. -->
 {#each arcs as geometry, index (index)}
 	<T.Line {geometry}>
-		<T.LineBasicMaterial color="#f59e0b" linewidth={2} />
+		<T.LineBasicMaterial color={ROUTE} linewidth={2} />
 	</T.Line>
 {/each}
 
@@ -295,6 +310,6 @@
 		onclick={() => onselect(stop.id)}
 	>
 		<T.SphereGeometry args={[0.011, 16, 16]} />
-		<T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#fb7185'} />
+		<T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : KIND[stop.kind]} />
 	</T.Mesh>
 {/each}

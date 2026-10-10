@@ -69,6 +69,19 @@ test('a wrong password is refused, with the message on the field', async ({ page
 	await expect(page).toHaveURL(/\/signin/);
 });
 
+test('on a German page the schema’s own messages are German', async ({ page }) => {
+	// Not the handler's message, which was always localised: the valibot schema's,
+	// which runs before the handler and used to answer in English on every page.
+	await page.goto('/de/signin');
+	await page.locator('html[data-hydrated]').waitFor();
+	await page.getByLabel('E-Mail').fill('keine-adresse');
+	await page.getByLabel('Passwort').fill('irgendetwas');
+	await page.getByRole('button', { name: 'Anmelden' }).click();
+	await expect(page.getByText('Gib eine E-Mail-Adresse ein')).toBeVisible();
+	await expect(page.getByText('Enter an email address')).toHaveCount(0);
+	await expect(page).toHaveURL(/\/de\/signin/);
+});
+
 test('a trip is started from the explore page, listed, and deleted from its settings', async ({
 	page
 }) => {
@@ -106,6 +119,23 @@ test('a trip is started from the explore page, listed, and deleted from its sett
 
 	// Delete it: a real form, with a confirm in front of it when JavaScript is on.
 	await page.goto(`/t/${slug}/settings`);
+	await page.locator('html[data-hydrated]').waitFor();
+
+	// "Cancel" keeps the trip: nothing is sent, and the trip is still listed.
+	let asked = false;
+	page.once('dialog', (dialog) => {
+		asked = true;
+		void dialog.dismiss();
+	});
+	await page.getByRole('button', { name: 'Delete trip' }).click();
+	await expect.poll(() => asked).toBe(true);
+	await expect(page).toHaveURL(new RegExp(`/t/${slug}/settings$`));
+	await page.goto('/trips');
+	await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toBeVisible();
+
+	// "OK" deletes it.
+	await page.goto(`/t/${slug}/settings`);
+	await page.locator('html[data-hydrated]').waitFor();
 	page.once('dialog', (dialog) => dialog.accept());
 	await page.getByRole('button', { name: 'Delete trip' }).click();
 	await expect(page).toHaveURL(/\/trips$/);

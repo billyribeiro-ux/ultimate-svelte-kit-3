@@ -151,12 +151,13 @@ export function worldStyle(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-131</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-125</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { untrack } from 'svelte';
 	import type { FeatureCollection, LineString } from 'geojson';
-	import type { LngLatBoundsLike, Map as MapLibreMap } from 'maplibre-gl';
+	import type { LngLatBoundsLike, MapMouseEvent, Map as MapLibreMap } from 'maplibre-gl';
 	import { fade } from 'svelte/transition';
 	import { GeoJSON, LineLayer, MapLibre, Marker } from 'svelte-maplibre';
 	import { CrosshairIcon, FrameCornersIcon } from 'phosphor-svelte';
@@ -221,6 +222,8 @@ export function worldStyle(
 	});
 
 	let map: MapLibreMap | undefined = $state();
+	/* The zoom the camera settled at; MapLibre writes it back after every move. */
+	let zoom = $state(1.4);
 	let showMe = $state(false);
 	const geo = new Geolocation();
 
@@ -261,22 +264,343 @@ export function worldStyle(
 				duration: reducedMotion.current ? 0 : 600
 			});
 		}
-	}
-
-	/* The first fit, once the map is up, uses the same padding — a cut, since it is the first frame anyone sees. */
-	function onload() {
-		ready = true;
-		if (map &amp;&amp; fit &amp;&amp; padding().bottom &gt; 40) {
-			map.fitBounds(fit, { padding: padding(), maxZoom: 11, duration: 0 });
-		}
-	}
-&lt;/script&gt;</code></pre>
+	}</code></pre>
 </figure>
-<p>The route is one great-circle line per leg — <code>arc()</code> from the library, forty-eight segments, unwrapped across the date line — as a GeoJSON <code>FeatureCollection</code> the <code>LineLayer</code> draws. <code>fit</code> is the padded bounds from the same library. <code>diffStyleUpdates</code> makes MapLibre patch three paint properties when the theme flips rather than tear the map down. <code>bind:map</code> hands the underlying <code>Map</code> instance back for the one imperative call, <code>fitBounds</code> on a button — which fits the route into the part of the canvas that is on screen: the side-by-side map is as tall as the viewport under the sticky tabs, so at the top of the page its bottom is below the fold, and the hidden strip is counted as padding. The first fit, once the map has loaded, does the same.</p>
+<p>The route is one great-circle line per leg — <code>arc()</code> from the library, forty-eight segments, unwrapped across the date line — as a GeoJSON <code>FeatureCollection</code> the <code>LineLayer</code> draws. <code>fit</code> is the padded bounds from the same library. <code>diffStyleUpdates</code> makes MapLibre patch three paint properties when the theme flips rather than tear the map down. <code>bind:map</code> hands the underlying <code>Map</code> instance back for the imperative calls, the first of them <code>fitBounds</code> on a button — which fits the route into the part of the canvas that is on screen: the side-by-side map is as tall as the viewport under the sticky tabs, so at the top of the page its bottom is below the fold, and the hidden strip is counted as padding.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:133-200</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:127-199</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * THE CAMERA MOVES WHEN SOMEBODY ASKS
+ * -----------------------------------
+ * The route is framed once: when the map has loaded and there is a route
+ * to frame — at once for a trip with stops, or when the first stop of a
+ * new trip arrives. It is a cut, since it is the first frame anyone sees.
+ * After that the camera belongs to the person: it moves for &quot;Fit the
+ * route&quot;, for a bubble pressed and for a stop chosen, and for nothing
+ * else.
+ *
+ * It used to be `bounds={fit}` on `&lt;MapLibre&gt;`, which re-fits whenever
+ * `bounds` changes — and `fit` is derived from the stops, which the live
+ * query hands over as a new array every time anybody's heartbeat wakes
+ * the room. Choosing a stop sends a heartbeat, so the route was re-fitted
+ * under the flight to the stop, a few frames after it took off.
+ *
+ * `framed` is a plain variable, not state: once it is true the effect
+ * returns before it reads anything reactive, so it never runs again.
+ */
+let framed = false;
+
+$effect(() =&gt; {
+	if (framed || !map || !ready) return;
+	const box = fit;
+	if (!box) return;
+	framed = true;
+	map.fitBounds(box, { padding: padding(), maxZoom: 11, duration: 0 });
+});
+
+/*
+ * A FRAME THAT CHANGES SIZE
+ * -------------------------
+ * MapLibre watches its own container and redraws the canvas when it
+ * changes size. The markers do not always follow: when the frame changed
+ * height while the map was starting up, the canvas was redrawn for the
+ * new height and the pins stayed where the old one had put them — on a
+ * phone, 25px below the route, until something moved the camera. It
+ * happened in five loads out of six, and not once when the frame changed
+ * later, with the map running, at rest or in the middle of a flight.
+ *
+ * So the frame is watched here too, and when it changes size this asks
+ * MapLibre to resize again — at once if the camera is still, or when its
+ * move ends. `resize()` at rest redraws the canvas and moves every marker
+ * to match, which is all the cure needs to know about the cause. The
+ * first report is the frame's starting size, not a change, and is let go.
+ */
+$effect(() =&gt; {
+	if (!map || !frame) return;
+	const instance = map;
+	let size = '';
+	let waiting = false;
+	const settle = () =&gt; {
+		waiting = false;
+		instance.resize();
+	};
+	const observer = new ResizeObserver(([entry]) =&gt; {
+		const next = `${entry?.contentRect.width}×${entry?.contentRect.height}`;
+		if (next === size) return;
+		const first = size === '';
+		size = next;
+		if (first) return;
+		if (!instance.isMoving()) instance.resize();
+		else if (!waiting) {
+			waiting = true;
+			instance.once('moveend', settle);
+		}
+	});
+	observer.observe(frame);
+	return () =&gt; {
+		observer.disconnect();
+		instance.off('moveend', settle);
+	};
+});</code></pre>
+</figure>
+<p>The route is framed once, as a cut, when the map has loaded and there is a route to frame — and after that the camera belongs to the person. It moves for “Fit the route”, for a bubble pressed and for a stop chosen, and for nothing else. The effect that frames it is written so that it can only ever do so once: <code>framed</code> is a plain <code>let</code>, and once it is true the effect returns before it has read anything reactive, so it has no dependencies left and never runs again.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>bounds={fit}</code> on <code>&lt;MapLibre&gt;</code></h4>
+	<p>Because svelte-maplibre re-fits the map whenever <code>bounds</code> changes, and <code>fit</code> is derived from the stops — which the live query hands over as a new array every time anybody’s heartbeat wakes the room. Choosing a stop sends a heartbeat. So the flight to the chosen stop took off, the next snapshot arrived a few frames later, and the whole route was fitted again underneath it: on the desktop’s side map, choosing Sagrada Família left the camera on the overview with its pin about 155px from the middle. A prop that is “the bounds to show” is right for a map whose view is a pure function of its data; this one is not, because a person moves it.</p>
+</aside>
+<p>The second effect is a repair for something MapLibre does not do reliably. It watches its own container and redraws the canvas when the container changes size — but on a phone the frame’s height is measured from the trip’s header after the map has started, and in five loads out of six the canvas was redrawn for the new height while every pin stayed where the old height had put them: 25px below the route, until something moved the camera. So the frame is watched here too, and a change of size asks for <code>resize()</code> again — at once if the camera is still, or on the <code>moveend</code> of the move in progress. At rest, <code>resize()</code> redraws and re-places every marker, which is all the cure needs to know about the cause. The first report a <code>ResizeObserver</code> makes is the size it started at, not a change, and is let go. <code>TripView</code> also guesses the header’s height per width now, so in the usual case there is no change of size to repair.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:201-324</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * PINS THAT SHARE A CITY
+ * ----------------------
+ * At the zoom that fits Lisbon to Barcelona, the five Lisbon stops are
+ * one blob of pins with only the top one readable. So markers that would
+ * share a press — whose 44px press areas would touch — are drawn as one
+ * bubble with the numbers they hold (&quot;1–5&quot;), and pressing the bubble
+ * fits the camera to what it holds. Stops that are closer still — two in
+ * the same street — may be a smaller bubble at that zoom, and pressing
+ * it goes further in. 44px is the same number the phone's target check
+ * presses with: two pins closer than that are two targets a finger
+ * cannot tell apart, whatever they look like.
+ *
+ * A press area is 44px tall and 44px wide, or as wide as the marker when
+ * the marker is wider — a bubble that says &quot;10–12&quot; is. Its width is
+ * worked out from its label, generously (a bold digit at the 13px the
+ * label is at its largest is under 9px, plus the padding and the ring),
+ * because the grouping has to be decided before anything is drawn to
+ * measure.
+ *
+ * Positions are MapLibre's world pixels: a point's Web Mercator
+ * coordinate (0 to 1 across the world) times 512 × 2^zoom. They depend
+ * on the zoom alone, not on where the map is panned, so the grouping is
+ * a `$derived` of the stops, the zoom and the selection — recomputed when
+ * a move ends, never per frame. Any two markers that touch are merged,
+ * and the bubble sits at the middle of what it holds, until no two touch.
+ * The selected stop is never folded into a bubble: the one thing the
+ * person asked to see is always a pin. Above zoom 16 nothing is grouped;
+ * two stops that close are on the same street.
+ */
+const PRESS = 44;
+
+const pressWidth = (label: string) =&gt; Math.max(PRESS, label.length * 9 + 20);
+
+interface Member {
+	readonly stop: MapStop;
+	readonly number: number;
+	/** Web Mercator, 0 to 1. */
+	readonly x: number;
+	readonly y: number;
+}
+
+interface Group {
+	readonly key: string;
+	readonly members: readonly Member[];
+	readonly label: string;
+	readonly lngLat: [number, number];
+}
+
+/*
+ * A bubble says which stops it holds, in the itinerary's numbers: &quot;1–5&quot;
+ * for a run of the route, &quot;3, 5&quot; or &quot;1–5, 12&quot; when a city is visited at
+ * two points of it. A bare count was the first answer, and it lied: a
+ * bubble holding stops 3 and 5 said &quot;2&quot;, beside the pin that *is* stop 2.
+ * Past two runs the list would be longer than the bubble is useful, and
+ * the count comes back — in the bubble's shape and colour, never a pin's.
+ */
+function labelOf(members: readonly Member[]): string {
+	const runs: [number, number][] = [];
+	for (const { number } of members) {
+		const run = runs.at(-1);
+		if (run &amp;&amp; number === run[1] + 1) run[1] = number;
+		else runs.push([number, number]);
+	}
+	if (runs.length &gt; 2) return String(members.length);
+	return runs.map(([from, to]) =&gt; (from === to ? `${from}` : `${from}–${to}`)).join(', ');
+}
+
+const mercator = (stop: MapStop) =&gt;
+	maplibregl.MercatorCoordinate.fromLngLat([stop.lng, stop.lat]);
+
+const groups: Group[] = $derived.by(() =&gt; {
+	const world = 512 * 2 ** zoom;
+	const drafts = stops.map((stop, index) =&gt; {
+		const { x, y } = mercator(stop);
+		const members = [{ stop, number: index + 1, x, y }];
+		return { members, x, y, label: labelOf(members), pinned: stop.id === selected };
+	});
+
+	const touch = (a: (typeof drafts)[number], b: (typeof drafts)[number]) =&gt;
+		Math.abs(a.x - b.x) * world &lt; (pressWidth(a.label) + pressWidth(b.label)) / 2 &amp;&amp;
+		Math.abs(a.y - b.y) * world &lt; PRESS;
+
+	let merged = zoom &lt; 16;
+	while (merged) {
+		merged = false;
+		search: for (let i = 0; i &lt; drafts.length; i += 1) {
+			for (let j = i + 1; j &lt; drafts.length; j += 1) {
+				const a = drafts[i]!;
+				const b = drafts[j]!;
+				if (a.pinned || b.pinned || !touch(a, b)) continue;
+				a.members = [...a.members, ...b.members].sort((one, other) =&gt; one.number - other.number);
+				a.x = a.members.reduce((sum, member) =&gt; sum + member.x, 0) / a.members.length;
+				a.y = a.members.reduce((sum, member) =&gt; sum + member.y, 0) / a.members.length;
+				a.label = labelOf(a.members);
+				drafts.splice(j, 1);
+				merged = true;
+				break search;
+			}
+		}
+	}
+
+	return drafts.map(({ members, x, y, label }) =&gt; {
+		const { lng, lat } = new maplibregl.MercatorCoordinate(x, y).toLngLat();
+		return {
+			key: members.map((member) =&gt; member.stop.id).join(' '),
+			members,
+			label,
+			lngLat: members.length === 1 ? [members[0]!.stop.lng, members[0]!.stop.lat] : [lng, lat]
+		};
+	});
+});
+
+function zoomInto(group: Group) {
+	const box = bounds(group.members.map((member) =&gt; member.stop));
+	if (!map || !box) return;
+	map.fitBounds(
+		[
+			[box.west, box.south],
+			[box.east, box.north]
+		],
+		{ padding: 80, maxZoom: 16, duration: reducedMotion.current ? 0 : 600 }
+	);
+}</code></pre>
+</figure>
+<p>Five Lisbon stops at the zoom that fits Lisbon to Barcelona are one blob of pins with only the top number readable. So markers that would share a press are drawn as one bubble that says which numbers it holds — “1–5” for a run of the route, “3, 5” or “1–5, 12” when a city is visited at two points of it — and pressing it fits the camera to them. “Would share a press” is the same 44px the phone’s target check presses with: two press areas that touch are two targets a finger cannot tell apart, however they are drawn. A press area is 44px square, or as wide as the marker when the marker is wider, and a bubble’s width is guessed from its label, generously, because the grouping has to be decided before there is anything drawn to measure.</p>
+<p>The trick that makes it cheap is that the test needs no screen. A point’s Web Mercator coordinate, 0 to 1 across the world, times <code>512 × 2^zoom</code> is where MapLibre draws it in world pixels at that zoom, and two stops 44 of those apart are 44 screen pixels apart wherever the map is panned — so the grouping is a <code>$derived</code> of the stops, the zoom and the selection. <code>bind:zoom</code> is written by svelte-maplibre on <code>moveend</code>, so the groups are recomputed once per gesture, not on every frame of it. Any two markers that touch are merged, the merged bubble moves to the middle of what it holds, and the loop runs again until no two touch — because a bubble that has grown and moved may now touch a neighbour it did not.</p>
+<p>Two exceptions keep it honest. The selected stop is never folded into a bubble — the one thing a person asked to see is always a pin — and above zoom 16 nothing is grouped, because two stops that close are on the same street and a bubble there would never come apart. The label lists numbers rather than counting them because a count lied: a bubble holding stops 3 and 5 said “2”, beside the pin that *is* stop 2; only past two runs of numbers does the count come back. The bubble is a button whose name is its label plus a visually hidden “2 stops here, zoom in”, in the page’s language; the stop names are only its <code>title</code>, and a single pin is named by its number. The bubble’s first draft spelled its stops out in that hidden text, which made a second button called “Alfama” beside the itinerary’s own, and every test that asked for “the Alfama button” found two.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:326-390</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * A STOP CHOSEN IS A STOP SHOWN
+ * -----------------------------
+ * Selecting a stop — in the list, the palette or on the map — flies the
+ * camera to it, so the pin is in the middle of what can be seen and out
+ * of any bubble. Under reduced motion it is a cut.
+ *
+ * How close is a judgement about this atlas, which has coastlines and
+ * borders and nothing under them. A fixed street-level zoom (12) put
+ * Alfama in an empty beige field; a fixed country-level one (10) still
+ * showed no coast at Lisbon, and hid the hotel a kilometre away under
+ * the chosen pin. What tells a person where a stop is, at the scale of a
+ * city, is the trip's other stops around it. So the camera goes as close
+ * as it takes for the chosen pin to stand clear of every other stop —
+ * its press area, a quarter larger while it is chosen, touching none of
+ * theirs — and no closer: zoom 9, sixty kilometres across, if that is
+ * enough, and never past 16. It never zooms out from where the map
+ * already is.
+ *
+ * The last stop flown to is remembered in a plain variable, not state:
+ * the effect must not re-run because it wrote down where it went.
+ */
+let flownTo: string | null = null;
+
+function closeEnough(stop: MapStop): number {
+	const own = mercator(stop);
+	const clear = PRESS * 1.25;
+	// The scale (512 × 2^zoom) at which every other stop is clear of this one across or down.
+	let scale = 0;
+	for (const other of stops) {
+		if (other.id === stop.id) continue;
+		const { x, y } = mercator(other);
+		const dx = Math.abs(x - own.x);
+		const dy = Math.abs(y - own.y);
+		scale = Math.max(scale, Math.min(clear / dx, clear / dy));
+	}
+	// Alone, anywhere is clear; on the very spot of another stop, nowhere is, and 16 is as close as it goes.
+	if (scale === 0) return 9;
+	return Number.isFinite(scale) ? Math.min(16, Math.max(9, Math.log2(scale / 512))) : 16;
+}
+
+$effect(() =&gt; {
+	const id = selected;
+	if (!id) {
+		flownTo = null;
+		return;
+	}
+	if (!map || !ready || id === flownTo) return;
+	const stop = untrack(() =&gt; stops.find((candidate) =&gt; candidate.id === id));
+	if (!stop) return;
+	flownTo = id;
+	const target = {
+		center: [stop.lng, stop.lat] as [number, number],
+		zoom: Math.max(
+			untrack(() =&gt; zoom),
+			untrack(() =&gt; closeEnough(stop))
+		),
+		padding: padding()
+	};
+	if (reducedMotion.current) map.jumpTo(target);
+	else map.flyTo({ ...target, duration: 800 });
+});
+
+/* Five decimal places is a metre: the map's click and a dragged pin give fifteen, which nobody typed and no field shows. */
+const round = (value: number) =&gt; Math.round(value * 1e5) / 1e5;</code></pre>
+</figure>
+<p>And a stop chosen is a stop shown. Selecting one — in the list, in the palette, on the map — flies the camera to it, which also takes it out of any bubble; under reduced motion it is a jump. How close is a judgement about this atlas, which has coastlines and borders and nothing under them. A fixed street-level zoom put Alfama in an empty beige field; a fixed country-level one still showed no coast at Lisbon and hid the hotel a kilometre away under the chosen pin. What tells a person where a stop is, at the scale of a city, is the trip’s other stops around it, so <code>closeEnough()</code> works out the zoom at which the chosen pin’s press area — a quarter larger while it is chosen — touches no other stop’s, from the same world-pixel arithmetic as the bubbles, and the camera goes there: never further out than zoom 9, never closer than 16, and never out from where the map already is.</p>
+<p><code>flownTo</code> is a plain <code>let</code>, not <code>$state</code>, on purpose: it is what the effect writes down about where it went, and an effect that depended on its own note would run again for having written it. The zoom is read with <code>untrack</code> for the same reason — a flight changes the zoom, and the effect must not answer its own flight. <code>round()</code> keeps five decimal places, a metre, on every coordinate the map hands over: the map’s click and a dragged pin give fifteen, which nobody typed and no field shows.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:392-413</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">function onload() {
+	ready = true;
+}
+
+/*
+ * A CLICK ON THE MAP, NOT ON A MARKER
+ * -----------------------------------
+ * An editor's click on empty map starts a new stop there. A click on a
+ * pin or a bubble is a click on the map too: MapLibre listens on the
+ * element the markers live in, and the marker's own `stopPropagation()`
+ * comes too late to stop it — Svelte delegates `onclick` to the root of
+ * the app, so by the time the marker's handler runs, the event has
+ * already passed MapLibre on its way up. Pressing a bubble opened the
+ * &quot;New stop&quot; dialog over the zoom it asked for. So the map asks where the
+ * click began.
+ */
+function onclick(e: MapMouseEvent) {
+	if (!editable) return;
+	const target = e.originalEvent.target;
+	if (target instanceof Element &amp;&amp; target.closest('.maplibregl-marker')) return;
+	onadd?.({ lng: round(e.lngLat.lng), lat: round(e.lngLat.lat) });
+}</code></pre>
+</figure>
+<p>For an editor, a click on empty map starts a new stop there — and for a while a click on a pin or a bubble did too. Pressing a bubble asked for a zoom and got the “New stop” dialog over it. The marker’s own click handler calls <code>stopPropagation()</code>, and it comes too late: MapLibre listens for clicks on the element the markers live in, with <code>addEventListener</code>, and the marker’s handler is a Svelte <code>onclick</code>, which Svelte *delegates* — it attaches one listener at the root of the app and runs the handlers on the event’s path when the event arrives there. By then the click has already passed MapLibre on its way up. So the map’s own handler asks where the click began, and a click that began inside <code>.maplibregl-marker</code> is not a click on the map.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the map checks the target instead of the marker stopping the event</h4>
+	<p>Because the marker’s handler is not ours — it is inside svelte-maplibre — and the fix that would work there, a native listener in the capture phase, is the kind of fight with the framework’s event model the Svelte documentation warns about: a <code>stopPropagation()</code> in a hand-added listener keeps the event from ever reaching the root, and every delegated handler above it silently stops working. Asking the event where it started is local, cannot break anybody else’s handler, and reads as what it means.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:416-497</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;map&quot; data-ready={ready ? '' : undefined} bind:this={frame}&gt;
@@ -284,17 +608,13 @@ export function worldStyle(
 		bind:map
 		{style}
 		diffStyleUpdates
-		bounds={fit}
-		fitBoundsOptions={{ padding: 40, maxZoom: 11 }}
 		center={[0, 20]}
-		zoom={1.4}
+		bind:zoom
 		attributionControl={false}
 		cooperativeGestures
 		class=&quot;map__canvas&quot;
 		{onload}
-		onclick={(e) =&gt; {
-			if (editable) onadd?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
-		}}
+		{onclick}
 	&gt;
 		&lt;!-- Two layers for one line: a wide halo in the paper colour, then the dashed route on top, so the dashes read where they cross a border. --&gt;
 		&lt;GeoJSON id=&quot;route&quot; data={route}&gt;
@@ -315,29 +635,47 @@ export function worldStyle(
 		&lt;!--
 			The selected pin is drawn above its neighbours. Each marker is its
 			own positioned element with a transform, so a z-index on the pin
-			inside it cannot climb out; the marker itself carries it. Without
-			this, pins that share a city paint in list order, and the ring
-			around &quot;1&quot; showed a &quot;5&quot;.
+			inside it cannot climb out; the marker itself carries it. A bubble
+			sits between the two.
 		--&gt;
-		{#each stops as stop, i (stop.id)}
-			&lt;Marker
-				lngLat={[stop.lng, stop.lat]}
-				zIndex={stop.id === selected ? 10 : 1}
-				draggable={editable}
-				asButton
-				onclick={() =&gt; onselect?.(stop.id)}
-				ondragend={(e) =&gt; onmove?.(stop.id, { lng: e.lngLat[0], lat: e.lngLat[1] })}
-			&gt;
-				&lt;span
-					class=&quot;pin&quot;
-					class:pin--selected={stop.id === selected}
-					class:pin--draggable={editable}
-					data-kind={stop.kind}
-					title={stop.name}
+		{#each groups as group (group.key)}
+			{#if group.members.length === 1}
+				{@const { stop, number } = group.members[0]!}
+				&lt;Marker
+					lngLat={group.lngLat}
+					zIndex={stop.id === selected ? 10 : 1}
+					draggable={editable}
+					asButton
+					onclick={() =&gt; onselect?.(stop.id)}
+					ondragend={(e) =&gt; onmove?.(stop.id, { lng: round(e.lngLat[0]), lat: round(e.lngLat[1]) })}
 				&gt;
-					{i + 1}
-				&lt;/span&gt;
-			&lt;/Marker&gt;
+					&lt;!--
+						A pin is named by its number, the number the itinerary gives the
+						stop; the stop's name is the title a pointer shows. The bubble
+						below keeps its stops' names in its title for the same reason:
+						its first draft spelled them out in its hidden text, which made a
+						second button called &quot;Alfama&quot; beside the itinerary's own.
+					--&gt;
+					&lt;span
+						class=&quot;pin&quot;
+						class:pin--selected={stop.id === selected}
+						class:pin--draggable={editable}
+						data-kind={stop.kind}
+						title={stop.name}
+					&gt;
+						{number}
+					&lt;/span&gt;
+				&lt;/Marker&gt;
+			{:else}
+				{@const names = group.members.map((member) =&gt; member.stop.name).join(', ')}
+				&lt;Marker lngLat={group.lngLat} zIndex={5} asButton onclick={() =&gt; zoomInto(group)}&gt;
+					&lt;span class=&quot;pin pin--cluster tabular&quot; title={names}&gt;
+						{group.label}&lt;span class=&quot;visually-hidden&quot;
+							&gt;: {m.map_cluster({ count: group.members.length })}&lt;/span
+						&gt;
+					&lt;/span&gt;
+				&lt;/Marker&gt;
+			{/if}
 		{/each}
 
 		&lt;!-- Reading `geo.fix` is what starts the position watch; not reading it stops it. --&gt;
@@ -348,7 +686,36 @@ export function worldStyle(
 		{/if}
 	&lt;/MapLibre&gt;</code></pre>
 </figure>
-<p>svelte-maplibre’s components are thin and declarative: <code>&lt;GeoJSON&gt;</code> is a source, <code>&lt;LineLayer&gt;</code> a layer inside it, <code>&lt;Marker&gt;</code> a DOM element positioned by the map. The route is two layers over one source — a wide halo in the paper colour, then the dashed line on top — so the dashes read where they cross a border. <code>onload</code> sets <code>data-ready</code>, which the CSS turns into a fade-in, so the canvas never flashes an empty frame. Markers are <code>asButton</code> so they are focusable, draggable when the viewer may edit, and the pin inside is ours — numbered, coloured by kind through the same <code>--kind</code> property the card uses, scaled when selected. The selected marker carries <code>zIndex={10}</code>: pins that share a city paint in list order, and a z-index on the pin inside cannot climb out of the marker’s own stacking context, so the ring around “1” used to show a “5”. A click on empty map calls <code>onadd</code> with a point; the dialog in the last chapter opens with it.</p>
+<p>svelte-maplibre’s components are thin and declarative: <code>&lt;GeoJSON&gt;</code> is a source, <code>&lt;LineLayer&gt;</code> a layer inside it, <code>&lt;Marker&gt;</code> a DOM element positioned by the map. The route is two layers over one source — a wide halo in the paper colour, then the dashed line on top — so the dashes read where they cross a border. <code>onload</code> sets <code>data-ready</code>, which the CSS turns into a fade-in, so the canvas never flashes an empty frame. Markers are <code>asButton</code> so they are focusable, draggable when the viewer may edit, and the pin inside is ours — numbered, coloured by kind through the same <code>--kind</code> property the card uses, and scaled when selected. The selected marker carries <code>zIndex={10}</code>: pins that share a city paint in list order, and a z-index on the pin inside cannot climb out of the marker’s own stacking context, so the ring around “1” used to show a “5”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:640-660</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * 26px drawn, 44px to press: the pin's own box is the look, the
+ * pseudo-element is the target. It is placed from the pin's *padding*
+ * edge, inside the 2px ring, so the reach is half of what is missing
+ * plus the ring — `inset: -9px` from the outside edge's arithmetic made
+ * a 40px target. A percentage inset is a share of the padding box (its
+ * width for the sides, its height for the top and bottom), which makes
+ * one rule right for both shapes: a round pin reaches out to 44px each
+ * way, and a bubble already wider than 44px reaches only to its ring
+ * sideways, so it does not grow into its neighbours.
+ */
+.pin {
+	position: relative;
+}
+
+.pin::after {
+	content: '';
+	position: absolute;
+	inset: min(-2px, calc(50% - var(--control) / 2));
+	border-radius: var(--radius-pill);
+}</code></pre>
+</figure>
+<p>A pin is drawn 26px across and pressed across 44px, and the difference is a pseudo-element. The arithmetic has one trap, the same one the icon buttons fell into: an absolutely placed box is measured from its parent’s *padding* edge, inside the border, so a reach of <code>(44 − 26) / 2 = 9px</code> from the outside of a pin with a 2px ring made a 40px target. A percentage inset is a share of the padding box — of its width for the sides, its height for the top and bottom — so <code>min(-2px, calc(50% - var(--control) / 2))</code> is right for both shapes at once: a round pin reaches out to 44px each way, and a bubble that is already wider than 44px reaches sideways only to its own ring, and does not grow into its neighbours. The phone’s target check in chapter 42 presses every marker at that distance.</p>
 <h3 id="geolocation">Where am I, as a reactive value</h3>
 
 <figure class="code">
@@ -433,7 +800,7 @@ export class Geolocation {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:202-243</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:499-540</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;div class=&quot;map__tools no-print&quot;&gt;
@@ -488,7 +855,7 @@ export class Geolocation {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what the style contains, what it costs, and what one change would add tiles.</li><li>You can explain why the worker URL is set in a module script and which CSP line it needs.</li><li>You can describe <code>createSubscriber</code> and give one other API it would fit.</li></ul>
+	<ul><li>You can say what the style contains, what it costs, and what one change would add tiles.</li><li>You can explain why the worker URL is set in a module script and which CSP line it needs.</li><li>You can describe <code>createSubscriber</code> and give one other API it would fit.</li><li>You can say how the map decides that two pins overlap without asking where they are on screen, and why the result is a <code>$derived</code>.</li><li>You can explain why a marker’s <code>stopPropagation()</code> did not keep its click from reaching the map, and what the map checks instead.</li></ul>
 </aside>
 		</article>
 

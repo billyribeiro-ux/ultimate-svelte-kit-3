@@ -109,10 +109,12 @@
 		}
 	}
 
+	/* 44px tall, the size of a target, though the wordmark draws at 28. */
 	.brand {
 		grid-area: brand;
 		display: inline-flex;
 		align-items: center;
+		min-height: var(--control);
 		gap: var(--space-2);
 		font-family: var(--font-display);
 		font-size: var(--text-lg);
@@ -127,6 +129,7 @@
 	}
 
 	.guides-nav a {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		min-height: var(--control-sm);
@@ -136,6 +139,15 @@
 		color: var(--ink-2);
 		font-size: var(--text-sm);
 		font-weight: 500;
+	}
+
+	/* 36px drawn, 44px under a finger: the reach is above and below, never into the next link. */
+	@media (pointer: coarse) {
+		.guides-nav a::after {
+			content: '';
+			position: absolute;
+			inset: -4px 0;
+		}
 	}
 
 	.guides-nav a:hover {

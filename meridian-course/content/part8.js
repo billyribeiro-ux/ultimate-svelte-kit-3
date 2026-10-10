@@ -23,7 +23,7 @@ export const part8 = [
 			},
 
 			{ type: 'h3', id: 'two-projects', text: 'Two projects in one config' },
-			code('vite.config.ts', 286, 357),
+			code('vite.config.ts', 289, 363),
 			{
 				type: 'p',
 				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Neither names an `extends`: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
@@ -35,7 +35,7 @@ export const part8 = [
 			{
 				type: 'why',
 				title: 'Why a real browser and not jsdom',
-				text: 'jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads `getBoundingClientRect` and listens for pointer events with real coordinates; `animate:flip` measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the seven component tests in this project in under five, which is a cheap price for tests that mean something.'
+				text: 'jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads `getBoundingClientRect` and listens for pointer events with real coordinates; `animate:flip` measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the six component tests in this project in under five, which is a cheap price for tests that mean something.'
 			},
 
 			{ type: 'h3', id: 'logic', text: 'The logic: worked examples, not just properties' },
@@ -82,6 +82,42 @@ export const part8 = [
 				text: '`Leg` is the component the Markdown guides embed (chapter 34). Its test does double duty: it proves the arithmetic and the compass point, and — because `Leg` imports the gazetteer and the geodesy package — it proves that the *workspace package* resolves from the app in a browser build. The second test is a rejection: `render()` of a component whose script throws returns a promise that rejects, and `rejects.toThrow(/atlantis/)` pins the message so a future refactor cannot turn a clear error into a blank component.'
 			},
 
+			{ type: 'h3', id: 'design-as-data', text: 'The design, tested as data' },
+			{
+				type: 'p',
+				text: 'Three files test the design rather than the domain. Two are in the server project, in Node, not the browser, on purpose: each asks a question that has an answer without a page. The third is in the browser because the second could not answer its question on its own. The first is the contrast table from chapter 22.'
+			},
+			code('src/lib/design/contrast.spec.ts', 5, 29),
+			{
+				type: 'p',
+				text: 'Arithmetic first, against figures anyone can check: black is luminance 0 and white is 1, the ratio runs from 1:1 to 21:1 whichever colour comes first, and `#767676` on white is 4.54:1 — the lightest grey that passes AA, a number quoted in every accessibility guide — while `#777777`, one step lighter, is 4.48:1 and fails. A contrast function that got the linearisation wrong would be off by a few hundredths, and those two greys sit on either side of the line by a few hundredths. That is what makes them the right examples: they test the function exactly where it matters.'
+			},
+			code('src/lib/design/contrast.spec.ts', 31, 73),
+			{
+				type: 'p',
+				text: 'Then the parser, on a stylesheet written in the test — a `light-dark()` pair, a plain hex, an alias of an alias, and a shadow that is not a colour and must be left out — and the two ways a pair fails: under its floor, and naming a token that does not exist, whose ratio is `null` rather than a crash. The last test reads the real `tokens.css` and expects no failures, which duplicates `scripts/contrast.ts` in `pnpm run lint` on purpose: the lint gate prints a table for a person, and the test fails in the same run as everything else when somebody runs only `vitest`.'
+			},
+			code('src/lib/ui/date-segments.spec.ts', 1, 52),
+			{
+				type: 'p',
+				text: 'The second is the function that localises Bits UI’s date segments (chapter 21). It is a pure function of the props Bits computed, so the test hands it what Bits writes — `aria-label="day, "`, `aria-valuetext="Empty"` — and checks what comes out: a German day is “Tag”, a Portuguese month “mês”, straight from `Intl.DisplayNames`; “Empty” becomes the page’s word and gains `data-empty`; a typed value is left as Bits wrote it; an issue makes the segment `aria-invalid` and points it at the issue line; and the separators are untouched. Node 24 ships full ICU, so `Intl` here knows every locale a browser does, and the test needs no browser to know what a screen reader will hear.'
+			},
+			code('src/lib/ui/DateField.svelte.test.ts', 1, 29),
+			code('src/lib/ui/DateField.svelte.test.ts', 32, 52),
+			{
+				type: 'p',
+				text: 'And then the same promise kept a second way, because the first cannot keep it alone. The spec feeds the function a hand-written copy of what Bits writes; the function finds a blank segment by comparing Bits’ `aria-valuetext` with the literal “Empty”. If a Bits release renamed that word, or translated it, the copy in the spec would still say “Empty” and pass, while on the page `data-empty` silently went and Bits’ new word was announced. So this file, in the browser project, renders the two real fields with Bits doing the computing — on a German page and a Brazilian one, by overwriting Paraglide’s `getLocale()` for each test and putting the page’s own back after — and asks the segments what they say: “Tag, ”, “Leer”, `data-empty`, and after a “3” is typed, no longer empty. The last two tests open the calendar and ask for “Vorheriger Monat”, and read the segments of a range field in Portuguese. A mutation run made the point: with the function’s “Empty” changed to another word, the spec stayed green and two of these went red.'
+			},
+			{
+				type: 'note',
+				text: 'The date field’s icons are listed in `optimizeDeps.include` in `vite.config.ts`, beside the ones the other component tests use. Without them Vite discovered three icons in the middle of the first run, bundled them again, and the test failed inside Bits with a `TypeError` from a second copy of Svelte’s runtime — the warning the comment in the config quotes is Vitest asking for exactly this.'
+			},
+			{
+				type: 'why',
+				title: 'Why test a design decision at all',
+				text: 'Because the decisions that make an interface accessible are the ones nobody sees break. A token darkened for a brand refresh, a library upgrade that renames an attribute: the page still looks right to the person who changed it, and the first to notice is somebody who cannot read the grey or whose screen reader now speaks English on a German page. A test that pins the decision as data turns “somebody will notice eventually” into a red line in the run that made the change.'
+			},
+
 			{ type: 'h3', id: 'running', text: 'Running it' },
 			code('package.json', 24, 28, { partial: true }),
 			{
@@ -90,17 +126,21 @@ export const part8 = [
 $ pnpm run test:unit -- --run
 
  ✓ |server| src/lib/domain/split.spec.ts (9 tests)
- ✓ |server| src/lib/domain/itinerary.spec.ts (6 tests)
+ ✓ |server| src/lib/domain/itinerary.spec.ts (8 tests)
+ ✓ |server| src/lib/design/contrast.spec.ts (7 tests)
+ ✓ |server| src/lib/domain/dates.spec.ts (6 tests)
+ ✓ |server| src/lib/domain/money.spec.ts (6 tests)
  ✓ |server| src/lib/domain/schemas.spec.ts (5 tests)
- ✓ |server| src/lib/domain/dates.spec.ts (4 tests)
- ✓ |server| src/lib/domain/money.spec.ts (4 tests)
+ ✓ |server| src/lib/ui/date-segments.spec.ts (4 tests)
+ ✓ |server| src/lib/server/locale-url.spec.ts (4 tests)
  ✓ |server| src/lib/server/geodata.spec.ts (3 tests)
- ✓ |client| src/lib/trip/StopCard.svelte.test.ts (2 tests)
- ✓ |client| src/lib/ui/RouteThumb.svelte.test.ts (2 tests)
- ✓ |client| src/lib/guides/Leg.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/ui/DateField.svelte.test.ts (5 tests)
+ ✓ |client (chromium)| src/lib/trip/StopCard.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/ui/RouteThumb.svelte.test.ts (2 tests)
+ ✓ |client (chromium)| src/lib/guides/Leg.svelte.test.ts (2 tests)
 
- Test Files  9 passed (9)
-      Tests  41 passed (41)`
+ Test Files  13 passed (13)
+      Tests  63 passed (63)`
 			},
 			{
 				type: 'p',
@@ -115,7 +155,8 @@ $ pnpm run test:unit -- --run
 				items: [
 					'You can say which project a new test file lands in from its name alone, and why the server project runs files one at a time.',
 					'You can write a browser test that mounts a component with a `vi.fn()` prop, clicks a role, and asserts the spy — with no markup selectors.',
-					'You can explain what `expect.requireAssertions` protects against, and what `flushSync` is for in a test of a runes class.'
+					'You can explain what `expect.requireAssertions` protects against, and what `flushSync` is for in a test of a runes class.',
+					'You can say why the contrast examples are `#767676` and `#777777`, and why the date-segment test needs no browser.'
 				]
 			}
 		]
@@ -125,21 +166,21 @@ $ pnpm run test:unit -- --run
 		slug: 'end-to-end',
 		title: 'End to end: the built server, two viewports, two people',
 		summary:
-			'Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile. Five suites cover a stranger, an account, one trip’s every tab, two browsers on one trip, and invites plus the embed. How the suite is kept honest, the three mobile-only failures it found, and what each one taught.',
+			'Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile, and the design’s checks in a third at 360px. Six suites cover a stranger, an account, one trip’s every tab, the map’s own behaviour, two browsers on one trip, and invites plus the embed; a seventh asks every screen of the design, in both themes and at three widths, whether anything sticks out, whether a finger can hit it, what axe finds, and how it paints, on a fast connection and a slow one; and a bundle guard after the build holds the chunks to a budget. How the suite is kept honest, what it found, and what each failure taught.',
 		goal: 'Run the end-to-end suite locally, read a failure’s call log and trace, and write a new test that signs in, does one thing, and cleans up after itself.',
 		blocks: [
 			{
 				type: 'p',
 				text: 'An end-to-end test is the only kind that can fail because of a **seam**: a cookie the hook did not read, a header the adapter did not send, a prerendered page that baked the wrong user in, a form the CSRF check refused. Those are exactly the failures that unit tests cannot see and that real people hit first. So the suite runs against the *built* application — the adapter’s output, its server, its database — and not against the dev server, and the configuration says why at length.'
 			},
-			code('playwright.config.ts', 34, 88),
+			code('playwright.config.ts', 41, 104),
 			{
 				type: 'p',
 				text: 'Read the `webServer` block as a recipe: rebuild the database from the migrations and the seed, build the app, start the adapter’s server on port 4173. Playwright waits for the port, runs the suite, and stops the process. `reuseExistingServer` is on outside CI, so a developer who already has the built server running skips the three-minute build — and in CI it is off, so the pipeline always tests what it just built. The environment block matters more than it looks: `PUBLIC_ORIGIN` is **baked into the bundle** at build time (chapter 03), and the server compares it with each request’s origin; if the build said 5173 and the test hits 4173, every form submission is a 403. It took an afternoon to learn that the same value has to be present in both places, which is why the comment is there.'
 			},
 			{
 				type: 'p',
-				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs about a minute and a half of wall clock for thirty-six tests across both profiles — plus the build, the first time — and buys a suite whose failures are always real.'
+				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and twenty-nine tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
 			},
 			code('scripts/prepare-e2e-db.js', 18, 47),
 			{
@@ -159,21 +200,36 @@ $ pnpm run test:unit -- --run
 				text: '`typeDate` exists because Bits UI’s date picker is not an `<input type="date">`; it is three editable segments per date, in the locale’s order, and Playwright’s `fill()` has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does — and the work is in `typeDateInto`, which takes any date input as a locator, because the expense form’s date is the same picker now: the trip’s two dates find their input by position in the range, the expense finds its by role, `getByRole("group", { name: "Date", exact: true })`. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.'
 			},
 
-			{ type: 'h3', id: 'suites', text: 'Five suites' },
+			{ type: 'h3', id: 'suites', text: 'Six suites' },
 			code('e2e/public.e2e.ts', 14, 34),
 			{
 				type: 'p',
 				text: 'The stranger’s suite asserts things that are easy to break and hard to notice. That the guides page ships **no script at all** is the whole point of `csr = false` (chapter 34), and `script[src]` count zero is the only assertion that proves it. That `/de/guides` has `lang="de"` proves the reroute hook, the prerender entries and the `%paraglide.lang%` replacement all agree for a page that was built at compile time, with no request to consult. That the text inside a guide is `Lisbon → Sintra` with a distance proves a Svelte component inside Markdown ran the geodesy library at build time.'
 			},
-			code('e2e/public.e2e.ts', 71, 92),
+			code('e2e/public.e2e.ts', 48, 66),
 			{
 				type: 'p',
-				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away.'
+				text: 'The same race as the sign-in form’s, on a plain input. Text typed into the explore filter before the page had hydrated was wiped when it did: the filter is a `bind:value` on a `$state` that starts empty, and hydration writes the state into the input. The account suite’s test of an explore-to-new-trip journey filled the filter straight after `goto` and failed on a slow run with “1 place” never appearing — the field was empty in its snapshot. The cure is the one `keepTyped()` applies to the form (chapter 32): the page’s script runs while the server’s input is still on the page, so the filter’s state starts from what is in it. The test holds the client bundle back, types, lets it go, and expects the text and the filtered list to have survived.'
+			},
+			code('e2e/public.e2e.ts', 91, 117),
+			{
+				type: 'p',
+				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter 36). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
 			},
 			code('e2e/account.e2e.ts', 13, 36),
 			{
 				type: 'p',
 				text: 'A fresh account with a unique email per run, so the test can run twice against the same database. It walks the whole loop — refused at `/trips`, sent to sign in with `redirectTo` remembered, creates the account, lands on an empty trips page, signs out, signs back in — and the `openMenu` calls are the phone project earning its keep.'
+			},
+			code('e2e/account.e2e.ts', 72, 83),
+			{
+				type: 'p',
+				text: 'The German test is about which code produced a sentence, not about German. The sign-in *handler*’s message — “that email and password do not match” — was always localised, because it is written with `m.*()` in the handler. The *schema*’s message for a malformed email runs before the handler, and it answered in English on every page until two things changed: the messages became functions called at failure time (chapter 12), and the Paraglide middleware read the locale from the page the form is on rather than the `/_app/remote` URL it posts to (chapter 20). The test asserts both halves — the German sentence is there, the English one is not — because a test that only looked for German would pass on a page that printed both.'
+			},
+			code('e2e/account.e2e.ts', 120, 142),
+			{
+				type: 'p',
+				text: 'The delete test answers the dialog twice. Playwright accepts nothing by default — a `confirm()` with no handler is dismissed — so `page.once(\'dialog\', …)` decides each answer explicitly. First “Cancel”: the page must still be the settings page and the trip must still be in the list. Then “OK”: the trip must be gone. The first half is new, and it is new because it failed: the `confirm()` lived in an `onsubmit` that called `preventDefault()`, the remote form’s own submit listener does not look at `defaultPrevented`, and Cancel deleted the trip (chapter 31). Testing only the “yes” path of a question is testing half of it.'
 			},
 			code('e2e/trip.e2e.ts', 14, 30),
 			{
@@ -184,6 +240,16 @@ $ pnpm run test:unit -- --run
 			{
 				type: 'p',
 				text: 'The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. Its date used to be `fill("2026-05-10")` on a native date input; the field became the segmented picker, in the page’s language rather than the browser’s, so the test types the date segment by segment like a person — the same assertion, through the control that ships. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.'
+			},
+			code('e2e/map.e2e.ts', 24, 64),
+			{
+				type: 'p',
+				text: 'The map has a suite of its own because its three bugs were behaviours a screenshot cannot show. The first is a click that goes two places: for an editor a click on the map starts a stop, and pressing a bubble opened the “New stop” dialog over the zoom it asked for (chapter 27 explains the event delegation behind it). The test presses a bubble and then a pin and expects no dialog, and then clicks the map itself and expects one — the second half is what keeps the first from passing by breaking clicks altogether. `markers()` runs in the page and reads every marker’s centre by its label, which is what the other two tests compare.'
+			},
+			code('e2e/map.e2e.ts', 66, 105),
+			{
+				type: 'p',
+				text: 'The second is a camera that was taken back. Choosing a stop flew the map to it, and the live query’s next snapshot — brought by the heartbeat the choice itself sends — re-fitted the whole route a few frames later. The test chooses Sagrada Família on the desktop’s side map, waits past the flight and the heartbeat, and expects the chosen pin in the middle of the map. Not Madrid, which was the first choice and is the lesson: Madrid is near the middle of the route, so a re-fit put its pin within a few pixels of the centre too, and the test passed against the bug. A test of “it went there” needs a there that nothing else would go to. The third is pins out of place: a resize at rest makes MapLibre place every marker afresh, so after a one-pixel round trip of the window no marker may have moved — against the bug, the Lisbon bubble moved 24px.'
 			},
 			code('e2e/collab.e2e.ts', 14, 60),
 			{
@@ -196,6 +262,123 @@ $ pnpm run test:unit -- --run
 				text: 'The settings test has a shape worth copying: `try … finally`. It flips the trip to visible-by-link, checks that the embed section appears and that the custom element inside it renders the trip *through the route API* — Playwright locators pierce shadow DOM, so `page.locator(\'meridian-route\').getByText(…)` reaches inside — and then, whatever happened, flips it back. Without the `finally`, one failure in the middle would leave the seeded trip public, and the stranger’s suite in the next run would fail on a 200 where it expects a 404, two files away from the cause.'
 			},
 
+			{ type: 'h3', id: 'visual', text: 'The suite that looks at the design' },
+			{
+				type: 'p',
+				text: 'The six suites above are about behaviour. The seventh, `visual.e2e.ts`, is about the things a person reviewing a screenshot is bad at: a control that runs two pixels past its card, a button a finger cannot hit, a missing accessible name, a colour pair a theme change broke. It walks the same list of screens `scripts/screens.ts` photographs — one list, so the screens a person reviews are the screens the gate checks.'
+			},
+			code('e2e/matrix.ts', 3, 33),
+			code('e2e/matrix.ts', 161, 163),
+			{
+				type: 'p',
+				text: 'A screen is a URL plus whatever has to happen before it is the screen: a filter that matches nothing, a sign-in with a bad email, the stop dialog open, the palette, a toast, the phone’s open menu. Twenty-seven of them, in both themes, in all three projects. `ALLOWED_SCROLLERS` names the elements that are wider than the screen on purpose — the expenses table’s wrapper, the tab strip, the two canvases, the toaster, the closed nav — so the overflow check can tell a scroller from a leak.'
+			},
+			code('src/lib/design/page-checks.ts', 19, 72),
+			{
+				type: 'p',
+				text: 'The checks are functions that run *in the page*: `page.evaluate(fn, arg)` sends a function’s source text to the browser and calls it there, so each must be self-contained — no imports, nothing from the module scope, everything it needs as its one argument. The overflow check asks two questions. Does anything end past the right edge of the screen, outside an allowed scroller? And does any form control run past its card’s *content box*? The second exists because the first missed a real bug: at 360px the new-trip date field poked through the card’s padding onto its border, which does not widen the page, so `scrollWidth` was fine and the field was not. And the gate missed it a second way, which is why there is a third project: the overflow walk ran on the desktop and on a 412px phone, the bug was there only at 360px, and a review that put the fix back to the broken CSS found the suite still green. A check that runs at the wrong width is a check of a different page.'
+			},
+			code('src/lib/design/page-checks.ts', 81, 196),
+			{
+				type: 'p',
+				text: 'The target check is the design’s rule made executable: on a phone, every visible button, link, input, select, option and `role="button"` is drawn at least 36px each way and answers a press anywhere in a 44px box around its centre. The second half is asked of the browser itself — `document.elementFromPoint()` just inside each edge of that box — so a `::after` that extends the hit area counts, and a neighbour drawn over it does not. A checkbox inside a `<label>` is measured as its label, because the label is what a finger presses; a link inside a sentence is exempt, as WCAG 2.5.8 exempts it; with a modal open only the dialog is swept, because everything behind it is under the scrim on purpose; and a toast passing over the page is a moment, not a layout. Each element is scrolled to the middle of the screen first, so the sticky header is never what the probe hits.'
+			},
+			{
+				type: 'p',
+				text: '`role="button"` is in the list because of the map. A MapLibre marker is a `div` with that role, and the probe used to sweep only real buttons, links and form controls — so the pins and the bubbles were checked by nothing, and a mutation that shrank every pin to 16px left the check green. With them in, it found the pins’ press area was 40px, from the same padding-edge arithmetic as the icon buttons (chapter 27). A marker is the second, and narrowest, exemption: it may be *drawn* down to WCAG’s own 24px, because a pin is 26px so the route under it stays readable — that is the map’s legibility, not its target — and it must still answer the full 44px press. A marker is never scrolled itself, because scrolling inside a map would move the picture under the probe; its map is brought to the middle instead, and a marker outside what its map shows is not on the screen to press.'
+			},
+			{
+				type: 'p',
+				text: 'Its first run failed on controls that *looked* right, and both reasons are worth knowing. An absolutely positioned `::after` with `inset: -4px` is measured from the element’s *padding box*, so on a 36px button with a 1px border it reached 42px, not 44 — hence `--reach` in `base.css`, which is half the difference plus the border. And two 36px buttons 8px apart, on a phone whose device pixel ratio is 2.625, met at a seam that rounds to one device pixel or the other; a press exactly between them could land on either, so the gaps between adjacent small targets became 12px, and a segmented control on a touch screen became 44px tall. Neither shows in a screenshot.'
+			},
+			code('e2e/visual.e2e.ts', 53, 84),
+			{
+				type: 'p',
+				text: 'Signing in afresh for every signed-in screen would be over fifty sign-ins — fourteen screens, two themes, two projects. `test.extend` adds two fixtures: `anaState`, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and `signedIn`, an *option* a `describe` block sets with `use()`. The built-in `storageState` fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.'
+			},
+			code('e2e/visual.e2e.ts', 86, 170),
+			{
+				type: 'p',
+				text: 'axe is the engine behind most accessibility tooling, and `@axe-core/playwright` runs it in a Playwright page. Two choices are deliberate. The engine is the project’s own `axe-core`, read from `node_modules` and handed over as `axeSource`, so the rules are the newest release rather than whichever the adapter bundled. And every rule axe tags `wcag2a` or `wcag2aa` — WCAG 2’s Level A and AA — runs, and *any* violation fails — not “no serious ones”, which is how a suite learns to live with a moderate problem forever. Only the two canvases are excluded, because a WebGL picture is not something axe can read — the canvases and nothing else. The first version excluded MapLibre’s `.maplibregl-canvas-container`, the element the canvas sits in, and every marker sits in it too: a dozen buttons people press, with names a screen reader announces, were out of axe’s sight, and stripping their names changed nothing in the result. Now it is `canvas.maplibregl-canvas`, and axe reads the markers like any other button. One rule has an exception, on one selector, with the reason written beside it: the palette’s list scrolls and focus never enters it, because it is the listbox of a combobox driven from the input with `aria-activedescendant`, and a tab stop there would do nothing. So the main run disables that rule and a second run applies it to the whole page *except* that selector — an exception that cannot quietly widen.'
+			},
+			{
+				type: 'p',
+				text: 'The whole matrix runs with `reducedMotion: \'reduce\'`, and the comment says why: the questions are about where a screen settles. The first run found a 1.97:1 primary button on the dark home page — axe had measured it at 97% opacity, half way through the hero’s fade. Motion is checked where it is decided, in the tokens that reduced motion zeroes; the matrix checks the page it settles into.'
+			},
+			{
+				type: 'why',
+				title: 'Why both axe and a hand-written target check',
+				text: 'Because axe’s target-size rule is WCAG 2.2’s 2.5.8 — 24px, with spacing — and is not among the rules this suite runs, which are the ones axe tags `wcag2a` and `wcag2aa`. The design asks for more — 36px drawn and 44px to press on a phone, the platform guidelines’ number — and no off-the-shelf rule knows the brief. The general tool checks the standard; the probe above checks the promise the design made. When a project’s own rules are stricter than the standard, they need their own test, or they are a wish.'
+			},
+			code('e2e/visual.e2e.ts', 172, 193),
+			{
+				type: 'p',
+				text: 'One map at any width. The itinerary’s side map exists from 64em and not below, and the reason is a WebGL context: a hidden MapLibre is still one, and a phone would pay for two on the Map tab. The test opens the itinerary at 1440px and counts one canvas, narrows the same page to 700px and counts none, widens it again and counts one — the `MediaQuery` that decides it is live, so resizing mounts and unmounts the map — and then on the Map tab counts one at both widths.'
+			},
+			code('e2e/visual.e2e.ts', 234, 287),
+			{
+				type: 'p',
+				text: 'And the three pages people land on — home, explore, a public trip — are measured on the phone profile, twice, with `PerformanceObserver`s installed before any of the page’s own script runs. `buffered: true` delivers the entries that happened before the observer existed. The first time the page loads as it is, and Cumulative Layout Shift must be *zero*, not under Lighthouse’s 0.1; when it is not, the test prints what moved, from each shift’s `sources`. The wait before reading is a second and a half, long enough for anything late — a chart, the live chip, a font — to have moved if it was going to.'
+			},
+			{
+				type: 'p',
+				text: 'The second time it loads over a slow connection, and the largest paint must still land inside 2.5 seconds. Unthrottled, on the machine running the suite, that budget meant nothing: the home page’s largest paint was 0.36 seconds and would have had to get seven times worse to fail. So a CDP session — Chromium’s DevTools protocol, which Playwright opens for any page — applies `Network.emulateNetworkConditions` with the round trip and bandwidth Lighthouse’s mobile preset assumes: 150ms, 1.6 Mbps down, 750 kbps up. The home page’s hero then paints at 2.27 seconds, within twenty milliseconds on every run, because a throttled network is the same network everywhere. That is a gate with 230ms of headroom: about forty kilobytes more in front of the hero, and it fails.'
+			},
+			{
+				type: 'why',
+				title: 'Why throttle the connection and not the processor',
+				text: 'Because a CPU multiplier is relative to the machine it runs on: “four times slower” is one speed on a laptop and another on a CI runner, so the same test would mean two different things. A throttled connection is a fixed number of milliseconds and bytes per second wherever it runs — and here it is the network that decides, too: adding the 4× CPU slowdown on top moved the home page’s paint by less than the run-to-run spread. It is not Lighthouse’s own figure, and the comment says so: Lighthouse simulates each request from an unthrottled run, and its preset for applied throttling adds a margin for that, 562.5ms round trips. On that preset this server’s home page paints at 6.1 seconds: the hero is requested in the first 700ms and arrives last, behind forty module preloads sharing HTTP/1.1’s six connections to one host. A reverse proxy that speaks HTTP/2 in front of `node build` would change that number, and chapter 44’s compose file leaves room for one. The gate holds the number it can hold steadily, and the other is written down here so that nobody mistakes one for the other.'
+			},
+			{
+				type: 'why',
+				title: 'Why zero, when 0.1 is “good”',
+				text: 'Because this project can have zero, and a threshold invites spending it. Every image has its width and height, the fonts are preloaded, the live chip’s slot is as wide as its widest label, the charts reserve their boxes. A shift here would be a bug with a cause, and 0.05 of budget would let the first one through unnoticed and the second one argue it was only another 0.05. A field measurement of real visitors is the place for thresholds; a lab test of three known pages is the place for zero.'
+			},
+
+			code('scripts/screens.ts', 1, 46),
+			{
+				type: 'p',
+				text: 'The pictures are still taken, and still looked at by a person — this suite does not replace a review, it holds the review’s conclusions. `scripts/screens.ts` walks the same matrix in three viewports — the 1440×900 desktop, the Pixel 7, and a 360px phone, the narrowest width the type scale is tuned for — and two themes, writes a PNG of each screen to `design/screens/`, and prints the overflow and contrast reports beside them from the same two modules the gates use — exiting non-zero on a problem of either kind. The design of this app was reviewed that way, three times, a hundred-odd pictures at a time; every finding that a machine could have made is now one of the checks above — the third review was largely of the checks themselves, and found the two blind spots this chapter describes — and the ones it could not — a heading that wrapped badly, a fade in the wrong place — are in the comments beside the CSS that fixed them. The folder is ignored by git, because the pictures change with every CSS edit and a few megabytes of PNGs in every diff would bury the change itself.'
+			},
+
+			{ type: 'h3', id: 'bundle', text: 'The bundle guard' },
+			{
+				type: 'p',
+				text: 'Two rules of the design can break while every test passes: GSAP belongs in the home page’s chunk and nowhere else, and no chunk over 20 KB gzipped may appear without somebody agreeing to it. A build that succeeds says nothing about either. So `pnpm run verify` runs `node scripts/bundle-guard.ts` between the build and the end-to-end suite, and the guard needs to know what is in each chunk — which a hashed file name does not say.'
+			},
+			code('vite.config.ts', 404, 438),
+			{
+				type: 'p',
+				text: 'The bundler knows. A Vite plugin is an object with hooks, and `generateBundle` is called once per environment with every chunk the build is about to write, including the modules in each and how many bytes of each survived into the output (`renderedLength`). SvelteKit’s build has a client environment and a server one; the plugin writes only the client’s, to `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is not served.'
+			},
+			code('scripts/bundle-guard.ts', 68, 91),
+			{
+				type: 'p',
+				text: 'A budget keyed by file name would break on every edit, because the hash changes with the content. So each chunk is *named* by what it is: the route it renders, the module it was split at (the globe’s dynamic import), or the package that is most of it — names that survive an edit. Two chunks of one package get the largest module’s path inside the package after the name, without pnpm’s version-stamped store path, so an upgrade does not rename them either.'
+			},
+			code('scripts/bundle-guard.ts', 103, 144),
+			{
+				type: 'terminal',
+				code: `
+$ node scripts/bundle-guard.ts
+BUNDLE (133 chunks, gzipped)
+   531.8 KB  route:src/routes/(site)/t/[slug=slug]/+page.svelte  (budget 531.1)
+   206.1 KB  module:src/lib/globe/Globe.svelte  (budget 206.1)
+      43 KB  package:bits-ui (bits-ui/dist/bits/date-field/date-field.svelte.js)  (budget 42.9)
+    30.9 KB  route:src/routes/(site)/+page.svelte  (budget 30.5)
+    24.9 KB  package:svelte (svelte/src/internal/client/reactivity/batch.js)  (budget 24.9)
+  everything else is under 20 KB`
+			},
+			{
+				type: 'p',
+				text: 'Five chunks are over the limit and all five are in `scripts/bundle-budget.json`, with the size they were measured at — three of them a little over it since, which is what the 10% is for. The trip page is big because it is MapLibre, Tiptap and LayerChart; the globe is three.js, and it loads only when somebody opens that tab (chapter 28). A budgeted chunk may grow 10% before the guard fails; a new chunk over 20 KB fails at once, with its name and its size. When a change is meant to grow one, `--write` measures again and rewrites the budget — and the budget is a file in the repository, so the growth is a line in the diff that a reviewer sees.'
+			},
+			{
+				type: 'why',
+				title: 'Why a budget in a file, and not a limit in the config',
+				text: 'Vite’s `chunkSizeWarningLimit` is one number for every chunk, a warning, and it is either too low for the trip page or too high for everything else. A budget per named chunk says something more useful: *this* chunk is big, on purpose, at *this* size. It makes the decision visible, and it turns a slow drift — a dependency that adds 3 KB a month — into a failure on the day it crosses 10%, rather than a discovery a year later.'
+			},
+
 			{ type: 'h3', id: 'found', text: 'What the suite found' },
 			{
 				type: 'p',
@@ -204,7 +387,7 @@ $ pnpm run test:unit -- --run
 			{
 				type: 'ol',
 				items: [
-					'**The trip page was a 500 for signed-in members.** An `$effect` that sent the presence heartbeat read the heartbeat command’s own `pending` state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with `effect_update_depth_exceeded`. The fix is in chapter 31: read the trip id once, and wrap the command call in `untrack`. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.',
+					'**The trip page was a 500 for signed-in members.** An `$effect` that sent the presence heartbeat read the heartbeat command’s own `pending` state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with `effect_update_depth_exceeded`. The fix is in chapter 24: read the trip id once, and wrap the command call in `untrack`. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.',
 					'**The place search never searched.** Bits UI’s `Combobox.Input` is a controlled input; binding its value is not the same as listening to it, and the `query` the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. `pressSequentially` in the test — typing a character at a time, as a person does — found it.',
 					'**The settings page did not update after Save.** The command used `.updates(tripBySlug(slug))` so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template `await`, which resolves once. Reading `query.current` in a `$derived` is the reactive way, and chapter 31 explains the difference.',
 					'**Text typed before the page had hydrated vanished.** One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is `keepTyped()` in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with `page.route`, types, releases it, and waits for a `data-hydrated` attribute the root layout sets in `onMount` before asserting the text is still there.',
@@ -214,22 +397,34 @@ $ pnpm run test:unit -- --run
 			},
 			{
 				type: 'p',
-				text: 'The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure `document.documentElement.scrollWidth` against `clientWidth` on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender.'
+				text: 'The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure `document.documentElement.scrollWidth` against `clientWidth` on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender. That probe is now `overflowInPage`, and it runs on every screen in the matrix.'
+			},
+			{
+				type: 'p',
+				text: 'The design suite’s first run, against screens that had already passed a review by eye, added four more: hit areas of 42px where the CSS said 44, because an `::after` is measured from the padding box; presses that could land on either of two buttons 8px apart at a fractional device pixel ratio; a primary button at 1.97:1, measured by axe half way through a fade; and the palette’s list, a scrollable region with no tab stop, which turned out to be right and became the one written exception. And the behaviour suites, re-run, found the two that started this round: Cancel on “Delete this trip?” deleted the trip, and a German form answered in English. Each is now a test, so each is found once.'
+			},
+			{
+				type: 'p',
+				text: 'Then a review of the gates themselves. It changed the code under each check to the broken version and watched for red, and found checks that were looking away: the overflow walk never ran at 360px, where its own bug lived; axe and the target probe never saw the map’s markers; the embed’s stylesheet assertion was true with the bug. Pointed at the map, the new suite found three bugs the pictures could not show — a bubble press that also started a stop, a flight taken back by a heartbeat, and pins 25px from the route on a phone — and the account suite, failing once in a slow run, found the explore filter wiping what was typed before hydration. The method is the lesson: a test is only known to work once it has been seen to fail.'
 			},
 			{
 				type: 'terminal',
 				code: `
 $ pnpm run test:e2e
 
-Running 36 tests using 1 worker
+Running 229 tests using 1 worker
 
   ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
   ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
   …
-  ✓  [phone] › trip.e2e.ts › an expense is added and the settle-up follows
-  ✓  [phone] › invite.e2e.ts › visibility by link switches the embed on, and the custom element renders the trip
+  ✓  [phone] › visual.e2e.ts › dark theme › trip-expenses › trip-expenses holds together
+  -  [desktop] › visual.e2e.ts › dark theme › nav-open › nav-open holds together
+  ✓  [phone] › map.e2e.ts › the pins are where the map is once it has settled
+  ✓  [phone] › visual.e2e.ts › first impressions on a phone › / paints its largest thing inside 2.5 seconds on a slow 4G connection
+  ✓  [narrow] › visual.e2e.ts › light theme › trip-new › trip-new holds together
 
-  36 passed (1.4m)`
+  17 skipped
+  212 passed`
 			},
 			{
 				type: 'note',
@@ -240,7 +435,11 @@ Running 36 tests using 1 worker
 				items: [
 					'You can explain why the suite runs against `node build/index.js` and what `PUBLIC_ORIGIN` has to do with a 403.',
 					'You can write a two-context test and say which assertion in it proves the live query rather than a reload.',
-					'You can read a Playwright call log that says “intercepts pointer events” and name the first thing to measure.'
+					'You can read a Playwright call log that says “intercepts pointer events” and name the first thing to measure.',
+					'You can say what the target check asks the browser that a measurement of the box cannot, and how an axe exception is kept to one selector.',
+					'You can say why the design’s checks run at 360px as well as 412px, and why the throttled test slows the connection and not the processor.',
+					'You can describe how to prove a test can fail, and name an assertion in this chapter that could not.',
+					'You can explain how the bundle guard names a chunk, and what has to change in the repository for a budgeted chunk to grow.'
 				]
 			}
 		]
@@ -268,11 +467,11 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter 34) are the reason the project needs both.'
 			},
-			code('src/app.html', 28, 33),
-			code('vite.config.ts', 374, 379),
+			code('src/app.html', 44, 57),
+			code('vite.config.ts', 380, 385),
 			{
 				type: 'p',
-				text: 'The theme boot script — the one that sets the dark class before first paint so a dark theme never flashes light — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'
+				text: 'The theme boot script — the one that sets `data-theme` before first paint so a dark theme never flashes light, and points the `theme-color` tags and the theme cookie at the same choice (chapter 22) — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'
 			},
 			{
 				type: 'ul',
@@ -291,7 +490,7 @@ Running 36 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'headers', text: 'The headers, and the one route that may be framed' },
-			code('src/hooks.server.ts', 97, 148),
+			code('src/hooks.server.ts', 114, 165),
 			{
 				type: 'p',
 				text: 'Three headers are always right and cost nothing: `x-content-type-options: nosniff` (the browser trusts our content types and does not guess), `referrer-policy: strict-origin-when-cross-origin` (other sites learn our origin, not our paths — a trip’s slug is not their business), and a `permissions-policy` that turns off the microphone and the camera and keeps geolocation for this origin only, because “where am I” on the map is the one capability the app asks for. `Vary: Cookie` on pages is for shared caches: the header shows the person’s name and the locale cookie changes the language, so a cache must never serve one person’s page to another. API responses and the hashed `/_app/` assets are excluded because they do not depend on the cookie, and a `Vary` there would only defeat the cache.'
@@ -300,14 +499,14 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: 'The embed route is the exception that proves the policy was applied thoughtfully. `/embed/<slug>` exists to be framed — it is the read-only route summary the custom element loads (chapter 36) — and for that path, and only that path, the handler rewrites the `frame-ancestors` directive **after SvelteKit has built the header**. A regular expression on the header is cruder than a per-route config would be, but SvelteKit’s policy is global, the route is one, and the rewrite is six lines next to a comment that says exactly what it does. The end-to-end suite asserts the result on the public frame and the 404 on the private one.'
 			},
-			code('src/hooks.server.ts', 76, 85),
+			code('src/hooks.server.ts', 93, 102),
 			{
 				type: 'p',
 				text: 'Identity is read once, here, into `locals` — so no page has to ask, and no page has to *remember* to ask. `svelteKitHandler` answers Better Auth’s own `/api/auth/*` routes and passes everything else on. The ordering in `sequence` matters: the locale handler runs first so an error page speaks the right language, and the security handler runs last so its headers are on every response including the ones Better Auth wrote.'
 			},
 
 			{ type: 'h3', id: 'edges', text: 'Three decisions at the edges' },
-			code('src/lib/remote/auth.remote.ts', 27, 46),
+			code('src/lib/remote/auth.remote.ts', 30, 49),
 			{
 				type: 'p',
 				text: 'An **open redirect** is a sign-in page that will send a person anywhere the `redirectTo` parameter says — including `https://evil.example/signin`, styled to look like ours. The guard is a regular expression that allows one leading slash and *only* one: `//evil.example` is a protocol-relative URL, starts with a slash, and still leaves the site. The choice to **sanitise** rather than reject is deliberate: the value lives in a hidden field the person cannot see, so a crafted link would otherwise leave them staring at “invalid redirect” with no way in. Falling back to `/trips` is safe and kind.'
@@ -317,15 +516,15 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: 'The route API is the one endpoint with `access-control-allow-origin: *`, and the comment explains why that is safe rather than assumes it: the response holds nothing that was not already public by link. The authorisation is *content-based* — a trip that is not visible by link is a 404 whether or not the caller is signed in — because the custom element runs on somebody else’s page, where our cookies are not sent and must not matter. That is the rule for any CORS-open endpoint: it may return only what an anonymous stranger could already see, and it must decide from the data, not the session.'
 			},
-			code('src/hooks.server.ts', 157, 165),
+			code('src/hooks.server.ts', 174, 182),
 			{
 				type: 'p',
 				text: '`handleFetch` wraps every server-side `fetch` the app makes. Same-origin requests go through untouched; anything leaving the server gets a ten-second `AbortSignal.timeout` and a user agent that names the app. The project makes no external requests today — the map is offline — which is exactly when to put the guard in: the first person to add a weather lookup inherits a timeout instead of a server that hangs when the weather service does.'
 			},
-			code('src/hooks.server.ts', 178, 193),
+			code('src/hooks.server.ts', 198, 213),
 			{
 				type: 'p',
-				text: 'Error handling is a security surface too. `handleError` receives a `kind` in SvelteKit 3 — `app`, `framework`, `validation` or `unknown` — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed message, so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.'
+				text: 'Error handling is a security surface too. `handleError` receives a `kind` in SvelteKit 3 — `app`, `framework`, `validation` or `unknown` — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed sentence — `m.error_bad_request()`, in the request’s language, and the same sentence whatever failed — so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.'
 			},
 			{
 				type: 'warn',
@@ -388,7 +587,7 @@ Running 36 tests using 1 worker
 
 			{ type: 'h3', id: 'health', text: 'The health endpoint and the first request' },
 			code('src/routes/healthz/+server.ts', 23, 36),
-			code('src/hooks.server.ts', 200, 204),
+			code('src/hooks.server.ts', 220, 224),
 			{
 				type: 'p',
 				text: '“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and `select 1` is the cheapest way to ask. The response carries the `version` — the commit the build was made from, through `version.name` in chapter 03 — so “which version is live?” is one request, and `cache-control: no-store`, because a cached “healthy” is worse than none. It goes out through `Response.json`, where SvelteKit 3 points you now that its own `json()` helper is deprecated. `init` in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.'

@@ -110,7 +110,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:1-49</span></span>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:1-56</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -118,7 +118,9 @@ export function formatRange(start: string, end: string, locale: string): string 
 	import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from 'phosphor-svelte';
 	import { untrack } from 'svelte';
 	import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
+	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { segmentAttributes } from './date-segments.ts';
 
 	/**
 	 * A DATE RANGE, THE ACCESSIBLE WAY
@@ -134,6 +136,11 @@ export function formatRange(start: string, end: string, locale: string): string 
 	 * `name` on each input renders a hidden `&lt;input&gt;` with the ISO date, which
 	 * is how the value reaches a remote `form` — and how it would reach a
 	 * plain HTML form with JavaScript off.
+	 *
+	 * Each segment is rendered through Bits UI's `child` snippet, so the
+	 * names a screen reader hears are in the page's language and an issue
+	 * from the form is announced on the field it belongs to —
+	 * `date-segments.ts` says what Bits writes in English and why.
 	 */
 	interface Props {
 		label: string;
@@ -167,21 +174,30 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:51-88</span></span>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:58-134</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	const locale = getLocale();
 
 	const parse = (iso: string | undefined): DateValue | undefined =&gt; {
 		if (!iso) return undefined;
-		const [y, m, d] = iso.split('-').map(Number);
-		return new CalendarDate(y!, m!, d!);
+		const [year, month, day] = iso.split('-').map(Number);
+		return new CalendarDate(year!, month!, day!);
 	};
 
 	// The props are the *initial* value only — after that the picker owns it.
 	// `untrack` says so out loud, and quiets the compiler's fair question.
 	let value = $state(untrack(() =&gt; ({ start: parse(start), end: parse(end) })));
 	const placeholder = today(getLocalTimeZone());
+
+	/* The issue line's id: what an invalid segment points at with `aria-describedby`. */
+	const issueId = $props.id();
+	const segment = (props: Record&lt;string, unknown&gt;, part: string) =&gt;
+		segmentAttributes(props, part, {
+			locale,
+			empty: m.date_empty(),
+			issueId: issues.length &gt; 0 ? issueId : undefined
+		});
 &lt;/script&gt;
 
 &lt;DateRangePicker.Root
@@ -191,6 +207,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 	}}
 	{placeholder}
 	{locale}
+	calendarLabel={label}
 	weekdayFormat=&quot;short&quot;
 	fixedWeeks
 	minValue={futureOnly ? placeholder : undefined}
@@ -198,18 +215,114 @@ export function formatRange(start: string, end: string, locale: string): string 
 &gt;
 	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
 
+	&lt;!--
+		The two dates are one group that may wrap, and the calendar button
+		stays at the end: at 360px, &quot;mm/dd/yyyy – mm/dd/yyyy&quot; and a 36px
+		button are wider than a card's column, and a field that cannot shrink
+		pokes out of the card it is in.
+	--&gt;
 	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
-		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
-				{#snippet children({ segments })}
-					{#each segments as { part, value: text }, i (part + i)}
-						&lt;DateRangePicker.Segment {part} class=&quot;datefield__segment&quot;
-							&gt;{text}&lt;/DateRangePicker.Segment
-						&gt;
-					{/each}
-				{/snippet}</code></pre>
+		&lt;div class=&quot;datefield__dates&quot;&gt;
+			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
+				&lt;span class=&quot;datefield__date&quot;&gt;
+					&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
+						{#snippet children({ segments })}
+							{#each segments as { part, value: text }, i (part + i)}
+								&lt;DateRangePicker.Segment {part} class=&quot;datefield__segment&quot;&gt;
+									{#snippet child({ props })}
+										&lt;span {...props} {...segment(props, part)}&gt;{text}&lt;/span&gt;
+									{/snippet}
+								&lt;/DateRangePicker.Segment&gt;
+							{/each}
+						{/snippet}
+					&lt;/DateRangePicker.Input&gt;
+					{#if type === 'start'}
+						&lt;span class=&quot;range__dash&quot; aria-hidden=&quot;true&quot;&gt;–&lt;/span&gt;
+					{/if}
+				&lt;/span&gt;
+			{/each}
+		&lt;/div&gt;
+
+		&lt;DateRangePicker.Trigger
+			class=&quot;btn btn--icon btn--ghost btn--sm datefield__trigger&quot;
+			aria-label={label}
+		&gt;
+			&lt;CalendarBlankIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+		&lt;/DateRangePicker.Trigger&gt;
+	&lt;/div&gt;
+
+	{#each issues as issue, i (issue.message)}
+		&lt;span class=&quot;issue&quot; id={i === 0 ? issueId : undefined}&gt;{issue.message}&lt;/span&gt;
+	{/each}</code></pre>
 </figure>
 <p>The <code>locale</code> prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. <code>untrack</code> around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in <code>src/lib/styles/dates.css</code> rather than the component’s <code>&lt;style&gt;</code>, because an expense’s single date (chapter 29) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.</p>
+<p><code>calendarLabel={label}</code> names the calendar grid; without it Bits UI calls every calendar in the app “Event”, in English. The two dates sit in one <code>datefield__dates</code> group that may wrap, and the calendar button stays outside it: at 360px “mm/dd/yyyy – mm/dd/yyyy” and a 36px button are wider than a card’s column, and a field that cannot shrink pokes out of the card. And each segment is rendered through the <code>child</code> snippet, which is the part worth slowing down for.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/date-segments.ts<span class="code__lines">:1-31</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT A DATE SEGMENT SAYS TO A SCREEN READER
+ * ===========================================
+ *
+ * Bits UI's date fields render each part of a date — the day, the month,
+ * the year — as its own `role=&quot;spinbutton&quot;`, and name it in English whatever
+ * the page's language: `aria-label=&quot;day, &quot;`, and `aria-valuetext=&quot;Empty&quot;`
+ * until something is typed (bits-ui 2.19, `date-field.svelte.js`, both
+ * written as literals with no prop to change them). A German page announced
+ * &quot;day, Datum, Empty&quot;.
+ *
+ * Bits does offer the way round it: a `child` snippet on `Segment` hands
+ * over the props it computed and lets us render the element ourselves. This
+ * function is what the two date components spread *after* those props, so
+ * these win:
+ *
+ *   - the part's name from the browser's own locale data
+ *     (`Intl.DisplayNames` with `type: 'dateTimeField'` — &quot;Tag&quot;, &quot;dia&quot;);
+ *   - &quot;Empty&quot; in the page's language;
+ *   - `data-empty`, so the stylesheet can grey a placeholder without
+ *     matching on an English word;
+ *   - `aria-invalid` and `aria-describedby` when the form has an issue for
+ *     the field, pointing at the issue line under it — Bits only computes
+ *     invalidity from its own `validate`, and knows nothing of the server.
+ *
+ * The literal segments (the `/` and `.` between parts) are not spinbuttons
+ * and are left alone. The calendar's two month buttons have the same
+ * problem — Bits names them &quot;Previous&quot; and &quot;Next&quot; — and the same cure, in
+ * the components themselves. `DateField.svelte.test.ts` renders the real
+ * fields, so a Bits release that changes any of these words fails a test.
+ */</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/date-segments.ts<span class="code__lines">:57-71</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export function segmentAttributes(
+	props: Record&lt;string, unknown&gt;,
+	part: string,
+	{ locale, empty, issueId }: SegmentOptions
+): Record&lt;string, string | undefined&gt; {
+	if (part === 'literal') return {};
+	const blank = props['aria-valuetext'] === 'Empty';
+	return {
+		'aria-label': `${fieldName(part, locale)}, `,
+		'aria-valuetext': blank ? empty : (props['aria-valuetext'] as string | undefined),
+		'data-empty': blank ? '' : undefined,
+		'aria-invalid': issueId ? 'true' : (props['aria-invalid'] as string | undefined),
+		'aria-describedby': issueId ?? (props['aria-describedby'] as string | undefined)
+	};
+}</code></pre>
+</figure>
+<p>Bits UI writes two English words into every segment, with no prop to change them: <code>aria-label=&quot;day, &quot;</code> and, until something is typed, <code>aria-valuetext=&quot;Empty&quot;</code>. A German screen-reader user heard “day, Datum, Empty”. A headless library usually leaves a door for this, and here it is the <code>child</code> snippet — Bits computes the props, hands them over, and lets us render the element. <code>segmentAttributes</code> is spread *after* Bits’ props, so its values win: the part’s name from <code>Intl.DisplayNames</code> with <code>type: 'dateTimeField'</code>, which is the browser’s own locale data (“Tag”, “mês”), “Empty” from the messages, a <code>data-empty</code> attribute so the stylesheet can grey a placeholder without matching an English word, and <code>aria-invalid</code> plus <code>aria-describedby</code> pointing at the issue line when the form has one — Bits only knows invalidity from its own <code>validate</code>, and nothing of the server’s. The calendar’s two month buttons had the same English, “Previous” and “Next”, written after any <code>aria-label</code> passed to them; the same <code>child</code> snippet renders each button with the page’s “Vorheriger Monat” after Bits’ props, so ours is the one that lands.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this matters</h4>
+	<p>Why not patch the library, or post-process the DOM? A patch is a fork you maintain at every upgrade, and a script that rewrites attributes after render fights the library’s own updates. The <code>child</code> snippet is Bits’ documented extension point: when Bits renders those strings differently, or adds a prop for them, this function is the one place to change. Two tests hold it. <code>date-segments.spec.ts</code> pins the function — a German day is “Tag”, a typed value is left alone, the separators are untouched — fed a hand-written stand-in for Bits’ props, which by itself would pass forever: if a Bits release renamed “Empty”, the stub would still say “Empty”. So <code>DateField.svelte.test.ts</code> renders both fields in a real browser with Bits doing the computing, on a German and a Brazilian page, and asks the segments and the month buttons what they say (chapter 41).</p>
+</aside>
 <h3 id="transport">A <code>CalendarDate</code> across the wire</h3>
 
 <figure class="code">
@@ -272,7 +385,7 @@ export function parseAmount(text: string, locale: string): number | null {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:530-547</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:551-568</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;label class=&quot;field&quot;&gt;
@@ -342,7 +455,7 @@ export function parseAmount(text: string, locale: string): number | null {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:29-31</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:30-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const locale = getLocale();

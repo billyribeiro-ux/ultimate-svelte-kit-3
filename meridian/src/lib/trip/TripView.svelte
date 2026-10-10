@@ -7,6 +7,7 @@
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import {
 		GearSixIcon,
 		GlobeHemisphereWestIcon,
@@ -89,46 +90,96 @@
 	};
 
 	/*
+	 * THE LIVE CHIP
+	 * -------------
+	 * Three states, not two. For the first three seconds a stream that is
+	 * not up yet is still connecting, and the chip says "Connecting…" in the
+	 * quiet grey. After that, a stream that is not up has failed or dropped,
+	 * and "Reconnect", the coral button, offers to try again. Shown the
+	 * moment the page hydrated, as it first was, it told everybody on a slow
+	 * network that something had failed when nothing had. All three sit in
+	 * one slot as wide as the widest of them (the `.status` rules say how),
+	 * so the palette and the settings button beside it never move.
+	 */
+	let patient = $state(true);
+
+	$effect(() => {
+		const timer = setTimeout(() => (patient = false), 3000);
+		return () => clearTimeout(timer);
+	});
+
+	const status: 'live' | 'connecting' | 'lost' = $derived(
+		live.connected ? 'live' : patient ? 'connecting' : 'lost'
+	);
+
+	/*
 	 * THE TAB INDICATOR
 	 * -----------------
 	 * One 2px bar under the current tab, positioned from the current link's
 	 * `offsetLeft` and `offsetWidth`. Its position is a `Tween` from
 	 * `svelte/motion`: a value that, when set, moves to the new one over a
-	 * duration — 160ms with the `--ease-out` curve, or 0 under reduced
-	 * motion — and the markup reads `.current` every frame. The first
-	 * position is set with `{ duration: 0 }`, so the bar starts under the
-	 * tab instead of sliding in from the left edge.
+	 * duration — 160ms with `cubicOut`, the nearest built-in curve to the
+	 * `--ease-out` token, or 0 under reduced motion — and the markup reads
+	 * `.current` every frame. The first position is set with
+	 * `{ duration: 0 }`, so the bar starts under the tab instead of sliding
+	 * in from the left edge.
 	 *
 	 * The effect reads `tab`, so it re-runs on every switch, and nothing
-	 * else reactive, so it does not run when the document changes. The
-	 * strip scrolls sideways on a phone, so the current link is also
-	 * scrolled into view — `inline: 'nearest'`, not `smooth`: the reset
-	 * stylesheet says why programmatic scrolls do not glide here.
+	 * else reactive, so it does not run when the document changes. When the
+	 * strip or a tab changes size — a rotation, a resize, a font arriving —
+	 * the observer below measures again, with no slide: the bar is moved to
+	 * where the tab now is, not animated there.
+	 *
+	 * The strip scrolls sideways on a phone, so the current tab is scrolled
+	 * into view too — by hand, to a position that leaves 32px clear on
+	 * either side of it. `scrollIntoView({ inline: 'nearest' })` stopped at
+	 * the strip's edge, which is where the fade is, and left "Notes" with
+	 * its last letter and its bar faded out.
 	 */
 	let strip = $state<HTMLElement>();
 	const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
 	let settled = false;
-	let overflowing = $state(false);
+	let fadeStart = $state(false);
+	let fadeEnd = $state(false);
 
-	$effect(() => {
-		void tab;
+	const INSET = 32;
+
+	function measure(animate: boolean) {
 		const current = strip?.querySelector<HTMLElement>('[aria-current="page"]');
 		if (!current || !strip) return;
 		const target = { x: current.offsetLeft, w: current.offsetWidth };
-		const instant = !settled || untrack(() => reducedMotion.current);
+		const instant = !animate || !settled || untrack(() => reducedMotion.current);
 		void indicator.set(target, instant ? { duration: 0 } : undefined);
 		settled = true;
-		current.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+
+		const left = current.offsetLeft - INSET;
+		const right = current.offsetLeft + current.offsetWidth + INSET - strip.clientWidth;
+		if (strip.scrollLeft > left) strip.scrollLeft = Math.max(0, left);
+		else if (strip.scrollLeft < right) strip.scrollLeft = right;
+	}
+
+	/* Each edge fades only while there is more strip beyond it. */
+	function edges() {
+		if (!strip) return;
+		fadeStart = strip.scrollLeft > 1;
+		fadeEnd = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+	}
+
+	$effect(() => {
+		void tab;
+		measure(true);
+		edges();
 	});
 
-	/* The strip fades at its edges while there is more of it to scroll to. */
 	$effect(() => {
 		if (!strip) return;
 		const element = strip;
 		const observer = new ResizeObserver(() => {
-			overflowing = element.scrollWidth > element.clientWidth + 1;
+			measure(false);
+			edges();
 		});
 		observer.observe(element);
+		for (const link of element.querySelectorAll('a')) observer.observe(link);
 		return () => observer.disconnect();
 	});
 
@@ -224,7 +275,7 @@
 			await updateStop({ id, lng: point.lng, lat: point.lat });
 			toast.success(m.stop_moved());
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 </script>
@@ -254,24 +305,37 @@
 		<div class="trip__status cluster">
 			<Presence {view} viewerId={initial.viewerId} />
 			<CommandPalette {view} {editable} onadd={() => (dialog = { kind: 'add', date: null })} />
-			{#if live.connected}
-				<span class="chip chip--sea live" title={m.live_connected()}>
-					<span class="live__dot" aria-hidden="true"></span>
-					{m.live_connected()}
+			<!-- The sizer is invisible and holds the three labels as generated text, so the slot is as wide as the widest. -->
+			<span class="status">
+				<span class="status__sizer" aria-hidden="true">
+					<span data-label={m.live_connected()}></span>
+					<span data-label={m.live_connecting()}></span>
+					<span data-label={m.live_reconnect()}></span>
 				</span>
-			{:else if live.current}
-				<button
-					class="btn btn--sm btn--ghost btn--danger"
-					type="button"
-					onclick={() => live.reconnect()}
-				>
-					{m.live_reconnect()}
-				</button>
-			{/if}
+				{#if status === 'live'}
+					<span class="chip chip--sea live" title={m.live_connected()}>
+						<span class="live__dot" aria-hidden="true"></span>
+						{m.live_connected()}
+					</span>
+				{:else if status === 'connecting'}
+					<span class="chip live live--connecting" title={m.live_connecting()}>
+						<span class="live__dot" aria-hidden="true"></span>
+						{m.live_connecting()}
+					</span>
+				{:else}
+					<button
+						class="btn btn--sm btn--ghost btn--danger"
+						type="button"
+						onclick={() => live.reconnect()}
+					>
+						{m.live_reconnect()}
+					</button>
+				{/if}
+			</span>
 			{#if owner}
 				<!-- Icon-only on a phone; the word is still the link's name, visually hidden there. -->
 				<a
-					class="btn btn--sm btn--ghost trip__settings"
+					class="btn btn--sm btn--ghost btn--icon trip__settings"
 					href={href('/(site)/t/[slug=slug]/settings', { slug })}
 					title={m.trip_settings()}
 				>
@@ -290,34 +354,35 @@
 		only warns about the old names in development: it no longer reads them.
 
 		The strip is sticky under the header, so on a long itinerary the tabs
-		stay in reach; `data-overflow` turns the edge fade on while there is
-		more strip to scroll to.
+		stay in reach. The frame around it carries the paper and the two edge
+		fades, which show only while there is more strip that way.
 	-->
-	<nav
-		class="tabs no-print"
-		aria-label={m.app_name()}
-		bind:this={strip}
-		data-overflow={overflowing ? '' : undefined}
+	<div
+		class="tabs-frame no-print"
+		data-fade-start={fadeStart ? '' : undefined}
+		data-fade-end={fadeEnd ? '' : undefined}
 	>
-		{#each TABS as name (name)}
-			{@const Icon = tabIcons[name]}
-			<a
-				class="tabs__link"
-				href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
-				aria-current={tab === name ? 'page' : undefined}
-				data-sveltekit-reset="false"
-			>
-				<Icon size={16} aria-hidden="true" />
-				{tabLabels[name]()}
-			</a>
-		{/each}
-		<span
-			class="tabs__indicator"
-			aria-hidden="true"
-			style:--x="{indicator.current.x}px"
-			style:--w="{indicator.current.w}px"
-		></span>
-	</nav>
+		<nav class="tabs" aria-label={m.app_name()} bind:this={strip} onscroll={edges}>
+			{#each TABS as name (name)}
+				{@const Icon = tabIcons[name]}
+				<a
+					class="tabs__link"
+					href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
+					aria-current={tab === name ? 'page' : undefined}
+					data-sveltekit-reset="false"
+				>
+					<Icon size={16} aria-hidden="true" />
+					{tabLabels[name]()}
+				</a>
+			{/each}
+			<span
+				class="tabs__indicator"
+				aria-hidden="true"
+				style:--x="{indicator.current.x}px"
+				style:--w="{indicator.current.w}px"
+			></span>
+		</nav>
+	</div>
 
 	<!-- The panel has its own transition name: the tabs and the header hold still while it changes. -->
 	<div class="trip__panel" style:view-transition-name="trip-panel" bind:this={panel}>
@@ -430,6 +495,7 @@
 	 * needs the same, for the same reason.
 	 */
 	.trip {
+		--frame-guess: 21rem;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-5);
@@ -437,19 +503,23 @@
 	}
 
 	/*
-	 * The status tools — palette, live chip, settings — share the name's
-	 * row, top right, on every width: on a phone a row of their own cost
-	 * 60px that the map below needed. The titles block is `display:
-	 * contents`, so its three children sit on the header's grid directly
-	 * and the meta line and the lede run the full width under both.
+	 * On a phone the trip's name has the full width, and the status tools —
+	 * who is here, the palette, the live chip, settings — are a row of
+	 * their own under the lede. Sharing the name's row left a real trip name
+	 * 177px of a 328px column: "A long weekend in the Douro valley with the
+	 * cousins" ran to five ragged lines of display type. From 40em there is
+	 * room for both, and the tools move up beside the name. The titles
+	 * block is `display: contents`, so its three children sit on the
+	 * header's grid directly.
 	 */
 	.trip__header {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: minmax(0, 1fr);
 		grid-template-areas:
-			'name status'
-			'meta meta'
-			'lede lede';
+			'name'
+			'meta'
+			'lede'
+			'status';
 		align-items: start;
 		gap: var(--space-2) var(--space-3);
 	}
@@ -480,13 +550,52 @@
 
 	.trip__status {
 		grid-area: status;
-		justify-content: flex-end;
+		justify-content: flex-start;
 		gap: var(--space-2);
 	}
 
-	/* A ghost button's padding is not part of its look: the icon, not the box, lines up with the gutter. */
-	.trip__settings {
-		margin-inline-end: calc(-1 * var(--space-2));
+	/*
+	 * The status slot: the visible chip or button, and under it an
+	 * invisible sizer as wide as the widest of the three labels, stacked in
+	 * one grid cell. The sizer's labels are generated text (`content:
+	 * attr(…)`), so they are in no one's way: not in the accessibility
+	 * tree, not in the page's text, not a second "Live" for a test to trip
+	 * over.
+	 */
+	.status {
+		display: inline-grid;
+		align-items: center;
+	}
+
+	.status > *,
+	.status__sizer > * {
+		grid-area: 1 / 1;
+	}
+
+	/*
+	 * The chip and the button are as wide as their own label, not the slot:
+	 * stretched to it, "Live" sat in a pill two and a half times its width.
+	 * They sit at the slot's leading edge on a phone, where the tools read
+	 * from the left, and at its trailing edge beside the name, where they are
+	 * set against the right — so the edge next to the settings button stays
+	 * put when the label changes.
+	 */
+	.status > :not(.status__sizer) {
+		justify-self: start;
+	}
+
+	.status__sizer {
+		display: inline-grid;
+		visibility: hidden;
+	}
+
+	.status__sizer > span::before {
+		content: attr(data-label);
+		display: block;
+		padding-inline: calc(0.6rem + 0.5rem + var(--space-2)) 0.7rem;
+		font-size: var(--text-xs);
+		font-weight: 500;
+		white-space: nowrap;
 	}
 
 	.trip__settings-label {
@@ -498,14 +607,44 @@
 		white-space: nowrap;
 	}
 
-	@media (max-width: 47.99em) {
+	@media (min-width: 40em) {
+		.trip {
+			--frame-guess: 18rem;
+		}
+
+		.trip__header {
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-areas:
+				'name status'
+				'meta meta'
+				'lede lede';
+		}
+
+		.trip__status {
+			justify-content: flex-end;
+		}
+
+		.status > :not(.status__sizer) {
+			justify-self: end;
+		}
+
+		/* A ghost button's padding is not part of its look: the icon, not the box, lines up with the gutter. */
 		.trip__settings {
-			width: var(--control-sm);
-			padding: 0;
+			margin-inline-end: calc(-1 * var(--space-2));
 		}
 	}
 
+	/*
+	 * Phone first, the settings link is a square icon button — `.btn--icon`
+	 * gives it the 44px hit area every compact icon button has. From 48em
+	 * the word comes back and it is a text button again.
+	 */
 	@media (min-width: 48em) {
+		.trip__settings {
+			width: auto;
+			padding: 0.25rem 0.7rem;
+		}
+
 		.trip__settings-label {
 			position: static;
 			width: auto;
@@ -534,6 +673,12 @@
 		}
 	}
 
+	/* Not yet live: the same chip in the quiet grey, its dot still. */
+	.live--connecting .live__dot {
+		animation: none;
+		opacity: 0.6;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.live__dot {
 			animation: none;
@@ -541,44 +686,70 @@
 	}
 
 	/*
-	 * The tab strip scrolls sideways on a phone, snapping to a tab, with a
-	 * fade at each edge while there is more to see (`data-overflow`). It
-	 * sticks under the header. Scrollbars are hidden because the fade and
-	 * the snap are the affordance; the indicator moves between tabs.
+	 * The tab strip scrolls sideways on a phone and sticks under the
+	 * header. The frame is the sticky thing and carries the paper; the strip
+	 * inside it scrolls. Scrollbars are hidden because the fades are the
+	 * affordance, and the indicator moves between tabs.
+	 *
+	 * The fades are two gradients from the paper to nothing, laid *over*
+	 * the strip by the frame, each shown only while there is more strip that
+	 * way. The first version masked the strip itself, and a mask fades a
+	 * background too: once the strip was stuck, the rail of the itinerary
+	 * scrolling under it showed through at both ends.
 	 *
 	 * `overflow-y: hidden`, and the hairline is an inset shadow rather than
 	 * a border: a scroll container clips at its padding box, so a bar that
 	 * sat on the border was cut to 1px and made the strip scroll a pixel
 	 * up and down. Now the 2px bar sits inside, over the hairline.
+	 *
+	 * No scroll snapping: proximity snapping re-aligned a tab scrolled into
+	 * view by hand to the strip's edge, under the fade.
 	 */
-	.tabs {
+	.tabs-frame {
 		position: sticky;
 		top: var(--header-h);
 		z-index: var(--z-sticky);
+		background: var(--paper);
+	}
+
+	.tabs-frame::before,
+	.tabs-frame::after {
+		content: '';
+		position: absolute;
+		inset-block: 0 1px;
+		z-index: 1;
+		width: var(--space-6);
+		pointer-events: none;
+		opacity: 0;
+	}
+
+	.tabs-frame::before {
+		left: 0;
+		background: linear-gradient(to right, var(--paper), transparent);
+	}
+
+	.tabs-frame::after {
+		right: 0;
+		background: linear-gradient(to left, var(--paper), transparent);
+	}
+
+	.tabs-frame[data-fade-start]::before,
+	.tabs-frame[data-fade-end]::after {
+		opacity: 1;
+	}
+
+	.tabs {
+		position: relative;
 		display: flex;
 		gap: var(--space-1);
 		overflow-x: auto;
 		overflow-y: hidden;
-		scroll-snap-type: x proximity;
-		/* Wider than the 24px edge fade, so the tab scrolled into view never sits in the fade. */
-		scroll-padding-inline: var(--space-6);
 		scrollbar-width: none;
 		box-shadow: inset 0 -1px var(--line);
-		background: var(--paper);
 	}
 
 	.tabs::-webkit-scrollbar {
 		display: none;
-	}
-
-	.tabs[data-overflow] {
-		mask-image: linear-gradient(
-			to right,
-			transparent,
-			#000 var(--space-4),
-			#000 calc(100% - var(--space-5)),
-			transparent
-		);
 	}
 
 	.tabs__link {
@@ -588,7 +759,6 @@
 		gap: var(--space-2);
 		min-height: var(--control);
 		padding-inline: var(--space-3);
-		scroll-snap-align: start;
 		text-decoration: none;
 		color: var(--ink-2);
 		font-size: var(--text-sm);
@@ -632,9 +802,20 @@
 		gap: var(--space-5);
 	}
 
-	/* What is left of the screen under the panel's top (the script measures it), between 20rem and 46rem. */
+	/*
+	 * What is left of the screen under the panel's top (the script measures
+	 * it), between 20rem and 46rem. Until it has — on the server, and in the
+	 * first frame — the top is a guess for the width: on a phone the status
+	 * tools are a row of their own under the lede, so the panel starts 3rem
+	 * lower than beside them. A guess that matches the measurement means the
+	 * frame does not change height under a map that has already started.
+	 */
 	.full-map {
-		height: clamp(20rem, calc(100dvh - var(--frame-top, 18rem) - var(--space-4)), 46rem);
+		height: clamp(
+			20rem,
+			calc(100dvh - var(--frame-top, var(--frame-guess)) - var(--space-4)),
+			46rem
+		);
 		border-radius: var(--radius-xl);
 		overflow: hidden;
 	}

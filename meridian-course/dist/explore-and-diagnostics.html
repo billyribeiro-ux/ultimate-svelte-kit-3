@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:11-65</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:12-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -77,7 +77,31 @@ const coords = (place: Place) =&gt;
 	`${degrees.format(Math.abs(place.lat))}° ${place.lat &lt; 0 ? m.coord_south() : m.coord_north()}, ` +
 	`${degrees.format(Math.abs(place.lng))}° ${place.lng &lt; 0 ? m.coord_west() : m.coord_east()}`;
 
-let query = $state('');
+/*
+ * What was typed before the page hydrated is kept. While this script runs
+ * on a server-rendered page, the server's input is still there with
+ * whatever a person typed into it, and hydration would write the empty
+ * string the server knew about over it — the bug `keepTyped()` fixes for
+ * the sign-in form (chapter 32), here for a plain `bind:value`. On a
+ * client-side navigation there is no such input yet, and the filter
+ * starts empty.
+ */
+let query = $state(
+	(browser &amp;&amp; document.querySelector&lt;HTMLInputElement&gt;('input.search__input')?.value) || ''
+);
+let search = $state&lt;HTMLInputElement&gt;();
+
+/*
+ * Both &quot;clear&quot; buttons remove themselves — the one in the field shows
+ * only while there is a query, the one in the empty state only while
+ * nothing matches — and a button that disappears under the keyboard's
+ * focus drops it to the top of the document. So clearing puts focus
+ * back in the field, where the next thing typed belongs.
+ */
+function clear() {
+	query = '';
+	search?.focus();
+}
 /*
  * runed's `Debounced` follows a reactive value with a delay: `current`
  * changes 150 ms after the last keystroke, so the list is not rebuilt
@@ -97,11 +121,11 @@ const filtered = $derived.by(() =&gt; {
 	);
 });</code></pre>
 </figure>
-<p>Three things in forty lines. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>. The coordinates under each place read as a place — <code>38.72° N, 9.14° W</code> — and the compass letters are messages, because they are words: east is O in German and L in Portuguese, and west is O in Portuguese.</p>
+<p>Three things worth stopping on, and one small one. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>. The coordinates under each place read as a place — <code>38.72° N, 9.14° W</code> — and the compass letters are messages, because they are words: east is O in German and L in Portuguese, and west is O in Portuguese. The small one is <code>clear()</code>. Both “clear” buttons remove themselves — the one in the field shows only while there is a query, the one in the empty state only while nothing matches — and a button that disappears under the keyboard’s focus drops focus to the top of the document, so a keyboard user who cleared the search had to tab back through the header to type again. <code>clear()</code> empties the query and puts focus in the field, through a <code>bind:this</code>, which is where the next thing typed belongs. And <code>query</code> does not quite start empty. On a page the server rendered, the field is there and usable before the JavaScript is, and what a person types into it in that second was wiped when the page hydrated — <code>bind:value</code> writes the state into the input, and the state was the empty string the server knew. The script runs while the server’s input is still on the page, so the state starts from whatever is in it: the same cure as <code>keepTyped()</code> for the sign-in form in chapter 32, for a plain input. On a client-side navigation there is no server input to read, and it starts empty after all.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:67-105</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:92-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Country {
@@ -147,14 +171,27 @@ const countries: Country[] = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:169-212</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:183-239</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;!--
-	The countries flow in columns — one on a phone, two from 48em, three
-	from 64em — each country unbroken, its places one under another. A
-	country has one or two places, so a grid of places left each country
-	a row of one or two cards and the rest of the width empty.
+	<pre><code class="lang-svelte">{#if countries.length === 0}
+	&lt;div class=&quot;explore__empty&quot;&gt;
+		&lt;Empty icon={MagnifyingGlassIcon} title={m.explore_none_title()} body={m.explore_none()}&gt;
+			{#snippet action()}
+				&lt;button class=&quot;btn btn--ghost&quot; type=&quot;button&quot; onclick={clear}&gt;
+					{m.explore_clear()}
+				&lt;/button&gt;
+			{/snippet}
+		&lt;/Empty&gt;
+	&lt;/div&gt;
+{/if}
+
+&lt;!--
+	The countries are a grid in reading order — one column on a phone, two
+	from 48em, three from 64em — so the alphabet runs across and then down,
+	each country unbroken, its places one under another. They were CSS
+	columns once: the alphabet ran down a 4,000px page and started again at
+	the top of the next column, and &quot;Hong Kong&quot; sat beside &quot;Argentina&quot;.
 
 	A place is a card, not a link — its two buttons are the links — so it
 	does not lift on hover: a lift says &quot;this is a link&quot;.
@@ -195,7 +232,7 @@ const countries: Country[] = $derived.by(() =&gt; {
 	{/each}
 &lt;/div&gt;</code></pre>
 </figure>
-<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.54, so in every 3.x, they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34. The countries flow in CSS columns — <code>columns: 3 18rem</code>, one on a phone, two from 48em, three from 64em — each country <code>break-inside: avoid</code> with its places one under another: a country has one or two places, and a grid of places had left each country a row of one or two cards and the rest of the width empty. A place is a card and not a link — its two buttons are the links — so it does not lift on hover, because a lift says “this is a link”. The search row sticks under the header and draws its hairline once it is stuck, which a zero-height sentinel and an <code>IntersectionObserver</code> attached to it decide; the browser’s blue clear button is replaced by a ghost one of ours, and on a phone the count is the places alone, so the row stays one row.</p>
+<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.54, so in every 3.x, they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34. The countries are a grid in reading order — one column on a phone, two from 48em, three from 64em, <code>align-items: start</code> so a short country does not stretch to its neighbour’s height — and each country is unbroken, its places one under another. They were CSS columns once, <code>columns: 3 18rem</code>, and columns fill *down* first: the alphabet ran down a 4,000px page and started again at the top of the next column, so “Hong Kong” sat beside “Argentina” and a person scanning across for “Japan” never found it. A grid of *places* had been wrong the other way, leaving each country a row of one or two cards and the rest of the width empty; a grid of countries is the shape the content has. A place is a card and not a link — its two buttons are the links — so it does not lift on hover, because a lift says “this is a link”. The search row sticks under the header and draws its hairline once it is stuck, which a zero-height sentinel and an <code>IntersectionObserver</code> attached to it decide; the browser’s blue clear button is replaced by a ghost one of ours, and on a phone the count is the places alone, so the row stays one row.</p>
 
 <aside class="callout callout--why">
 	<h4>Why runed, for one debounce</h4>

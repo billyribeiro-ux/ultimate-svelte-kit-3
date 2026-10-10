@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:13-48</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:14-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -82,7 +82,7 @@ let inviteUrl = $state&lt;string | null&gt;(null);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:52-87</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:53-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function invite() {
@@ -90,7 +90,7 @@ let inviteUrl = $state&lt;string | null&gt;(null);</code></pre>
 		const result = await createInvite({ tripId: view.trip.id, role: inviteRole });
 		inviteUrl = result.url;
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }
 
@@ -110,7 +110,7 @@ async function setRole(userId: string, next: 'editor' | 'viewer') {
 	try {
 		await changeRole({ tripId: view.trip.id, userId, role: next });
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }
 
@@ -118,7 +118,7 @@ async function remove(userId: string) {
 	try {
 		await removeMember({ tripId: view.trip.id, userId });
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }</code></pre>
 </figure>
@@ -126,7 +126,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:90-153</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:91-154</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;stack stack--lg&quot;&gt;
@@ -197,7 +197,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:155-199</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:156-200</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if owner}
@@ -429,12 +429,13 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-28</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-29</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import { ArrowLeftIcon, LinkIcon, LockSimpleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
@@ -464,7 +465,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:30-55</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:31-56</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function save(event: SubmitEvent) {
@@ -488,7 +489,7 @@ async function remove(userId: string) {
 		}).updates(tripBySlug(trip.slug));
 		toast.success(m.trip_saved());
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	} finally {
 		saving = false;
 	}
@@ -517,16 +518,22 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/DeleteTrip.svelte<span class="code__lines">:17-32</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/DeleteTrip.svelte<span class="code__lines">:17-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;!-- A remote form: deleting works with JavaScript off, and asks first when it is on. --&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	A remote form: deleting works with JavaScript off, and asks first when it
+	is on. The question is asked inside `enhance`, the remote form's own hook,
+	and the submission happens only if the answer is yes. An `onsubmit` that
+	calls `preventDefault()` does not stop it: the form's attachment has a
+	submit listener of its own that never looks at `defaultPrevented`, so
+	&quot;Cancel&quot; deleted the trip anyway.
+--&gt;
 &lt;form
 	class=&quot;card card--pad danger stack&quot;
-	{...deleteTrip}
-	onsubmit={(event) =&gt; {
-		if (!confirm(m.trip_delete_confirm())) event.preventDefault();
-	}}
+	{...deleteTrip.enhance(async (form) =&gt; {
+		if (confirm(m.trip_delete_confirm())) await form.submit();
+	})}
 &gt;
 	&lt;input {...deleteTrip.fields.id.as('hidden', tripId)} /&gt;
 	&lt;!-- An h2: a section of the page of its own, not a part of the embed section before it. --&gt;
@@ -537,11 +544,11 @@ async function remove(userId: string) {
 	&lt;/div&gt;
 &lt;/form&gt;</code></pre>
 </figure>
-<p>Delete is a remote <code>form</code> with a <code>confirm()</code> in its <code>onsubmit</code>. With JavaScript off the form posts and the trip is gone; with it on, the browser asks first, and <code>preventDefault</code> cancels the submission if the person changes their mind. That is progressive enhancement in four lines, and it is the pattern for every destructive button in the app. It is a component of its own so the page can put it last, under the embed section: the one thing on the page that cannot be undone comes after everything that can, where nobody reaches it on the way to something else. Its heading is an <code>h2</code> at an <code>h3</code>’s size, so heading navigation files the danger zone as a section of its own and not as a part of the embed section above it.</p>
+<p>Delete is a remote <code>form</code> whose question is asked inside <code>enhance</code>, the remote form’s own hook. With JavaScript off the form posts and the trip is gone; with it on, <code>enhance</code> is handed the form and submits it only if <code>confirm()</code> says yes. The first version put the <code>confirm()</code> in an <code>onsubmit</code> and called <code>preventDefault()</code> on a no — the way you would cancel a plain form — and “Cancel” deleted the trip anyway: the remote form’s attachment has a submit listener of its own, and it does not look at <code>defaultPrevented</code>. The end-to-end suite now dismisses the dialog first and checks the trip is still listed, then accepts it and checks it is gone (chapter 42). This is the one destructive *form* in the app; the smaller removals — a stop, an expense, a companion — are commands behind a button, with the person looking at the thing they remove, and ask nothing. It is a component of its own so the page can put it last, under the embed section: the one thing on the page that cannot be undone comes after everything that can, where nobody reaches it on the way to something else. Its heading is an <code>h2</code> at an <code>h3</code>’s size, so heading navigation files the danger zone as a section of its own and not as a part of the embed section above it.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why the invite is a command and leaving is a form.</li><li>You can explain the settings page’s 403 and where <code>error()</code> in markup is handled.</li><li>You can compare <code>untrack</code> in the settings form with assignable deriveds in the stop dialog and say when each is right.</li></ul>
+	<ul><li>You can say why the invite is a command and leaving is a form.</li><li>You can explain the settings page’s 403 and where <code>error()</code> in markup is handled.</li><li>You can compare <code>untrack</code> in the settings form with assignable deriveds in the stop dialog and say when each is right.</li><li>You can say why a <code>confirm()</code> belongs in a remote form’s <code>enhance</code> and not in an <code>onsubmit</code> with <code>preventDefault()</code>.</li></ul>
 </aside>
 		</article>
 

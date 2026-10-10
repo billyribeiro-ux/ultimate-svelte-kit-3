@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The design system — Building Meridian</title>
-<meta name="description" content="Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash, fonts from fontsource preloaded by filename, an `&lt;enhanced:img&gt;` hero, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, and the short, named list of places a hex code may appear outside the tokens.">
+<meta name="description" content="Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,16 +33,16 @@
 		<article>
 			<p class="eyebrow">Chapter 22</p>
 			<h1>The design system</h1>
-			<p class="lede">Tokens with <code>light-dark()</code>, a theme class on <code>MediaQuery</code>, the boot script that stops the flash, fonts from fontsource preloaded by filename, an <code>&lt;enhanced:img&gt;</code> hero, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, and the short, named list of places a hex code may appear outside the tokens.</p>
+			<p class="lede">Tokens with <code>light-dark()</code>, a theme class on <code>MediaQuery</code>, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a light-and-dark design system that never flashes, respects reduced motion, and keeps every colour in one file.</p></aside>
-			<p>Four CSS files, imported in order: tokens define, reset clears, base styles, utilities lay out. Every colour, size and duration the interface uses is named once in the first, and components reference the names. A hex code anywhere else in <code>src</code> is a copy made where a custom property cannot be read, and there are four, each saying so where it is written: the map’s canvas (<code>map/style.ts</code>), the globe’s WebGL scene, the custom element’s shadow root, and the <code>theme-color</code> meta tags in <code>app.html</code>, which the browser reads before any stylesheet. The header of <code>tokens.css</code> lists them, along with the two hex codes that are not copies: print, which is black on white whatever the theme, and the <code>#000</code> in a <code>mask-image</code> gradient, which means “opaque”, not black.</p>
+			<p>Five CSS files, imported in order: tokens define, reset clears, base styles, the date fields’ sheet dresses what Bits UI renders, utilities lay out. <code>dates.css</code> is global rather than a component’s <code>&lt;style&gt;</code> because two components — the trip’s range and an expense’s single date — wear it, and the elements it styles are rendered by the library, out of reach of a scoped selector (chapter 21). Every colour, size and duration the interface uses is named once in the first, and components reference the names. A hex code anywhere else in <code>src</code> is a copy made where a custom property cannot be read, and there are four, each saying so where it is written: the map’s canvas (<code>map/style.ts</code>), the globe’s WebGL scene, the custom element’s shadow root, and the <code>theme-color</code> meta tags in <code>app.html</code>, which the browser reads before any stylesheet. The header of <code>tokens.css</code> lists them, along with the two hex codes that are not copies: print, which is black on white whatever the theme, and the <code>#000</code> in a <code>mask-image</code> gradient, which means “opaque”, not black.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">src/lib/styles/index.css<span class="code__lines">:1-6</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* Order matters: tokens define, reset clears, base styles, utilities lay out. */
+	<pre><code class="lang-css">/* Order matters: tokens define, reset clears, base styles, the date fields dress what Bits UI renders, utilities lay out. */
 @import './tokens.css';
 @import './reset.css';
 @import './base.css';
@@ -52,7 +52,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-24</span></span>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -67,7 +67,15 @@
  * `app.html`, which the browser reads before any stylesheet — and each of
  * those says so where it is written. Two more are not copies: print, in
  * `base.css`, is black on white whatever the theme, and `#000` in a
- * `mask-image` gradient is not a colour at all — it means &quot;opaque&quot;.
+ * `mask-image` gradient is not a colour at all — it means &quot;opaque&quot;. (The
+ * hex codes in `design/contrast.spec.ts` are test data for the arithmetic,
+ * not colours anybody sees.)
+ *
+ * Every ratio quoted below is checked, not remembered: `pnpm run lint` ends
+ * with `scripts/contrast.ts`, which reads this file, resolves both sides of
+ * every pair the design puts on top of each other, and fails under the
+ * floor — 4.5:1 for text, 3:1 for an edge or a ring. `--report` prints the
+ * table.
  *
  * Colour is done with `light-dark()`: each token holds its light value and
  * its dark value, and the browser picks by `color-scheme` — which follows
@@ -83,7 +91,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:26-118</span></span>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:34-127</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">:root {
@@ -138,7 +146,8 @@
 	/*
 	 * Text on any saturated fill: pins, route numbers, avatars. Dark kind
 	 * colours are pastel, so white on them fails (1.86:1 on dark `--sea`);
-	 * near-black ink reads at 6:1 or better on every one.
+	 * near-black ink reads at 6.19:1 or better on every one. In light the
+	 * kinds are deep enough for white, at 5.17:1 or better.
 	 */
 	--on-fill: light-dark(#ffffff, #0b1220);
 
@@ -248,12 +257,12 @@ h4 {
 	line-height: var(--leading-snug);
 }</code></pre>
 </figure>
-<p>The display face is Fraunces, a variable font with an optical-size axis that the browser maps from the font size — <code>font-optical-sizing: auto</code>, so an 18px heading gets the cut drawn for 18px and a 56px hero gets the one drawn for posters; only the hero title and the 404 numeral pin <code>&quot;opsz&quot; 144</code>. The body is Inter. Both come from fontsource as stylesheets of <code>@font-face</code> rules with <code>unicode-range</code>, so a browser downloads the latin subset and nothing else — and chapter 14’s <code>preload</code> filter names those two files by their source filename.</p>
+<p>The display face is Fraunces, a variable font with an optical-size axis that the browser maps from the font size — <code>font-optical-sizing: auto</code>, so an 18px heading gets the cut drawn for 18px and a 56px hero gets the one drawn for posters; only the hero title pins <code>&quot;opsz&quot; 144</code>, and the 404 numeral pins 96 — at 46 to 72px the poster cut lost its hairlines and each “4” read as a blob. The body is Inter. Both come from fontsource as stylesheets of <code>@font-face</code> rules with <code>unicode-range</code>, so a browser downloads the latin subset and nothing else — and chapter 14’s <code>preload</code> filter names those two files by their source filename.</p>
 <h3 id="theme">The theme, and the flash it prevents</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-56</span></span>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -273,6 +282,7 @@ h4 {
 
 import { MediaQuery } from 'svelte/reactivity';
 import { browser } from '$app/env';
+import { THEME_COOKIE } from './theme-cookie.ts';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -308,34 +318,93 @@ class ThemeState {
 		}
 		if (next === 'system') delete document.documentElement.dataset.theme;
 		else document.documentElement.dataset.theme = next;
+
+		/*
+		 * The two things outside the stylesheet that follow the choice, the
+		 * same way the boot script in `app.html` sets them on load: the
+		 * browser chrome's `theme-color`, and the cookie the server reads.
+		 */
+		for (const meta of document.querySelectorAll&lt;HTMLMetaElement&gt;('meta[name=&quot;theme-color&quot;]')) {
+			const scheme = meta.dataset.scheme;
+			meta.media =
+				next === 'system'
+					? `(prefers-color-scheme: ${scheme})`
+					: scheme === next
+						? 'all'
+						: 'not all';
+		}
+		document.cookie =
+			next === 'system'
+				? `${THEME_COOKIE}=; path=/; max-age=0; samesite=lax`
+				: `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
 	}
 }
 
 export const theme = new ThemeState();</code></pre>
 </figure>
-<p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too.</p>
+<p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too. Two things outside the stylesheet follow a change as well, and <code>set()</code> updates both: the <code>theme-color</code> meta tags, and a cookie for the server — the next two blocks say what each is for.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/app.html<span class="code__lines">:20-33</span></span>
+		<span class="code__file">src/app.html<span class="code__lines">:12-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;!--
+	The browser's own chrome — the phone's status bar, the tab strip —
+	takes the page's canvas colour, so a cream page is not topped by a
+	white bar and a near-black one by a grey one. These are `--paper`'s
+	two values from `tokens.css`, by hand: a &lt;meta&gt; cannot read a token.
+	Each follows the system's scheme until a person picks one; then the
+	script below points the chosen one at every screen (`media=&quot;all&quot;`)
+	and the other at none, so a dark page on a light phone gets a dark
+	bar. `theme.svelte.ts` does the same when the choice changes.
+--&gt;
+&lt;meta
+	name=&quot;theme-color&quot;
+	data-scheme=&quot;light&quot;
+	media=&quot;(prefers-color-scheme: light)&quot;
+	content=&quot;#f8f5ee&quot;
+/&gt;
+&lt;meta
+	name=&quot;theme-color&quot;
+	data-scheme=&quot;dark&quot;
+	media=&quot;(prefers-color-scheme: dark)&quot;
+	content=&quot;#101318&quot;
+/&gt;</code></pre>
+</figure>
+<p><code>theme-color</code> is the colour a phone paints its status bar and a desktop browser its tab strip. It is <code>--paper</code>’s two values, by hand, because a <code>&lt;meta&gt;</code> is read before any stylesheet and cannot see a token. Two tags with <code>media</code> queries follow the system; the catch is a person who *chose* — a dark page on a light phone would sit under a cream bar. So the boot script below, and <code>theme.set()</code> later, point the chosen tag at every screen (<code>media=&quot;all&quot;</code>) and the other at none (<code>media=&quot;not all&quot;</code>). Rewriting <code>media</code> rather than <code>content</code> keeps both colours in the HTML, where the comment beside them can say where they came from.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html<span class="code__lines">:34-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-html">&lt;!--
 	The theme a person chose, applied before the first paint so a dark
-	choice on a light system never flashes light. This script is the one
-	inline script in the app: `vite.config.ts` reads it out of this file,
-	hashes it, and adds the hash to `script-src` — so it runs under the
-	Content Security Policy on prerendered pages (hashes) and rendered
-	ones (nonces) alike.
+	choice on a light system never flashes light; the browser chrome
+	follows it, and so does a cookie, which is how the server knows which
+	of the home page's two hero prints to ask for (`theme-cookie.ts`).
+	This script is the one inline script in the app: `vite.config.ts`
+	reads it out of this file, hashes it, and adds the hash to
+	`script-src` — so it runs under the Content Security Policy on
+	prerendered pages (hashes) and rendered ones (nonces) alike.
 --&gt;
 &lt;script&gt;
 	try {
 		var t = localStorage.getItem('meridian:theme');
-		if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+		if (t !== 'light' &amp;&amp; t !== 'dark') t = '';
+		if (t) document.documentElement.dataset.theme = t;
+		var metas = document.querySelectorAll('meta[name=&quot;theme-color&quot;]');
+		for (var i = 0; i &lt; metas.length; i++) {
+			var s = metas[i].getAttribute('data-scheme');
+			metas[i].media = t ? (s === t ? 'all' : 'not all') : '(prefers-color-scheme: ' + s + ')';
+		}
+		document.cookie =
+			'meridian-theme=' + t + '; path=/; max-age=' + (t ? 31536000 : 0) + '; samesite=lax';
 	} catch (e) {}
 &lt;/script&gt;</code></pre>
 </figure>
-<p>The one inline script in the app, and the reason <code>vite.config.ts</code> hashes it. A dark choice on a light system would otherwise paint light for one frame before hydration; this runs before the first paint and sets <code>data-theme</code> from storage. It carries no nonce attribute, because the guides are prerendered and SvelteKit refuses to prerender a template with <code>%sveltekit.nonce%</code> in it — the hash in <code>script-src</code> allows it everywhere.</p>
+<p>The one inline script in the app, and the reason <code>vite.config.ts</code> hashes it. A dark choice on a light system would otherwise paint light for one frame before hydration; this runs before the first paint, sets <code>data-theme</code> from storage, points the <code>theme-color</code> tags, and writes the choice into a cookie — the one thing the *server* needs to know about a theme, for the hero below. The variable names are one letter and the syntax is <code>var</code> because this is the only JavaScript that runs before the bundle, untranspiled, in every browser that loads the page. It carries no nonce attribute, because the guides are prerendered and SvelteKit refuses to prerender a template with <code>%sveltekit.nonce%</code> in it — the hash in <code>script-src</code> allows it everywhere.</p>
 
 <figure class="code">
 	<figcaption>
@@ -379,11 +448,91 @@ export const theme = new ThemeState();</code></pre>
 &lt;/fieldset&gt;</code></pre>
 </figure>
 <p>A radio group, because that is what it is: one of three, always exactly one. Arrow keys move between them for free, and a screen reader says “Theme, Light, 2 of 3” with no ARIA beyond the fieldset. <code>:has(input:checked)</code> styles the label from the state of the input inside it, which is what <code>:has()</code> was made for — and what it paints is a tier-3 pill with the <code>--segment-edge</code> hairline, so the choice shows in the dark theme too.</p>
-<h3 id="hero">A picture that is four pictures</h3>
+<h3 id="hero">A picture in four prints</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:19-64</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:19-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">let { data } = $props();
+
+/*
+ * FOUR PRINTS, ONE DOWNLOAD
+ * -------------------------
+ * The hero has a day print and a night print (`scripts/make-hero.ts`),
+ * each drawn twice — for a desktop, and for a phone, with pins and
+ * numbers big enough to read at 360px — and a page should fetch only
+ * the one it shows. `&lt;picture&gt;` chooses before any script runs, by the
+ * first `&lt;source&gt;` whose `media` and `type` match, so the order is the
+ * decision:
+ *
+ *   - nobody chose a theme: the night prints come first and carry
+ *     `(prefers-color-scheme: dark)`, the day prints follow without it,
+ *     and the system decides;
+ *   - somebody chose: only that print's sources are rendered, with no
+ *     colour scheme in their media, so a dark choice on a light phone
+ *     gets the night print and never downloads the day one;
+ *   - within each, the desktop print carries `(min-width: 37em)` and the
+ *     phone print, after it, carries no width at all. 37em is where the
+ *     desktop print's numbers reach 11px — 30px of a 1600px drawing,
+ *     shown 590px wide — so below it the phone print takes over, with
+ *     its 21px pins.
+ *
+ * The server learns the choice from a cookie the boot script keeps
+ * (`theme-cookie.ts`); once the page is running, the choice is the live
+ * one, so flipping the toggle on this page swaps the print. All four are
+ * `?enhanced` imports with the widths named, which is the same
+ * `&lt;enhanced:img&gt;` pipeline — AVIF and WebP at three or four widths,
+ * width and height known so nothing shifts (the phone print has the
+ * desktop's 16:10) — rendered by hand because the component cannot put
+ * a `media` on a source.
+ */
+let running = $state(false);
+onMount(() =&gt; {
+	running = true;
+});
+
+const chosen = $derived(running ? (theme.choice === 'system' ? null : theme.choice) : data.theme);
+
+const WIDE = '(min-width: 37em)';
+const DARK = '(prefers-color-scheme: dark)';
+const both = (...queries: (string | undefined)[]) =&gt;
+	queries.filter(Boolean).join(' and ') || undefined;
+
+const prints = $derived.by(() =&gt; {
+	const scheme = chosen === null ? DARK : undefined;
+	return [
+		...(chosen === 'light'
+			? []
+			: [
+					{
+						name: 'night',
+						picture: night,
+						media: both(WIDE, scheme),
+						sizes: '(min-width: 64em) 40rem, 100vw'
+					},
+					{ name: 'night-phone', picture: nightPhone, media: scheme, sizes: '100vw' }
+				]),
+		...(chosen === 'dark'
+			? []
+			: [
+					{ name: 'day', picture: day, media: WIDE, sizes: '(min-width: 64em) 40rem, 100vw' },
+					{ name: 'day-phone', picture: dayPhone, media: undefined, sizes: '100vw' }
+				])
+	];
+});
+
+const sources = (picture: typeof day) =&gt;
+	Object.entries(picture.sources).map(([format, srcset]) =&gt; ({
+		type: `image/${format}`,
+		srcset
+	}));</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:99-158</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -391,8 +540,10 @@ export const theme = new ThemeState();</code></pre>
 	in the display face at its largest cut, a glow of the sea colour behind
 	the image, and the image itself bleeding to the screen's edge on a phone
 	and sitting in a soft frame on a desktop. `{@attach hero()}` plays the
-	one GSAP timeline, once, on mount; the copy and the image are marked with
-	data attributes so the attachment finds them without knowing the markup.
+	one GSAP timeline when the hero arrives by navigation — never over a page
+	somebody has already seen (`hero.ts` says how it knows); the copy and the
+	image are marked with data attributes so the attachment finds them
+	without knowing the markup.
 --&gt;
 &lt;section class=&quot;hero&quot; {@attach hero()}&gt;
 	&lt;div class=&quot;container hero__grid&quot;&gt;
@@ -415,30 +566,50 @@ export const theme = new ThemeState();</code></pre>
 		&lt;/div&gt;
 
 		&lt;!--
-			`&lt;enhanced:img&gt;` is rewritten at build time into a `&lt;picture&gt;` with AVIF
-			and WebP sources at several widths, plus width/height so nothing shifts
-			while it loads. The source is a PNG drawn by `scripts/make-hero.ts`.
-			`sizes` tells the browser how wide the image is on screen, so it picks
-			the smallest file that is still sharp for that width.
+			`media` says which print a source is for; `sizes` tells the browser how
+			wide that print is on screen, so it picks the smallest file that is
+			still sharp for that width; `fetchpriority` says it is the largest
+			thing on the first screen.
 		--&gt;
 		&lt;div class=&quot;hero__figure&quot; data-hero-image&gt;
-			&lt;enhanced:img
-				class=&quot;hero__img&quot;
-				src=&quot;../../lib/assets/hero.png&quot;
-				alt=&quot;&quot;
-				sizes=&quot;(min-width: 64em) 40rem, 100vw&quot;
-				fetchpriority=&quot;high&quot;
-			/&gt;
+			&lt;picture&gt;
+				{#each prints as print (print.name)}
+					{#each sources(print.picture) as source (source.type)}
+						&lt;source
+							srcset={source.srcset}
+							sizes={print.sizes}
+							type={source.type}
+							media={print.media}
+						/&gt;
+					{/each}
+				{/each}
+				&lt;img
+					class=&quot;hero__img&quot;
+					src={chosen === 'dark' ? night.img.src : day.img.src}
+					width={day.img.w}
+					height={day.img.h}
+					alt=&quot;&quot;
+					fetchpriority=&quot;high&quot;
+				/&gt;
+			&lt;/picture&gt;
 		&lt;/div&gt;
 	&lt;/div&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<p><code>&lt;enhanced:img&gt;</code> is rewritten at build time — by the preprocessor that must come first in <code>vite.config.ts</code> — into a <code>&lt;picture&gt;</code> with AVIF and WebP sources at several widths, plus <code>width</code> and <code>height</code> so nothing shifts while it loads. <code>sizes</code> tells the browser how wide the image is on screen, so it picks the smallest file that is still sharp. The source PNG is drawn by <code>scripts/make-hero.ts</code> with sharp, which is why sharp is a devDependency named out loud rather than a transitive one hoped for. It is drawn on cream, and on a dark page a cream print is the brightest thing on the screen; so in the dark theme the image is developed as a negative — <code>filter: invert(1) hue-rotate(180deg)</code>, a little darker and flatter — which turns the paper near-black and puts the teal route back to teal. On a phone a mask fades both its top and bottom edges into the page.</p>
-<h3 id="motion">One timeline, three rules</h3>
+<p>The hero is a map of the sample trip drawn by <code>scripts/make-hero.ts</code> with sharp — coastline, contours clipped to the land, a graticule, the dashed route and its numbered pins — once on cream for the light theme and once on near-black for the dark. Drawn twice rather than filtered once: the first version developed the cream print as a negative in the dark theme, <code>filter: invert(1) hue-rotate(180deg)</code>, and a negative is not a night map — the pins’ white numbers went black, and the land and the sea took whatever greys the arithmetic gave them rather than the night tokens’. The script is deterministic, so running it again produces the same bytes and the diff of a commit that touches it is honest.</p>
+<p>And each print is drawn twice, for two sizes of screen. A pin and its number are drawn in the pixels of the image, and the image is shown 40rem wide on a desktop and the full width of a 360px phone: the desktop drawing’s 26px pins came out 15px across on the phone, with numbers under 5px tall. So the script draws a desktop print at 1600×1000 and a phone print at 1200×750, framed a little tighter on the route, and every size in it — strokes, pins, numbers — is written in screen pixels at the narrowest the print is shown and multiplied out per print: the phone’s pins are 21px with 11.5px numbers at 360px. The compass rose is the desktop’s ornament only; drawn on the phone print it sat on Barcelona.</p>
+<p>Four prints must not mean four downloads, and the hero is the largest thing on the first screen — its paint *is* the page’s Largest Contentful Paint. <code>&lt;picture&gt;</code> makes the choice before any script runs: the browser takes the first <code>&lt;source&gt;</code> whose <code>media</code> and <code>type</code> match, so the order of the sources is the decision, and <code>prints</code> is that order as data. With no theme chosen, the night prints come first with <code>(prefers-color-scheme: dark)</code> in their <code>media</code> and the day prints follow, so the system decides. With a theme chosen, only that theme’s prints are rendered, with no colour scheme in their <code>media</code>, so a dark choice on a light phone fetches a night print and never a day one. Within each theme the desktop print carries <code>(min-width: 37em)</code> and comes first, and the phone print after it carries no width at all. 37em is not one of the layout’s breakpoints; it is where the desktop print’s numbers reach 11px — 30px of a 1600px drawing, shown about 590px wide — so below it the phone print, drawn for that, takes over. The server learns the choice from the cookie the boot script writes, through the <code>(site)</code> layout’s <code>load</code> (the next chapter quotes it); once the page is running, the live choice takes over, so flipping the toggle on this page swaps the print.</p>
+<p>Both prints are <code>?enhanced</code> imports with the widths named — the same pipeline as <code>&lt;enhanced:img&gt;</code>, run by the preprocessor that must come first in <code>vite.config.ts</code>: AVIF and WebP at four widths for a desktop print and three for a phone print, with the intrinsic width and height known so nothing shifts while it loads — the phone print is 16:10 like the desktop’s, so the one <code>&lt;img&gt;</code> reserves the right space for either. The component is not used because it cannot put a <code>media</code> on a source; the import gives the same <code>sources</code> and <code>img</code> and the markup is written by hand, with <code>src/images.d.ts</code> telling TypeScript what such an import returns. Each source’s <code>sizes</code> tells the browser how wide that print is on screen — 40rem from 64em or the whole width for a desktop print, the whole width for a phone print — so it picks the smallest file that is still sharp, and <code>fetchpriority=&quot;high&quot;</code> says it is the one to fetch first. On a phone the image steps out of the gutter to the screen’s edges and its bottom edge fades into the paper — only the bottom: a fade at the top as well left the map a faint band with dead space under it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a cookie, when the choice is already in storage</h4>
+	<p>Because the server renders the <code>&lt;picture&gt;</code>, and the browser starts fetching an image from the HTML long before any script could change it. <code>localStorage</code> is invisible to the server; a cookie is sent with the request. The cookie is a mirror, not a second source of truth: every colour still comes from <code>light-dark()</code> and <code>data-theme</code>, so a missing or stale cookie costs at most one picture drawn for the other theme — never a flash, never a wrong colour on anything else.</p>
+</aside>
+<h3 id="motion">One timeline, four rules</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:1-51</span></span>
+		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:1-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -451,18 +622,29 @@ export const theme = new ThemeState();</code></pre>
  * unmasks — and GSAP ships only in the home route's chunk, because this is
  * the only file that imports it.
  *
- * Three rules keep it honest:
+ * Four rules keep it honest:
  *
  *   1. Nothing is hidden until JavaScript runs. The server renders every
  *      element visible; only this function, in the browser, sets the
  *      starting opacity. With JavaScript off, or before it loads, the page
  *      is simply there.
- *   2. Reduced motion means no motion. Not &quot;less&quot; — none. The function
+ *   2. Nothing that has been seen is taken away. On the first load the
+ *      server's hero is painted long before the JavaScript arrives, and
+ *      the first version then snapped the title, the lede and the image to
+ *      nothing and faded them back in — the text a visitor had started to
+ *      read blinked out. So when the hero is being *hydrated* (the root
+ *      layout has not yet marked the document `data-hydrated`) and the
+ *      browser has already painted (a `first-contentful-paint` entry
+ *      exists), the timeline does not run. It plays when the hero arrives
+ *      with a navigation — a click on the brand from another page — where
+ *      the elements are new and nobody has seen them yet.
+ *   3. Reduced motion means no motion. Not &quot;less&quot; — none. The function
  *      returns before touching a style.
- *   3. It runs once, on mount. Scrolling back up does not replay it; that
+ *   4. It runs once, on mount. Scrolling back up does not replay it; that
  *      is a slot machine, not a page.
  *
- * Everything else that moves in the app is CSS. If this timeline ever goes,
+ * Nothing else in the app uses GSAP; the rest of what moves is CSS, a
+ * Svelte tween or a library's own animation. If this timeline ever goes,
  * GSAP leaves the dependency list the same day.
  */
 
@@ -473,6 +655,7 @@ import { reducedMotion } from './prefers.svelte.ts';
 export function hero(): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
 		if (reducedMotion.current) return;
+		if (alreadySeen()) return;
 
 		const copy = Array.from(node.querySelectorAll&lt;HTMLElement&gt;('[data-hero-copy] &gt; *'));
 		const image = node.querySelector&lt;HTMLElement&gt;('[data-hero-image]');
@@ -491,13 +674,22 @@ export function hero(): Attachment&lt;HTMLElement&gt; {
 			gsap.set([...copy, ...(image ? [image] : [])], { clearProps: 'all' });
 		};
 	};
+}
+
+/** Hydrating a page the browser has already painted: the hero is on screen, and stays as it is. */
+function alreadySeen(): boolean {
+	const hydrating = !('hydrated' in document.documentElement.dataset);
+	const painted = performance
+		.getEntriesByType('paint')
+		.some((entry) =&gt; entry.name === 'first-contentful-paint');
+	return hydrating &amp;&amp; painted;
 }</code></pre>
 </figure>
-<p>The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a <code>Tween</code> from <code>svelte/motion</code>, the check mark on a copy button pops in with a ten-line custom transition in <code>src/lib/motion/transitions.ts</code>, and all of it reads its duration from the <code>--dur-*</code> tokens or from the one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with three rules the comment states: nothing is hidden until JavaScript runs, reduced motion means no motion, and it plays once. The copy and the image are found by <code>data-hero-copy</code> and <code>data-hero-image</code>, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.</p>
+<p>The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a <code>Tween</code> from <code>svelte/motion</code>, the check mark on a copy button pops in with a ten-line custom transition in <code>src/lib/motion/transitions.ts</code>, and all of it reads its duration from the <code>--dur-*</code> tokens or from the one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with four rules the comment states: nothing is hidden until JavaScript runs, nothing that has been seen is taken away, reduced motion means no motion, and it plays once. The second rule is the one a review found. On a first load the server’s hero is painted long before the JavaScript arrives, and the timeline then snapped the title, the lede and the image to nothing and faded them back — the sentence a visitor had started to read blinked out. So <code>alreadySeen()</code> asks two questions: is this a hydration (the root layout has not yet set <code>data-hydrated</code>), and has the browser painted (a <code>first-contentful-paint</code> entry exists)? Both yes, and the hero stays exactly as it is; the timeline plays when the hero arrives with a client-side navigation, as new elements nobody has seen. The copy and the image are found by <code>data-hero-copy</code> and <code>data-hero-image</code>, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:66-94</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:160-188</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -533,7 +725,7 @@ export function hero(): Attachment&lt;HTMLElement&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:53-83</span></span>
+		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:74-104</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -571,7 +763,7 @@ export function inview(): Attachment&lt;HTMLElement&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:216-239</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:290-313</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -600,10 +792,92 @@ export function inview(): Attachment&lt;HTMLElement&gt; {
 }</code></pre>
 </figure>
 <p>The feature cards need no timeline, so they get none. <code>inview</code> only decides *when*: it sets <code>data-animate</code> in the browser while the grid is still below the fold, and <code>data-inview</code> the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on <code>--dur-5</code>, each card 70ms after the one before through the <code>--i</code> the markup sets — and rule 1 lives in the selector: a card is hidden only under <code>[data-animate]</code>, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match.</p>
+<h3 id="checked">Contrast, checked on every lint</h3>
+<p>Every ratio in this chapter — 5.36:1 for the tertiary ink on paper, 3.06:1 for a chosen segment’s edge, 10.39:1 for the globe’s hints — is printed by a script, not remembered. Because every colour is a token and most tokens are a <code>light-dark()</code> pair, whether text is readable is a question <code>tokens.css</code> can answer on its own, without a browser: parse it, resolve both sides of each pair and the <code>var()</code> aliases between tokens, and work out the WCAG ratio of every pair the design puts on top of each other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/contrast.ts<span class="code__lines">:105-143</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const TEXT = ['ink', 'ink-2', 'ink-3'] as const;
+const TIERS = ['paper', 'paper-2', 'paper-3', 'paper-4'] as const;
+const KINDS = ['place', 'lodging', 'food', 'transport', 'activity', 'idea'] as const;
+
+/**
+ * The table the design promises: every text ink on every surface tier,
+ * the ink on every saturated fill, the focus ring on every paper, a chosen
+ * segment's edge on its track and on itself, the globe's hint on the night
+ * frame, and the hairline floor for a control's border — plus the accent
+ * and state colours where they are used as text.
+ */
+export const PAIRS: readonly Pair[] = [
+	...TEXT.flatMap((fg) =&gt;
+		TIERS.map((bg) =&gt; ({ fg, bg, min: 4.5, note: `${fg} text on surface tier ${bg}` }))
+	),
+	...KINDS.map((kind) =&gt; ({
+		fg: 'on-fill',
+		bg: `kind-${kind}`,
+		min: 4.5,
+		note: `a pin's number on the ${kind} colour`
+	})),
+	...TIERS.map((bg) =&gt; ({ fg: 'focus', bg, min: 3, note: `the focus ring on ${bg}` })),
+	{ fg: 'segment-edge', bg: 'paper-3', min: 3, note: 'a chosen segment’s edge on its track' },
+	{ fg: 'segment-edge', bg: 'paper-4', min: 3, note: 'a chosen segment’s edge on the segment' },
+	{ fg: 'night-ink', bg: 'night', min: 4.5, note: 'the globe’s hints on the night frame' },
+	{ fg: 'line-2', bg: 'paper-2', min: 1.5, note: 'a control’s border (hairline floor)' },
+	{ fg: 'sea', bg: 'paper', min: 4.5, note: 'links' },
+	{ fg: 'sea', bg: 'paper-2', min: 4.5, note: 'links on a card' },
+	{ fg: 'sea-strong', bg: 'paper', min: 4.5, note: 'hovered links' },
+	{ fg: 'sea', bg: 'sea-soft', min: 4.5, note: '.chip--sea, the Live chip' },
+	{ fg: 'sun', bg: 'paper', min: 4.5, note: 'warning text' },
+	{ fg: 'sun', bg: 'sun-soft', min: 4.5, note: 'sun text on its soft fill' },
+	{ fg: 'coral', bg: 'paper', min: 4.5, note: '.issue' },
+	{ fg: 'coral', bg: 'paper-4', min: 4.5, note: '.issue in a dialog' },
+	{ fg: 'coral', bg: 'coral-soft', min: 4.5, note: '.chip--coral' },
+	{ fg: 'on-sea', bg: 'sea', min: 4.5, note: 'the primary button' },
+	{ fg: 'on-fill', bg: 'coral', min: 4.5, note: '.btn--danger' },
+	{ fg: 'paper', bg: 'ink', min: 4.5, note: 'the update banner, the skip link' }
+];</code></pre>
+</figure>
+<p>That is the table the design promises, as data: every text ink on every surface tier, the fill ink on every stop kind, the focus ring on every paper, the segment edge on its track and on itself, and the accent and state colours where they are used as text. The floor is the standard’s — 4.5:1 for text, 3:1 for something that is not text but must be seen — and the maths is too: each channel linearised, weighted by how bright the eye finds it into a luminance, and the ratio of two luminances each plus 0.05. A pair whose token does not exist counts as a failure, so renaming <code>--ink-3</code> cannot quietly drop its rows.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/contrast.ts<span class="code__lines">:19-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { check, report } from '../src/lib/design/contrast.ts';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const css = readFileSync(join(root, 'src/lib/styles/tokens.css'), 'utf8');
+const results = check(css);
+const failures = results.filter((result) =&gt; !result.ok);
+
+if (process.argv.includes('--report') || failures.length &gt; 0) {
+	console.log('CONTRAST (WCAG 2.x, from tokens.css)' + report(results).join('\n'));
+}
+
+if (failures.length &gt; 0) {
+	console.error(`\n${failures.length} pair(s) under their floor`);
+	process.exitCode = 1;
+} else {
+	console.log(`contrast: ${results.length} pairs in two themes, every one at or above its floor`);
+}</code></pre>
+</figure>
+<p><code>pnpm run lint</code> ends with this script, so a token change that makes the tertiary ink unreadable on a card fails in a second, before a browser has started; <code>--report</code> prints the whole table, and <code>scripts/screens.ts</code> prints it again beside the screenshots. The module is pure — no DOM, no file system — so a script, a unit test (chapter 41) and the screenshot tool all import the same table.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a static table, when axe checks contrast in the browser</h4>
+	<p>axe does check it, and chapter 42 runs axe on every screen in both themes. But axe can only judge what is on screen in the states the suite reaches: an error line inside a dialog, a warning chip, a hovered link may never be rendered there. The table checks every pair the design *promises*, in both themes, whether or not a page shows it today — and when it fails it names two tokens, which is where the fix goes, rather than a DOM node, which is where the symptom was. The two disagree only when a component puts colours together that the table does not list, and that is a conversation the design should have anyway.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain <code>light-dark()</code> and why the theme class only sets <code>color-scheme</code>.</li><li>You know why the boot script has a hash and no nonce.</li><li>You can state the three rules of the hero timeline, and say why the feature cards animate with CSS instead.</li></ul>
+	<ul><li>You can explain <code>light-dark()</code> and why the theme class only sets <code>color-scheme</code>.</li><li>You know why the boot script has a hash and no nonce.</li><li>You can state the four rules of the hero timeline, and say why the feature cards animate with CSS instead.</li><li>You can say how the hero fetches one print of two, and why the server has to know the theme for that.</li><li>You know which file a contrast ratio in this chapter comes from, and what fails when a token change breaks one.</li></ul>
 </aside>
 		</article>
 

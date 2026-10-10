@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:363-400</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:428-465</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{:else if tab === 'globe'}
@@ -85,11 +85,12 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-47</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-51</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { Canvas } from '@threlte/core';
+	import { MediaQuery } from 'svelte/reactivity';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -125,6 +126,9 @@
 	 */
 	let flying = $state(false);
 
+	/* On a touch screen a scroll moves the page and a pinch zooms the globe, so the hint says pinch. */
+	const touch = new MediaQuery('(pointer: coarse)');
+
 	/* The canvas fades in over 700ms once the scene has drawn its first frame; before that the frame is already night. */
 	let ready = $state(false);
 
@@ -139,7 +143,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:49-102</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:53-106</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;globe&quot;&gt;
@@ -193,24 +197,44 @@
 		{:else}
 			&lt;p class=&quot;hint&quot;&gt;{m.route_none()}&lt;/p&gt;
 		{/if}
-		&lt;p class=&quot;hint&quot;&gt;{m.globe_hint()}&lt;/p&gt;
+		&lt;p class=&quot;hint&quot;&gt;{touch.current ? m.globe_hint_touch() : m.globe_hint()}&lt;/p&gt;
 	&lt;/div&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from the app’s one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>, and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded.</p>
+<p>The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from the app’s one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>, and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded. The hint under them is a second <code>MediaQuery</code>, <code>(pointer: coarse)</code>: with a mouse a scroll wheel zooms the globe, and on a touch screen a scroll moves the page and a pinch zooms, so the sentence says pinch where a pinch is what works.</p>
 <h3 id="the-scene">The scene</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:32-73</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:33-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">export interface GlobeStop {
 	readonly id: string;
 	readonly name: string;
+	readonly kind: StopKind;
 	readonly lng: number;
 	readonly lat: number;
 }
+
+/*
+ * The route and the stops in the colours the map gives them: the route
+ * in the sea, each stop in its kind's hue — the dark theme's values,
+ * because the globe is a night scene whatever the page's theme. Copied
+ * from `tokens.css` by hand, because a WebGL material cannot read a
+ * token. The first version drew the arc in `--sun` and every stop in
+ * `--coral`: the same route in two colours on two neighbouring tabs,
+ * and two state colours spent as decoration.
+ */
+const ROUTE = '#2dd4bf';
+const KIND: Record&lt;StopKind, string&gt; = {
+	place: '#2dd4bf',
+	lodging: '#a78bfa',
+	food: '#f59e0b',
+	transport: '#60a5fa',
+	activity: '#fb7185',
+	idea: '#8b95a5'
+};
 
 interface Props {
 	stops: readonly GlobeStop[];
@@ -251,7 +275,7 @@ const asLngLat = ([lng = 0, lat = 0]: readonly number[]): LngLat =&gt; ({ lng, l
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:75-98</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:96-119</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* Coastlines: every ring of every polygon becomes pairs of points. */
@@ -279,11 +303,11 @@ const outlines = $derived.by(() =&gt; {
 	return geometry;
 });</code></pre>
 </figure>
-<p>A latitude and longitude become a point on the unit sphere, with 0°E facing the default camera. The coastlines become a <code>BufferGeometry</code> of line segments — every ring of every polygon, pairs of consecutive points — which is twenty thousand vertices and one draw call. <code>interactivity()</code> from <code>@threlte/extras</code> is what makes <code>onclick</code> on a mesh work: it raycasts from the pointer into the scene.</p>
+<p>The colours first, because the first version got them wrong in an instructive way: it drew the arc in <code>--sun</code> and every stop in <code>--coral</code>, so the same route was teal on the Map tab and amber on the Globe tab next to it, and two *state* colours — warning and danger — were spent as decoration. Now the route is in the sea and each stop in its kind’s hue, exactly as on the map. They are the dark theme’s values whatever the page’s theme, because the globe is a night scene, and they are copied from <code>tokens.css</code> by hand, because a WebGL material cannot read a custom property — which is why <code>GlobeStop</code> grew a <code>kind</code>. A latitude and longitude become a point on the unit sphere, with 0°E facing the default camera. The coastlines become a <code>BufferGeometry</code> of line segments — every ring of every polygon, pairs of consecutive points — which is twenty thousand vertices and one draw call. <code>interactivity()</code> from <code>@threlte/extras</code> is what makes <code>onclick</code> on a mesh work: it raycasts from the pointer into the scene.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:100-135</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:121-156</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Leg {
@@ -327,7 +351,7 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:137-232</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:158-253</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	let camera = $state&lt;PerspectiveCamera&gt;();
@@ -431,7 +455,7 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:234-300</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:255-315</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;T.PerspectiveCamera
@@ -477,16 +501,10 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 	&lt;T.LineBasicMaterial color=&quot;#9cc4dc&quot; transparent opacity={0.55} /&gt;
 &lt;/T.LineSegments&gt;
 
-&lt;!--
-	The route and the stops wear the dark theme's state colours — `--sun` for
-	the arc, `--coral` for a stop — by hand, because a WebGL material cannot
-	read a token and the globe is a night scene whatever the page's theme.
-	The selected stop is white: the one thing lit.
---&gt;
-&lt;!-- The route --&gt;
+&lt;!-- The route, in the sea; the selected stop is white, the one thing lit. --&gt;
 {#each arcs as geometry, index (index)}
 	&lt;T.Line {geometry}&gt;
-		&lt;T.LineBasicMaterial color=&quot;#f59e0b&quot; linewidth={2} /&gt;
+		&lt;T.LineBasicMaterial color={ROUTE} linewidth={2} /&gt;
 	&lt;/T.Line&gt;
 {/each}
 
@@ -498,11 +516,11 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 		onclick={() =&gt; onselect(stop.id)}
 	&gt;
 		&lt;T.SphereGeometry args={[0.011, 16, 16]} /&gt;
-		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#fb7185'} /&gt;
+		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : KIND[stop.kind]} /&gt;
 	&lt;/T.Mesh&gt;
 {/each}</code></pre>
 </figure>
-<p>The markup. A camera with <code>OrbitControls</code> from extras, disabled while flying so the two do not fight; two lights; <code>Stars</code> for a restrained bit of cinema, with <code>speed={0}</code> under reduced motion; the sphere; a slightly larger back-facing shell for an atmosphere; the coastlines; the arcs; and one small mesh per stop, scaled up when selected and clickable. <code>bind:ref={camera}</code> hands the three.js camera to the task. Every colour here is a literal, like the map’s, because WebGL does not read the cascade. The camera starts over the route — the mean of the stops as unit vectors, which is the right middle on a sphere where an average of longitudes is not — at the distance where the sphere fills about 80% of the frame’s shorter side: a sphere of radius R fills an angle of 2·asin(R/d) from a distance d, and the horizontal field of view comes from the canvas’s aspect, so a portrait phone backs the camera off instead of cutting the globe at both edges. Until the person turns the globe, a resize re-frames it; <code>OrbitControls</code>’ <code>onstart</code> is how the scene knows they have.</p>
+<p>The markup. A camera with <code>OrbitControls</code> from extras, disabled while flying so the two do not fight; two lights; <code>Stars</code> for a restrained bit of cinema, with <code>speed={0}</code> under reduced motion; the sphere; a slightly larger back-facing shell for an atmosphere; the coastlines; the arcs; and one small mesh per stop, scaled up when selected and clickable. <code>bind:ref={camera}</code> hands the three.js camera to the task. Every colour here is a literal or one of the two constants above, like the map’s, because WebGL does not read the cascade; the selected stop is white, the one thing lit. The camera starts over the route — the mean of the stops as unit vectors, which is the right middle on a sphere where an average of longitudes is not — at the distance where the sphere fills about 80% of the frame’s shorter side: a sphere of radius R fills an angle of 2·asin(R/d) from a distance d, and the horizontal field of view comes from the canvas’s aspect, so a portrait phone backs the camera off instead of cutting the globe at both edges. Until the person turns the globe, a resize re-frames it; <code>OrbitControls</code>’ <code>onstart</code> is how the scene knows they have.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Threlte and not three.js in an attachment</h4>

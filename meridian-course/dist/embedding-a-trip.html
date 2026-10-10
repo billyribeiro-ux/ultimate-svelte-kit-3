@@ -165,7 +165,7 @@ export const csr = false;</code></pre>
 
 	&lt;ol class=&quot;embed__stops&quot;&gt;
 		{#each scheduled as stop (stop.id)}
-			&lt;li&gt;
+			&lt;li data-kind={stop.kind}&gt;
 				&lt;span&gt;{stop.name}&lt;/span&gt;
 				{#if stop.date}&lt;span class=&quot;muted&quot;&gt;{formatDate(stop.date, locale, 'short')}&lt;/span&gt;{/if}
 			&lt;/li&gt;
@@ -185,7 +185,7 @@ export const csr = false;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:119-136</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:136-153</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -207,7 +207,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 	}
 }</code></pre>
 </figure>
-<p>The frame page is outside the <code>(site)</code> group — no header — and has <code>csr = false</code>, so it is a few kilobytes of HTML and CSS. For a while it was a few kilobytes of HTML and no CSS of its own: the compiler option below that turns <code>src/lib/embed</code> into custom elements tested for any folder called <code>embed</code>, so the client build compiled this page as a custom element too, put its styles into a shadow root that never exists, and emitted no stylesheet for the server to link. The test is now the path <code>src/lib/embed</code>, and a probe of the frame checks the box is 22rem wide. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which <code>hooks.server.ts</code> replaces <code>frame-ancestors &quot;none&quot;</code> with <code>*</code> after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.</p>
+<p>The frame page is outside the <code>(site)</code> group — no header — and has <code>csr = false</code>, so it is a few kilobytes of HTML and CSS. For a while it was a few kilobytes of HTML and no CSS of its own: the compiler option below that turns <code>src/lib/embed</code> into custom elements tested for any folder called <code>embed</code>, so the client build compiled this page as a custom element too, put its styles into a shadow root that never exists, and emitted no stylesheet for the server to link. The test is now the path <code>src/lib/embed</code>, and the end-to-end test of the frame asks for two things only this page’s own stylesheet provides: the card is the 22rem the CSS says, and the list has no indent (chapter 42). It used to ask whether *a* stylesheet was linked, which was true with the bug too — the root layout’s global CSS is linked on every page, frame or not — so it could not fail. The stops are numbered the way the itinerary and the map number them — a counter in a disc of the stop’s kind colour, through the same <code>data-kind</code> — because a grid row is not <code>display: list-item</code>, and the list’s own markers had silently gone. Their indent had not: the browser gives an <code>&lt;ol&gt;</code> 40px of padding for the markers, drawn or not, and the discs sat 40px right of the title until the list’s padding was set to nothing. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which <code>hooks.server.ts</code> replaces <code>frame-ancestors &quot;none&quot;</code> with <code>*</code> after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.</p>
 <h3 id="the-element">The custom element</h3>
 
 <figure class="code">
@@ -351,7 +351,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 	&lt;/div&gt;
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same five pairs <code>tokens.css</code> holds, written as <code>light-dark()</code>. Inside a shadow root <code>light-dark()</code> resolves against the <code>color-scheme</code> the element inherits from the host page, so the host decides: a page that declares <code>color-scheme: light dark</code> gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A <code>prefers-color-scheme</code> query would have asked the visitor instead, and put a dark card on a light page.</p>
+<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same six pairs <code>tokens.css</code> holds — paper, raised paper, the hairline, two inks and the sea — written as <code>light-dark()</code>. Inside a shadow root <code>light-dark()</code> resolves against the <code>color-scheme</code> the element inherits from the host page, so the host decides: a page that declares <code>color-scheme: light dark</code> gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A <code>prefers-color-scheme</code> query would have asked the visitor instead, and put a dark card on a light page.</p>
 
 <figure class="code">
 	<figcaption>

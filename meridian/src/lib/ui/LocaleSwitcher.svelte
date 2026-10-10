@@ -17,9 +17,14 @@
 	 * `compact` is for a header that has to fit a nav beside it: below 64em
 	 * the links show two-letter codes — EN · DE · PT — and the full names
 	 * come back from 64em, where there is room. A phone needs it most: with
-	 * full names the guides header wrapped to three rows. The full name
-	 * stays in the DOM, visually hidden, so the link is still called
-	 * "Deutsch" to a screen reader and to the end-to-end suite.
+	 * full names the guides header wrapped to three rows.
+	 *
+	 * A compact link is named with both — "Português (PT)" — so its name
+	 * holds the words on it. Named "Português" while it showed "PT", it was
+	 * a link speech input could not find ("click PT"), and it passed for
+	 * English and German only because their names happen to start with
+	 * their codes. The full name is still the first word, so the link is
+	 * still "Deutsch" to the end-to-end suite.
 	 */
 	interface Props {
 		keepSearch?: boolean;
@@ -54,6 +59,7 @@
 			hreflang={locale}
 			lang={locale}
 			title={compact ? names[locale] : undefined}
+			aria-label={compact ? `${names[locale]} (${codes[locale]})` : undefined}
 			aria-current={locale === current ? 'true' : undefined}
 			data-sveltekit-reload
 		>
@@ -74,8 +80,11 @@
 	}
 
 	.locales a {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
+		min-width: var(--control-sm);
 		min-height: var(--control-sm);
 		padding: 0.15rem 0.45rem;
 		border-radius: var(--radius-sm);
@@ -91,6 +100,23 @@
 	.locales a[aria-current='true'] {
 		color: var(--ink);
 		font-weight: 600;
+	}
+
+	/*
+	 * 36px drawn, 44px under a finger: the pseudo-element reaches 4px past
+	 * each edge, and the links move 12px apart so two reaches never meet —
+	 * at 8px they would touch, and on a screen of fractional device pixels
+	 * a press on the seam could go to either code.
+	 */
+	@media (pointer: coarse) {
+		.locales {
+			gap: var(--space-3);
+		}
+		.locales a::after {
+			content: '';
+			position: absolute;
+			inset: -4px;
+		}
 	}
 
 	.locales__code {

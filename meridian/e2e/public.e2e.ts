@@ -45,6 +45,26 @@ test('the explore page filters a hundred places by name or country', async ({ pa
 	await expect(page).toHaveURL(/\/guides\//);
 });
 
+test('a filter typed before the explore page has hydrated is kept', async ({ page }) => {
+	// The sign-in form's race (account.e2e.ts), on a plain `bind:value`: hold the client bundle
+	// back, type into the server's HTML, then let the page wake up.
+	let release: () => void = () => {};
+	const held = new Promise<void>((resolve) => (release = resolve));
+	await page.route('**/_app/immutable/entry/start.*.js', async (route) => {
+		await held;
+		await route.continue();
+	});
+
+	await page.goto('/explore');
+	await page.getByPlaceholder('Filter places').fill('Kyoto');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(0);
+
+	release();
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+	await expect(page.getByPlaceholder('Filter places')).toHaveValue('Kyoto');
+	await expect(page.getByText('1 place', { exact: false })).toBeVisible();
+});
+
 test('a trip visible by link is readable; a private one is a 404', async ({ page }) => {
 	await page.goto(`/t/${TRIPS.japan}`);
 	await expect(page.getByRole('heading', { level: 1, name: 'Japan in autumn' })).toBeVisible();
@@ -86,6 +106,11 @@ test('health, the route API and the embed frame answer for machines', async ({ p
 	expect(frame?.headers()['content-security-policy']).toContain('frame-ancestors *');
 	await expect(page.getByRole('link', { name: 'Planned with Meridian' })).toBeVisible();
 	expect(await page.locator('script[src]').count()).toBe(0);
+	// Styled, though it ships no script: the page's own stylesheet came with it. A frame
+	// compiled as a custom element once shipped without it. Only that stylesheet makes the card
+	// 22rem and takes the list's indent away — the root layout's CSS is linked either way.
+	await expect(page.locator('article.embed')).toHaveCSS('max-width', '352px');
+	await expect(page.locator('.embed__stops')).toHaveCSS('padding-inline-start', '0px');
 
 	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
 	expect(framedPrivate?.status()).toBe(404);

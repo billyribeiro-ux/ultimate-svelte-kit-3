@@ -107,15 +107,22 @@
 
 <!--
 	A magnifier, which means "search" to everybody, not the ⌘ glyph, which
-	means something only on a Mac. Icon-only on a phone (the label is still
-	its name); the shortcut shows where a keyboard is likely.
+	means something only on a Mac. Icon-only on a phone, where the label is
+	visually hidden and still the button's name; the shortcut shows where a
+	keyboard is likely.
+
+	The name comes from the label, not an `aria-label`: with one, the name
+	was "Search and commands" while the button read "Search and commands
+	Ctrl K", and a name that does not match what is on the button is a
+	button speech input cannot find. The shortcut itself goes to assistive
+	technology as `aria-keyshortcuts`, in its own vocabulary.
 -->
 <button
-	class="btn btn--sm btn--ghost palette__button no-print"
+	class="btn btn--sm btn--ghost btn--icon palette__button no-print"
 	type="button"
 	onclick={() => (open = true)}
 	title={m.palette_hint()}
-	aria-label={m.palette_open()}
+	aria-keyshortcuts="Control+K Meta+K"
 >
 	<MagnifyingGlassIcon size={16} aria-hidden="true" />
 	<span class="palette__label">{m.palette_open()}</span>
@@ -202,20 +209,30 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	/* Phone first: a square icon button (`.btn--icon`, with its 44px hit area), the label visually hidden. */
 	.palette__label {
-		display: none;
-	}
-
-	/* A square icon button on a phone. */
-	@media (max-width: 47.99em) {
-		.palette__button {
-			width: var(--control-sm);
-			padding: 0;
-		}
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
 	}
 
 	@media (min-width: 48em) {
-		.palette__label,
+		.palette__button {
+			width: auto;
+			padding: 0.25rem 0.7rem;
+		}
+
+		.palette__label {
+			position: static;
+			width: auto;
+			height: auto;
+			overflow: visible;
+			clip: auto;
+		}
+
 		.palette__kbd {
 			display: inline-block;
 		}
@@ -225,11 +242,16 @@
 	 * A tier-3 panel near the top of the screen, dropping in 8px. It wears
 	 * the shared `.overlay` scrim (base.css) but not the `.dialog` shell: a
 	 * palette is not a sheet on a phone, it is a search box you type into.
+	 *
+	 * On a phone it hangs just under the header, so its top edge covers
+	 * whole lines of the page: at 12vh it cut through the trip's name and
+	 * left half a line of display type sticking out above it. From 40em it
+	 * drops to an eighth of the way down the screen.
 	 */
 	:global(.palette) {
 		position: fixed;
 		z-index: var(--z-dialog);
-		top: max(12vh, var(--space-6));
+		top: calc(var(--header-h) + var(--space-2));
 		left: 50%;
 		translate: -50% 0;
 		width: min(36rem, calc(100vw - 2 * var(--gutter)));
@@ -352,6 +374,12 @@
 		margin-inline-end: var(--space-1);
 		font-family: var(--font-body);
 		font-variant-numeric: tabular-nums;
+	}
+
+	@media (min-width: 40em) {
+		:global(.palette) {
+			top: max(12vh, var(--space-6));
+		}
 	}
 
 	@media (min-width: 48em) {

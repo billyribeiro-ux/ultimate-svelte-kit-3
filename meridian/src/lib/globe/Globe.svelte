@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Canvas } from '@threlte/core';
+	import { MediaQuery } from 'svelte/reactivity';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -34,6 +35,9 @@
 	 * stops animating without a reload.
 	 */
 	let flying = $state(false);
+
+	/* On a touch screen a scroll moves the page and a pinch zooms the globe, so the hint says pinch. */
+	const touch = new MediaQuery('(pointer: coarse)');
 
 	/* The canvas fades in over 700ms once the scene has drawn its first frame; before that the frame is already night. */
 	let ready = $state(false);
@@ -97,7 +101,7 @@
 		{:else}
 			<p class="hint">{m.route_none()}</p>
 		{/if}
-		<p class="hint">{m.globe_hint()}</p>
+		<p class="hint">{touch.current ? m.globe_hint_touch() : m.globe_hint()}</p>
 	</div>
 </div>
 

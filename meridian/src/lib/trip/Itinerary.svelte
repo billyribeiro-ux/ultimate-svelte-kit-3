@@ -4,6 +4,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { dndzone, TRIGGERS, type DndEvent } from 'svelte-dnd-action';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import { LightbulbIcon, PlusIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
@@ -48,14 +49,23 @@
 	/*
 	 * The rail shows the day of the month and a short weekday; the heading
 	 * shows the whole date — "Sunday, May 10", "Sonntag, 10. Mai" — without
-	 * the year, which is the same for every day of the trip. Both format in
-	 * UTC, like `formatDate`, so the calendar date is the one that comes out.
+	 * the year, which is the same for every day of the trip. On a phone the
+	 * heading is the short date — "Sun, May 10" — because the rail already
+	 * says the day and the weekday, and the long one wrapped onto two lines
+	 * beside the "Add a stop" button. All of them format in UTC, like
+	 * `formatDate`, so the calendar date is the one that comes out.
 	 */
 	const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
 	const heading = new Intl.DateTimeFormat(locale, {
 		weekday: 'long',
 		day: 'numeric',
 		month: 'long',
+		timeZone: 'UTC'
+	});
+	const headingShort = new Intl.DateTimeFormat(locale, {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
 		timeZone: 'UTC'
 	});
 
@@ -146,7 +156,7 @@
 			await moveStop({ tripId: view.trip.id, id: event.detail.info.id, date, index });
 		} catch (error) {
 			override = null;
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 
@@ -155,7 +165,7 @@
 			await removeStop({ tripId: view.trip.id, id: stop.id });
 			toast.success(m.stop_removed());
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 
@@ -168,6 +178,9 @@
 		element.style.borderRadius = 'var(--radius)';
 	}
 </script>
+
+<!-- The panel's heading, for the outline: the page's h1, this h2, and a day's h3 under it. -->
+<h2 class="visually-hidden">{m.tab_itinerary()}</h2>
 
 <div class="days">
 	{#each groups as group (group.date ?? 'ideas')}
@@ -189,7 +202,13 @@
 
 			<header class="day__header">
 				<h3 class="day__title">
-					{group.date ? heading.format(fromIso(group.date).toDate('UTC')) : m.day_ideas()}
+					{#if group.date}
+						{@const day = fromIso(group.date).toDate('UTC')}
+						<span class="day__long">{heading.format(day)}</span>
+						<span class="day__short">{headingShort.format(day)}</span>
+					{:else}
+						{m.day_ideas()}
+					{/if}
 				</h3>
 				{#if editable}
 					<button
@@ -247,9 +266,10 @@
 		gap: var(--space-5);
 	}
 
+	/* A 36px rail on a phone, where every pixel of the stop's name counts; 44px from 40em. */
 	.day {
 		display: grid;
-		grid-template-columns: 2.75rem minmax(0, 1fr);
+		grid-template-columns: 2.25rem minmax(0, 1fr);
 		grid-template-rows: auto auto;
 		column-gap: var(--space-3);
 		row-gap: var(--space-2);
@@ -309,8 +329,41 @@
 		min-height: var(--control-sm);
 	}
 
+	/*
+	 * The heading takes the room that is left and wraps inside it; the
+	 * button keeps its size and its icon. Without `flex: none` the button was
+	 * the thing that gave way, and squeezed its plus sign to a dot.
+	 */
 	.day__title {
+		flex: 1 1 0;
+		min-width: 0;
 		font-size: var(--text-lg);
+	}
+
+	.day__long {
+		display: none;
+	}
+
+	.day__add {
+		flex: none;
+	}
+
+	.day__add :global(svg) {
+		flex-shrink: 0;
+	}
+
+	@media (min-width: 40em) {
+		.day {
+			grid-template-columns: 2.75rem minmax(0, 1fr);
+		}
+
+		.day__long {
+			display: inline;
+		}
+
+		.day__short {
+			display: none;
+		}
 	}
 
 	.day__list {

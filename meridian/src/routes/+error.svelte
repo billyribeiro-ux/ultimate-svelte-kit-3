@@ -33,6 +33,7 @@
 	.bare__brand {
 		display: inline-flex;
 		align-items: center;
+		min-height: var(--control);
 		gap: var(--space-2);
 		font-family: var(--font-display);
 		font-size: var(--text-lg);

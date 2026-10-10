@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import { ArrowLeftIcon, LinkIcon, LockSimpleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
@@ -48,7 +49,7 @@
 			}).updates(tripBySlug(trip.slug));
 			toast.success(m.trip_saved());
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		} finally {
 			saving = false;
 		}
@@ -160,10 +161,15 @@
 		gap: var(--space-2);
 	}
 
+	/*
+	 * The radio and the icon line up with the title, the first line, not
+	 * with the middle of a description that wraps to two or three lines on
+	 * a phone: `start`, and nudged down to sit on the title's line.
+	 */
 	.choice {
 		display: grid;
 		grid-template-columns: auto auto minmax(0, 1fr);
-		align-items: center;
+		align-items: start;
 		gap: var(--space-3);
 		min-height: var(--control);
 		padding: var(--space-3) var(--space-4);
@@ -185,7 +191,12 @@
 		border-color: var(--sea);
 	}
 
+	.choice :global(.radio) {
+		margin-block-start: 0.2em;
+	}
+
 	.choice :global(.choice__icon) {
+		margin-block-start: 0.15em;
 		color: var(--ink-3);
 	}
 

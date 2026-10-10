@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:18-71</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:19-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -75,14 +75,23 @@ const locale = getLocale();
 /*
  * The rail shows the day of the month and a short weekday; the heading
  * shows the whole date — &quot;Sunday, May 10&quot;, &quot;Sonntag, 10. Mai&quot; — without
- * the year, which is the same for every day of the trip. Both format in
- * UTC, like `formatDate`, so the calendar date is the one that comes out.
+ * the year, which is the same for every day of the trip. On a phone the
+ * heading is the short date — &quot;Sun, May 10&quot; — because the rail already
+ * says the day and the weekday, and the long one wrapped onto two lines
+ * beside the &quot;Add a stop&quot; button. All of them format in UTC, like
+ * `formatDate`, so the calendar date is the one that comes out.
  */
 const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
 const heading = new Intl.DateTimeFormat(locale, {
 	weekday: 'long',
 	day: 'numeric',
 	month: 'long',
+	timeZone: 'UTC'
+});
+const headingShort = new Intl.DateTimeFormat(locale, {
+	weekday: 'short',
+	day: 'numeric',
+	month: 'short',
 	timeZone: 'UTC'
 });
 
@@ -101,7 +110,7 @@ const groups = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:73-85</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:83-95</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** The route number of a scheduled stop, so the list agrees with the map's pins. */
@@ -121,7 +130,7 @@ const lookers = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:123-160</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:133-161</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function withZone(date: string | null, items: Stop[]): DayGroup&lt;Stop&gt;[] {
@@ -150,16 +159,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 		await moveStop({ tripId: view.trip.id, id: event.detail.info.id, date, index });
 	} catch (error) {
 		override = null;
-		toast.error(error instanceof Error ? error.message : String(error));
-	}
-}
-
-async function remove(stop: Stop) {
-	try {
-		await removeStop({ tripId: view.trip.id, id: stop.id });
-		toast.success(m.stop_removed());
-	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }</code></pre>
 </figure>
@@ -167,10 +167,13 @@ async function remove(stop: Stop) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:172-242</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:182-261</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;days&quot;&gt;
+	<pre><code class="lang-svelte">&lt;!-- The panel's heading, for the outline: the page's h1, this h2, and a day's h3 under it. --&gt;
+&lt;h2 class=&quot;visually-hidden&quot;&gt;{m.tab_itinerary()}&lt;/h2&gt;
+
+&lt;div class=&quot;days&quot;&gt;
 	{#each groups as group (group.date ?? 'ideas')}
 		&lt;!--
 			Each day is a rail and a column. The rail carries the day of the month
@@ -190,7 +193,13 @@ async function remove(stop: Stop) {
 
 			&lt;header class=&quot;day__header&quot;&gt;
 				&lt;h3 class=&quot;day__title&quot;&gt;
-					{group.date ? heading.format(fromIso(group.date).toDate('UTC')) : m.day_ideas()}
+					{#if group.date}
+						{@const day = fromIso(group.date).toDate('UTC')}
+						&lt;span class=&quot;day__long&quot;&gt;{heading.format(day)}&lt;/span&gt;
+						&lt;span class=&quot;day__short&quot;&gt;{headingShort.format(day)}&lt;/span&gt;
+					{:else}
+						{m.day_ideas()}
+					{/if}
 				&lt;/h3&gt;
 				{#if editable}
 					&lt;button
@@ -242,11 +251,11 @@ async function remove(stop: Stop) {
 	{/each}
 &lt;/div&gt;</code></pre>
 </figure>
-<p><code>animate:flip</code> on each <code>&lt;li&gt;</code> is what makes the other cards slide out of the way rather than jump; <code>flipDurationMs</code> on the zone tells svelte-dnd-action to expect it, and both read the same <code>duration</code>, which is 0 when the app’s <code>reducedMotion</code> query says so — the one piece of motion in the itinerary that CSS tokens cannot reach. <code>dropTargetStyle: {}</code> turns off the library’s inline outline in favour of <code>dropTargetClasses</code>, a class from the tokens, and <code>transformDraggedElement</code> lifts the library’s clone of the dragged card — a heavier shadow, a degree of tilt. The empty-day item is inside the list so a day with nothing on it is still a drop target, and its sentence tells an editor that it is one. Each day is a rail and a column: the day of the month in the display face, with a hairline running down to the next day.</p>
+<p><code>animate:flip</code> on each <code>&lt;li&gt;</code> is what makes the other cards slide out of the way rather than jump; <code>flipDurationMs</code> on the zone tells svelte-dnd-action to expect it, and both read the same <code>duration</code>, which is 0 when the app’s <code>reducedMotion</code> query says so — the one piece of motion in the itinerary that CSS tokens cannot reach. <code>dropTargetStyle: {}</code> turns off the library’s inline outline in favour of <code>dropTargetClasses</code>, a class from the tokens, and <code>transformDraggedElement</code> lifts the library’s clone of the dragged card — a heavier shadow, a degree of tilt. The empty-day item is inside the list so a day with nothing on it is still a drop target, and its sentence tells an editor that it is one. Each day is a rail and a column: the day of the month in the display face, with a hairline running down to the next day. On a phone the heading is the short date — “Sun, May 10” — because the rail beside it already says the day and the weekday, and the long one wrapped onto two lines beside “Add a stop”; both are rendered and a media query shows one, so the server’s HTML is right at every width without a script measuring anything. The title takes the free space (<code>flex: 1 1 0</code>, <code>min-width: 0</code>) and the button none (<code>flex: none</code>), so a long German date wraps instead of squeezing the button’s icon. And above the days sits a visually hidden <code>&lt;h2&gt;</code>: the page’s <code>&lt;h1&gt;</code> is the trip, each day is an <code>&lt;h3&gt;</code>, and an outline that jumps from one to three is a document a screen reader’s heading list cannot make sense of.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:87-121</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:97-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -402,11 +411,55 @@ $effect(() =&gt; {
 &lt;/article&gt;</code></pre>
 </figure>
 <p>The name is a button with <code>aria-pressed</code>, because selecting a stop is a toggle that highlights it on the map — and it is a button’s size: 36px drawn, so the number and the grip centre on it, and 44px to hit, through a pseudo-element that reaches into the card’s padding where there is nothing else to press. The number is the route position from <code>view.scheduled</code>, so the list agrees with the map’s pins. <code>lookers</code> are the companions whose pointer is on this stop, as chips — presence at the granularity of a card. <code>data-kind</code> sets the <code>--kind</code> custom property from <code>tokens.css</code> for the coloured border and the number badge, whose digits are <code>--on-fill</code> — the ink that reads on every kind colour in both themes — so the six kinds of stop share one hue table with the map. On a screen with a mouse the edit and remove buttons fade in on hover or focus; on a touch screen there is no hover, so they are always there. They are hidden by opacity, not <code>display</code>, so a keyboard can still reach them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:111-146</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Named areas. On a phone the name has the whole first row and the two
+ * actions sit at the end of the second, beside the kind chip: with the
+ * buttons on the name's row, a 360px screen left the name 108px — the
+ * most important words on the screen broken over two lines by two grey
+ * icons. From 40em there is room, and the actions move up beside the
+ * name. The notes always run the full width under both.
+ */
+.stop {
+	display: grid;
+	grid-template-columns: auto auto minmax(0, 1fr) auto;
+	grid-template-areas:
+		'grip number name name'
+		'. . meta actions'
+		'. . notes notes';
+	align-items: start;
+	gap: var(--space-1) var(--space-2);
+	padding: var(--space-3);
+	border: 1px solid var(--line);
+	border-left: 3px solid var(--kind, var(--line-2));
+	border-radius: var(--radius);
+	background: var(--paper-2);
+	overflow: hidden;
+	transition:
+		box-shadow var(--dur-2) var(--ease-out),
+		border-color var(--dur-2) var(--ease-out);
+}
+
+@media (min-width: 40em) {
+	.stop {
+		grid-template-areas:
+			'grip number name actions'
+			'. . meta meta'
+			'. . notes notes';
+	}
+}</code></pre>
+</figure>
+<p>The card is a grid with named areas, and the areas change at 40em rather than the markup. On a phone the name has the whole first row and the two actions sit at the end of the second, beside the kind chip; with the buttons on the name’s row, a 360px screen left the name 108px, and the most important words on the screen broke over two lines beside two grey icons. Writing the layout as <code>grid-template-areas</code> makes that decision readable at a glance — the strings *are* the picture — and moving an area is one line in one media query, with no element reordered in the DOM, so the tab order and the reading order stay the same at every width.</p>
 <h3 id="dialog">The dialog: assignable deriveds</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:16-87</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:24-96</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -423,9 +476,10 @@ $effect(() =&gt; {
  * function a drag uses, so &quot;move to Thursday&quot; means one thing in the
  * whole application.
  *
- * The shell — `.overlay`, `.dialog`, the header, the grabber — is shared
- * CSS in `base.css`: on a phone it is a bottom sheet, from 40em a centred
- * panel, and the command palette wears the same classes.
+ * The shell — `.overlay`, `.dialog`, the header, the grabber — is CSS in
+ * `base.css`, because it is the product's dialog pattern: on a phone a
+ * bottom sheet, from 40em a centred panel. Today this dialog is the one
+ * that wears it; the command palette shares only the scrim, and says why.
  */
 export type Mode =
 	| { kind: 'add'; date: string | null; point?: { lng: number; lat: number } }
@@ -486,10 +540,93 @@ let placeId: string | undefined = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:103-137</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:98-118</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * The coordinates are folded away once a place has been picked — they
+ * came from the gazetteer and rarely need a hand. They are open while
+ * adding: either the pin came from a click on the map, where a nudge is
+ * the likely next step, or there is no pin yet, and the row says so and
+ * cannot be folded until there is.
+ */
+let adjusting = $derived(mode?.kind === 'add');
+
+/*
+ * THE GAZETTEER, BEFORE ANYBODY ASKS
+ * ----------------------------------
+ * The place search needs the hundred places the moment the dialog opens.
+ * Asking for them here — this component is mounted with the trip page,
+ * long before it is opened — starts the fetch of the prerendered file
+ * while the person is still reading the itinerary, and `.current` hands
+ * the search whatever has arrived without suspending anything: no
+ * `await`, so the dialog's first frame is its finished layout. In the
+ * browser only; a dialog that is closed has nothing to server-render.
+ */
+const gazetteer = browser ? places() : undefined;</code></pre>
+</figure>
+<p>The gazetteer is asked for here, by the dialog, when the trip page mounts — long before anybody opens it. <code>places()</code> is the <code>prerender</code> remote function from chapter 16, and the resource it returns has a <code>.current</code> that is <code>undefined</code> until the file arrives and the hundred places after, without suspending anything. The first version awaited it inside the search, and an <code>await</code> in a component with no boundary of its own holds back the update that mounts it: the dialog opened with no search field and the wrong day selected, then rebuilt itself mid-animation when the file landed. Now the first frame of the dialog is its finished layout, and the search shows “Loading places…” in the rare case it is opened faster than a small static file can be fetched. In the browser only: a closed dialog has nothing to render on the server, and the guard keeps the fetch off it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>await</code> with a <code>pending</code> snippet</h4>
+	<p>A <code>&lt;svelte:boundary&gt;</code> with a <code>pending</code> snippet would have kept the rest of the dialog from waiting, and drawn a placeholder where the search goes — a layout that changes when the file arrives, inside a panel that is animating in. Starting the request early and reading <code>.current</code> turns a waterfall (open, then fetch, then render) into a head start, and asks nothing of the layout. <code>await</code> in markup is the right tool when the data *is* the page; here it is a nicety the person may not even use.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:125-209</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	let saving = $state(false);
+
+	/*
+	 * ISSUES, ON THE FIELD THEY BELONG TO
+	 * -----------------------------------
+	 * The save runs the same schema the server will, first, in the browser:
+	 * a name of three spaces passes `required` and fails the server's trim,
+	 * and the answer used to come back as a toast of raw JSON. Now each issue
+	 * is a line under its field, the field is `aria-invalid`, and nothing is
+	 * sent. The coordinates also listen for the browser's own `invalid`
+	 * event: they can sit in a closed `&lt;details&gt;`, and a required field
+	 * folded out of sight stops the form without a word — so an invalid
+	 * coordinate unfolds the row and says what is wrong.
+	 */
+	interface Issues {
+		readonly name?: string | undefined;
+		readonly coords?: string | undefined;
+		readonly notes?: string | undefined;
+	}
+
+	// Like the fields above: assignable, and reset to none whenever the dialog opens for something else.
+	let issues: Issues = $derived.by(() =&gt; {
+		void mode;
+		return {};
+	});
+
+	function check(): boolean {
+		const result =
+			mode?.kind === 'edit'
+				? v.safeParse(StopPatchSchema, { id: mode.stop.id, name, kind, lng, lat, notes })
+				: v.safeParse(StopInputSchema, { tripId, name, kind, lng, lat, date, notes, placeId });
+		if (result.success) {
+			issues = {};
+			return true;
+		}
+		const nested = v.flatten(result.issues).nested ?? {};
+		issues = {
+			name: nested.name?.[0],
+			coords: nested.lng || nested.lat ? m.issue_coordinates() : undefined,
+			notes: nested.notes?.[0]
+		};
+		if (issues.coords) adjusting = true;
+		return false;
+	}
+
+	/* The browser refused a coordinate: unfold the row, and say what it wants. */
+	function coordsInvalid() {
+		adjusting = true;
+		issues = { ...issues, coords: m.issue_coordinates() };
+	}
 
 	function fromPlace(place: Place) {
 		if (!name.trim()) name = place.name;
@@ -502,6 +639,7 @@ let placeId: string | undefined = $derived(
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
 		if (!mode || saving || lng == null || lat == null) return;
+		if (!check()) return;
 		saving = true;
 		try {
 			if (mode.kind === 'add') {
@@ -518,7 +656,7 @@ let placeId: string | undefined = $derived(
 			}
 			onclose();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		} finally {
 			saving = false;
 		}
@@ -526,10 +664,43 @@ let placeId: string | undefined = $derived(
 &lt;/script&gt;</code></pre>
 </figure>
 <p>Bits UI’s <code>Dialog</code> supplies the focus trap, the Escape key, the scroll lock and the ARIA; the form inside is plain HTML. Saving calls <code>addStop</code> or <code>updateStop</code> — commands, because a dialog only exists once JavaScript is running — and a date change on an existing stop goes through <code>moveStop</code>, the same function a drag uses, so “move to Thursday” means one thing in the whole application. The coordinates are <code>number | null</code>: a stop added with no place picked and no click on the map has no pin, and <code>null</code> says so. The first version started them at <code>0, 0</code>, which is a real point — in the Gulf of Guinea — and one save of it turned a 1,263km route into a 10,000km one.</p>
+<p>Before anything is sent, <code>check()</code> runs the schema the server will run — <code>StopInputSchema</code> or <code>StopPatchSchema</code>, the same import — with <code>v.safeParse</code>, and <code>v.flatten</code> turns its issues into one message per field. A name of three spaces passes the input’s <code>required</code> and fails the schema’s trim; it used to reach the server and come back as a toast of raw JSON, and now it is a line under the field, the field is <code>aria-invalid</code> and <code>aria-describedby</code> points at the line, and nothing is sent. <code>issues</code> is an assignable <code>$derived</code> like the fields, so it resets whenever the dialog opens for something else. The toast for the errors that *do* come back reads <code>errorMessage(error)</code>, which the next block is.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:139-265</span></span>
+		<span class="code__file">src/lib/ui/errors.ts<span class="code__lines">:1-24</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT A FAILED CALL SAYS
+ * =======================
+ *
+ * A remote `command` that fails throws SvelteKit's `HttpError` in the
+ * browser: `{ status, body: { message } }`, and *not* an `Error` — so the
+ * old `error instanceof Error ? error.message : String(error)` printed the
+ * whole body as JSON in the toast, `{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}`.
+ *
+ * The body's message is the one to show. The server wrote it — `error(422,
+ * m.stop_limit(…))`, or `handleError`'s `m.error_bad_request()` for an
+ * argument that failed its schema — in the request's language. Anything
+ * else (the network went away, a bug) is not something the person can act
+ * on in detail, and the browser's own text for it is English, so it gets
+ * the product's one sentence for &quot;that did not work&quot;.
+ */
+
+import { isHttpError } from '@sveltejs/kit';
+import { m } from '#lib/paraglide/messages.js';
+
+export function errorMessage(error: unknown): string {
+	if (isHttpError(error)) return error.body.message;
+	return m.error_title();
+}</code></pre>
+</figure>
+<p>A failed <code>command</code> throws SvelteKit’s <code>HttpError</code> in the browser, and an <code>HttpError</code> is not an <code>Error</code> — so the <code>error instanceof Error ? error.message : String(error)</code> every component used to write fell through to <code>String()</code>, and the toast read <code>{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}</code>. <code>isHttpError()</code> from <code>@sveltejs/kit</code> is the test that knows the difference, and <code>body.message</code> is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:211-378</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
@@ -558,12 +729,26 @@ let placeId: string | undefined = $derived(
 			&lt;form class=&quot;stack&quot; onsubmit={save}&gt;
 				&lt;div class=&quot;field&quot;&gt;
 					&lt;label class=&quot;label&quot; for={searchId}&gt;{m.stop_place()}&lt;/label&gt;
-					&lt;PlaceSearch id={searchId} onpick={fromPlace} /&gt;
+					&lt;PlaceSearch id={searchId} places={gazetteer?.current ?? []} onpick={fromPlace} /&gt;
 				&lt;/div&gt;
 
 				&lt;label class=&quot;field&quot;&gt;
 					&lt;span class=&quot;label&quot;&gt;{m.stop_name()}&lt;/span&gt;
-					&lt;input class=&quot;input&quot; bind:value={name} bind:this={nameInput} maxlength=&quot;120&quot; required /&gt;
+					&lt;input
+						class=&quot;input&quot;
+						bind:value={name}
+						bind:this={nameInput}
+						maxlength=&quot;120&quot;
+						required
+						aria-invalid={issues.name ? 'true' : undefined}
+						aria-describedby={issues.name ? `${searchId}-name-issue` : undefined}
+					/&gt;
+					{#if issues.name}
+						&lt;span class=&quot;issue&quot; id=&quot;{searchId}-name-issue&quot;&gt;
+							&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+							{issues.name}
+						&lt;/span&gt;
+					{/if}
 				&lt;/label&gt;
 
 				&lt;!--
@@ -618,37 +803,64 @@ let placeId: string | undefined = $derived(
 							&lt;span class=&quot;coords__unset&quot;&gt;{m.stop_coordinates_unset()}&lt;/span&gt;
 						{/if}
 					&lt;/summary&gt;
+					&lt;!--
+						`step=&quot;any&quot;`: a click on the map, or a dragged pin, gives a
+						coordinate to many more places than four, and a step of 0.0001
+						made the browser refuse it as a &quot;step mismatch&quot;.
+					--&gt;
 					&lt;div class=&quot;coords__row&quot;&gt;
 						&lt;input
 							class=&quot;input tabular&quot;
 							type=&quot;number&quot;
 							inputmode=&quot;decimal&quot;
-							step=&quot;0.0001&quot;
+							step=&quot;any&quot;
 							min=&quot;-90&quot;
 							max=&quot;90&quot;
 							aria-label={m.stop_latitude()}
 							placeholder={m.stop_latitude()}
 							required
+							aria-invalid={issues.coords ? 'true' : undefined}
+							aria-describedby={issues.coords ? `${searchId}-coords-issue` : undefined}
+							oninvalid={coordsInvalid}
 							bind:value={lat}
 						/&gt;
 						&lt;input
 							class=&quot;input tabular&quot;
 							type=&quot;number&quot;
 							inputmode=&quot;decimal&quot;
-							step=&quot;0.0001&quot;
+							step=&quot;any&quot;
 							min=&quot;-180&quot;
 							max=&quot;180&quot;
 							aria-label={m.stop_longitude()}
 							placeholder={m.stop_longitude()}
 							required
+							aria-invalid={issues.coords ? 'true' : undefined}
+							aria-describedby={issues.coords ? `${searchId}-coords-issue` : undefined}
+							oninvalid={coordsInvalid}
 							bind:value={lng}
 						/&gt;
 					&lt;/div&gt;
 				&lt;/details&gt;
+				{#if issues.coords}
+					&lt;span class=&quot;issue&quot; id=&quot;{searchId}-coords-issue&quot;&gt;
+						&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+						{issues.coords}
+					&lt;/span&gt;
+				{/if}
 
 				&lt;label class=&quot;field&quot;&gt;
 					&lt;span class=&quot;label&quot;&gt;{m.stop_notes()}&lt;/span&gt;
-					&lt;textarea class=&quot;textarea notes&quot; bind:value={notes} maxlength=&quot;1000&quot;&gt;&lt;/textarea&gt;
+					&lt;textarea
+						class=&quot;textarea notes&quot;
+						bind:value={notes}
+						maxlength=&quot;1000&quot;
+						aria-invalid={issues.notes ? 'true' : undefined}&gt;&lt;/textarea&gt;
+					{#if issues.notes}
+						&lt;span class=&quot;issue&quot;&gt;
+							&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+							{issues.notes}
+						&lt;/span&gt;
+					{/if}
 				&lt;/label&gt;
 
 				&lt;div class=&quot;cluster dialog__actions&quot;&gt;
@@ -660,11 +872,11 @@ let placeId: string | undefined = $derived(
 	&lt;/Dialog.Portal&gt;
 &lt;/Dialog.Root&gt;</code></pre>
 </figure>
-<p>The kind is a segmented control — six radios in a <code>fieldset</code>, drawn as a pill track three to a row — six across would squeeze “Transport” and “Hospedagem” out of a 32rem panel — whose chosen segment takes the kind’s colour — and the coordinates sit in a <code>&lt;details&gt;</code> that folds away once a place is picked, because then the pin is already right, and is open while adding: a click on the map gives a pin to nudge, and an add with neither has no pin at all — the summary says “Not set”, the two inputs are <code>required</code> so the browser will not submit, and the summary refuses to fold, because a required field folded out of sight is a form that will not submit and will not say why. From 40em the dialog opens with focus in the place search, labelled “Place” like every other field (<code>onOpenAutoFocus</code>); on a phone focus stays on the close button, so no keyboard rises over the sheet. The day select writes each day as the itinerary’s headings do — “Sunday, May 10”. The close button is labelled “Close” and the second action “Cancel”: an icon button announced as “Menu”, and a cancel that said “Undo”, were both on the list of things the design pass fixed.</p>
+<p>The kind is a segmented control — six radios in a <code>fieldset</code>, drawn as a pill track three to a row — six across would squeeze “Transport” and “Hospedagem” out of a 32rem panel — whose chosen segment takes the kind’s colour — and the coordinates sit in a <code>&lt;details&gt;</code> that folds away once a place is picked, because then the pin is already right, and is open while adding: a click on the map gives a pin to nudge, and an add with neither has no pin at all — the summary says “Not set”, the two inputs are <code>required</code> so the browser will not submit, and the summary refuses to fold, because a required field folded out of sight is a form that will not submit and will not say why. The inputs listen for the browser’s own <code>invalid</code> event as well, which unfolds the row and puts the issue under it, and their <code>step</code> is <code>any</code>: a click on the map or a dragged pin gives a coordinate to many more places than four, and <code>step=&quot;0.0001&quot;</code> made the browser refuse a perfectly good point as a “step mismatch”. From 40em the dialog opens with focus in the place search, labelled “Place” like every other field (<code>onOpenAutoFocus</code>); on a phone focus stays on the close button, so no keyboard rises over the sheet. The day select writes each day as the itinerary’s headings do — “Sunday, May 10”. The close button is labelled “Close” and the second action “Cancel”: an icon button announced as “Menu”, and a cancel that said “Undo”, were both things a review of the screens caught, and neither shows in a screenshot.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:540-578</span></span>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:555-593</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -707,12 +919,12 @@ let placeId: string | undefined = $derived(
 	animation: sheet-out var(--dur-3) var(--ease-in) both;
 }</code></pre>
 </figure>
-<p>The shell is shared with the command palette, so it lives in <code>base.css</code>. On a phone it is a bottom sheet with a grabber, sliding up on the <code>--ease-sheet</code> curve; from 40em it is a centred panel that rises 8px and scales from 96%. There is no JavaScript in any of it: Bits UI sets <code>data-state=&quot;open&quot;</code> while the dialog is up and <code>closed</code> as it leaves, waiting for the exit animation, so the motion is two keyframe rules per state — and under reduced motion every <code>--dur-*</code> is zero and the dialog simply appears.</p>
+<p>The shell lives in <code>base.css</code> because it is the product’s dialog pattern, not because two dialogs share it today: the stop dialog is the one that wears it. The command palette shares only the scrim — it is a search box you type into, a panel near the top of the screen at every width, not a sheet — and its own comment says so. On a phone the shell is a bottom sheet with a grabber, sliding up on the <code>--ease-sheet</code> curve; from 40em it is a centred panel that rises 8px and scales from 96%. There is no JavaScript in any of it: Bits UI sets <code>data-state=&quot;open&quot;</code> while the dialog is up and <code>closed</code> as it leaves, waiting for the exit animation, so the motion is two keyframe rules per state — and under reduced motion every <code>--dur-*</code> is zero and the dialog simply appears.</p>
 <h3 id="search">A combobox over the gazetteer</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:1-52</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:1-56</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -720,7 +932,7 @@ let placeId: string | undefined = $derived(
 	import { MagnifyingGlassIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import { places, type Place } from '#lib/remote/geo.remote.ts';
+	import type { Place } from '#lib/remote/geo.remote.ts';
 
 	/**
 	 * A COMBOBOX OVER THE GAZETTEER
@@ -732,34 +944,38 @@ let placeId: string | undefined = $derived(
 	 * and everything that is tedious to get right by hand. The other half is
 	 * ours: which places match, and what happens when one is picked.
 	 *
-	 * The places come from the `prerender` remote function: a static JSON
-	 * file, fetched once and cached by SvelteKit for the life of the page.
-	 * Filtering a hundred names on every keystroke does not need a server.
+	 * The places come in as a prop, already loaded. The first version awaited
+	 * the `prerender` function in here, and an `await` in a component that
+	 * is not inside a boundary of its own holds back the update that mounts
+	 * it — so the stop dialog opened with no search field and the wrong day,
+	 * then rebuilt itself mid-animation when the gazetteer arrived. The
+	 * dialog starts the fetch when the trip page loads (`StopDialog.svelte`)
+	 * and hands over whatever it has; filtering a hundred names on every
+	 * keystroke does not need a server.
 	 */
 	interface Props {
+		/** The gazetteer; empty until it has loaded. */
+		places: readonly Place[];
 		onpick: (place: Place) =&gt; void;
 		/** The input's id, so a visible `&lt;label for&gt;` outside can name it. */
 		id?: string;
 	}
 
-	let { onpick, id }: Props = $props();
+	let { places, onpick, id }: Props = $props();
 
 	// What has been typed, read from the input itself: the root's `inputValue`
 	// is a prop to set, not one to bind.
 	let query = $state('');
 	let value = $state('');
 
-	// The gazetteer, awaited once. `await` in a `$derived` is fine in async mode.
-	const all = $derived(await places());
-
 	const matches = $derived.by(() =&gt; {
 		const needle = query.trim().toLowerCase();
-		if (!needle) return all.slice(0, 8);
-		return all.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
+		if (!needle) return places.slice(0, 8);
+		return places.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
 	});
 
 	function pick(id: string) {
-		const place = all.find((p) =&gt; p.id === id);
+		const place = places.find((p) =&gt; p.id === id);
 		if (place) onpick(place);
 	}
 
@@ -768,11 +984,11 @@ let placeId: string | undefined = $derived(
 	const countryName = (code: string) =&gt; regions.of(code) ?? code;
 &lt;/script&gt;</code></pre>
 </figure>
-<p>Bits UI’s <code>Combobox</code> is the accessible half — <code>role=&quot;combobox&quot;</code>, a listbox, arrow keys, Escape, type-ahead, <code>aria-activedescendant</code>. The other half is ours: <code>const all = $derived(await places())</code> awaits the prerendered gazetteer inside a derived, which async mode allows, and <code>matches</code> filters a hundred names on every keystroke without a server. <code>query</code> is read from the input’s own event because the root’s <code>inputValue</code> is a prop to set, not one to bind — the kind of detail a headless library’s docs say once.</p>
+<p>Bits UI’s <code>Combobox</code> is the accessible half — <code>role=&quot;combobox&quot;</code>, a listbox, arrow keys, Escape, type-ahead, <code>aria-activedescendant</code>. The other half is ours: the places arrive as a prop, already loaded or still empty, and <code>matches</code> filters a hundred names on every keystroke without a server. The component used to fetch them itself, with <code>$derived(await places())</code>; the dialog above says why that moved out. <code>query</code> is read from the input’s own event because the root’s <code>inputValue</code> is a prop to set, not one to bind — the kind of detail a headless library’s docs say once.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:54-81</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:58-87</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Combobox.Root type=&quot;single&quot; bind:value onValueChange={pick}&gt;
@@ -798,7 +1014,9 @@ let placeId: string | undefined = $derived(
 						{/snippet}
 					&lt;/Combobox.Item&gt;
 				{:else}
-					&lt;p class=&quot;search__empty&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
+					&lt;p class=&quot;search__empty&quot;&gt;
+						{places.length === 0 ? m.places_loading() : m.stop_search_empty()}
+					&lt;/p&gt;
 				{/each}
 			&lt;/Combobox.Viewport&gt;
 		&lt;/Combobox.Content&gt;
@@ -807,7 +1025,7 @@ let placeId: string | undefined = $derived(
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain the override, why it is derived, and what the version stamp compares against.</li><li>You can say which <code>finalize</code> sends the move and why the other one must not.</li><li>You can describe assignable deriveds in the dialog and what they replaced.</li></ul>
+	<ul><li>You can explain the override, why it is derived, and what the version stamp compares against.</li><li>You can say which <code>finalize</code> sends the move and why the other one must not.</li><li>You can describe assignable deriveds in the dialog and what they replaced.</li><li>You can say why the gazetteer is fetched by the dialog and read through <code>.current</code>, rather than awaited by the search.</li></ul>
 </aside>
 		</article>
 

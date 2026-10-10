@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/env';
 	import { Debounced } from 'runed';
 	import { ArrowRightIcon, MagnifyingGlassIcon, XIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -44,7 +45,31 @@
 		`${degrees.format(Math.abs(place.lat))}° ${place.lat < 0 ? m.coord_south() : m.coord_north()}, ` +
 		`${degrees.format(Math.abs(place.lng))}° ${place.lng < 0 ? m.coord_west() : m.coord_east()}`;
 
-	let query = $state('');
+	/*
+	 * What was typed before the page hydrated is kept. While this script runs
+	 * on a server-rendered page, the server's input is still there with
+	 * whatever a person typed into it, and hydration would write the empty
+	 * string the server knew about over it — the bug `keepTyped()` fixes for
+	 * the sign-in form (chapter 32), here for a plain `bind:value`. On a
+	 * client-side navigation there is no such input yet, and the filter
+	 * starts empty.
+	 */
+	let query = $state(
+		(browser && document.querySelector<HTMLInputElement>('input.search__input')?.value) || ''
+	);
+	let search = $state<HTMLInputElement>();
+
+	/*
+	 * Both "clear" buttons remove themselves — the one in the field shows
+	 * only while there is a query, the one in the empty state only while
+	 * nothing matches — and a button that disappears under the keyboard's
+	 * focus drops it to the top of the document. So clearing puts focus
+	 * back in the field, where the next thing typed belongs.
+	 */
+	function clear() {
+		query = '';
+		search?.focus();
+	}
 	/*
 	 * runed's `Debounced` follows a reactive value with a delay: `current`
 	 * changes 150 ms after the last keystroke, so the list is not rebuilt
@@ -131,6 +156,7 @@
 					class="input search__input"
 					type="search"
 					bind:value={query}
+					bind:this={search}
 					placeholder={m.explore_search()}
 				/>
 			</label>
@@ -141,7 +167,7 @@
 					type="button"
 					aria-label={m.explore_clear()}
 					title={m.explore_clear()}
-					onclick={() => (query = '')}
+					onclick={clear}
 				>
 					<XIcon size={16} aria-hidden="true" />
 				</button>
@@ -158,7 +184,7 @@
 		<div class="explore__empty">
 			<Empty icon={MagnifyingGlassIcon} title={m.explore_none_title()} body={m.explore_none()}>
 				{#snippet action()}
-					<button class="btn btn--ghost" type="button" onclick={() => (query = '')}>
+					<button class="btn btn--ghost" type="button" onclick={clear}>
 						{m.explore_clear()}
 					</button>
 				{/snippet}
@@ -167,10 +193,11 @@
 	{/if}
 
 	<!--
-		The countries flow in columns — one on a phone, two from 48em, three
-		from 64em — each country unbroken, its places one under another. A
-		country has one or two places, so a grid of places left each country
-		a row of one or two cards and the rest of the width empty.
+		The countries are a grid in reading order — one column on a phone, two
+		from 48em, three from 64em — so the alphabet runs across and then down,
+		each country unbroken, its places one under another. They were CSS
+		columns once: the alphabet ran down a 4,000px page and started again at
+		the top of the next column, and "Hong Kong" sat beside "Argentina".
 
 		A place is a card, not a link — its two buttons are the links — so it
 		does not lift on hover: a lift says "this is a link".
@@ -300,18 +327,19 @@
 
 	/*
 	 * Rhythm comes from the section. Each country keeps its own space below
-	 * it, not above, so the first country at the top of every column lines
-	 * up with the others; `break-inside: avoid` keeps a country in one
-	 * column.
+	 * it, not above, so the countries at the top of a row line up; each sits
+	 * at the top of its cell, so a country with one place beside a country
+	 * with two leaves its space below, not in the middle.
 	 */
 	.countries {
-		columns: 3 18rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
 		column-gap: var(--space-5);
 		padding-block-start: var(--space-6);
 	}
 
 	.country {
-		break-inside: avoid;
 		padding-block-end: var(--space-6);
 	}
 
@@ -381,6 +409,16 @@
 
 		.count__countries {
 			display: inline;
+		}
+
+		.countries {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 64em) {
+		.countries {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
 	}
 </style>

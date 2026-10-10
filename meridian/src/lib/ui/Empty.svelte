@@ -37,12 +37,17 @@
 </div>
 
 <style>
+	/*
+	 * Left-aligned in the page, like the heading above it, and centred
+	 * inside: a card floating in the middle of a left-aligned page read as
+	 * a dialog that had lost its way.
+	 */
 	.empty {
 		display: grid;
 		justify-items: center;
 		gap: var(--space-2);
 		max-width: 28rem;
-		margin-inline: auto;
+		margin-inline: 0;
 		padding: var(--space-7) var(--space-5);
 		text-align: center;
 		border-style: dashed;

@@ -158,15 +158,92 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/lib/ui/Empty.svelte<span class="code__lines">:1-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { Snippet } from 'svelte';
+	import type { MapPinIcon } from 'phosphor-svelte';
+
+	/**
+	 * NOTHING HERE YET
+	 * ================
+	 *
+	 * One empty state for the whole product: an icon drawn thin, a title in
+	 * the display face, a sentence, and — when there is one obvious thing to
+	 * do — the button that does it. The dashed border is the only dashed
+	 * border in the app, and it means exactly this: a place where something
+	 * will go.
+	 */
+	interface Props {
+		/** A Phosphor icon component; typed the way `kinds.ts` types them. */
+		icon: typeof MapPinIcon;
+		title: string;
+		body?: string;
+		/** The one action, if any: a button or a link rendered by the caller. */
+		action?: Snippet;
+	}
+
+	let { icon: Icon, title, body, action }: Props = $props();
+&lt;/script&gt;
+
+&lt;div class=&quot;empty card&quot;&gt;
+	&lt;Icon size={40} weight=&quot;thin&quot; aria-hidden=&quot;true&quot; /&gt;
+	&lt;!-- A paragraph, not a heading: &quot;No expenses yet.&quot; must not be a second heading called Expenses. --&gt;
+	&lt;p class=&quot;empty__title&quot;&gt;{title}&lt;/p&gt;
+	{#if body}
+		&lt;p class=&quot;empty__body&quot;&gt;{body}&lt;/p&gt;
+	{/if}
+	{#if action}
+		&lt;div class=&quot;empty__action&quot;&gt;{@render action()}&lt;/div&gt;
+	{/if}
+&lt;/div&gt;
+
+&lt;style&gt;
+	/*
+	 * Left-aligned in the page, like the heading above it, and centred
+	 * inside: a card floating in the middle of a left-aligned page read as
+	 * a dialog that had lost its way.
+	 */
+	.empty {
+		display: grid;
+		justify-items: center;
+		gap: var(--space-2);
+		max-width: 28rem;
+		margin-inline: 0;
+		padding: var(--space-7) var(--space-5);
+		text-align: center;
+		border-style: dashed;
+		border-color: var(--line-2);
+		box-shadow: none;
+		color: var(--ink-3);
+	}</code></pre>
+</figure>
+<p>A new account’s trips list is empty, and so is a search that matches nothing and a trip with no expenses; all three are <code>Empty</code>, so “nothing here yet” looks and reads the same everywhere. Its one action is a <code>Snippet</code> prop — <code>action?: Snippet</code>, rendered with <code>{@render action()}</code> — because the caller knows what the action is: a link to the new-trip form here, a button that clears the search on the explore page. A snippet passed as a child, <code>{#snippet action()}…{/snippet}</code> inside <code>&lt;Empty&gt;</code>, *is* that prop, by name, so the call site reads like markup and the component stays ignorant of what it is rendering. The title is a paragraph in the display face, not a heading — “No expenses yet” must not be a second heading in a section already called Expenses — and the card sits at the left edge, like the heading above it, and centres its contents inside: a card floating in the middle of a left-aligned page had read as a dialog that had lost its way.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a snippet, and not an <code>href</code> and a label</h4>
+	<p>An <code>href</code> and a label would cover the first use and not the second — a button that runs a function — and the third prop added for it (<code>onaction</code>?) would be the start of a component that grows an option per caller. A snippet hands the caller the whole slot: link, button, two buttons if a page ever needs them, with the caller’s own types and event handlers. The component owns the frame, the caller owns the content, and neither needs to know the other’s details.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:1-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	/**
 	 * A trip as a thumbnail: its stops joined by lines, in a small box, with
 	 * nothing else. The data is `[lng, lat]` pairs; the projection is the
-	 * simplest there is — longitude across, latitude up, scaled to fit — which
-	 * is wrong for the whole world and right for a trip.
+	 * simplest there is — longitude across, latitude up, scaled to fit, with
+	 * a degree of longitude shrunk by the cosine of the trip's middle
+	 * latitude, as it is on the ground — which is wrong for the whole world
+	 * and right for a trip. Without the cosine, Iberia was a flat smear
+	 * across the top half of the box.
+	 *
+	 * The route goes through every stop; the dots do not. Five stops in one
+	 * city are five rings drawn over each other at this size, a smudge, so
+	 * stops closer than 6 units in the box share one dot.
 	 */
 	interface Props {
 		points: readonly (readonly [number, number])[];
@@ -185,17 +262,28 @@
 		const east = Math.max(...lngs);
 		const south = Math.min(...lats);
 		const north = Math.max(...lats);
-		const inset = 10;
-		const spanX = Math.max(east - west, 0.5);
+		const inset = 12;
+		const squash = Math.cos((((north + south) / 2) * Math.PI) / 180);
+		const spanX = Math.max((east - west) * squash, 0.5);
 		const spanY = Math.max(north - south, 0.5);
-		// Keep the aspect honest: scale both axes by the same factor.
+		// Keep the aspect honest: scale both axes by the same factor, and centre the drawing.
 		const scale = Math.min((width - inset * 2) / spanX, (height - inset * 2) / spanY);
 		const offsetX = (width - spanX * scale) / 2;
 		const offsetY = (height - spanY * scale) / 2;
 		return points.map(([lng, lat]) =&gt; [
-			offsetX + (lng - west) * scale,
+			offsetX + (lng - west) * squash * scale,
 			offsetY + (north - lat) * scale
 		]);
+	});
+
+	const dots = $derived.by(() =&gt; {
+		const kept: number[][] = [];
+		for (const point of projected) {
+			const [x = 0, y = 0] = point;
+			if (kept.some(([kx = 0, ky = 0]) =&gt; Math.hypot(kx - x, ky - y) &lt; 6)) continue;
+			kept.push(point);
+		}
+		return kept;
 	});
 
 	const path = $derived(
@@ -208,7 +296,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:45-64</span></span>
+		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:63-82</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -227,12 +315,12 @@
 	{#if projected.length &gt; 1}
 		&lt;path d={path} class=&quot;thumb__route&quot; /&gt;
 	{/if}
-	{#each projected as [x, y], i (i)}
+	{#each dots as [x, y], i (i)}
 		&lt;circle cx={x} cy={y} r=&quot;3&quot; class=&quot;thumb__stop&quot; /&gt;
 	{/each}
 &lt;/svg&gt;</code></pre>
 </figure>
-<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at <code>width</code> × <code>height</code> — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, <code>style:aspect-ratio</code>, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry <code>vector-effect: non-scaling-stroke</code> — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.</p>
+<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip, once a degree of longitude is shrunk by the cosine of the trip’s middle latitude, as it is on the ground. Without that, Iberia at 40°N was a flat smear across the top half of the box, drawn a third wider than it is. The route goes through every stop and the dots do not: five stops in one city are five rings drawn over each other at this size, a smudge, so a stop closer than 6 units to one already drawn shares its dot. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at <code>width</code> × <code>height</code> — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, <code>style:aspect-ratio</code>, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry <code>vector-effect: non-scaling-stroke</code> — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.</p>
 <h3 id="new-trip">A new trip</h3>
 
 <figure class="code">

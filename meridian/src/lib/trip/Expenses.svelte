@@ -10,6 +10,7 @@
 	} from '@tanstack/svelte-table';
 	import { BarChart, PieChart } from 'layerchart';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import {
 		ArrowRightIcon,
 		ArrowsDownUpIcon,
@@ -22,7 +23,11 @@
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 	import { formatMoney, fromMinor } from '#lib/domain/money.ts';
-	import { EXPENSE_CATEGORIES, type ExpenseCategory } from '#lib/domain/schemas.ts';
+	import {
+		EXPENSE_CATEGORIES,
+		ExpenseFormSchema,
+		type ExpenseCategory
+	} from '#lib/domain/schemas.ts';
 	import { balances, settle } from '#lib/domain/split.ts';
 	import { addExpense, removeExpense } from '#lib/remote/expenses.remote.ts';
 	import { theme } from '#lib/ui/theme.svelte.ts';
@@ -58,6 +63,12 @@
 	const currency = $derived(view.trip.currency);
 	const names = $derived(new Map(view.document.members.map((c) => [c.userId, c.name])));
 	const nameOf = (id: string) => names.get(id) ?? '…';
+	/* Who the form says paid, before anybody touches it: the person filling it in, if they are on the trip. */
+	const payer = $derived(
+		view.document.members.find((member) => member.userId === viewerId)?.userId ??
+			view.document.members[0]?.userId ??
+			''
+	);
 
 	const categoryLabels: Record<ExpenseCategory, () => string> = {
 		food: m.category_food,
@@ -166,8 +177,8 @@
 	/*
 	 * Header and cell templates are functions that return strings (or plain
 	 * strings). TanStack's own `FlexRender` also renders components; this
-	 * table only needs text, so two small helpers call the templates with the
-	 * context the library provides and keep the markup a plain <table>.
+	 * table only needs text, so one small helper calls a template with the
+	 * context the library provides and keeps the markup a plain <table>.
 	 */
 	type Template<C> = string | ((context: C) => unknown) | undefined;
 	const render = <C,>(template: Template<C>, context: C, fallback: string) =>
@@ -297,7 +308,7 @@
 		try {
 			await removeExpense({ tripId: view.trip.id, id });
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 </script>
@@ -341,6 +352,8 @@
 							bars: { rounded: 'top', radius: 4, class: 'chart__bar' },
 							xAxis: {
 								tickMarks: false,
+								// With no tick marks drawn, the tick length is the gap between the baseline and the labels.
+								tickLength: 8,
 								format: (label: string) => (compact ? (dayOf.get(label) ?? label) : label)
 							},
 							yAxis: {
@@ -392,6 +405,7 @@
 							{#each group.headers as header (header.id)}
 								{@const sorted = header.column.getIsSorted()}
 								<th
+									class="sortable"
 									class:num={header.column.columnDef.meta?.align === 'end'}
 									aria-sort={sorted === 'asc'
 										? 'ascending'
@@ -412,7 +426,8 @@
 									</button>
 								</th>
 							{/each}
-							{#if editable}<th></th>{/if}
+							<!-- The remove column has a name for a screen reader, and nothing to read for anyone else. -->
+							{#if editable}<th><span class="visually-hidden">{m.expenses_remove()}</span></th>{/if}
 						</tr>
 					{/each}
 				</thead>
@@ -463,9 +478,9 @@
 		</div>
 
 		<!--
-			Two short lists, side by side from 64em and each no wider than 28rem:
-			a balance 1,100px from its name is a balance the eye has to go and
-			find.
+			Two short lists, side by side from 64em and each no wider than 28rem
+			— a balance 1,100px from its name is a balance the eye has to go and
+			find — one against each edge of the card.
 		-->
 		<div class="card card--pad stack">
 			<h3>{m.expenses_settle()}</h3>
@@ -515,7 +530,13 @@
 			coerce it — the amount arrives as a number, the checked companions
 			as an array — and works with JavaScript off.
 		-->
-		<form class="card card--pad stack" {...addExpense}>
+		<!--
+			`preflight` runs the form's own schema in the browser before anything
+			is sent: a forgotten date is an issue under the date at once, in the
+			page's language, and the other fields keep what was typed — no round
+			trip that hands back a form with its selects emptied.
+		-->
+		<form class="card card--pad stack" {...addExpense.preflight(ExpenseFormSchema)}>
 			<h3>{m.expenses_add()}</h3>
 			<input {...addExpense.fields.tripId.as('hidden', view.trip.id)} />
 
@@ -550,11 +571,20 @@
 			<div class="two">
 				<label class="field">
 					<span class="label">{m.expenses_category()}</span>
-					<select class="select" {...addExpense.fields.category.as('select')}>
+					<!--
+						A select's value is given to `as()`, not to an `<option selected>`:
+						the form re-renders its fields after a submission the server
+						refused, and a select with no value of its own came back with
+						nothing chosen — and was then left out of the next submission.
+					-->
+					<select class="select" {...addExpense.fields.category.as('select', 'food')}>
 						{#each EXPENSE_CATEGORIES as category (category)}
 							<option value={category}>{categoryLabels[category]()}</option>
 						{/each}
 					</select>
+					{#each addExpense.fields.category.issues() ?? [] as issue (issue.message)}
+						<span class="issue">{issue.message}</span>
+					{/each}
 				</label>
 				<!-- The trip's own date field, in the page's language; its hidden input carries the name the form expects. -->
 				<DateField
@@ -568,13 +598,14 @@
 
 			<label class="field">
 				<span class="label">{m.expenses_paid_by()}</span>
-				<select class="select" {...addExpense.fields.paidBy.as('select')}>
+				<select class="select" {...addExpense.fields.paidBy.as('select', payer)}>
 					{#each view.document.members as member (member.userId)}
-						<option value={member.userId} selected={member.userId === viewerId}
-							>{member.name}</option
-						>
+						<option value={member.userId}>{member.name}</option>
 					{/each}
 				</select>
+				{#each addExpense.fields.paidBy.issues() ?? [] as issue (issue.message)}
+					<span class="issue">{issue.message}</span>
+				{/each}
 			</label>
 
 			<fieldset class="field">
@@ -656,7 +687,17 @@
 		fill: var(--sea-strong);
 	}
 
-	/* Axis text and grid lines in the quiet greys. */
+	/*
+	 * Axis text and grid lines in the quiet greys. LayerChart draws a 2px
+	 * halo round each label in `--color-surface-100` — white, or black in
+	 * dark — so a label stays legible over a bar; set to the card's own
+	 * paper, the halo is there and invisible, instead of a black outline
+	 * that embossed every label on a dark card.
+	 */
+	.chart {
+		--color-surface-100: var(--paper-2);
+	}
+
 	.chart :global(text) {
 		fill: var(--ink-3);
 		font-size: var(--text-xs);
@@ -687,10 +728,24 @@
 		margin-block-start: var(--space-3);
 	}
 
+	/*
+	 * A sortable heading is a button that fills its cell, edge to edge, and
+	 * is the height of a control: the label alone was 19px tall, a target
+	 * nobody could hit on a phone. The cell gives its padding to the button,
+	 * so the label sits where it did, the column is as wide as it was, and
+	 * the whole cell — 44px tall — is the target.
+	 */
+	.table th.sortable {
+		padding: 0;
+	}
+
 	.sort {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
+		width: 100%;
+		min-height: var(--control);
+		padding-inline: 0.75rem;
 		border-radius: var(--radius-sm);
 		font: inherit;
 		color: inherit;
@@ -705,6 +760,7 @@
 	 */
 	.table th.num .sort {
 		flex-direction: row-reverse;
+		justify-content: flex-start;
 	}
 
 	/* The idle sort icon shows on hover of its heading only. */
@@ -719,10 +775,16 @@
 		opacity: 1;
 	}
 
-	/* The title column may wrap; the others stay on one line. */
+	/*
+	 * The title column may wrap; the others stay on one line. On a phone it
+	 * is 8rem, so the date, what it was for and the amount — the one figure
+	 * the table exists for — fit before the right-hand fade, and only the
+	 * category, the payer and the shares scroll. From 40em there is room
+	 * for 12.
+	 */
 	.table td.what {
 		white-space: normal;
-		min-width: 12rem;
+		min-width: 8rem;
 	}
 
 	.table td.amount {
@@ -804,6 +866,9 @@
 	}
 
 	@media (min-width: 40em) {
+		.table td.what {
+			min-width: 12rem;
+		}
 		.two {
 			grid-template-columns: 1fr 1fr;
 		}
@@ -815,9 +880,15 @@
 		}
 	}
 
+	/*
+	 * Side by side, each list at most 28rem, pushed to the two edges of the
+	 * card: the balances start at its left padding and the transfers end at
+	 * its right, so neither leaves a third of the card empty beside it.
+	 */
 	@media (min-width: 64em) {
 		.settle {
 			grid-template-columns: repeat(2, minmax(0, 28rem));
+			justify-content: space-between;
 			align-items: start;
 			column-gap: var(--space-7);
 		}

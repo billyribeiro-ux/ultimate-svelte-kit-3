@@ -8,18 +8,29 @@
  * unmasks — and GSAP ships only in the home route's chunk, because this is
  * the only file that imports it.
  *
- * Three rules keep it honest:
+ * Four rules keep it honest:
  *
  *   1. Nothing is hidden until JavaScript runs. The server renders every
  *      element visible; only this function, in the browser, sets the
  *      starting opacity. With JavaScript off, or before it loads, the page
  *      is simply there.
- *   2. Reduced motion means no motion. Not "less" — none. The function
+ *   2. Nothing that has been seen is taken away. On the first load the
+ *      server's hero is painted long before the JavaScript arrives, and
+ *      the first version then snapped the title, the lede and the image to
+ *      nothing and faded them back in — the text a visitor had started to
+ *      read blinked out. So when the hero is being *hydrated* (the root
+ *      layout has not yet marked the document `data-hydrated`) and the
+ *      browser has already painted (a `first-contentful-paint` entry
+ *      exists), the timeline does not run. It plays when the hero arrives
+ *      with a navigation — a click on the brand from another page — where
+ *      the elements are new and nobody has seen them yet.
+ *   3. Reduced motion means no motion. Not "less" — none. The function
  *      returns before touching a style.
- *   3. It runs once, on mount. Scrolling back up does not replay it; that
+ *   4. It runs once, on mount. Scrolling back up does not replay it; that
  *      is a slot machine, not a page.
  *
- * Everything else that moves in the app is CSS. If this timeline ever goes,
+ * Nothing else in the app uses GSAP; the rest of what moves is CSS, a
+ * Svelte tween or a library's own animation. If this timeline ever goes,
  * GSAP leaves the dependency list the same day.
  */
 
@@ -30,6 +41,7 @@ import { reducedMotion } from './prefers.svelte.ts';
 export function hero(): Attachment<HTMLElement> {
 	return (node) => {
 		if (reducedMotion.current) return;
+		if (alreadySeen()) return;
 
 		const copy = Array.from(node.querySelectorAll<HTMLElement>('[data-hero-copy] > *'));
 		const image = node.querySelector<HTMLElement>('[data-hero-image]');
@@ -48,6 +60,15 @@ export function hero(): Attachment<HTMLElement> {
 			gsap.set([...copy, ...(image ? [image] : [])], { clearProps: 'all' });
 		};
 	};
+}
+
+/** Hydrating a page the browser has already painted: the hero is on screen, and stays as it is. */
+function alreadySeen(): boolean {
+	const hydrating = !('hydrated' in document.documentElement.dataset);
+	const painted = performance
+		.getEntriesByType('paint')
+		.some((entry) => entry.name === 'first-contentful-paint');
+	return hydrating && painted;
 }
 
 /**

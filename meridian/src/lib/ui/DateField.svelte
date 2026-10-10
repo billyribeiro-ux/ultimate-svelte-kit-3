@@ -2,7 +2,9 @@
 	import { DatePicker } from 'bits-ui';
 	import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from 'phosphor-svelte';
 	import { CalendarDate, type DateValue } from '@internationalized/date';
+	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { segmentAttributes } from './date-segments.ts';
 
 	/**
 	 * ONE DATE, THE SAME WAY AS TWO
@@ -18,6 +20,13 @@
 	 *
 	 * `name` renders a hidden `<input>` with the ISO date, which is how the
 	 * value reaches a remote `form`, with JavaScript off as well as on.
+	 *
+	 * An issue from the form is tied to the field the accessible way: each
+	 * segment is `aria-invalid` and points at the issue line with
+	 * `aria-describedby` (see `date-segments.ts` for why Bits cannot do it
+	 * for us), and the calendar is named after the field — Bits' default
+	 * name is the English word "Event" — with its month buttons named in the
+	 * page's language too.
 	 */
 	interface Props {
 		label: string;
@@ -36,18 +45,27 @@
 
 	const parse = (iso: string | undefined): DateValue | undefined => {
 		if (!iso) return undefined;
-		const [y, m, d] = iso.split('-').map(Number);
-		return new CalendarDate(y!, m!, d!);
+		const [year, month, day] = iso.split('-').map(Number);
+		return new CalendarDate(year!, month!, day!);
 	};
 
 	let value = $state<DateValue | undefined>();
 	const placeholder = $derived(parse(near) ?? parse(min));
+
+	const issueId = $props.id();
+	const segment = (props: Record<string, unknown>, part: string) =>
+		segmentAttributes(props, part, {
+			locale,
+			empty: m.date_empty(),
+			issueId: issues.length > 0 ? issueId : undefined
+		});
 </script>
 
 <DatePicker.Root
 	bind:value
 	{placeholder}
 	{locale}
+	calendarLabel={label}
 	weekdayFormat="short"
 	fixedWeeks
 	minValue={parse(min)}
@@ -57,13 +75,19 @@
 		<DatePicker.Label class="label">{label}</DatePicker.Label>
 
 		<div class="datefield" class:datefield--invalid={issues.length > 0}>
-			<DatePicker.Input {name} class="datefield__input">
-				{#snippet children({ segments })}
-					{#each segments as { part, value: text }, i (part + i)}
-						<DatePicker.Segment {part} class="datefield__segment">{text}</DatePicker.Segment>
-					{/each}
-				{/snippet}
-			</DatePicker.Input>
+			<div class="datefield__dates">
+				<DatePicker.Input {name} class="datefield__input">
+					{#snippet children({ segments })}
+						{#each segments as { part, value: text }, i (part + i)}
+							<DatePicker.Segment {part} class="datefield__segment">
+								{#snippet child({ props })}
+									<span {...props} {...segment(props, part)}>{text}</span>
+								{/snippet}
+							</DatePicker.Segment>
+						{/each}
+					{/snippet}
+				</DatePicker.Input>
+			</div>
 
 			<DatePicker.Trigger
 				class="btn btn--icon btn--ghost btn--sm datefield__trigger"
@@ -73,8 +97,8 @@
 			</DatePicker.Trigger>
 		</div>
 
-		{#each issues as issue (issue.message)}
-			<span class="issue">{issue.message}</span>
+		{#each issues as issue, i (issue.message)}
+			<span class="issue" id={i === 0 ? issueId : undefined}>{issue.message}</span>
 		{/each}
 	</div>
 
@@ -82,12 +106,21 @@
 		<DatePicker.Calendar class="cal cal--single">
 			{#snippet children({ months, weekdays })}
 				<DatePicker.Header class="cal__header">
+					<!-- Bits names these two "Previous" and "Next", in English, after any name we pass; the child snippet lets ours come last. -->
 					<DatePicker.PrevButton class="btn btn--icon btn--ghost btn--sm">
-						<CaretLeftIcon size={16} aria-hidden="true" />
+						{#snippet child({ props })}
+							<button {...props} aria-label={m.date_previous_month()}>
+								<CaretLeftIcon size={16} aria-hidden="true" />
+							</button>
+						{/snippet}
 					</DatePicker.PrevButton>
 					<DatePicker.Heading class="cal__heading" />
 					<DatePicker.NextButton class="btn btn--icon btn--ghost btn--sm">
-						<CaretRightIcon size={16} aria-hidden="true" />
+						{#snippet child({ props })}
+							<button {...props} aria-label={m.date_next_month()}>
+								<CaretRightIcon size={16} aria-hidden="true" />
+							</button>
+						{/snippet}
 					</DatePicker.NextButton>
 				</DatePicker.Header>
 

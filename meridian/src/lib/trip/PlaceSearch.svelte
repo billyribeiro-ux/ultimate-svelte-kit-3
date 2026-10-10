@@ -3,7 +3,7 @@
 	import { MagnifyingGlassIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import { places, type Place } from '#lib/remote/geo.remote.ts';
+	import type { Place } from '#lib/remote/geo.remote.ts';
 
 	/**
 	 * A COMBOBOX OVER THE GAZETTEER
@@ -15,34 +15,38 @@
 	 * and everything that is tedious to get right by hand. The other half is
 	 * ours: which places match, and what happens when one is picked.
 	 *
-	 * The places come from the `prerender` remote function: a static JSON
-	 * file, fetched once and cached by SvelteKit for the life of the page.
-	 * Filtering a hundred names on every keystroke does not need a server.
+	 * The places come in as a prop, already loaded. The first version awaited
+	 * the `prerender` function in here, and an `await` in a component that
+	 * is not inside a boundary of its own holds back the update that mounts
+	 * it — so the stop dialog opened with no search field and the wrong day,
+	 * then rebuilt itself mid-animation when the gazetteer arrived. The
+	 * dialog starts the fetch when the trip page loads (`StopDialog.svelte`)
+	 * and hands over whatever it has; filtering a hundred names on every
+	 * keystroke does not need a server.
 	 */
 	interface Props {
+		/** The gazetteer; empty until it has loaded. */
+		places: readonly Place[];
 		onpick: (place: Place) => void;
 		/** The input's id, so a visible `<label for>` outside can name it. */
 		id?: string;
 	}
 
-	let { onpick, id }: Props = $props();
+	let { places, onpick, id }: Props = $props();
 
 	// What has been typed, read from the input itself: the root's `inputValue`
 	// is a prop to set, not one to bind.
 	let query = $state('');
 	let value = $state('');
 
-	// The gazetteer, awaited once. `await` in a `$derived` is fine in async mode.
-	const all = $derived(await places());
-
 	const matches = $derived.by(() => {
 		const needle = query.trim().toLowerCase();
-		if (!needle) return all.slice(0, 8);
-		return all.filter((p) => p.name.toLowerCase().includes(needle)).slice(0, 8);
+		if (!needle) return places.slice(0, 8);
+		return places.filter((p) => p.name.toLowerCase().includes(needle)).slice(0, 8);
 	});
 
 	function pick(id: string) {
-		const place = all.find((p) => p.id === id);
+		const place = places.find((p) => p.id === id);
 		if (place) onpick(place);
 	}
 
@@ -74,7 +78,9 @@
 						{/snippet}
 					</Combobox.Item>
 				{:else}
-					<p class="search__empty">{m.stop_search_empty()}</p>
+					<p class="search__empty">
+						{places.length === 0 ? m.places_loading() : m.stop_search_empty()}
+					</p>
 				{/each}
 			</Combobox.Viewport>
 		</Combobox.Content>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
 		ArrowRightIcon,
 		GlobeHemisphereWestIcon,
@@ -9,6 +10,85 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { hero, inview } from '#lib/motion/hero.ts';
+	import { theme } from '#lib/ui/theme.svelte.ts';
+	import day from '#lib/assets/hero.png?w=640;960;1280;1600&enhanced';
+	import night from '#lib/assets/hero-night.png?w=640;960;1280;1600&enhanced';
+	import dayPhone from '#lib/assets/hero-phone.png?w=640;960;1200&enhanced';
+	import nightPhone from '#lib/assets/hero-phone-night.png?w=640;960;1200&enhanced';
+
+	let { data } = $props();
+
+	/*
+	 * FOUR PRINTS, ONE DOWNLOAD
+	 * -------------------------
+	 * The hero has a day print and a night print (`scripts/make-hero.ts`),
+	 * each drawn twice — for a desktop, and for a phone, with pins and
+	 * numbers big enough to read at 360px — and a page should fetch only
+	 * the one it shows. `<picture>` chooses before any script runs, by the
+	 * first `<source>` whose `media` and `type` match, so the order is the
+	 * decision:
+	 *
+	 *   - nobody chose a theme: the night prints come first and carry
+	 *     `(prefers-color-scheme: dark)`, the day prints follow without it,
+	 *     and the system decides;
+	 *   - somebody chose: only that print's sources are rendered, with no
+	 *     colour scheme in their media, so a dark choice on a light phone
+	 *     gets the night print and never downloads the day one;
+	 *   - within each, the desktop print carries `(min-width: 37em)` and the
+	 *     phone print, after it, carries no width at all. 37em is where the
+	 *     desktop print's numbers reach 11px — 30px of a 1600px drawing,
+	 *     shown 590px wide — so below it the phone print takes over, with
+	 *     its 21px pins.
+	 *
+	 * The server learns the choice from a cookie the boot script keeps
+	 * (`theme-cookie.ts`); once the page is running, the choice is the live
+	 * one, so flipping the toggle on this page swaps the print. All four are
+	 * `?enhanced` imports with the widths named, which is the same
+	 * `<enhanced:img>` pipeline — AVIF and WebP at three or four widths,
+	 * width and height known so nothing shifts (the phone print has the
+	 * desktop's 16:10) — rendered by hand because the component cannot put
+	 * a `media` on a source.
+	 */
+	let running = $state(false);
+	onMount(() => {
+		running = true;
+	});
+
+	const chosen = $derived(running ? (theme.choice === 'system' ? null : theme.choice) : data.theme);
+
+	const WIDE = '(min-width: 37em)';
+	const DARK = '(prefers-color-scheme: dark)';
+	const both = (...queries: (string | undefined)[]) =>
+		queries.filter(Boolean).join(' and ') || undefined;
+
+	const prints = $derived.by(() => {
+		const scheme = chosen === null ? DARK : undefined;
+		return [
+			...(chosen === 'light'
+				? []
+				: [
+						{
+							name: 'night',
+							picture: night,
+							media: both(WIDE, scheme),
+							sizes: '(min-width: 64em) 40rem, 100vw'
+						},
+						{ name: 'night-phone', picture: nightPhone, media: scheme, sizes: '100vw' }
+					]),
+			...(chosen === 'dark'
+				? []
+				: [
+						{ name: 'day', picture: day, media: WIDE, sizes: '(min-width: 64em) 40rem, 100vw' },
+						{ name: 'day-phone', picture: dayPhone, media: undefined, sizes: '100vw' }
+					])
+		];
+	});
+
+	const sources = (picture: typeof day) =>
+		Object.entries(picture.sources).map(([format, srcset]) => ({
+			type: `image/${format}`,
+			srcset
+		}));
 </script>
 
 <svelte:head>
@@ -21,8 +101,10 @@
 	in the display face at its largest cut, a glow of the sea colour behind
 	the image, and the image itself bleeding to the screen's edge on a phone
 	and sitting in a soft frame on a desktop. `{@attach hero()}` plays the
-	one GSAP timeline, once, on mount; the copy and the image are marked with
-	data attributes so the attachment finds them without knowing the markup.
+	one GSAP timeline when the hero arrives by navigation — never over a page
+	somebody has already seen (`hero.ts` says how it knows); the copy and the
+	image are marked with data attributes so the attachment finds them
+	without knowing the markup.
 -->
 <section class="hero" {@attach hero()}>
 	<div class="container hero__grid">
@@ -45,20 +127,32 @@
 		</div>
 
 		<!--
-			`<enhanced:img>` is rewritten at build time into a `<picture>` with AVIF
-			and WebP sources at several widths, plus width/height so nothing shifts
-			while it loads. The source is a PNG drawn by `scripts/make-hero.ts`.
-			`sizes` tells the browser how wide the image is on screen, so it picks
-			the smallest file that is still sharp for that width.
+			`media` says which print a source is for; `sizes` tells the browser how
+			wide that print is on screen, so it picks the smallest file that is
+			still sharp for that width; `fetchpriority` says it is the largest
+			thing on the first screen.
 		-->
 		<div class="hero__figure" data-hero-image>
-			<enhanced:img
-				class="hero__img"
-				src="../../lib/assets/hero.png"
-				alt=""
-				sizes="(min-width: 64em) 40rem, 100vw"
-				fetchpriority="high"
-			/>
+			<picture>
+				{#each prints as print (print.name)}
+					{#each sources(print.picture) as source (source.type)}
+						<source
+							srcset={source.srcset}
+							sizes={print.sizes}
+							type={source.type}
+							media={print.media}
+						/>
+					{/each}
+				{/each}
+				<img
+					class="hero__img"
+					src={chosen === 'dark' ? night.img.src : day.img.src}
+					width={day.img.w}
+					height={day.img.h}
+					alt=""
+					fetchpriority="high"
+				/>
+			</picture>
 		</div>
 	</div>
 </section>
@@ -148,44 +242,24 @@
 
 	/*
 	 * Phone: the image is the full width of the screen — it steps out of the
-	 * gutter — with no frame, and a mask that fades both its edges into the
-	 * paper, so it has no hard line where it starts and no line where it
-	 * ends. The mask changes nothing about layout, so the space the
-	 * `<picture>`'s width and height reserve is still exact.
+	 * gutter — with no frame, and its bottom edge fades into the paper, so it
+	 * has no hard line where the cards begin. Only the bottom: a fade at the
+	 * top as well turned the map into a faint band with dead space under it.
+	 * The mask changes nothing about layout, so the space the image's width
+	 * and height reserve is still exact.
 	 */
 	.hero__figure {
 		position: relative;
 		margin-inline: calc(-1 * var(--gutter));
-		mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 70%, transparent);
+		mask-image: linear-gradient(to bottom, #000 70%, transparent);
 	}
 
-	.hero :global(.hero__img) {
+	.hero__img {
+		display: block;
 		width: 100%;
 		height: auto;
 		aspect-ratio: 16 / 10;
 		object-fit: cover;
-	}
-
-	/*
-	 * THE PRINT AT NIGHT
-	 * ------------------
-	 * The picture is drawn on cream. On a dark page it was the brightest
-	 * thing on the screen, a flat grey slab; a veil over it only made the
-	 * slab darker grey. So in the dark theme the print is developed as a
-	 * negative: inverted, which turns the cream into near-black and the ink
-	 * into light, then turned half way round the colour wheel, which puts
-	 * the teal route back to teal — a dark paper map with a light-teal
-	 * route, a shade under the page's own paper. Two rules, because the
-	 * theme is either chosen (`data-theme`) or followed from the system.
-	 */
-	:global(:root[data-theme='dark']) .hero :global(.hero__img) {
-		filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.92);
-	}
-
-	@media (prefers-color-scheme: dark) {
-		:global(:root:not([data-theme='light'])) .hero :global(.hero__img) {
-			filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.92);
-		}
 	}
 
 	.features {
@@ -283,7 +357,7 @@
 			pointer-events: none;
 		}
 
-		.hero :global(.hero__img) {
+		.hero__img {
 			border-radius: var(--radius-xl);
 		}
 	}

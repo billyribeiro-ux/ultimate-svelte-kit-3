@@ -11,17 +11,38 @@
  * with the page that imports it.
  */
 
-/* The field's shell: an input's border, holding segments and a calendar button. */
+/*
+ * The field's shell: an input's border, holding the dates and a calendar
+ * button. `min-width: 0` lets it be as narrow as the column it is in; the
+ * dates inside wrap onto a second line rather than push the border out.
+ */
 .datefield {
 	display: flex;
 	align-items: center;
-	gap: var(--space-2);
+	gap: var(--space-1);
+	min-width: 0;
 	min-height: var(--control);
 	padding: 0.25rem 0.25rem 0.25rem 0.75rem;
 	border: 1px solid var(--line-2);
 	border-radius: var(--radius);
 	background: var(--paper-2);
 	transition: border-color var(--dur-2) var(--ease-out);
+}
+
+/* One date, or two with a dash between: a row that wraps at the dash, never inside a date. */
+.datefield__dates {
+	display: flex;
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	align-items: center;
+	column-gap: var(--space-1);
+	min-width: 0;
+}
+
+.datefield__date {
+	display: inline-flex;
+	align-items: center;
+	white-space: nowrap;
 }
 
 .datefield:hover {
@@ -43,8 +64,9 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* A pixel either side: enough for the focus wash to have an edge, not so much that a date stops fitting a phone. */
 .datefield__segment {
-	padding: 0 0.1em;
+	padding: 0 1px;
 	border-radius: var(--radius-xs);
 	outline: none;
 }
@@ -55,11 +77,10 @@
 
 /*
  * An empty segment shows its placeholder — "mm", "dd", "yyyy" — in the
- * tertiary ink, so it reads as a hint and not as a value. Bits marks an
- * empty segment only in its ARIA (`aria-valuetext="Empty"`), so that is
- * what the selector reads.
+ * tertiary ink, so it reads as a hint and not as a value. `data-empty` is
+ * ours, written by `date-segments.ts` from what Bits says in its ARIA.
  */
-.datefield__segment[aria-valuetext='Empty'] {
+.datefield__segment[data-empty] {
 	color: var(--ink-3);
 }
 
@@ -69,8 +90,9 @@
 	color: var(--sea);
 }
 
-/* The calendar button sits at the far end of the field. */
+/* The calendar button sits at the far end of the field, and never shrinks to make room. */
 .datefield__trigger {
+	flex: none;
 	margin-inline-start: auto;
 }
 

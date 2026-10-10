@@ -294,11 +294,11 @@ version: {
 output: { bundleStrategy: 'split' }</code></pre>
 </figure>
 <p><code>version.name</code> is the commit hash, computed by <code>commitHash()</code> below with a fallback to the package version, because a Docker build context has no <code>.git</code>. <code>pollInterval</code> makes the client check for a new version once a minute; <code>updated.current</code> in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. <code>bundleStrategy: &quot;split&quot;</code> is the default and is named here because chapter 36 builds the one thing that must *not* be split.</p>
-<h3 id="paraglide-and-icons">Two plugins that are not SvelteKit</h3>
+<h3 id="paraglide-and-icons">Three plugins that are not SvelteKit</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:240-274</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:240-277</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -335,14 +335,17 @@ paraglideVitePlugin({
  * parses its input as JavaScript, so putting it first hands it raw `.svelte`
  * source and it dies on the first `&lt;h1&gt;`.
  */
-sveltePhosphorOptimize()</code></pre>
+sveltePhosphorOptimize(),
+
+// What went into each browser chunk, for `scripts/bundle-guard.ts`. See the function below.
+bundleStats()</code></pre>
 </figure>
-<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>.</p>
+<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>. The third, <code>bundleStats()</code>, is this project’s own and runs only in a build: at the end of the browser build it writes down which modules went into which chunk, so that a script can hold the bundle to a budget afterwards. A chunk’s file name is a hash and changes with every edit; the bundler is the one place that knows what a chunk *is*. Chapter 42 is where that script runs, and why it exists.</p>
 <h3 id="the-rest">The native addon, and the two test projects</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:277-284</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:280-287</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -357,7 +360,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:286-357</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:289-363</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -390,6 +393,9 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			optimizeDeps: {
 				include: [
 					'phosphor-svelte/lib/BedIcon',
+					'phosphor-svelte/lib/CalendarBlankIcon',
+					'phosphor-svelte/lib/CaretLeftIcon',
+					'phosphor-svelte/lib/CaretRightIcon',
 					'phosphor-svelte/lib/DotsSixVerticalIcon',
 					'phosphor-svelte/lib/ForkKnifeIcon',
 					'phosphor-svelte/lib/LightbulbIcon',
@@ -437,7 +443,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:361-396</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:367-402</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

@@ -9,7 +9,10 @@
  *   - the redirect afterwards is ours, so somebody who was sent to sign in
  *     lands back where they were going, in their language;
  *   - the error is ours to phrase — in three languages, through Paraglide,
- *     which knows the request's locale even in here;
+ *     which knows the request's locale even in here. That goes for the
+ *     schema's own messages too: each is a function returning `m.issue_*()`
+ *     (see `domain/schemas.ts`), so "Enter an email address" is
+ *     "Gib eine E-Mail-Adresse ein" on `/de/signin`;
  *   - the whole thing type-checks against the component that uses it, and
  *     works with JavaScript switched off.
  */
@@ -48,7 +51,10 @@ const RedirectSchema = v.optional(
 export const signIn = form(
 	v.object({
 		email: EmailSchema,
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		password: v.pipe(
+			v.string(() => m.issue_password_missing()),
+			v.minLength(1, () => m.issue_password_missing())
+		),
 		redirectTo: RedirectSchema
 	}),
 	async (data, issue) => {
@@ -74,7 +80,12 @@ export const signIn = form(
 
 export const signUp = form(
 	v.object({
-		name: v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter your name'), v.maxLength(80)),
+		name: v.pipe(
+			v.string(() => m.issue_name_missing()),
+			v.trim(),
+			v.minLength(1, () => m.issue_name_missing()),
+			v.maxLength(80, () => m.issue_too_long())
+		),
 		email: EmailSchema,
 		password: PasswordSchema,
 		redirectTo: RedirectSchema

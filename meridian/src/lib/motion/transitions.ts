@@ -4,8 +4,9 @@
  *
  * `pop` is for a small thing that confirms something — the check mark that
  * replaces a copy icon for a moment. It scales from 60% with its opacity,
- * on the `--ease-out` curve, and takes 0ms when motion is reduced, so a
- * component that uses it does not have to ask.
+ * on `cubicOut` — the nearest built-in curve to the `--ease-out` token,
+ * which a JavaScript easing cannot read — and takes 0ms when motion is
+ * reduced, so a component that uses it does not have to ask.
  *
  * A Svelte transition is a function of the element that returns `duration`,
  * `easing` and a `css` function of `t` (0 → 1 on the way in). Returning

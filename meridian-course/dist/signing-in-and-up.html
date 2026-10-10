@@ -207,7 +207,7 @@ export function keepTyped(...fields: readonly TextField[]): void {
 	}
 }</code></pre>
 </figure>
-<p>Both pages call <code>keepTyped()</code> at the top of their script, and it earns its place with a bug the end-to-end suite found. A server-rendered form is usable before the JavaScript arrives — that is the point of rendering it on the server — and on a slow connection a person can have typed their email by the time the bundle runs. Then hydration happens: the field spreads its *current* value onto the input, the current value is the empty string the server knew about, and what was typed is gone. The person presses the button and the browser says “Please fill out this field” about a field they filled. Playwright types faster than a bundle loads, so about one run in ten signed in with an email that had vanished.</p>
+<p>Both pages call <code>keepTyped()</code> at the top of their script, and it earns its place with a bug the end-to-end suite found. A server-rendered form is usable before the JavaScript arrives — that is the point of rendering it on the server — and on a slow connection a person can have typed their email by the time the bundle runs. Without it, hydration happened next: the field spread its *current* value onto the input, the current value was the empty string the server had known about, and what was typed was gone. The person pressed the button and the browser said “Please fill out this field” about a field they had filled. Playwright types faster than a bundle loads, so about one run in ten signed in with an email that had vanished.</p>
 <p>The fix uses an ordering guarantee worth knowing: a component’s <code>&lt;script&gt;</code> runs *before* its template is hydrated, while the server’s HTML is still on the page. So the helper reads what is in each input now, and makes it the field’s value with <code>set()</code>, and hydration writes the typed text back instead of nothing. It finds the input by the exact generated name the field’s own <code>as()</code> reports — <code>email/&lt;hash&gt;/signIn</code> — so a field on some other form can never be mistaken for this one, and on a client-side navigation there is no server HTML, the query finds nothing, and nothing happens.</p>
 
 <figure class="code">
@@ -361,29 +361,35 @@ export const load: LayoutServerLoad = ({ locals, url }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:139-156</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:138-161</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;nav__account&quot; style:--i={links.length + 1}&gt;
 	{#if user}
-		{#if !onTrips}
-			&lt;a class=&quot;btn btn--primary&quot; href={href('/(site)/(app)/trips/new')}&gt;
-				&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
-				{m.nav_new_trip()}
-			&lt;/a&gt;
-		{/if}
+		&lt;a
+			class=&quot;btn btn--primary&quot;
+			href={href('/(site)/(app)/trips/new')}
+			aria-current={onNewTrip ? 'page' : undefined}
+		&gt;
+			&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+			{m.nav_new_trip()}
+		&lt;/a&gt;
 		&lt;!-- A form, so signing out works with JavaScript off too. --&gt;
 		&lt;form {...signOut}&gt;
 			&lt;button class=&quot;btn btn--ghost&quot; type=&quot;submit&quot; title={user.name}&gt;
 				{m.auth_sign_out()}
 			&lt;/button&gt;
 		&lt;/form&gt;
-	{:else if !onAuth}
-		&lt;a class=&quot;btn&quot; href={href('/(site)/(auth)/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+	{:else}
+		&lt;a
+			class=&quot;btn&quot;
+			href={href('/(site)/(auth)/signin')}
+			aria-current={onSignIn ? 'page' : undefined}&gt;{m.auth_sign_in()}&lt;/a
+		&gt;
 	{/if}
 &lt;/div&gt;</code></pre>
 </figure>
-<p>Signing out is a <code>&lt;form&gt;</code> spread from <code>signOut</code>, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s <code>load</code> runs again and the header renders the signed-out state. The header offers nothing the page already is: “New trip” is left out on the trips list, which has its own a hundred pixels below, and on the new-trip form; “Sign in” is left out on the sign-in and sign-up pages. Both checks read <code>page.route.id</code>, which is the same in every language.</p>
+<p>Signing out is a <code>&lt;form&gt;</code> spread from <code>signOut</code>, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s <code>load</code> runs again and the header renders the signed-out state. The header’s account corner is the same on every page — “New trip” for a person, “Sign in” for a stranger — so nothing in the header moves when the page changes under it. On its own page the action says so with <code>aria-current=&quot;page&quot;</code>: <code>onNewTrip</code> and <code>onSignIn</code> read <code>page.route.id</code>, which is the same in every language, so <code>/de/signin</code> is recognised without a German string in the check.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

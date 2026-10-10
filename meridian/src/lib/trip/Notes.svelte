@@ -5,6 +5,7 @@
 	import StarterKit from '@tiptap/starter-kit';
 	import * as v from 'valibot';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import {
 		ListBulletsIcon,
 		LockSimpleIcon,
@@ -99,7 +100,7 @@
 			status = 'saved';
 		} catch (error) {
 			status = 'idle';
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 
@@ -228,6 +229,17 @@
 		border-radius: var(--radius);
 		background: var(--paper-3);
 		align-self: start;
+	}
+
+	/*
+	 * Under a finger the tools are 44px squares: they sit 2px apart in their
+	 * track, with no room for a hit area to reach past what is drawn.
+	 */
+	@media (pointer: coarse) {
+		.toolbar :global(.toolbar__tool) {
+			width: var(--control);
+			min-height: var(--control);
+		}
 	}
 
 	.toolbar__sep {

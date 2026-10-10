@@ -123,10 +123,11 @@
 
 <style>
 	/*
-	 * Five colours, hand-copied from `tokens.css` because a shadow root cannot
+	 * Six colours, hand-copied from `tokens.css` because a shadow root cannot
 	 * read the host page's custom properties and this element must not bring
-	 * the tokens with it: paper, raised paper, ink, secondary ink, the sea for
-	 * the route — each as the same `light-dark()` pair the token holds.
+	 * the tokens with it: paper, raised paper, the hairline, ink, secondary
+	 * ink, the sea for the route — each as the same `light-dark()` pair the
+	 * token holds.
 	 *
 	 * `light-dark()` resolves against the element's `color-scheme`, which it
 	 * inherits from the host page through the shadow boundary. So the host

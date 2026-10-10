@@ -122,7 +122,7 @@ export const variables = defineEnvVars({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-36</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -158,15 +158,17 @@ import {
 	type ServerInit
 } from '@sveltejs/kit/hooks';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { m } from '#lib/paraglide/messages.js';
 import { getTextDirection } from '#lib/paraglide/runtime.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
-import { auth } from '#lib/server/auth.ts';</code></pre>
+import { auth } from '#lib/server/auth.ts';
+import { localeUrl } from '#lib/server/locale-url.ts';</code></pre>
 </figure>
 <p>The types come from <code>@sveltejs/kit/hooks</code>, and the comment says why it matters: importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for every destructured argument, which is not an error, so the file keeps working and every parameter silently loses its type. That is a SvelteKit 3 change worth knowing by heart.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:38-66</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:40-83</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -188,22 +190,43 @@ import { auth } from '#lib/server/auth.ts';</code></pre>
  * not `replace`: with a string pattern `replace` swaps the *first* match,
  * and the first match was the one in the comment above the `&lt;html&gt;` tag —
  * a bug that shipped a page that looked right and said `lang=&quot;%paraglide.lang%&quot;`.
+ *
+ * WHICH URL SAYS THE LANGUAGE
+ * ---------------------------
+ * Not the request's own URL, which for a remote function is its endpoint,
+ * `/_app/remote/…`, with no `/de` in it — and the URL strategy's answer for
+ * a URL with no prefix is English, so the cookie was never asked. Read that
+ * way, a German sign-in form answered &quot;Enter an email address&quot; from its
+ * schema while the rest of the page spoke German. `localeUrl` gives the
+ * middleware a URL that carries the language: the calling page, which
+ * SvelteKit puts back into `event.url` for a form or a command, and for a
+ * `query` — which comes from no page — the endpoint under the cookie's
+ * language (`#lib/server/locale-url.ts` says how, and why that order).
  */
 const handleParaglide: Handle = ({ event, resolve }) =&gt;
-	paraglideMiddleware(event.request, ({ locale }) =&gt; {
-		return resolve(event, {
-			transformPageChunk: ({ html }) =&gt;
-				html
-					.replaceAll('%paraglide.lang%', locale)
-					.replaceAll('%paraglide.dir%', getTextDirection(locale))
-		});
-	});</code></pre>
+	paraglideMiddleware(
+		event.request,
+		({ locale }) =&gt;
+			resolve(event, {
+				transformPageChunk: ({ html }) =&gt;
+					html
+						.replaceAll('%paraglide.lang%', locale)
+						.replaceAll('%paraglide.dir%', getTextDirection(locale))
+			}),
+		{ effectiveRequestUrl: localeUrl(event) }
+	);</code></pre>
 </figure>
-<p>Paraglide first, because everything after it — a redirect message, an error page, a remote function — may speak. The middleware decides the locale from the URL, the cookie or <code>Accept-Language</code> in the order the config gave, stores it in an <code>AsyncLocalStorage</code> so <code>m.some_message()</code> anywhere in this request speaks the right language, and fills the two placeholders in <code>app.html</code> through <code>transformPageChunk</code>. The comment about <code>replaceAll</code> records a real bug: with a string pattern, <code>replace</code> swaps the first match, and the first match was in a comment above the <code>&lt;html&gt;</code> tag.</p>
+<p>Paraglide first, because everything after it — a redirect message, an error page, a remote function, a schema that refuses a field — may speak. The middleware decides the locale from the URL, the cookie or <code>Accept-Language</code> in the order the config gave, stores it in an <code>AsyncLocalStorage</code> so <code>m.some_message()</code> anywhere in this request speaks the right language, and fills the two placeholders in <code>app.html</code> through <code>transformPageChunk</code>. The comment about <code>replaceAll</code> records a real bug: with a string pattern, <code>replace</code> swaps the first match, and the first match was in a comment above the <code>&lt;html&gt;</code> tag.</p>
+<p>The third argument records another. A remote form is not posted to its page: the browser sends it to <code>/_app/remote/…</code>, a URL with no <code>/de</code> in it, and tells the server which page it came from in a header that SvelteKit turns back into <code>event.url</code>. The middleware reads the request’s own URL unless it is told otherwise, and the URL strategy does not answer “I cannot tell” for a URL with no prefix — it answers English, the base locale, and the cookie is never asked. So a German sign-in page answered a malformed email in English, because the schema’s message was the one sentence produced inside that request. <code>effectiveRequestUrl</code> is Paraglide’s documented option for exactly this, the URL the person is on rather than the one the bytes went to, and <code>localeUrl()</code> works out what to give it: the calling page for a form or a command, and for a <code>query</code> — which sends no such header, so SvelteKit has no page to put back — the endpoint under the cookie’s language. Chapter 20 quotes it; chapter 42 has the test that types a bad address into <code>/de/signin</code> and expects German back.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this matters</h4>
+	<p>Why not leave the cookie to decide? Because the cookie is the language of the last page someone *chose*, and the URL is the language of the page they are *on*. They differ the moment a German link is opened in a browser that last visited the English site — and a form that answers in a different language from the page it sits on reads as broken, whichever language is right.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:68-85</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:85-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -229,7 +252,7 @@ const handleAuth: Handle = async ({ event, resolve }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:87-150</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:104-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -302,7 +325,7 @@ export const handle: Handle = sequence(handleParaglide, handleAuth, handleSecuri
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:152-204</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:169-224</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -329,7 +352,10 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
  *   `unknown`     something genuinely broken — the only one worth an id
  *
  * Returning nothing keeps SvelteKit's defaults — the status and the safe
- * message — which is right for `app` and `framework` errors.
+ * message — which is right for `app` and `framework` errors. The two
+ * messages written here are Paraglide's: this hook runs inside the request,
+ * so they come out in the request's language — a German page that sent a
+ * bad request reads German in its toast.
  */
 export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
 	if (kind === 'validation') {
@@ -338,14 +364,14 @@ export const handleError: HandleServerError = ({ error, event, kind, issues }) =
 			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
 			.join('.');
 		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
-		return { message: 'That request did not make sense.' };
+		return { message: m.error_bad_request() };
 	}
 
 	if (kind !== 'unknown') return;
 
 	const id = crypto.randomUUID();
 	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
-	return { message: 'Something went wrong on our side.', id };
+	return { message: m.error_server(), id };
 };
 
 /**
@@ -359,7 +385,7 @@ export const init: ServerInit = async () =&gt; {
 	await client.execute('select 1');
 };</code></pre>
 </figure>
-<p><code>handleError</code> is told apart by <code>kind</code>, which SvelteKit 3 added: <code>app</code> is a deliberate <code>error(404)</code>, <code>framework</code> is SvelteKit’s own, <code>validation</code> is a remote function argument that failed its schema — with the <code>issues</code> handed over, so the log can say which field — and <code>unknown</code> is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. <code>init</code> runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.</p>
+<p><code>handleError</code> is told apart by <code>kind</code>, which SvelteKit 3 added: <code>app</code> is a deliberate <code>error(404)</code>, <code>framework</code> is SvelteKit’s own, <code>validation</code> is a remote function argument that failed its schema — with the <code>issues</code> handed over, so the log can say which field — and <code>unknown</code> is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, <code>m.error_bad_request()</code> and <code>m.error_server()</code>: <code>handleError</code> runs inside the request the middleware wrapped, so they come out in that request’s language. <code>init</code> runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.</p>
 
 <figure class="code">
 	<figcaption>

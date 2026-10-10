@@ -243,19 +243,22 @@ onMount(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+layout.server.ts<span class="code__lines">:1-11</span></span>
+		<span class="code__file">src/routes/(site)/+layout.server.ts<span class="code__lines">:1-14</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import type { LayoutServerLoad } from './$types';
+import { THEME_COOKIE, chosenTheme } from '#lib/ui/theme-cookie.ts';
 
 /**
- * Who is signed in, for the header. The only `load` in the project: identity
- * is needed by every page and by the shell around them, which is exactly the
- * case a layout `load` exists for. Everything page-specific comes through
- * remote functions instead.
+ * Who is signed in, for the header, and which theme they chose, for the one
+ * picture that has two prints (`theme-cookie.ts` says why the server needs
+ * to know). Both are about the shell around every page, which is exactly
+ * the case a layout `load` exists for. Everything page-specific comes
+ * through remote functions instead.
  */
-export const load: LayoutServerLoad = ({ locals }) =&gt; ({
-	user: locals.user ? { id: locals.user.id, name: locals.user.name } : null
+export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
+	user: locals.user ? { id: locals.user.id, name: locals.user.name } : null,
+	theme: chosenTheme(cookies.get(THEME_COOKIE))
 });</code></pre>
 </figure>
 
@@ -292,12 +295,12 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 &lt;Footer /&gt;</code></pre>
 </figure>
-<p>The only <code>load</code> in the project. Identity is needed by every page and by the shell around them, which is exactly the case a layout <code>load</code> exists for; everything page-specific comes through remote functions. The <code>(app)</code> group inside <code>(site)</code> adds a second layout load that redirects strangers to sign in — chapter 32 quotes it — so a page under it cannot forget to check.</p>
+<p>The only <code>load</code> in the project, and what it returns is about the shell, not a page. Identity is needed by every page and by the header around them, which is exactly the case a layout <code>load</code> exists for; the theme cookie is read here for the one picture with two prints (chapter 22), because the server has to choose its sources before any script runs. Everything page-specific comes through remote functions. The <code>(app)</code> group inside <code>(site)</code> adds a second layout load that redirects strangers to sign in — chapter 32 quotes it — so a page under it cannot forget to check.</p>
 <h3 id="header">The header</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-98</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-97</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -386,23 +389,22 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 		page.url.pathname === target || page.url.pathname.startsWith(target + '/');
 
 	/*
-	 * The header does not offer what the page already is. On the trips list
-	 * the page's own &quot;New trip&quot; is a hundred pixels below, and on the new
-	 * trip form it is the page; on the sign-in and sign-up pages, &quot;Sign in&quot;
-	 * is the form you are looking at. One accent, spent once.
+	 * The header is the same on every page. The first version left out
+	 * whatever the page already was — &quot;New trip&quot; on the trips list and the
+	 * new-trip form, &quot;Sign in&quot; on the sign-in pages — and so the links, the
+	 * language switcher and the theme toggle jumped 130px sideways on the
+	 * most travelled path in the app, from the trips list into a trip. Now
+	 * the action is always there, and on its own page it says so with
+	 * `aria-current`, like a nav link.
 	 */
-	const onTrips = $derived(
-		page.route.id === '/(site)/(app)/trips' || page.route.id === '/(site)/(app)/trips/new'
-	);
-	const onAuth = $derived(
-		page.route.id === '/(site)/(auth)/signin' || page.route.id === '/(site)/(auth)/signup'
-	);
+	const onNewTrip = $derived(page.route.id === '/(site)/(app)/trips/new');
+	const onSignIn = $derived(page.route.id === '/(site)/(auth)/signin');
 &lt;/script&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:102-112</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:101-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -421,7 +423,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:114-184</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:113-189</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={scrolled}&gt;
@@ -451,20 +453,26 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 			&lt;div class=&quot;nav__account&quot; style:--i={links.length + 1}&gt;
 				{#if user}
-					{#if !onTrips}
-						&lt;a class=&quot;btn btn--primary&quot; href={href('/(site)/(app)/trips/new')}&gt;
-							&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
-							{m.nav_new_trip()}
-						&lt;/a&gt;
-					{/if}
+					&lt;a
+						class=&quot;btn btn--primary&quot;
+						href={href('/(site)/(app)/trips/new')}
+						aria-current={onNewTrip ? 'page' : undefined}
+					&gt;
+						&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+						{m.nav_new_trip()}
+					&lt;/a&gt;
 					&lt;!-- A form, so signing out works with JavaScript off too. --&gt;
 					&lt;form {...signOut}&gt;
 						&lt;button class=&quot;btn btn--ghost&quot; type=&quot;submit&quot; title={user.name}&gt;
 							{m.auth_sign_out()}
 						&lt;/button&gt;
 					&lt;/form&gt;
-				{:else if !onAuth}
-					&lt;a class=&quot;btn&quot; href={href('/(site)/(auth)/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+				{:else}
+					&lt;a
+						class=&quot;btn&quot;
+						href={href('/(site)/(auth)/signin')}
+						aria-current={onSignIn ? 'page' : undefined}&gt;{m.auth_sign_in()}&lt;/a
+					&gt;
 				{/if}
 			&lt;/div&gt;
 		&lt;/nav&gt;
@@ -496,7 +504,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	the page under it is `inert`, which is what a screen reader hears.
 --&gt;</code></pre>
 </figure>
-<p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: <code>inert</code> on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and <code>afterNavigate</code> to close it whatever caused the navigation. The scrim is rendered after the <code>&lt;header&gt;</code>, not inside it: the header’s <code>backdrop-filter</code> makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And <code>open</code> is an assignable <code>$derived</code> that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header also leaves out what the page already is: no “New trip” on the trips list or the new-trip form, no “Sign in” on the sign-in and sign-up pages. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every <code>href</code> in it is a call to <code>href()</code> — the next section — so the link list is a list of typed route ids, <code>/(site)/(app)/trips</code> and friends, not strings that happen to look like paths.</p>
+<p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: <code>inert</code> on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and <code>afterNavigate</code> to close it whatever caused the navigation. The scrim is rendered after the <code>&lt;header&gt;</code>, not inside it: the header’s <code>backdrop-filter</code> makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And <code>open</code> is an assignable <code>$derived</code> that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header is also the same on every page. The first version left out whatever the page already was — no “New trip” on the trips list, no “Sign in” on the sign-in page — and the result was a header whose links, language switcher and theme toggle jumped 130px sideways on the most travelled path in the app, from the trips list into a trip. Now the action is always there, and on its own page it carries <code>aria-current=&quot;page&quot;</code>, like a nav link: a screen reader says “current page”, and the stylesheet can mark it without a second rule for the same idea. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every <code>href</code> in it is a call to <code>href()</code> — the next section — so the link list is a list of typed route ids, <code>/(site)/(app)/trips</code> and friends, not strings that happen to look like paths.</p>
 <h3 id="links">One way to write a link</h3>
 
 <figure class="code">
@@ -554,7 +562,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Footer.svelte<span class="code__lines">:1-15</span></span>
+		<span class="code__file">src/lib/ui/Footer.svelte<span class="code__lines">:1-20</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -563,10 +571,15 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	import { version } from '$app/env';
 &lt;/script&gt;
 
-&lt;footer class=&quot;footer&quot;&gt;
+&lt;!--
+	Product copy, not a build log. The version a deployment is running is on
+	the diagnostics page, and here only as `data-version` — there for whoever
+	opens the inspector, invisible to everybody else.
+--&gt;
+&lt;footer class=&quot;footer&quot; data-version={version}&gt;
 	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
-		&lt;p class=&quot;muted&quot;&gt;{m.footer_made()} &lt;code class=&quot;muted&quot;&gt;{version}&lt;/code&gt;&lt;/p&gt;
-		&lt;nav class=&quot;cluster&quot; aria-label=&quot;Meta&quot;&gt;
+		&lt;p class=&quot;muted&quot;&gt;{m.footer_made()}&lt;/p&gt;
+		&lt;nav class=&quot;cluster footer__links&quot; aria-label=&quot;Meta&quot;&gt;
 			&lt;a class=&quot;muted&quot; href={href('/guides')}&gt;{m.nav_guides()}&lt;/a&gt;
 			&lt;a class=&quot;muted&quot; href={href('/(site)/(app)/diagnostics')}&gt;{m.footer_diagnostics()}&lt;/a&gt;
 		&lt;/nav&gt;
@@ -602,7 +615,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	&lt;/button&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>The footer shows <code>version</code> from <code>$app/env</code> — the commit hash — so “which build is this?” is answered on every page. The banner appears when <code>updated.current</code> flips — under the header on a phone, where the toasts also go, never at the bottom where the stop sheet opens — and its button is a plain reload, because there is nothing to save that the server does not already have.</p>
+<p>The footer is product copy, not a build log: one sentence and two links. <code>version</code> from <code>$app/env</code> — the commit hash — is on the element as <code>data-version</code>, so “which build is this?” is answered for whoever opens the inspector, and on the diagnostics page in words, without a hash sitting in front of every visitor. The banner appears when <code>updated.current</code> flips — under the header on a phone, where the toasts also go, never at the bottom where the stop sheet opens — and its button is a plain reload, because there is nothing to save that the server does not already have.</p>
 <h3 id="errors">Two error pages, one view</h3>
 
 <figure class="code">
@@ -621,8 +634,8 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	 * one, for a URL that matches no route, and the one inside `(site)`, for
 	 * an error on a page that has a header — so the words live once.
 	 *
-	 * The status code is set in the display face at its largest cut, in the
-	 * tertiary grey: it is decoration, and the heading carries the meaning.
+	 * The status code is set in the display face, large and in the
+	 * secondary grey: it is decoration, and the heading carries the meaning.
 	 * Behind it, a compass rose drawn thin from the icon set the app already
 	 * ships — the one illustration in the product.
 	 */
@@ -681,7 +694,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	&lt;ErrorView /&gt;
 &lt;/main&gt;</code></pre>
 </figure>
-<p>A URL that matches no route lands on the root <code>+error.svelte</code>, inside the root layout, which has no header — so the root error page brings a small one of its own. An error on a site page renders <code>(site)/+error.svelte</code>, inside the site layout, with the full header. Both render <code>ErrorView</code>, so the words live once: the status in the display face at its poster cut over a faint compass rose — decoration, so <code>aria-hidden</code>, while the heading carries the meaning — a sentence, two ways out (back to your trips, or explore), and the reference id from <code>handleError</code> when there is one.</p>
+<p>A URL that matches no route lands on the root <code>+error.svelte</code>, inside the root layout, which has no header — so the root error page brings a small one of its own. An error on a site page renders <code>(site)/+error.svelte</code>, inside the site layout, with the full header. Both render <code>ErrorView</code>, so the words live once: the status large in the display face and the secondary grey, over a faint compass rose turned 45° so its points fall between the digits — decoration, so <code>aria-hidden</code>, while the heading carries the meaning — a sentence, two ways out (back to your trips, or explore), and the reference id from <code>handleError</code> when there is one.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

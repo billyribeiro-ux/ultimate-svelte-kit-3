@@ -208,11 +208,20 @@ hr {
  * A 36px icon button is the right size to look at and the wrong size to
  * touch. The pseudo-element extends the hit area to 44px without changing
  * what is drawn — the same trick on every compact icon button in the app.
+ *
+ * The reach is 5px, not the 4px the arithmetic suggests: an absolutely
+ * placed box is measured from its parent's *padding* edge, inside the 1px
+ * border, so `inset: -4px` reached 3px past what is drawn and made a 42px
+ * target. The visual end-to-end test found it by pressing 4px outside.
  */
 .btn--icon.btn--sm::after {
 	content: '';
 	position: absolute;
-	inset: -4px;
+	inset: calc(-1 * var(--reach));
+}
+
+.btn {
+	--reach: calc((var(--control) - var(--control-sm)) / 2 + 1px);
 }
 
 /*
@@ -224,10 +233,10 @@ hr {
 	.btn--sm::after {
 		content: '';
 		position: absolute;
-		inset: -4px 0;
+		inset: calc(-1 * var(--reach)) 0;
 	}
 	.btn--icon.btn--sm::after {
-		inset: -4px;
+		inset: calc(-1 * var(--reach));
 	}
 }
 
@@ -376,6 +385,12 @@ hr {
 	font-weight: 500;
 	cursor: pointer;
 	transition: background-color var(--dur-2) var(--ease-out);
+}
+/* 44px under a finger: the chips wrap onto rows 8px apart, too close for a reach. */
+@media (pointer: coarse) {
+	.check {
+		min-height: var(--control);
+	}
 }
 .check:has(input:checked) {
 	background: var(--sea-soft);
@@ -534,7 +549,7 @@ hr {
 }
 
 /* ------------------------------------------------------------------ */
-/* Dialog shell — shared by the stop dialog and the command palette     */
+/* Dialog shell — the scrim, and the sheet or panel a dialog sits in    */
 /* ------------------------------------------------------------------ */
 
 /*
@@ -718,19 +733,28 @@ hr {
 .toast__desc {
 	color: var(--ink-2);
 }
+/*
+ * The close button (wide screens only) is the toast's last item, a compact
+ * ghost icon button inside its edge — not the library's default, a circle
+ * hanging off the top-left corner of a toast that sits bottom-right.
+ */
 .toast__close {
-	position: absolute;
-	top: -0.5rem;
-	left: -0.5rem;
+	position: relative;
+	order: 1;
 	display: grid;
 	place-items: center;
-	width: 1.5rem;
-	height: 1.5rem;
-	border-radius: 50%;
-	background: var(--paper-4);
+	flex: none;
+	width: var(--control-sm);
+	height: var(--control-sm);
+	margin-inline: auto calc(-1 * var(--space-2));
+	border-radius: var(--radius-sm);
+	background: transparent;
 	color: var(--ink-2);
-	border: 1px solid var(--line);
-	box-shadow: var(--shadow-1);
+	transition: background-color var(--dur-2) var(--ease-out);
+}
+.toast__close:hover {
+	background: var(--paper-3);
+	color: var(--ink);
 }
 
 /* ------------------------------------------------------------------ */

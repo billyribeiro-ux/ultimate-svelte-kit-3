@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>End to end: the built server, two viewports, two people — Building Meridian</title>
-<meta name="description" content="Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile. Five suites cover a stranger, an account, one trip’s every tab, two browsers on one trip, and invites plus the embed. How the suite is kept honest, the three mobile-only failures it found, and what each one taught.">
+<meta name="description" content="Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile, and the design’s checks in a third at 360px. Six suites cover a stranger, an account, one trip’s every tab, the map’s own behaviour, two browsers on one trip, and invites plus the embed; a seventh asks every screen of the design, in both themes and at three widths, whether anything sticks out, whether a finger can hit it, what axe finds, and how it paints, on a fast connection and a slow one; and a bundle guard after the build holds the chunks to a budget. How the suite is kept honest, what it found, and what each failure taught.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,13 +33,13 @@
 		<article>
 			<p class="eyebrow">Chapter 42</p>
 			<h1>End to end: the built server, two viewports, two people</h1>
-			<p class="lede">Playwright runs against <code>node build/index.js</code> — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile. Five suites cover a stranger, an account, one trip’s every tab, two browsers on one trip, and invites plus the embed. How the suite is kept honest, the three mobile-only failures it found, and what each one taught.</p>
+			<p class="lede">Playwright runs against <code>node build/index.js</code> — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile, and the design’s checks in a third at 360px. Six suites cover a stranger, an account, one trip’s every tab, the map’s own behaviour, two browsers on one trip, and invites plus the embed; a seventh asks every screen of the design, in both themes and at three widths, whether anything sticks out, whether a finger can hit it, what axe finds, and how it paints, on a fast connection and a slow one; and a bundle guard after the build holds the chunks to a budget. How the suite is kept honest, what it found, and what each failure taught.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run the end-to-end suite locally, read a failure’s call log and trace, and write a new test that signs in, does one thing, and cleans up after itself.</p></aside>
 			<p>An end-to-end test is the only kind that can fail because of a <strong>seam</strong>: a cookie the hook did not read, a header the adapter did not send, a prerendered page that baked the wrong user in, a form the CSRF check refused. Those are exactly the failures that unit tests cannot see and that real people hit first. So the suite runs against the *built* application — the adapter’s output, its server, its database — and not against the dev server, and the configuration says why at length.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">playwright.config.ts<span class="code__lines">:34-88</span></span>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:41-104</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig({
@@ -72,6 +72,15 @@
 			// and a device pixel ratio with it, and both change what the map does.
 			name: 'phone',
 			use: { ...devices['Pixel 7'] }
+		},
+		{
+			name: 'narrow',
+			testMatch: /visual\.e2e\.ts/,
+			use: {
+				...devices['Pixel 7'],
+				viewport: { width: 360, height: 780 },
+				screen: { width: 360, height: 780 }
+			}
 		}
 	],
 
@@ -99,7 +108,7 @@
 });</code></pre>
 </figure>
 <p>Read the <code>webServer</code> block as a recipe: rebuild the database from the migrations and the seed, build the app, start the adapter’s server on port 4173. Playwright waits for the port, runs the suite, and stops the process. <code>reuseExistingServer</code> is on outside CI, so a developer who already has the built server running skips the three-minute build — and in CI it is off, so the pipeline always tests what it just built. The environment block matters more than it looks: <code>PUBLIC_ORIGIN</code> is <strong>baked into the bundle</strong> at build time (chapter 03), and the server compares it with each request’s origin; if the build said 5173 and the test hits 4173, every form submission is a 403. It took an afternoon to learn that the same value has to be present in both places, which is why the comment is there.</p>
-<p><code>workers: 1</code> and <code>fullyParallel: false</code> are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs about a minute and a half of wall clock for thirty-six tests across both profiles — plus the build, the first time — and buys a suite whose failures are always real.</p>
+<p><code>workers: 1</code> and <code>fullyParallel: false</code> are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and twenty-nine tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs <code>visual.e2e.ts</code> alone: a behaviour does not change between 412px and 360px, and a layout does.</p>
 
 <figure class="code">
 	<figcaption>
@@ -218,7 +227,7 @@ export async function typeDateInto(
 }</code></pre>
 </figure>
 <p><code>typeDate</code> exists because Bits UI’s date picker is not an <code>&lt;input type=&quot;date&quot;&gt;</code>; it is three editable segments per date, in the locale’s order, and Playwright’s <code>fill()</code> has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does — and the work is in <code>typeDateInto</code>, which takes any date input as a locator, because the expense form’s date is the same picker now: the trip’s two dates find their input by position in the range, the expense finds its by role, <code>getByRole(&quot;group&quot;, { name: &quot;Date&quot;, exact: true })</code>. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.</p>
-<h3 id="suites">Five suites</h3>
+<h3 id="suites">Six suites</h3>
 
 <figure class="code">
 	<figcaption>
@@ -251,7 +260,34 @@ export async function typeDateInto(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:71-92</span></span>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:48-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a filter typed before the explore page has hydrated is kept', async ({ page }) =&gt; {
+	// The sign-in form's race (account.e2e.ts), on a plain `bind:value`: hold the client bundle
+	// back, type into the server's HTML, then let the page wake up.
+	let release: () =&gt; void = () =&gt; {};
+	const held = new Promise&lt;void&gt;((resolve) =&gt; (release = resolve));
+	await page.route('**/_app/immutable/entry/start.*.js', async (route) =&gt; {
+		await held;
+		await route.continue();
+	});
+
+	await page.goto('/explore');
+	await page.getByPlaceholder('Filter places').fill('Kyoto');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(0);
+
+	release();
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+	await expect(page.getByPlaceholder('Filter places')).toHaveValue('Kyoto');
+	await expect(page.getByText('1 place', { exact: false })).toBeVisible();
+});</code></pre>
+</figure>
+<p>The same race as the sign-in form’s, on a plain input. Text typed into the explore filter before the page had hydrated was wiped when it did: the filter is a <code>bind:value</code> on a <code>$state</code> that starts empty, and hydration writes the state into the input. The account suite’s test of an explore-to-new-trip journey filled the filter straight after <code>goto</code> and failed on a slow run with “1 place” never appearing — the field was empty in its snapshot. The cure is the one <code>keepTyped()</code> applies to the form (chapter 32): the page’s script runs while the server’s input is still on the page, so the filter’s state starts from what is in it. The test holds the client bundle back, types, lets it go, and expects the text and the filtered list to have survived.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:91-117</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('health, the route API and the embed frame answer for machines', async ({ page, request }) =&gt; {
@@ -272,12 +308,17 @@ export async function typeDateInto(
 	expect(frame?.headers()['content-security-policy']).toContain('frame-ancestors *');
 	await expect(page.getByRole('link', { name: 'Planned with Meridian' })).toBeVisible();
 	expect(await page.locator('script[src]').count()).toBe(0);
+	// Styled, though it ships no script: the page's own stylesheet came with it. A frame
+	// compiled as a custom element once shipped without it. Only that stylesheet makes the card
+	// 22rem and takes the list's indent away — the root layout's CSS is linked either way.
+	await expect(page.locator('article.embed')).toHaveCSS('max-width', '352px');
+	await expect(page.locator('.embed__stops')).toHaveCSS('padding-inline-start', '0px');
 
 	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
 	expect(framedPrivate?.status()).toBe(404);
 });</code></pre>
 </figure>
-<p>The machine-facing test uses <code>request</code> — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains <code>frame-ancestors *</code> — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away.</p>
+<p>The machine-facing test uses <code>request</code> — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains <code>frame-ancestors *</code> — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter 36). They ask for two facts only the page’s own stylesheet makes true: the card’s computed <code>max-width</code> is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.</p>
 
 <figure class="code">
 	<figcaption>
@@ -310,6 +351,57 @@ export async function typeDateInto(
 });</code></pre>
 </figure>
 <p>A fresh account with a unique email per run, so the test can run twice against the same database. It walks the whole loop — refused at <code>/trips</code>, sent to sign in with <code>redirectTo</code> remembered, creates the account, lands on an empty trips page, signs out, signs back in — and the <code>openMenu</code> calls are the phone project earning its keep.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:72-83</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('on a German page the schema’s own messages are German', async ({ page }) =&gt; {
+	// Not the handler's message, which was always localised: the valibot schema's,
+	// which runs before the handler and used to answer in English on every page.
+	await page.goto('/de/signin');
+	await page.locator('html[data-hydrated]').waitFor();
+	await page.getByLabel('E-Mail').fill('keine-adresse');
+	await page.getByLabel('Passwort').fill('irgendetwas');
+	await page.getByRole('button', { name: 'Anmelden' }).click();
+	await expect(page.getByText('Gib eine E-Mail-Adresse ein')).toBeVisible();
+	await expect(page.getByText('Enter an email address')).toHaveCount(0);
+	await expect(page).toHaveURL(/\/de\/signin/);
+});</code></pre>
+</figure>
+<p>The German test is about which code produced a sentence, not about German. The sign-in *handler*’s message — “that email and password do not match” — was always localised, because it is written with <code>m.*()</code> in the handler. The *schema*’s message for a malformed email runs before the handler, and it answered in English on every page until two things changed: the messages became functions called at failure time (chapter 12), and the Paraglide middleware read the locale from the page the form is on rather than the <code>/_app/remote</code> URL it posts to (chapter 20). The test asserts both halves — the German sentence is there, the English one is not — because a test that only looked for German would pass on a page that printed both.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:120-142</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// Delete it: a real form, with a confirm in front of it when JavaScript is on.
+await page.goto(`/t/${slug}/settings`);
+await page.locator('html[data-hydrated]').waitFor();
+
+// &quot;Cancel&quot; keeps the trip: nothing is sent, and the trip is still listed.
+let asked = false;
+page.once('dialog', (dialog) =&gt; {
+	asked = true;
+	void dialog.dismiss();
+});
+await page.getByRole('button', { name: 'Delete trip' }).click();
+await expect.poll(() =&gt; asked).toBe(true);
+await expect(page).toHaveURL(new RegExp(`/t/${slug}/settings$`));
+await page.goto('/trips');
+await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toBeVisible();
+
+// &quot;OK&quot; deletes it.
+await page.goto(`/t/${slug}/settings`);
+await page.locator('html[data-hydrated]').waitFor();
+page.once('dialog', (dialog) =&gt; dialog.accept());
+await page.getByRole('button', { name: 'Delete trip' }).click();
+await expect(page).toHaveURL(/\/trips$/);
+await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toHaveCount(0);</code></pre>
+</figure>
+<p>The delete test answers the dialog twice. Playwright accepts nothing by default — a <code>confirm()</code> with no handler is dismissed — so <code>page.once('dialog', …)</code> decides each answer explicitly. First “Cancel”: the page must still be the settings page and the trip must still be in the list. Then “OK”: the trip must be gone. The first half is new, and it is new because it failed: the <code>confirm()</code> lived in an <code>onsubmit</code> that called <code>preventDefault()</code>, the remote form’s own submit listener does not look at <code>defaultPrevented</code>, and Cancel deleted the trip (chapter 31). Testing only the “yes” path of a question is testing half of it.</p>
 
 <figure class="code">
 	<figcaption>
@@ -367,6 +459,103 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 });</code></pre>
 </figure>
 <p>The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. Its date used to be <code>fill(&quot;2026-05-10&quot;)</code> on a native date input; the field became the segmented picker, in the page’s language rather than the browser’s, so the test types the date segment by segment like a person — the same assertion, through the control that ships. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/map.e2e.ts<span class="code__lines">:24-64</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Where each marker's centre is, by its label, on the screen. */
+function markers(page: Page): Promise&lt;Record&lt;string, { x: number; y: number }&gt;&gt; {
+	return page.evaluate(() =&gt;
+		Object.fromEntries(
+			[...document.querySelectorAll('.maplibregl-marker')].map((marker) =&gt; {
+				const box = marker.getBoundingClientRect();
+				const label = (marker.textContent ?? '').trim().split(':')[0] ?? '';
+				return [label, { x: box.x + box.width / 2, y: box.y + box.height / 2 }];
+			})
+		)
+	);
+}
+
+/** Open the map and wait for it to have loaded and settled. */
+async function openMap(page: Page, url: string): Promise&lt;void&gt; {
+	await signIn(page, USERS.ana, url);
+	await page.locator('.map[data-ready]').waitFor();
+	// The route is framed as a cut; give the frame's measured height time to arrive and settle.
+	await page.waitForTimeout(1000);
+}
+
+test('pressing a bubble or a pin is not a click on the map', async ({ page }) =&gt; {
+	await openMap(page, `/t/${TRIPS.iberia}?tab=map`);
+	const dialog = page.getByRole('dialog');
+
+	// At the zoom that fits Lisbon to Barcelona, the Lisbon stops are one bubble.
+	await page.locator('.maplibregl-marker:has(.pin--cluster)').first().click();
+	await page.waitForTimeout(1000);
+	await expect(dialog).toHaveCount(0);
+
+	// The bubble zoomed in until its stops came apart; press one of them.
+	await page.locator('.maplibregl-marker:has(.pin:not(.pin--cluster))').first().click();
+	await page.waitForTimeout(500);
+	await expect(dialog).toHaveCount(0);
+
+	// And a click on the map itself still starts a stop there.
+	const frame = await page.locator('.map').boundingBox();
+	expect(frame).not.toBeNull();
+	await page.mouse.click(frame!.x + 60, frame!.y + 60);
+	await expect(dialog.getByRole('heading', { name: 'New stop' })).toBeVisible();
+});</code></pre>
+</figure>
+<p>The map has a suite of its own because its three bugs were behaviours a screenshot cannot show. The first is a click that goes two places: for an editor a click on the map starts a stop, and pressing a bubble opened the “New stop” dialog over the zoom it asked for (chapter 27 explains the event delegation behind it). The test presses a bubble and then a pin and expects no dialog, and then clicks the map itself and expects one — the second half is what keeps the first from passing by breaking clicks altogether. <code>markers()</code> runs in the page and reads every marker’s centre by its label, which is what the other two tests compare.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/map.e2e.ts<span class="code__lines">:66-105</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('choosing a stop flies the camera to it, and it stays', async ({ page }, testInfo) =&gt; {
+	test.skip(testInfo.project.name !== 'desktop', 'the map beside the itinerary is a desktop’s');
+	await openMap(page, `/t/${TRIPS.iberia}`);
+
+	// Barcelona is a bubble at the edge of the fitted route; choosing one of its stops pulls it
+	// out. (Not Madrid: it is near the middle of the route, so a re-fit would pass for a flight.)
+	await page.getByRole('button', { name: 'Sagrada Família', exact: true }).click();
+	const selected = page.locator('.maplibregl-marker:has(.pin--selected)');
+	await expect(selected).toHaveCount(1);
+	// The flight is 800ms; the heartbeat that choosing sends brings a new snapshot meanwhile.
+	await page.waitForTimeout(2000);
+
+	const pin = await selected.boundingBox();
+	const frame = await page.locator('.map').boundingBox();
+	expect(pin).not.toBeNull();
+	expect(frame).not.toBeNull();
+	const dx = pin!.x + pin!.width / 2 - (frame!.x + frame!.width / 2);
+	const dy = pin!.y + pin!.height / 2 - (frame!.y + frame!.height / 2);
+	expect(Math.abs(dx), 'the chosen pin is in the middle, across').toBeLessThan(24);
+	expect(Math.abs(dy), 'the chosen pin is in the middle, down').toBeLessThan(24);
+});
+
+test('the pins are where the map is once it has settled', async ({ page }) =&gt; {
+	await openMap(page, `/t/${TRIPS.iberia}?tab=map`);
+	const settled = await markers(page);
+
+	// A resize at rest makes MapLibre place every marker afresh. A pin that moves was out of place.
+	const size = page.viewportSize()!;
+	await page.setViewportSize({ width: size.width, height: size.height + 1 });
+	await page.waitForTimeout(300);
+	await page.setViewportSize(size);
+	await page.waitForTimeout(800);
+	const afresh = await markers(page);
+
+	expect(Object.keys(afresh).sort()).toEqual(Object.keys(settled).sort());
+	for (const [label, at] of Object.entries(settled)) {
+		const now = afresh[label]!;
+		expect(Math.hypot(now.x - at.x, now.y - at.y), `marker ${label} moved`).toBeLessThan(1.5);
+	}
+});</code></pre>
+</figure>
+<p>The second is a camera that was taken back. Choosing a stop flew the map to it, and the live query’s next snapshot — brought by the heartbeat the choice itself sends — re-fitted the whole route a few frames later. The test chooses Sagrada Família on the desktop’s side map, waits past the flight and the heartbeat, and expects the chosen pin in the middle of the map. Not Madrid, which was the first choice and is the lesson: Madrid is near the middle of the route, so a re-fit put its pin within a few pixels of the centre too, and the test passed against the bug. A test of “it went there” needs a there that nothing else would go to. The third is pins out of place: a resize at rest makes MapLibre place every marker afresh, so after a one-pixel round trip of the window no marker may have moved — against the bug, the Lisbon bubble moved 24px.</p>
 
 <figure class="code">
 	<figcaption>
@@ -461,10 +650,694 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 });</code></pre>
 </figure>
 <p>The settings test has a shape worth copying: <code>try … finally</code>. It flips the trip to visible-by-link, checks that the embed section appears and that the custom element inside it renders the trip *through the route API* — Playwright locators pierce shadow DOM, so <code>page.locator('meridian-route').getByText(…)</code> reaches inside — and then, whatever happened, flips it back. Without the <code>finally</code>, one failure in the middle would leave the seeded trip public, and the stranger’s suite in the next run would fail on a 200 where it expects a 404, two files away from the cause.</p>
+<h3 id="visual">The suite that looks at the design</h3>
+<p>The six suites above are about behaviour. The seventh, <code>visual.e2e.ts</code>, is about the things a person reviewing a screenshot is bad at: a control that runs two pixels past its card, a button a finger cannot hit, a missing accessible name, a colour pair a theme change broke. It walks the same list of screens <code>scripts/screens.ts</code> photographs — one list, so the screens a person reviews are the screens the gate checks.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/matrix.ts<span class="code__lines">:3-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SCREENS, ONCE
+ * =================
+ *
+ * Every screen the design is judged on: the pages, and the states a page
+ * alone does not show — a filter with no match, a sign-in with a bad email,
+ * a dialog, the palette, a toast, the phone's open menu. Two things walk this
+ * list: `scripts/screens.ts`, which photographs each screen for a person to
+ * look at, and `e2e/visual.e2e.ts`, which asks each one the questions a
+ * machine can answer. One list, so the screens a person reviews are the
+ * screens the gate checks.
+ */
+
+export type Device = 'desktop' | 'phone';
+
+export interface Screen {
+	readonly name: string;
+	readonly url: string;
+	/** Needs the seed's Ana signed in. */
+	readonly auth?: boolean;
+	/** Photograph the viewport, not the whole page (a map does not scroll). */
+	readonly viewport?: boolean;
+	/** Only on a touch phone (the open menu: a desktop has no menu button). */
+	readonly phoneOnly?: boolean;
+	/** Needs WebGL: the globe. */
+	readonly webgl?: boolean;
+	/** Ships no JavaScript (`csr = false`): there is no hydration to wait for. */
+	readonly static?: boolean;
+	/** Something to do on the page before it is looked at. */
+	readonly act?: (page: Page) =&gt; Promise&lt;void&gt;;
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/matrix.ts<span class="code__lines">:161-163</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** The scrollers a page may have that are wider than the screen on purpose, and what is inside them. */
+export const ALLOWED_SCROLLERS =
+	'.table-wrap, .tabs, .maplibregl-map, .globe, [data-sonner-toaster], .nav:not(.nav--open)';</code></pre>
+</figure>
+<p>A screen is a URL plus whatever has to happen before it is the screen: a filter that matches nothing, a sign-in with a bad email, the stop dialog open, the palette, a toast, the phone’s open menu. Twenty-seven of them, in both themes, in all three projects. <code>ALLOWED_SCROLLERS</code> names the elements that are wider than the screen on purpose — the expenses table’s wrapper, the tab strip, the two canvases, the toaster, the closed nav — so the overflow check can tell a scroller from a leak.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/page-checks.ts<span class="code__lines">:19-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Does the page scroll sideways, and what sticks out?
+ *
+ * Two kinds of sticking out. An element past the right edge of the screen,
+ * unless it is inside one of the `allowed` scrollers (the table wrapper, the
+ * tab strip, the two canvases — each scrolls inside itself on purpose). And
+ * a form control past its card's *content box*: a field that runs over the
+ * card's padding onto its border does not widen the page, so the first
+ * check never saw the date field poking out of the new-trip card at 360px.
+ */
+export function overflowInPage(allowed: string): Overflow {
+	const name = (el: Element) =&gt;
+		`${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${
+			typeof el.className === 'string' &amp;&amp; el.className
+				? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')
+				: ''
+		}`;
+	const shown = (el: Element, rect: DOMRect) =&gt; {
+		if (rect.width &lt;= 1 || rect.height &lt;= 1) return false;
+		const style = getComputedStyle(el);
+		return style.position !== 'fixed' &amp;&amp; style.visibility !== 'hidden';
+	};
+
+	const offenders: string[] = [];
+	for (const el of document.querySelectorAll('body *')) {
+		const rect = el.getBoundingClientRect();
+		if (!shown(el, rect) || el.closest(allowed)) continue;
+		if (rect.right &gt; innerWidth + 1) {
+			offenders.push(
+				`${name(el)} ends at ${Math.round(rect.right)}, past the ${innerWidth}px screen`
+			);
+		}
+	}
+
+	const controls = '.card :is(input, select, textarea, button, .datefield, .input-group)';
+	for (const el of document.querySelectorAll(controls)) {
+		const rect = el.getBoundingClientRect();
+		const card = el.closest('.card');
+		if (!card || !shown(el, rect) || el.closest(allowed)) continue;
+		const box = card.getBoundingClientRect();
+		const style = getComputedStyle(card);
+		const left = box.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+		const right = box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+		if (rect.right &gt; right + 1 || rect.left &lt; left - 1) {
+			offenders.push(
+				`${name(el)} spans ${Math.round(rect.left)}–${Math.round(rect.right)}, ` +
+					`outside its card's content box ${Math.round(left)}–${Math.round(right)}`
+			);
+		}
+	}
+
+	const html = document.documentElement;
+	return { scrollWidth: html.scrollWidth, clientWidth: html.clientWidth, offenders };
+}</code></pre>
+</figure>
+<p>The checks are functions that run *in the page*: <code>page.evaluate(fn, arg)</code> sends a function’s source text to the browser and calls it there, so each must be self-contained — no imports, nothing from the module scope, everything it needs as its one argument. The overflow check asks two questions. Does anything end past the right edge of the screen, outside an allowed scroller? And does any form control run past its card’s *content box*? The second exists because the first missed a real bug: at 360px the new-trip date field poked through the card’s padding onto its border, which does not widen the page, so <code>scrollWidth</code> was fine and the field was not. And the gate missed it a second way, which is why there is a third project: the overflow walk ran on the desktop and on a 412px phone, the bug was there only at 360px, and a review that put the fix back to the broken CSS found the suite still green. A check that runs at the wrong width is a check of a different page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/page-checks.ts<span class="code__lines">:81-196</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every visible button, link, input, select and option — and anything else
+ * that says it is a button with `role=&quot;button&quot;`, which is what a map marker
+ * is — measured twice: is it drawn at least `drawn` pixels tall and wide,
+ * and does a press anywhere in a `hit`-pixel box around its centre land on
+ * it? The second is asked of the browser itself — `elementFromPoint` just
+ * inside each edge of that box — so a pseudo-element that extends the
+ * target counts, and a neighbour drawn over it does not.
+ *
+ * The element is scrolled to the middle of the screen first (the sticky
+ * header must not be what the probe hits), and the page is scrolled back
+ * to the top at the end. A marker is not scrolled itself — its map clips
+ * it, and scrolling inside a map would move the picture under the probe —
+ * so its map is brought to the middle instead, and a marker outside what
+ * its map shows is not on the screen to press. With a modal dialog open
+ * only the dialog is swept: everything behind it is under the scrim,
+ * unpressable on purpose. A checkbox or radio inside a `&lt;label&gt;` is
+ * measured as its label, because the label is what a finger presses.
+ *
+ * Two exemptions, each as narrow as it can be. A link inside a sentence is
+ * exempt altogether, as WCAG 2.5.8 exempts it. A map marker is exempt from
+ * the drawn floor only, down to WCAG's own 24px: a pin is drawn at 26px so
+ * the route under it stays readable, which is the map's legibility, not
+ * its target — the press is still the full `hit` box, and the map groups
+ * any markers whose press boxes would touch.
+ */
+export function smallTargetsInPage({ drawn, hit }: TargetRules): string[] {
+	const name = (el: Element) =&gt;
+		`${el.tagName.toLowerCase()}${
+			typeof el.className === 'string' &amp;&amp; el.className
+				? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')
+				: ''
+		} &quot;${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 32)}&quot;`;
+
+	const problems: string[] = [];
+	const seen = new Set&lt;Element&gt;();
+	// With a modal dialog open, the page behind it is under the scrim and not a target at all.
+	const scope =
+		document.querySelector(
+			'[role=&quot;dialog&quot;][aria-modal=&quot;true&quot;], [role=&quot;alertdialog&quot;][aria-modal=&quot;true&quot;]'
+		) ?? document;
+	const candidates = scope.querySelectorAll&lt;HTMLElement&gt;(
+		'button, a[href], input:not([type=&quot;hidden&quot;]), select, [role=&quot;option&quot;], [role=&quot;button&quot;]'
+	);
+
+	for (const el of candidates) {
+		const label = el instanceof HTMLInputElement ? el.closest('label') : null;
+		const subject: HTMLElement = label ?? el;
+		if (seen.has(subject)) continue;
+		seen.add(subject);
+
+		const style = getComputedStyle(el);
+		if (style.visibility === 'hidden' || el.closest('[inert], [aria-hidden=&quot;true&quot;]')) continue;
+		if (el.tagName === 'A' &amp;&amp; style.display === 'inline') continue;
+
+		let rect = subject.getBoundingClientRect();
+		// Not rendered, visually hidden (the 1px clip), or parked off the page like the skip link.
+		if (rect.width &lt;= 1 || rect.height &lt;= 1) continue;
+		if (rect.bottom + scrollY &lt; 0 || rect.right + scrollX &lt; 0) continue;
+
+		const map = subject.matches('.maplibregl-marker') ? subject.closest('.maplibregl-map') : null;
+		const floor = map ? Math.min(drawn, 24) : drawn;
+		if (rect.width &lt; floor || rect.height &lt; floor) {
+			problems.push(
+				`${name(subject)} is drawn ${Math.round(rect.width)}×${Math.round(rect.height)}`
+			);
+			continue;
+		}
+
+		// The middle of its scroller too: at a scroller's edge the reach would be clipped by the scroller, not missing.
+		(map ?? subject).scrollIntoView({ block: 'center', inline: 'center' });
+		rect = subject.getBoundingClientRect();
+		if (map) {
+			const view = map.getBoundingClientRect();
+			const x = rect.left + rect.width / 2;
+			const y = rect.top + rect.height / 2;
+			if (x &lt; view.left || x &gt; view.right || y &lt; view.top || y &gt; view.bottom) continue;
+		}
+		const cx = rect.left + rect.width / 2;
+		const cy = rect.top + rect.height / 2;
+		const reachX = Math.max(0, (hit - rect.width) / 2);
+		const reachY = Math.max(0, (hit - rect.height) / 2);
+		const probes: [string, number, number][] = [];
+		if (reachY &gt; 0) {
+			probes.push(
+				['above', cx, rect.top - reachY + 0.5],
+				['below', cx, rect.bottom + reachY - 0.5]
+			);
+		}
+		if (reachX &gt; 0) {
+			probes.push(
+				['left of', rect.left - reachX + 0.5, cy],
+				['right of', rect.right + reachX - 0.5, cy]
+			);
+		}
+
+		const misses = probes
+			.filter(([, x, y]) =&gt; x &gt;= 0 &amp;&amp; y &gt;= 0 &amp;&amp; x &lt;= innerWidth &amp;&amp; y &lt;= innerHeight)
+			.filter(([, x, y]) =&gt; {
+				const found = document.elementFromPoint(x, y);
+				// A toast passing over the page is a moment, not a layout: a press there is not a miss.
+				if (found?.closest('[data-sonner-toaster]')) return false;
+				return !found || !(found === subject || subject.contains(found));
+			})
+			.map(([where]) =&gt; where);
+		if (misses.length &gt; 0) {
+			problems.push(
+				`${name(subject)} (${Math.round(rect.width)}×${Math.round(rect.height)}) ` +
+					`misses a ${hit}px press ${misses.join(', ')} it`
+			);
+		}
+	}
+
+	scrollTo(0, 0);
+	return problems;
+}</code></pre>
+</figure>
+<p>The target check is the design’s rule made executable: on a phone, every visible button, link, input, select, option and <code>role=&quot;button&quot;</code> is drawn at least 36px each way and answers a press anywhere in a 44px box around its centre. The second half is asked of the browser itself — <code>document.elementFromPoint()</code> just inside each edge of that box — so a <code>::after</code> that extends the hit area counts, and a neighbour drawn over it does not. A checkbox inside a <code>&lt;label&gt;</code> is measured as its label, because the label is what a finger presses; a link inside a sentence is exempt, as WCAG 2.5.8 exempts it; with a modal open only the dialog is swept, because everything behind it is under the scrim on purpose; and a toast passing over the page is a moment, not a layout. Each element is scrolled to the middle of the screen first, so the sticky header is never what the probe hits.</p>
+<p><code>role=&quot;button&quot;</code> is in the list because of the map. A MapLibre marker is a <code>div</code> with that role, and the probe used to sweep only real buttons, links and form controls — so the pins and the bubbles were checked by nothing, and a mutation that shrank every pin to 16px left the check green. With them in, it found the pins’ press area was 40px, from the same padding-edge arithmetic as the icon buttons (chapter 27). A marker is the second, and narrowest, exemption: it may be *drawn* down to WCAG’s own 24px, because a pin is 26px so the route under it stays readable — that is the map’s legibility, not its target — and it must still answer the full 44px press. A marker is never scrolled itself, because scrolling inside a map would move the picture under the probe; its map is brought to the middle instead, and a marker outside what its map shows is not on the screen to press.</p>
+<p>Its first run failed on controls that *looked* right, and both reasons are worth knowing. An absolutely positioned <code>::after</code> with <code>inset: -4px</code> is measured from the element’s *padding box*, so on a 36px button with a 1px border it reached 42px, not 44 — hence <code>--reach</code> in <code>base.css</code>, which is half the difference plus the border. And two 36px buttons 8px apart, on a phone whose device pixel ratio is 2.625, met at a seam that rounds to one device pixel or the other; a press exactly between them could land on either, so the gaps between adjacent small targets became 12px, and a segmented control on a touch screen became 44px tall. Neither shows in a screenshot.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/visual.e2e.ts<span class="code__lines">:53-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const axeSource = readFileSync(
+	createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
+	'utf8'
+);
+
+interface Fixtures {
+	/** Whether this test's browser context starts with Ana's session. */
+	signedIn: boolean;
+}
+
+interface WorkerFixtures {
+	/** A storage state file holding a session for Ana, made once per worker. */
+	anaState: string;
+}
+
+const it = test.extend&lt;Fixtures, WorkerFixtures&gt;({
+	signedIn: [false, { option: true }],
+	anaState: [
+		async ({ browser }, use, workerInfo) =&gt; {
+			const file = `${workerInfo.project.outputDir}/ana-${workerInfo.workerIndex}.json`;
+			const context = await browser.newContext({ baseURL: workerInfo.project.use.baseURL });
+			await signInAsAna(await context.newPage());
+			await context.storageState({ path: file });
+			await context.close();
+			await use(file);
+		},
+		{ scope: 'worker' }
+	],
+	storageState: async ({ signedIn, anaState }, use) =&gt; {
+		await use(signedIn ? anaState : undefined);
+	}
+});</code></pre>
+</figure>
+<p>Signing in afresh for every signed-in screen would be over fifty sign-ins — fourteen screens, two themes, two projects. <code>test.extend</code> adds two fixtures: <code>anaState</code>, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and <code>signedIn</code>, an *option* a <code>describe</code> block sets with <code>use()</code>. The built-in <code>storageState</code> fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/visual.e2e.ts<span class="code__lines">:86-170</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The questions are about where a screen settles, so the matrix runs with
+ * reduced motion: the hero's timeline, the cards' rise and the map's camera
+ * are then cuts, and axe never measures a button's contrast half way
+ * through a fade (it did: 1.97:1, at 97% opacity). Motion is checked where
+ * it is decided — every duration is a token that reduced motion zeroes.
+ */
+const AXE_EXCEPTIONS = [
+	{
+		rule: 'scrollable-region-focusable',
+		selector: '.cmd__list',
+		// The palette's list scrolls, and focus never enters it: it is the listbox of a
+		// combobox, driven from the input by `aria-activedescendant` (Bits UI's Command),
+		// and the highlighted option is scrolled into view as the arrows move. axe asks
+		// for a focusable region, which here would be a tab stop that does nothing.
+		why: 'a combobox listbox, scrolled from its input'
+	}
+] as const;
+
+for (const theme of ['light', 'dark'] as const) {
+	it.describe(`${theme} theme`, () =&gt; {
+		it.use({ colorScheme: theme, reducedMotion: 'reduce' });
+
+		for (const screen of SCREENS) {
+			it.describe(screen.name, () =&gt; {
+				it.use({ signedIn: Boolean(screen.auth) });
+
+				it(`${screen.name} holds together`, async ({ page }, testInfo) =&gt; {
+					const phone = testInfo.project.name !== 'desktop';
+					it.skip(Boolean(screen.phoneOnly) &amp;&amp; !phone, 'there is no menu button on a desktop');
+					// The globe waits up to 30s for three.js and WebGL; the checks after it need their own time.
+					it.slow(Boolean(screen.webgl), 'the globe loads a large chunk and starts WebGL');
+
+					// The theme both ways the app reads it: the stored choice and the system's.
+					await page.addInitScript((t) =&gt; {
+						try {
+							localStorage.setItem('meridian:theme', t);
+						} catch {
+							/* private mode */
+						}
+					}, theme);
+					await openScreen(page, screen);
+
+					const overflow = await page.evaluate(overflowInPage, ALLOWED_SCROLLERS);
+					expect(overflow.scrollWidth, 'the page scrolls sideways').toBeLessThanOrEqual(
+						overflow.clientWidth
+					);
+					expect(overflow.offenders, 'elements that stick out').toEqual([]);
+
+					if (phone) {
+						const small = await page.evaluate(smallTargetsInPage, { drawn: 36, hit: 44 });
+						expect(small, 'targets a finger cannot hit').toEqual([]);
+					}
+
+					// Every WCAG 2 A and AA rule — but the excepted ones only on their one selector,
+					// so each runs a second time over the rest of the page.
+					const axe = () =&gt;
+						new AxeBuilder({ page, axeSource })
+							.exclude('canvas.maplibregl-canvas')
+							.exclude('.globe canvas');
+					const { violations } = await axe()
+						.withTags(['wcag2a', 'wcag2aa'])
+						.disableRules(AXE_EXCEPTIONS.map((e) =&gt; e.rule))
+						.analyze();
+					for (const exception of AXE_EXCEPTIONS) {
+						const rest = await axe()
+							.withRules([exception.rule])
+							.exclude(exception.selector)
+							.analyze();
+						violations.push(...rest.violations);
+					}
+					expect(
+						violations.map(
+							(v) =&gt;
+								`${v.id}: ${v.nodes.map((n) =&gt; `${n.target.join(' ')} — ${n.failureSummary ?? ''}`).join('; ')}`
+						),
+						'axe violations'
+					).toEqual([]);
+
+					expect(await page.locator('canvas.maplibregl-canvas').count()).toBeLessThanOrEqual(1);
+				});
+			});
+		}
+	});
+}</code></pre>
+</figure>
+<p>axe is the engine behind most accessibility tooling, and <code>@axe-core/playwright</code> runs it in a Playwright page. Two choices are deliberate. The engine is the project’s own <code>axe-core</code>, read from <code>node_modules</code> and handed over as <code>axeSource</code>, so the rules are the newest release rather than whichever the adapter bundled. And every rule axe tags <code>wcag2a</code> or <code>wcag2aa</code> — WCAG 2’s Level A and AA — runs, and *any* violation fails — not “no serious ones”, which is how a suite learns to live with a moderate problem forever. Only the two canvases are excluded, because a WebGL picture is not something axe can read — the canvases and nothing else. The first version excluded MapLibre’s <code>.maplibregl-canvas-container</code>, the element the canvas sits in, and every marker sits in it too: a dozen buttons people press, with names a screen reader announces, were out of axe’s sight, and stripping their names changed nothing in the result. Now it is <code>canvas.maplibregl-canvas</code>, and axe reads the markers like any other button. One rule has an exception, on one selector, with the reason written beside it: the palette’s list scrolls and focus never enters it, because it is the listbox of a combobox driven from the input with <code>aria-activedescendant</code>, and a tab stop there would do nothing. So the main run disables that rule and a second run applies it to the whole page *except* that selector — an exception that cannot quietly widen.</p>
+<p>The whole matrix runs with <code>reducedMotion: 'reduce'</code>, and the comment says why: the questions are about where a screen settles. The first run found a 1.97:1 primary button on the dark home page — axe had measured it at 97% opacity, half way through the hero’s fade. Motion is checked where it is decided, in the tokens that reduced motion zeroes; the matrix checks the page it settles into.</p>
+
+<aside class="callout callout--why">
+	<h4>Why both axe and a hand-written target check</h4>
+	<p>Because axe’s target-size rule is WCAG 2.2’s 2.5.8 — 24px, with spacing — and is not among the rules this suite runs, which are the ones axe tags <code>wcag2a</code> and <code>wcag2aa</code>. The design asks for more — 36px drawn and 44px to press on a phone, the platform guidelines’ number — and no off-the-shelf rule knows the brief. The general tool checks the standard; the probe above checks the promise the design made. When a project’s own rules are stricter than the standard, they need their own test, or they are a wish.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/visual.e2e.ts<span class="code__lines">:172-193</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">it.describe('one map at any width', () =&gt; {
+	it.use({ signedIn: true });
+
+	it('the trip never runs two MapLibre canvases', async ({ page }, testInfo) =&gt; {
+		it.skip(testInfo.project.name !== 'desktop', 'the desktop project can change its width');
+		const maps = page.locator('canvas.maplibregl-canvas');
+
+		// The itinerary has its side map from 64em, and none below.
+		await page.goto('/t/seediberia');
+		await expect(maps).toHaveCount(1);
+		await page.setViewportSize({ width: 700, height: 900 });
+		await expect(maps).toHaveCount(0);
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await expect(maps).toHaveCount(1);
+
+		// The Map tab is the map, at every width.
+		await page.goto('/t/seediberia?tab=map');
+		await expect(maps).toHaveCount(1);
+		await page.setViewportSize({ width: 700, height: 900 });
+		await expect(maps).toHaveCount(1);
+	});
+});</code></pre>
+</figure>
+<p>One map at any width. The itinerary’s side map exists from 64em and not below, and the reason is a WebGL context: a hidden MapLibre is still one, and a phone would pay for two on the Map tab. The test opens the itinerary at 1440px and counts one canvas, narrows the same page to 700px and counts none, widens it again and counts one — the <code>MediaQuery</code> that decides it is live, so resizing mounts and unmounts the map — and then on the Map tab counts one at both widths.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/visual.e2e.ts<span class="code__lines">:234-287</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The round trip and the bandwidth Lighthouse's mobile preset simulates,
+ * applied by the browser to every request of the page. It is not
+ * Lighthouse's own figure: Lighthouse models the page's requests one by
+ * one from an unthrottled run, and its preset for applied throttling adds
+ * a margin for that (562.5ms round trips). This is the same connection on
+ * every machine, which makes it a gate rather than a report.
+ */
+const SLOW_4G = {
+	offline: false,
+	latency: 150,
+	downloadThroughput: (1.6 * 1024 * 1024) / 8,
+	uploadThroughput: (750 * 1024) / 8
+};
+
+it.describe('first impressions on a phone', () =&gt; {
+	for (const url of ['/', '/explore', '/t/seedjapan2']) {
+		it(`${url} does not shift and paints its largest thing early`, async ({ page }, testInfo) =&gt; {
+			it.skip(testInfo.project.name !== 'phone', 'measured on the phone profile, like Lighthouse');
+
+			await watchVitals(page);
+			await page.goto(url, { waitUntil: 'load' });
+			await page.locator('html[data-hydrated]').waitFor();
+			await page.evaluate(() =&gt; document.fonts.ready);
+			// Long enough for anything late — a chart, a live chip, a font — to have moved if it was going to.
+			await page.waitForTimeout(1500);
+
+			const vitals = await readVitals(page);
+			expect(vitals.shifts, 'what moved').toEqual([]);
+			expect(vitals.cls).toBe(0);
+			expect(vitals.lcp).toBeGreaterThan(0);
+			expect(vitals.lcp).toBeLessThan(2500);
+		});
+
+		it(`${url} paints its largest thing inside 2.5 seconds on a slow 4G connection`, async ({
+			page
+		}, testInfo) =&gt; {
+			it.skip(testInfo.project.name !== 'phone', 'measured on the phone profile, like Lighthouse');
+
+			const cdp = await page.context().newCDPSession(page);
+			await cdp.send('Network.enable');
+			await cdp.send('Network.emulateNetworkConditions', SLOW_4G);
+			await watchVitals(page);
+			await page.goto(url, { waitUntil: 'load' });
+			await page.locator('html[data-hydrated]').waitFor({ timeout: 20_000 });
+			// The largest paint is reported a frame after it happens.
+			await page.waitForTimeout(500);
+
+			const { lcp } = await readVitals(page);
+			expect(lcp).toBeGreaterThan(0);
+			expect(lcp, 'the largest contentful paint, in ms').toBeLessThan(2500);
+		});
+	}
+});</code></pre>
+</figure>
+<p>And the three pages people land on — home, explore, a public trip — are measured on the phone profile, twice, with <code>PerformanceObserver</code>s installed before any of the page’s own script runs. <code>buffered: true</code> delivers the entries that happened before the observer existed. The first time the page loads as it is, and Cumulative Layout Shift must be *zero*, not under Lighthouse’s 0.1; when it is not, the test prints what moved, from each shift’s <code>sources</code>. The wait before reading is a second and a half, long enough for anything late — a chart, the live chip, a font — to have moved if it was going to.</p>
+<p>The second time it loads over a slow connection, and the largest paint must still land inside 2.5 seconds. Unthrottled, on the machine running the suite, that budget meant nothing: the home page’s largest paint was 0.36 seconds and would have had to get seven times worse to fail. So a CDP session — Chromium’s DevTools protocol, which Playwright opens for any page — applies <code>Network.emulateNetworkConditions</code> with the round trip and bandwidth Lighthouse’s mobile preset assumes: 150ms, 1.6 Mbps down, 750 kbps up. The home page’s hero then paints at 2.27 seconds, within twenty milliseconds on every run, because a throttled network is the same network everywhere. That is a gate with 230ms of headroom: about forty kilobytes more in front of the hero, and it fails.</p>
+
+<aside class="callout callout--why">
+	<h4>Why throttle the connection and not the processor</h4>
+	<p>Because a CPU multiplier is relative to the machine it runs on: “four times slower” is one speed on a laptop and another on a CI runner, so the same test would mean two different things. A throttled connection is a fixed number of milliseconds and bytes per second wherever it runs — and here it is the network that decides, too: adding the 4× CPU slowdown on top moved the home page’s paint by less than the run-to-run spread. It is not Lighthouse’s own figure, and the comment says so: Lighthouse simulates each request from an unthrottled run, and its preset for applied throttling adds a margin for that, 562.5ms round trips. On that preset this server’s home page paints at 6.1 seconds: the hero is requested in the first 700ms and arrives last, behind forty module preloads sharing HTTP/1.1’s six connections to one host. A reverse proxy that speaks HTTP/2 in front of <code>node build</code> would change that number, and chapter 44’s compose file leaves room for one. The gate holds the number it can hold steadily, and the other is written down here so that nobody mistakes one for the other.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>Why zero, when 0.1 is “good”</h4>
+	<p>Because this project can have zero, and a threshold invites spending it. Every image has its width and height, the fonts are preloaded, the live chip’s slot is as wide as its widest label, the charts reserve their boxes. A shift here would be a bug with a cause, and 0.05 of budget would let the first one through unnoticed and the second one argue it was only another 0.05. A field measurement of real visitors is the place for thresholds; a lab test of three known pages is the place for zero.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/screens.ts<span class="code__lines">:1-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE SCREENSHOT MATRIX
+ * =====================
+ *
+ * A Playwright script, not a test: it signs in as the seed's Ana, walks every
+ * screen in three viewports (Desktop Chrome at 1440×900, a Pixel 7, and a
+ * 360px phone — the narrowest the type scale is tuned for) and two themes,
+ * and writes a PNG per screen to `design/screens/&lt;theme&gt;/&lt;device&gt;/`.
+ * It never asserts about pixels — a person looks at the pictures. Beside
+ * them it prints the two things a person is bad at checking by eye:
+ *
+ *   1. OVERFLOW — on the phones, for every page: does the document scroll
+ *      sideways, which elements stick out past the right edge, and which
+ *      controls run past their card's content box (the table wrapper, the
+ *      tab strip and the two canvases are allowed to scroll inside
+ *      themselves and are excluded).
+ *   2. CONTRAST — the WCAG 2.x ratio of every text token on every surface
+ *      tier, for both sides of each `light-dark()` in `tokens.css`, against
+ *      the 4.5:1 floor for text and 3:1 for the focus ring.
+ *
+ * Neither is this script's own code any more. The screens are `e2e/matrix.ts`,
+ * the overflow walk is `src/lib/design/page-checks.ts` and the contrast table
+ * is `src/lib/design/contrast.ts` — the same three the gates use
+ * (`e2e/visual.e2e.ts`, at the same three widths, and `scripts/contrast.ts`),
+ * so what this prints is what `pnpm run verify` enforces, and either kind of
+ * problem makes it exit non-zero.
+ *
+ * The theme is forced two ways, and both are needed: `meridian:theme` in
+ * localStorage is what the boot script in `app.html` reads before the first
+ * paint, and `emulateMedia({ colorScheme })` is what `light-dark()` reads
+ * when nothing is stored. Set together, they agree.
+ *
+ * Run against the built server, with `PUBLIC_ORIGIN` the same for the build
+ * and the server — it is baked into the bundle, and a mismatch is a 403 on
+ * the sign-in this script starts with (`design/README.md` says more):
+ *
+ *   export DATABASE_URL=file:e2e.db PUBLIC_ORIGIN=http://localhost:4173 \
+ *     BETTER_AUTH_SECRET=e2e-only-secret-of-at-least-thirty-two-characters \
+ *     STOP_LIMIT=200 PORT=4173
+ *   node scripts/prepare-e2e-db.js &amp;&amp; pnpm run build
+ *   node build/index.js &amp;
+ *   node scripts/screens.ts
+ *
+ * Options: `--only=home,trips` to shoot a subset; `--device=phone|narrow|desktop`;
+ * `--theme=light|dark`; `--skip-globe` when there is no WebGL to be had.
+ */</code></pre>
+</figure>
+<p>The pictures are still taken, and still looked at by a person — this suite does not replace a review, it holds the review’s conclusions. <code>scripts/screens.ts</code> walks the same matrix in three viewports — the 1440×900 desktop, the Pixel 7, and a 360px phone, the narrowest width the type scale is tuned for — and two themes, writes a PNG of each screen to <code>design/screens/</code>, and prints the overflow and contrast reports beside them from the same two modules the gates use — exiting non-zero on a problem of either kind. The design of this app was reviewed that way, three times, a hundred-odd pictures at a time; every finding that a machine could have made is now one of the checks above — the third review was largely of the checks themselves, and found the two blind spots this chapter describes — and the ones it could not — a heading that wrapped badly, a fade in the wrong place — are in the comments beside the CSS that fixed them. The folder is ignored by git, because the pictures change with every CSS edit and a few megabytes of PNGs in every diff would bury the change itself.</p>
+<h3 id="bundle">The bundle guard</h3>
+<p>Two rules of the design can break while every test passes: GSAP belongs in the home page’s chunk and nowhere else, and no chunk over 20 KB gzipped may appear without somebody agreeing to it. A build that succeeds says nothing about either. So <code>pnpm run verify</code> runs <code>node scripts/bundle-guard.ts</code> between the build and the end-to-end suite, and the guard needs to know what is in each chunk — which a hashed file name does not say.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:404-438</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT IS IN EACH CHUNK
+ * =====================
+ *
+ * The bundle guard (`scripts/bundle-guard.ts`, run after the build in
+ * `pnpm run verify`) has two rules — GSAP only in the home page's chunk, no
+ * new chunk over 20 KB gzipped — and both need to know what a chunk *is*.
+ * Its file name is a hash and its manifest name is whichever module came
+ * first, so neither survives an edit. The bundler knows: at the end of the
+ * browser build this writes every chunk's file and the modules in it, with
+ * how many bytes of each made it into the output, to
+ * `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is
+ * not served.
+ */
+function bundleStats(): Plugin {
+	return {
+		name: 'meridian:bundle-stats',
+		apply: 'build',
+		generateBundle(_options, bundle) {
+			if (this.environment?.name !== 'client') return;
+			const chunks = Object.values(bundle)
+				.filter((output) =&gt; output.type === 'chunk')
+				.map((chunk) =&gt; ({
+					file: chunk.fileName,
+					entry: chunk.isEntry || chunk.isDynamicEntry,
+					facade: chunk.facadeModuleId,
+					modules: Object.fromEntries(
+						Object.entries(chunk.modules).map(([id, info]) =&gt; [id, info.renderedLength])
+					)
+				}));
+			mkdirSync('.svelte-kit', { recursive: true });
+			writeFileSync('.svelte-kit/bundle-stats.json', JSON.stringify(chunks));
+		}
+	};
+}</code></pre>
+</figure>
+<p>The bundler knows. A Vite plugin is an object with hooks, and <code>generateBundle</code> is called once per environment with every chunk the build is about to write, including the modules in each and how many bytes of each survived into the output (<code>renderedLength</code>). SvelteKit’s build has a client environment and a server one; the plugin writes only the client’s, to <code>.svelte-kit/bundle-stats.json</code> — beside the build, never in it, so it is not served.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/bundle-guard.ts<span class="code__lines">:68-91</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A name for a chunk that does not change when its hash does. */
+function identify(chunk: Chunk): string {
+	const ids = Object.keys(chunk.modules);
+	const routes = [
+		...new Set(
+			ids.map(local).filter((id) =&gt; /^src\/routes\/.*\+(page|layout|error)\.svelte$/.test(id))
+		)
+	].sort();
+	if (chunk.entry &amp;&amp; routes.length &gt; 0) return `route:${routes.join(' + ')}`;
+	if (
+		chunk.facade &amp;&amp;
+		!chunk.facade.includes('/node_modules/') &amp;&amp;
+		!chunk.facade.includes('.svelte-kit')
+	) {
+		return `module:${local(chunk.facade)}`;
+	}
+	const byPackage = new Map&lt;string, number&gt;();
+	for (const [id, bytes] of Object.entries(chunk.modules)) {
+		const name = packageOf(id) ?? 'app';
+		byPackage.set(name, (byPackage.get(name) ?? 0) + bytes);
+	}
+	const [top = 'app'] = [...byPackage].sort((a, b) =&gt; b[1] - a[1]).map(([name]) =&gt; name);
+	return `package:${top}`;
+}</code></pre>
+</figure>
+<p>A budget keyed by file name would break on every edit, because the hash changes with the content. So each chunk is *named* by what it is: the route it renders, the module it was split at (the globe’s dynamic import), or the package that is most of it — names that survive an edit. Two chunks of one package get the largest module’s path inside the package after the name, without pnpm’s version-stamped store path, so an upgrade does not rename them either.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/bundle-guard.ts<span class="code__lines">:103-144</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const problems: string[] = [];
+
+for (const { name, chunk, gsap } of measured) {
+	if (gsap &amp;&amp; name !== HOME) {
+		problems.push(`GSAP is in ${name} (${chunk.file}); it belongs in the home page's chunk only`);
+	}
+}
+if (!measured.some(({ name, gsap }) =&gt; gsap &amp;&amp; name === HOME)) {
+	problems.push(`GSAP is not in ${HOME}: did the hero timeline move, or the route?`);
+}
+
+/*
+ * The limit is per chunk. Two chunks can earn the same name — two split
+ * points in one package — so a repeated name gets the chunk's largest
+ * module after it, which keeps the budget's keys apart.
+ */
+const seenNames = new Map&lt;string, number&gt;();
+for (const { name } of measured) seenNames.set(name, (seenNames.get(name) ?? 0) + 1);
+const large = measured
+	.filter(({ kb }) =&gt; kb &gt; LIMIT_KB)
+	.map(({ name, kb, chunk }): [string, number] =&gt; {
+		if ((seenNames.get(name) ?? 0) &lt; 2) return [name, kb];
+		const [biggest = ''] = Object.entries(chunk.modules).sort((a, b) =&gt; b[1] - a[1])[0] ?? [];
+		return [`${name} (${inPackage(biggest)})`, kb];
+	})
+	.sort((a, b) =&gt; b[1] - a[1]);
+
+if (process.argv.includes('--write')) {
+	writeFileSync(budgetFile, JSON.stringify(Object.fromEntries(large), null, '\t') + '\n');
+	console.log(`bundle-budget.json: ${large.length} chunk(s) over ${LIMIT_KB} KB recorded`);
+} else {
+	for (const [name, kb] of large) {
+		const allowed = budget[name];
+		if (allowed === undefined) {
+			problems.push(
+				`${name} is ${kb} KB gzipped, over the ${LIMIT_KB} KB limit and not in the budget`
+			);
+		} else if (kb &gt; allowed * GROWTH) {
+			problems.push(`${name} grew from ${allowed} KB to ${kb} KB gzipped (more than 10%)`);
+		}
+	}
+}</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ node scripts/bundle-guard.ts
+BUNDLE (133 chunks, gzipped)
+   531.8 KB  route:src/routes/(site)/t/[slug=slug]/+page.svelte  (budget 531.1)
+   206.1 KB  module:src/lib/globe/Globe.svelte  (budget 206.1)
+      43 KB  package:bits-ui (bits-ui/dist/bits/date-field/date-field.svelte.js)  (budget 42.9)
+    30.9 KB  route:src/routes/(site)/+page.svelte  (budget 30.5)
+    24.9 KB  package:svelte (svelte/src/internal/client/reactivity/batch.js)  (budget 24.9)
+  everything else is under 20 KB</code></pre>
+</figure>
+<p>Five chunks are over the limit and all five are in <code>scripts/bundle-budget.json</code>, with the size they were measured at — three of them a little over it since, which is what the 10% is for. The trip page is big because it is MapLibre, Tiptap and LayerChart; the globe is three.js, and it loads only when somebody opens that tab (chapter 28). A budgeted chunk may grow 10% before the guard fails; a new chunk over 20 KB fails at once, with its name and its size. When a change is meant to grow one, <code>--write</code> measures again and rewrites the budget — and the budget is a file in the repository, so the growth is a line in the diff that a reviewer sees.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a budget in a file, and not a limit in the config</h4>
+	<p>Vite’s <code>chunkSizeWarningLimit</code> is one number for every chunk, a warning, and it is either too low for the trip page or too high for everything else. A budget per named chunk says something more useful: *this* chunk is big, on purpose, at *this* size. It makes the decision visible, and it turns a slow drift — a dependency that adds 3 KB a month — into a failure on the day it crosses 10%, rather than a discovery a year later.</p>
+</aside>
 <h3 id="found">What the suite found</h3>
 <p>A suite is worth what it catches. Before it went green this one caught six bugs that no unit test could have — one of them only in the phone project, one only in about one run in ten, and one that had been hiding behind a <code>.catch(() =&gt; {})</code>, which is the argument for a phone project and for never dismissing a flaky test in one paragraph.</p>
-<ol><li><strong>The trip page was a 500 for signed-in members.</strong> An <code>$effect</code> that sent the presence heartbeat read the heartbeat command’s own <code>pending</code> state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with <code>effect_update_depth_exceeded</code>. The fix is in chapter 31: read the trip id once, and wrap the command call in <code>untrack</code>. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.</li><li><strong>The place search never searched.</strong> Bits UI’s <code>Combobox.Input</code> is a controlled input; binding its value is not the same as listening to it, and the <code>query</code> the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. <code>pressSequentially</code> in the test — typing a character at a time, as a person does — found it.</li><li><strong>The settings page did not update after Save.</strong> The command used <code>.updates(tripBySlug(slug))</code> so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template <code>await</code>, which resolves once. Reading <code>query.current</code> in a <code>$derived</code> is the reactive way, and chapter 31 explains the difference.</li><li><strong>Text typed before the page had hydrated vanished.</strong> One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is <code>keepTyped()</code> in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with <code>page.route</code>, types, releases it, and waits for a <code>data-hydrated</code> attribute the root layout sets in <code>onMount</code> before asserting the text is still there.</li><li><strong>The seed’s ids were not ids.</strong> Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — <code>00000000-0000-4000-8000-0000000a001</code> — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the <code>IdSchema</code> check on the server, and the client’s <code>.catch(() =&gt; {})</code> on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: <code>seedId()</code> builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.</li><li><strong>On a phone, the Add-an-expense button could not be clicked.</strong> Playwright’s call log said <code>&lt;h3&gt; intercepts pointer events</code> — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly <code>auto</code>, and an <code>auto</code> track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. <code>grid-template-columns: minmax(0, 1fr)</code> on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.</li></ol>
-<p>The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code> on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender.</p>
+<ol><li><strong>The trip page was a 500 for signed-in members.</strong> An <code>$effect</code> that sent the presence heartbeat read the heartbeat command’s own <code>pending</code> state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with <code>effect_update_depth_exceeded</code>. The fix is in chapter 24: read the trip id once, and wrap the command call in <code>untrack</code>. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.</li><li><strong>The place search never searched.</strong> Bits UI’s <code>Combobox.Input</code> is a controlled input; binding its value is not the same as listening to it, and the <code>query</code> the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. <code>pressSequentially</code> in the test — typing a character at a time, as a person does — found it.</li><li><strong>The settings page did not update after Save.</strong> The command used <code>.updates(tripBySlug(slug))</code> so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template <code>await</code>, which resolves once. Reading <code>query.current</code> in a <code>$derived</code> is the reactive way, and chapter 31 explains the difference.</li><li><strong>Text typed before the page had hydrated vanished.</strong> One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is <code>keepTyped()</code> in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with <code>page.route</code>, types, releases it, and waits for a <code>data-hydrated</code> attribute the root layout sets in <code>onMount</code> before asserting the text is still there.</li><li><strong>The seed’s ids were not ids.</strong> Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — <code>00000000-0000-4000-8000-0000000a001</code> — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the <code>IdSchema</code> check on the server, and the client’s <code>.catch(() =&gt; {})</code> on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: <code>seedId()</code> builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.</li><li><strong>On a phone, the Add-an-expense button could not be clicked.</strong> Playwright’s call log said <code>&lt;h3&gt; intercepts pointer events</code> — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly <code>auto</code>, and an <code>auto</code> track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. <code>grid-template-columns: minmax(0, 1fr)</code> on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.</li></ol>
+<p>The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code> on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender. That probe is now <code>overflowInPage</code>, and it runs on every screen in the matrix.</p>
+<p>The design suite’s first run, against screens that had already passed a review by eye, added four more: hit areas of 42px where the CSS said 44, because an <code>::after</code> is measured from the padding box; presses that could land on either of two buttons 8px apart at a fractional device pixel ratio; a primary button at 1.97:1, measured by axe half way through a fade; and the palette’s list, a scrollable region with no tab stop, which turned out to be right and became the one written exception. And the behaviour suites, re-run, found the two that started this round: Cancel on “Delete this trip?” deleted the trip, and a German form answered in English. Each is now a test, so each is found once.</p>
+<p>Then a review of the gates themselves. It changed the code under each check to the broken version and watched for red, and found checks that were looking away: the overflow walk never ran at 360px, where its own bug lived; axe and the target probe never saw the map’s markers; the embed’s stylesheet assertion was true with the bug. Pointed at the map, the new suite found three bugs the pictures could not show — a bubble press that also started a stop, a flight taken back by a heartbeat, and pins 25px from the route on a phone — and the account suite, failing once in a slow run, found the explore filter wiping what was typed before hydration. The method is the lesson: a test is only known to work once it has been seen to fail.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -473,21 +1346,25 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 	</figcaption>
 	<pre><code>$ pnpm run test:e2e
 
-Running 36 tests using 1 worker
+Running 229 tests using 1 worker
 
   ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
   ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
   …
-  ✓  [phone] › trip.e2e.ts › an expense is added and the settle-up follows
-  ✓  [phone] › invite.e2e.ts › visibility by link switches the embed on, and the custom element renders the trip
+  ✓  [phone] › visual.e2e.ts › dark theme › trip-expenses › trip-expenses holds together
+  -  [desktop] › visual.e2e.ts › dark theme › nav-open › nav-open holds together
+  ✓  [phone] › map.e2e.ts › the pins are where the map is once it has settled
+  ✓  [phone] › visual.e2e.ts › first impressions on a phone › / paints its largest thing inside 2.5 seconds on a slow 4G connection
+  ✓  [narrow] › visual.e2e.ts › light theme › trip-new › trip-new holds together
 
-  36 passed (1.4m)</code></pre>
+  17 skipped
+  212 passed</code></pre>
 </figure>
 <aside class="callout callout--note"><p>When a test fails, <code>test-results/&lt;test&gt;/</code> holds a screenshot, an <code>error-context.md</code> with the accessibility tree at the moment of failure, and a <code>trace.zip</code> — open it with <code>pnpm exec playwright show-trace &lt;file&gt;</code> for a timeline with every action, every network request and a DOM snapshot at each step. The trace is almost always faster than a debugger.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain why the suite runs against <code>node build/index.js</code> and what <code>PUBLIC_ORIGIN</code> has to do with a 403.</li><li>You can write a two-context test and say which assertion in it proves the live query rather than a reload.</li><li>You can read a Playwright call log that says “intercepts pointer events” and name the first thing to measure.</li></ul>
+	<ul><li>You can explain why the suite runs against <code>node build/index.js</code> and what <code>PUBLIC_ORIGIN</code> has to do with a 403.</li><li>You can write a two-context test and say which assertion in it proves the live query rather than a reload.</li><li>You can read a Playwright call log that says “intercepts pointer events” and name the first thing to measure.</li><li>You can say what the target check asks the browser that a measurement of the box cannot, and how an axe exception is kept to one selector.</li><li>You can say why the design’s checks run at 360px as well as 412px, and why the throttled test slows the connection and not the processor.</li><li>You can describe how to prove a test can fail, and name an assertion in this chapter that could not.</li><li>You can explain how the bundle guard names a chunk, and what has to change in the repository for a budgeted chunk to grow.</li></ul>
 </aside>
 		</article>
 

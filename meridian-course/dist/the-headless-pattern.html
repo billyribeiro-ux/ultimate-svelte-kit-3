@@ -40,7 +40,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:139-160</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:211-232</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
@@ -70,7 +70,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:125-143</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:132-150</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root bind:open&gt;
@@ -98,7 +98,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:65-82</span></span>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:81-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;DateRangePicker.Root
@@ -108,6 +108,7 @@
 	}}
 	{placeholder}
 	{locale}
+	calendarLabel={label}
 	weekdayFormat=&quot;short&quot;
 	fixedWeeks
 	minValue={futureOnly ? placeholder : undefined}
@@ -115,15 +116,46 @@
 &gt;
 	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
 
+	&lt;!--
+		The two dates are one group that may wrap, and the calendar button
+		stays at the end: at 360px, &quot;mm/dd/yyyy – mm/dd/yyyy&quot; and a 36px
+		button are wider than a card's column, and a field that cannot shrink
+		pokes out of the card it is in.
+	--&gt;
 	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
-		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
-				{#snippet children({ segments })}</code></pre>
+		&lt;div class=&quot;datefield__dates&quot;&gt;
+			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
+				&lt;span class=&quot;datefield__date&quot;&gt;
+					&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
+						{#snippet children({ segments })}
+							{#each segments as { part, value: text }, i (part + i)}
+								&lt;DateRangePicker.Segment {part} class=&quot;datefield__segment&quot;&gt;
+									{#snippet child({ props })}
+										&lt;span {...props} {...segment(props, part)}&gt;{text}&lt;/span&gt;
+									{/snippet}
+								&lt;/DateRangePicker.Segment&gt;
+							{/each}
+						{/snippet}
+					&lt;/DateRangePicker.Input&gt;
+					{#if type === 'start'}
+						&lt;span class=&quot;range__dash&quot; aria-hidden=&quot;true&quot;&gt;–&lt;/span&gt;
+					{/if}
+				&lt;/span&gt;
+			{/each}
+		&lt;/div&gt;
+
+		&lt;DateRangePicker.Trigger
+			class=&quot;btn btn--icon btn--ghost btn--sm datefield__trigger&quot;
+			aria-label={label}
+		&gt;
+			&lt;CalendarBlankIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+		&lt;/DateRangePicker.Trigger&gt;
+	&lt;/div&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:64-81</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:68-87</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;/div&gt;
@@ -139,46 +171,46 @@
 					{/snippet}
 				&lt;/Combobox.Item&gt;
 			{:else}
-				&lt;p class=&quot;search__empty&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
+				&lt;p class=&quot;search__empty&quot;&gt;
+					{places.length === 0 ? m.places_loading() : m.stop_search_empty()}
+				&lt;/p&gt;
 			{/each}
 		&lt;/Combobox.Viewport&gt;
 	&lt;/Combobox.Content&gt;
 &lt;/Combobox.Portal&gt;</code></pre>
 </figure>
 <p>When a part has to render something the library computes — the segments of a date input, the months and weekdays of a calendar, whether an item is selected — it exposes it through a <code>children</code> snippet with parameters. <code>{#snippet children({ segments })}</code> receives the segments and renders one <code>Segment</code> part per entry; <code>{#snippet children({ selected })}</code> receives the item’s state. This is Svelte 5’s replacement for slot props, and it is typed: the parameter’s shape comes from the library’s declarations.</p>
+<p>The date segments use the other snippet a Bits part offers, <code>child</code>. Where <code>children</code> renders *inside* the part’s element, <code>{#snippet child({ props })}</code> replaces the element: the library computes every attribute it would have written — the role, the ARIA, the keyboard handlers — and hands them over, and the snippet renders the element itself with <code>{...props}</code>. Spreading something *after* them wins. That is how the project replaces the two English words Bits writes into each segment, and the “Previous” and “Next” it writes on the calendar’s month buttons, with the page’s language (chapter 21) without patching the library or fighting it from outside: the escape hatch is a documented part of the component, which is the test of a headless library worth choosing.</p>
 <h3 id="state">Idiom three: your state, their behaviour</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:28-47</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:35-51</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">let { onpick, id }: Props = $props();
+	<pre><code class="lang-svelte">let { places, onpick, id }: Props = $props();
 
 // What has been typed, read from the input itself: the root's `inputValue`
 // is a prop to set, not one to bind.
 let query = $state('');
 let value = $state('');
 
-// The gazetteer, awaited once. `await` in a `$derived` is fine in async mode.
-const all = $derived(await places());
-
 const matches = $derived.by(() =&gt; {
 	const needle = query.trim().toLowerCase();
-	if (!needle) return all.slice(0, 8);
-	return all.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
+	if (!needle) return places.slice(0, 8);
+	return places.filter((p) =&gt; p.name.toLowerCase().includes(needle)).slice(0, 8);
 });
 
 function pick(id: string) {
-	const place = all.find((p) =&gt; p.id === id);
+	const place = places.find((p) =&gt; p.id === id);
 	if (place) onpick(place);
 }</code></pre>
 </figure>
-<p>The combobox filters nothing. It opens a list, moves a highlight, and reports a value; which items are in the list is yours, and here it is a <code>$derived</code> over a <code>$state</code> string that an <code>oninput</code> handler updates. No effect copies library state into Svelte state or back — the root’s <code>bind:value</code> and <code>onValueChange</code> are the whole contract, and a <code>$derived</code> reads whatever it needs. The moment you find yourself writing an effect to “sync” a headless component, look for the prop or the callback you missed.</p>
+<p>The combobox filters nothing. It opens a list, moves a highlight, and reports a value; which items are in the list is yours, and here it is a <code>$derived</code> over the <code>places</code> prop and a <code>$state</code> string that an <code>oninput</code> handler updates. No effect copies library state into Svelte state or back — the root’s <code>bind:value</code> and <code>onValueChange</code> are the whole contract, and a <code>$derived</code> reads whatever it needs. The moment you find yourself writing an effect to “sync” a headless component, look for the prop or the callback you missed.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:133-146</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:144-157</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -200,7 +232,7 @@ const table = createTable({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:390-417</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:403-432</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each table.getHeaderGroups() as group (group.id)}
@@ -208,6 +240,7 @@ const table = createTable({
 		{#each group.headers as header (header.id)}
 			{@const sorted = header.column.getIsSorted()}
 			&lt;th
+				class=&quot;sortable&quot;
 				class:num={header.column.columnDef.meta?.align === 'end'}
 				aria-sort={sorted === 'asc'
 					? 'ascending'
@@ -228,7 +261,8 @@ const table = createTable({
 				&lt;/button&gt;
 			&lt;/th&gt;
 		{/each}
-		{#if editable}&lt;th&gt;&lt;/th&gt;{/if}
+		&lt;!-- The remove column has a name for a screen reader, and nothing to read for anyone else. --&gt;
+		{#if editable}&lt;th&gt;&lt;span class=&quot;visually-hidden&quot;&gt;{m.expenses_remove()}&lt;/span&gt;&lt;/th&gt;{/if}
 	&lt;/tr&gt;
 {/each}</code></pre>
 </figure>

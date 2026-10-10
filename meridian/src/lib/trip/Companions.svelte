@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
 	import { fade } from 'svelte/transition';
 	import { CheckIcon, CopyIcon, CrownSimpleIcon, LinkIcon, UserMinusIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -54,7 +55,7 @@
 			const result = await createInvite({ tripId: view.trip.id, role: inviteRole });
 			inviteUrl = result.url;
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 
@@ -74,7 +75,7 @@
 		try {
 			await changeRole({ tripId: view.trip.id, userId, role: next });
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 
@@ -82,7 +83,7 @@
 		try {
 			await removeMember({ tripId: view.trip.id, userId });
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		}
 	}
 </script>

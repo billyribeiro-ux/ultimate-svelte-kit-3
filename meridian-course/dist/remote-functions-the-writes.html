@@ -73,7 +73,7 @@ export const deleteTrip = form(v.object({ id: IdSchema }), async ({ id }) =&gt; 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:1-42</span></span>
+		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:1-43</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -97,6 +97,7 @@ import { command, getRequestEvent } from '$app/server';
 import { STOP_LIMIT } from '$app/env/private';
 import { and, eq } from 'drizzle-orm';
 import { nextPosition, place } from '#lib/domain/itinerary.ts';
+import { m } from '#lib/paraglide/messages.js';
 import { IdSchema, MoveStopSchema, StopInputSchema, StopPatchSchema } from '#lib/domain/schemas.ts';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
@@ -106,7 +107,7 @@ export const addStop = command(StopInputSchema, async (input) =&gt; {
 	const { user, trip } = await requireMember(input.tripId, 'editor');
 
 	if ((await trips.countStops(trip.id)) &gt;= STOP_LIMIT) {
-		error(422, `A trip holds at most ${STOP_LIMIT} stops`);
+		error(422, m.stop_limit({ limit: STOP_LIMIT }));
 	}
 
 	const position = nextPosition(await trips.listStops(trip.id), input.date);
@@ -119,11 +120,11 @@ export const addStop = command(StopInputSchema, async (input) =&gt; {
 	return row!;
 });</code></pre>
 </figure>
-<p><code>addStop</code> reads <code>STOP_LIMIT</code> — a number, by chapter 14 — and answers 422 when a trip is full. <code>nextPosition</code> from the domain puts the new stop after the last one on its day. <code>returning()</code> gives the row back so the client can select it immediately. And <code>bump</code> wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.</p>
+<p><code>addStop</code> reads <code>STOP_LIMIT</code> — a number, by chapter 14 — and answers 422 when a trip is full, with a sentence the toast can show as it is: <code>m.stop_limit({ limit: STOP_LIMIT })</code> is a Paraglide message with a parameter, so the limit reads “Eine Reise hat höchstens 500 Halte” on a German page. <code>nextPosition</code> from the domain puts the new stop after the last one on its day. <code>returning()</code> gives the row back so the client can select it immediately. And <code>bump</code> wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:44-84</span></span>
+		<span class="code__file">src/lib/remote/stops.remote.ts<span class="code__lines">:45-85</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const updateStop = command(StopPatchSchema, async ({ id, ...patch }) =&gt; {
@@ -173,7 +174,7 @@ export const me = command(async () =&gt; getRequestEvent().locals.user?.id ?? nu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:1-40</span></span>
+		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:1-31</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -184,44 +185,36 @@ export const me = command(async () =&gt; getRequestEvent().locals.user?.id ?? nu
  * sends: strings, unless the field was rendered with `fields.amount.as('number')`,
  * in which case SvelteKit coerces it before the schema runs, and a set of
  * checkboxes rendered with `fields.participants.as('checkbox', id)` arrives
- * as a `string[]`. The schema below is therefore *typed* by the form, and the
- * component's `as()` calls are checked against it: a checkbox for a field
- * the schema says is a number is a compile error.
+ * as a `string[]`. The schema — `ExpenseFormSchema`, in `domain/schemas.ts`
+ * because the browser runs it too, as the form's preflight — is therefore
+ * *typed* by the form, and the component's `as()` calls are checked against
+ * it: a checkbox for a field the schema says is a number is a compile error.
  *
  * The amount is converted to minor units here, once, with the trip's
  * currency — the form never sees cents, and the database never sees a float.
  */
 
 import * as v from 'valibot';
-import { error, invalid } from '@sveltejs/kit';
+import { invalid } from '@sveltejs/kit';
 import { command, form, requested } from '$app/server';
 import { and, eq } from 'drizzle-orm';
 import { toMinor } from '#lib/domain/money.ts';
-import { ExpenseCategorySchema, IdSchema, IsoDateSchema } from '#lib/domain/schemas.ts';
+import { ExpenseFormSchema, IdSchema } from '#lib/domain/schemas.ts';
+import { m } from '#lib/paraglide/messages.js';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
 import { tripBySlug } from './trips.remote.ts';
 
 export const addExpense = form(
-	v.object({
-		tripId: IdSchema,
-		title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Say what it was for'), v.maxLength(120)),
-		amount: v.pipe(
-			v.number('Enter an amount'),
-			v.minValue(0.01, 'Enter an amount'),
-			v.maxValue(10_000_000, 'That is more than a trip costs')
-		),
-		category: ExpenseCategorySchema,
-		date: IsoDateSchema,
-		paidBy: v.pipe(v.string(), v.minLength(1, 'Who paid?')),
-		participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
-	}),</code></pre>
+	// Shared with the browser, which runs it as a preflight before sending anything.
+	ExpenseFormSchema,</code></pre>
 </figure>
 <p>The doc comment is the lesson. A form sends strings, unless a field was rendered with <code>fields.amount.as(&quot;number&quot;)</code>, in which case its name carries a prefix and SvelteKit coerces the value before the schema runs; a set of checkboxes rendered with <code>fields.participants.as(&quot;checkbox&quot;, id)</code> arrives as a <code>string[]</code>. So the schema is typed by the form, and the component’s <code>as()</code> calls are checked against it — a checkbox for a field the schema says is a number is a compile error. The amount is a decimal *here*, and becomes minor units once, with the trip’s currency, on the way into the database.</p>
+<p>The schema itself is not in this file. <code>ExpenseFormSchema</code> lives in <code>domain/schemas.ts</code> (chapter 12), because the form in the browser runs the very same object as a *preflight* before it sends anything (chapter 29) — and a <code>.remote.ts</code> module may export remote functions and nothing else, so a schema defined here could not be imported there. One schema, two places it runs, no copy to drift.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:41-76</span></span>
+		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:32-67</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	async (data, issue) =&gt; {
@@ -232,11 +225,11 @@ export const addExpense = form(
 			where: eq(schema.member.tripId, trip.id),
 			columns: { userId: true }
 		});
-		const ids = new Set(members.map((m) =&gt; m.userId));
-		if (!ids.has(data.paidBy)) error(400, 'The payer is not on this trip');
+		const ids = new Set(members.map((member) =&gt; member.userId));
+		if (!ids.has(data.paidBy)) invalid(issue.paidBy(m.issue_payer_not_member()));
 		const participants = data.participants.filter((id) =&gt; ids.has(id));
 		// `invalid` with a field-bound issue lands under that field in the form.
-		if (participants.length === 0) invalid(issue.participants('Pick a companion'));
+		if (participants.length === 0) invalid(issue.participants(m.issue_participants_member()));
 
 		await db.transaction(async (tx) =&gt; {
 			const [row] = await tx
@@ -261,7 +254,7 @@ export const addExpense = form(
 	}
 );</code></pre>
 </figure>
-<p><code>invalid(issue.participants(&quot;Pick a companion&quot;))</code> is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and <code>invalid</code> with a field-bound issue lands the message under that field in the form as if the schema had produced it. The transaction writes the expense and its shares together, <code>bump</code> wakes the room, and the same <code>requested().refreshAll()</code> gives the submitting client its updated <code>tripBySlug</code> in the same response.</p>
+<p><code>invalid(issue.participants(m.issue_participants_member()))</code> is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and <code>invalid</code> with a field-bound issue lands the message under that field in the form as if the schema had produced it — in the request’s language, because <code>m</code> reads the locale the middleware stored. A payer who is not on the trip is the same kind of answer, <code>issue.paidBy(…)</code>, rather than a bare 400 that would have thrown the whole form away. The transaction writes the expense and its shares together, <code>bump</code> wakes the room, and the same <code>requested().refreshAll()</code> gives the submitting client its updated <code>tripBySlug</code> in the same response.</p>
 
 <figure class="code">
 	<figcaption>
@@ -295,7 +288,7 @@ export const saveNote = command(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:26-46</span></span>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:29-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** The default landing place, used whenever we cannot trust what we were given. */
@@ -323,13 +316,16 @@ const RedirectSchema = v.optional(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:48-73</span></span>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:51-79</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const signIn = form(
 	v.object({
 		email: EmailSchema,
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		password: v.pipe(
+			v.string(() =&gt; m.issue_password_missing()),
+			v.minLength(1, () =&gt; m.issue_password_missing())
+		),
 		redirectTo: RedirectSchema
 	}),
 	async (data, issue) =&gt; {
@@ -353,7 +349,7 @@ const RedirectSchema = v.optional(
 	}
 );</code></pre>
 </figure>
-<p>The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses <code>//evil.example</code> — a protocol-relative URL that starts with a slash and still leaves the site.</p>
+<p>The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses <code>//evil.example</code> — a protocol-relative URL that starts with a slash and still leaves the site. The password’s messages are functions, <code>() =&gt; m.issue_password_missing()</code>, for the reason chapter 12 gave: valibot calls a message function when the check fails, which is inside the request, where Paraglide knows the language.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

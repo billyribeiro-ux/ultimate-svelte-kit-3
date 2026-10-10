@@ -6,38 +6,29 @@
  * sends: strings, unless the field was rendered with `fields.amount.as('number')`,
  * in which case SvelteKit coerces it before the schema runs, and a set of
  * checkboxes rendered with `fields.participants.as('checkbox', id)` arrives
- * as a `string[]`. The schema below is therefore *typed* by the form, and the
- * component's `as()` calls are checked against it: a checkbox for a field
- * the schema says is a number is a compile error.
+ * as a `string[]`. The schema — `ExpenseFormSchema`, in `domain/schemas.ts`
+ * because the browser runs it too, as the form's preflight — is therefore
+ * *typed* by the form, and the component's `as()` calls are checked against
+ * it: a checkbox for a field the schema says is a number is a compile error.
  *
  * The amount is converted to minor units here, once, with the trip's
  * currency — the form never sees cents, and the database never sees a float.
  */
 
 import * as v from 'valibot';
-import { error, invalid } from '@sveltejs/kit';
+import { invalid } from '@sveltejs/kit';
 import { command, form, requested } from '$app/server';
 import { and, eq } from 'drizzle-orm';
 import { toMinor } from '#lib/domain/money.ts';
-import { ExpenseCategorySchema, IdSchema, IsoDateSchema } from '#lib/domain/schemas.ts';
+import { ExpenseFormSchema, IdSchema } from '#lib/domain/schemas.ts';
+import { m } from '#lib/paraglide/messages.js';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
 import { tripBySlug } from './trips.remote.ts';
 
 export const addExpense = form(
-	v.object({
-		tripId: IdSchema,
-		title: v.pipe(v.string(), v.trim(), v.minLength(1, 'Say what it was for'), v.maxLength(120)),
-		amount: v.pipe(
-			v.number('Enter an amount'),
-			v.minValue(0.01, 'Enter an amount'),
-			v.maxValue(10_000_000, 'That is more than a trip costs')
-		),
-		category: ExpenseCategorySchema,
-		date: IsoDateSchema,
-		paidBy: v.pipe(v.string(), v.minLength(1, 'Who paid?')),
-		participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
-	}),
+	// Shared with the browser, which runs it as a preflight before sending anything.
+	ExpenseFormSchema,
 	async (data, issue) => {
 		const { trip } = await requireMember(data.tripId, 'editor');
 
@@ -46,11 +37,11 @@ export const addExpense = form(
 			where: eq(schema.member.tripId, trip.id),
 			columns: { userId: true }
 		});
-		const ids = new Set(members.map((m) => m.userId));
-		if (!ids.has(data.paidBy)) error(400, 'The payer is not on this trip');
+		const ids = new Set(members.map((member) => member.userId));
+		if (!ids.has(data.paidBy)) invalid(issue.paidBy(m.issue_payer_not_member()));
 		const participants = data.participants.filter((id) => ids.has(id));
 		// `invalid` with a field-bound issue lands under that field in the form.
-		if (participants.length === 0) invalid(issue.participants('Pick a companion'));
+		if (participants.length === 0) invalid(issue.participants(m.issue_participants_member()));
 
 		await db.transaction(async (tx) => {
 			const [row] = await tx
