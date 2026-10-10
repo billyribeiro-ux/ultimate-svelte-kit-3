@@ -3,6 +3,7 @@
 	import { KeyIcon, SignOutIcon, TrashIcon } from 'phosphor-svelte';
 	import Section from '#lib/components/Section.svelte';
 	import { explain, registerPasskey } from '#lib/auth/passkey.ts';
+	import { messageOf } from '#lib/errors.ts';
 	import {
 		getProfile,
 		listPasskeys,
@@ -40,7 +41,7 @@
 			try {
 				if (await form.submit()) toast('Saved');
 			} catch (e) {
-				toast((e as Error).message, 'error');
+				toast(messageOf(e, 'Could not save that'), 'error');
 			}
 		});
 
@@ -141,7 +142,8 @@
 											await f.submit();
 											toast('Passkey removed');
 										} catch (e) {
-											toast((e as Error).message, 'error');
+											// "That is your only passkey…" is a 409 from the server, in `body.message`.
+											toast(messageOf(e, 'Could not remove that passkey'), 'error');
 										}
 									})}
 								>

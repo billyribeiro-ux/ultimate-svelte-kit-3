@@ -42,8 +42,10 @@
 	let cancelError = $state<string | null>(null);
 
 	/**
-	 * The booking, awaited so the layout's boundary suspends and this page arrives
-	 * server-rendered rather than filling in after hydration.
+	 * The booking, awaited so the boundary SvelteKit wraps around this page
+	 * suspends and the page arrives server-rendered rather than filling in after
+	 * hydration. An unknown token rejects with `error(404, …)`, and that same
+	 * boundary renders `+error.svelte` with the message.
 	 */
 	const b = $derived(await getManagedBooking(data.token));
 

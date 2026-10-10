@@ -162,11 +162,11 @@ test('a list that cannot load says so, with the server’s reason', async ({ pag
 	release();
 	await expect(hydrated(page)).toHaveCount(1);
 
-	// The keys say what the server said; the views have one sentence for every failure.
+	// Both say what the server said, from the `App.Error` each boundary is handed.
 	await expect(page.getByRole('region', { name: 'API keys' }).getByRole('alert')).toHaveText(
 		'Sign in to continue.'
 	);
 	await expect(page.getByRole('region', { name: 'Saved views' }).getByRole('alert')).toHaveText(
-		'Could not load saved views.'
+		'Sign in to continue.'
 	);
 });

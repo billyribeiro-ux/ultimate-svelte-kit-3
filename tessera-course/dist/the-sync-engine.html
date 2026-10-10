@@ -328,6 +328,7 @@ try {
 	<h4>Retryable or not</h4>
 	<p>A network error is retryable and the outbox keeps the work. A 403 or 422 is not: sending it again fails identically, forever, and the operations would sit in the outbox for the life of the browser profile. Those are surfaced and <strong>the queue is left alone</strong> for a person to decide about. Losing somebody’s work silently in order to tidy up a queue is not a trade a tool gets to make on their behalf.</p>
 </aside>
+<aside class="callout callout--note"><p>Why <code>body?.message</code>, and not <code>message</code>? An awaited command that fails rejects with an <code>HttpError</code>: <code>{ status, body }</code>, with the server’s <code>App.Error</code> as the <code>body</code>. It is not an <code>Error</code> and has no <code>message</code> of its own, so <code>status</code> and <code>body.message</code> are the two things worth reading — which is exactly what this method reads. Chapter 30 puts this shape next to the other one, the <code>App.Error</code> a boundary is handed.</p></aside>
 <h3 id="snapshots">Local snapshots, debounced</h3>
 
 <figure class="code">

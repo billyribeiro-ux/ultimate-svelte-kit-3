@@ -215,21 +215,26 @@ export function messageFrom(thrown: unknown, fallback: string): string {
 		if (message) return message;
 	}
 
-	if (thrown instanceof Error && thrown.message.trim()) {
-		return thrown.message;
-	}
-
 	return fallback;
 }`
 			},
 			{
+				type: 'p',
+				text: 'Notice what is not there: a second branch for `thrown instanceof Error`. That branch looks like a kindness, and an earlier version of this helper had it. The other things a remote call rejects with are a dropped connection, which arrives as the browser\'s own `TypeError: Failed to fetch`, and a bug in our code, which arrives as whatever the bug said. We forced both in a probe, and with the branch in place the alert read "Failed to fetch". Neither has been through `handleError`, so neither is a sentence anybody vetted for a customer\'s screen. The fallback is for exactly those, so the helper reads `body.message` and nothing else.'
+			},
+			{
 				type: 'note',
-				text: 'Write it once, in `src/lib/errors.ts`, and use it in every catch. Seven places in this app catch a remote rejection; all seven had the same bug, because all seven were written from the same reasonable instinct.'
+				text: 'Write it once, in `src/lib/errors.ts`, and use it in every `catch` around a remote call. Six places in this app catch a remote rejection; all six had the same bug, because all six were written from the same reasonable instinct.'
+			},
+			{
+				type: 'warn',
+				title: 'A catch is not a boundary',
+				text: 'This helper is for the value a `catch` receives. A `<svelte:boundary>`\'s `failed` snippet and `+error.svelte` are handed something else: an `App.Error`, `{ status, message }`, with no `body` at all. Pass one of those to `messageFrom` and the fallback wins every time. Chapter 23 shows the boundary side, and how this project got it wrong.'
 			},
 
 			{
 				type: 'checkpoint',
-				text: 'The booking page renders from a `query`, and a `command` that calls `error(400, …)` shows *your* message in the browser, not a generic one.'
+				text: 'The booking page renders from a `query`, and a `command` that calls `error(400, …)` shows *your* message in the browser, not a generic one. Open the same booking in two windows, cancel it in one, then press Cancel in the other: the alert says "That booking is already cancelled.", the server\'s sentence. Switch the network off in your browser\'s developer tools and try again, and you get the fallback, not "Failed to fetch".'
 			}
 		]
 	},

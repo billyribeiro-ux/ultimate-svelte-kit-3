@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Remote functions: query, batch, form and command — Building Sextant</title>
-<meta name="description" content="Four kinds, one rule for choosing between them, and two mistakes that both render a 500 page over a working form.">
+<meta name="description" content="Four kinds, one rule for choosing between them, two mistakes that both render a 500 page over a working form, and the two shapes a refusal arrives in.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 39</p>
 			<h1>Remote functions: query, batch, form and command</h1>
-			<p class="lede">Four kinds, one rule for choosing between them, and two mistakes that both render a 500 page over a working form.</p>
+			<p class="lede">Four kinds, one rule for choosing between them, two mistakes that both render a 500 page over a working form, and the two shapes a refusal arrives in.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Call the server without writing an endpoint, and know which kind each call should be.</p></aside>
 			
 <figure class="code">
@@ -124,7 +124,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:213-234</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:242-263</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
@@ -167,7 +167,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:241-264</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:270-293</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
@@ -247,40 +247,270 @@ if (clearsAt !== null &amp;&amp; !Number.isFinite(clearsAt)) {
 	invalid(issue.clearsAt('The clear threshold must be a number, or empty.'));
 }</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><code>error(400, …)</code> inside a form handler throws an <code>HttpError</code>, which SvelteKit turns into a 500 error <strong>page</strong> — the whole form, and the list around it, replaced by &quot;Internal Error&quot;. <code>invalid(issue.query(…))</code> puts the message beside the field and marks the input. Both mistakes in this chapter were found by one end-to-end test that creates a rule; both looked perfectly reasonable in review.</p></aside>
+<aside class="callout callout--warn"><p><code>error(400, …)</code> inside a form handler throws an <code>HttpError</code>, which SvelteKit turns into a 500 error <strong>page</strong> — the whole form, and the list around it, replaced by &quot;Internal Error&quot;. <code>invalid(issue.query(…))</code> puts the message beside the field and marks the input. Both of these mistakes were found by one end-to-end test that creates a rule; both looked perfectly reasonable in review.</p></aside>
 <h3 id="per-instance">One instance per row</h3>
 <p>A remote form is a single object with one attached <code>&lt;form&gt;</code> element, so spreading the same one inside an <code>{#each}</code> throws — and the page then renders its error branch, which looks like the query failed rather than like a markup mistake. <code>.for(id)</code> mints one instance per id, which is also what gives each row its own pending state.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:84-103</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:102-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;h2&gt;{rule.name}&lt;/h2&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	`.for(rule.id)`, not the bare form object.
 
-&lt;div class=&quot;rule__actions&quot;&gt;
+	A remote form is a single object with one attached `&lt;form&gt;` element, so
+	spreading the same one inside an `{#each}` throws &quot;A form object can only
+	be attached to a single `&lt;form&gt;` element&quot; — and the whole page then
+	renders its error branch. `.for` mints one instance per id, which is also
+	what gives each row its own pending state.
+--&gt;
+{const remove = $derived(deleteRule.for(rule.id))}</code></pre>
+</figure>
+<h3 id="a-refused-command">A command the server refuses</h3>
+<p>The toggle used to call <code>toggleRule(…)</code> and forget it. When the server refused, nothing said so: the rejection went unhandled, and the box went on showing what had been asked for rather than what the server had kept. A boundary could not have helped. The Svelte documentation is plain that errors “in event handlers or after a <code>setTimeout</code> or async work” are <strong>not</strong> caught by error boundaries. So the page catches the rejection itself, puts the box back, and shows the refusal in the row.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:38-66</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** The last toggle the server refused, and what it said. */
+let refused = $state&lt;{ id: string; message: string } | null&gt;(null);
+
+/**
+ * Enable or disable, and say so when the server will not.
+ *
+ * Nothing draws a command's failure for it: no boundary sees an event
+ * handler, and the rejection used to go unhandled, leaving the box showing
+ * what was asked for rather than what the server kept. So the box is put back
+ * and the refusal is shown in the row.
+ *
+ * What arrives here is NOT an `App.Error`. A boundary is handed what
+ * `handleError` made of a failure; awaiting a command hands back the
+ * `HttpError` the client rebuilt from the response, and its message is on
+ * `body`. `isHttpError` tells it from a request that never reached the server.
+ */
+async function toggle(id: string, box: HTMLInputElement): Promise&lt;void&gt; {
+	const enabled = box.checked;
+	refused = null;
+	try {
+		await toggleRule({ tenant: data.tenant, id, enabled });
+	} catch (error) {
+		box.checked = !enabled;
+		refused = {
+			id,
+			message: isHttpError(error) ? error.body.message : 'The change did not reach the server.'
+		};
+	}
+}</code></pre>
+</figure>
+<p>The line that matters is the one that reads the message, because a refusal reaches the browser in two shapes. A <code>failed</code> snippet is handed what SvelteKit’s <code>handleError</code> made of the error, and the documentation says so in a comment on its own example: “error went through the <code>handleError</code> hook and is of type <code>App.Error</code>” — <code>{ status, message }</code>, plus whatever the app adds. Awaiting a command hands back something else: the <code>HttpError</code> the client rebuilt from the response, with the message on <code>body</code> and none of its own. A probe that ended the session under a live page, then made a list reload and pressed the toggle, printed both.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>boundary (traces list)  {&quot;status&quot;:401,&quot;message&quot;:&quot;Sign in to continue.&quot;}
+                        a plain object: not an Error, and no body
+
+command (toggleRule)    HandledHttpError, which extends HttpError
+                        {&quot;status&quot;:401,&quot;body&quot;:{&quot;status&quot;:401,&quot;message&quot;:&quot;Sign in to continue.&quot;}}
+                        not an Error, and no message</code></pre>
+</figure>
+<p>So a boundary reads <code>message</code>, a command’s <code>catch</code> reads <code>body.message</code>, and each is the wrong field for the other: the wrong one is <code>undefined</code>, and a fallback sentence quietly takes its place. <code>isHttpError</code> tells a refusal from a request that never reached the server, which is the one case the fallback here is for. Server code is unchanged by any of this. A remote function or a hook that catches an <code>error()</code> holds the <code>HttpError</code> itself, and <code>isHttpError(e) &amp;&amp; e.body.message</code> is still right there.</p>
+<aside class="callout callout--note"><p>The documentation writes the snippet as <code>failed(error: App.Error)</code>. Svelte types a boundary’s <code>failed</code> as <code>Snippet&lt;[error: unknown, reset: () =&gt; void]&gt;</code>, so <code>svelte-check</code> refuses that annotation — “Type <code>unknown</code> is not assignable to type <code>Error</code>” — and the snippets here take <code>error</code> untyped and cast it where they read it: <code>(error as App.Error).message</code>.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/alerts.e2e.ts<span class="code__lines">:132-157</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a toggle the server refuses says why, and the box goes back', async ({ page, context }) =&gt; {
+	await page.goto('/demo/alerts');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	const row = page
+		.getByRole('listitem')
+		.filter({ has: page.getByRole('checkbox', { name: 'Enabled' }) })
+		.first();
+	const toggle = row.getByRole('checkbox', { name: 'Enabled' });
+	const before = await toggle.isChecked();
+
+	/*
+	 * The session ends under a live page, so the command is refused for real:
+	 * a 401 that says &quot;Sign in to continue.&quot;. `click`, not `check` or `uncheck`,
+	 * which insist the box ends up changed — and the point is that it does not.
+	 *
+	 * The message comes from the rejection's `body`. Awaiting a command rejects
+	 * with the `HttpError` the client rebuilt from the response, not with the
+	 * `App.Error` a boundary is handed, and it has no `message` of its own.
+	 */
+	await context.clearCookies();
+	await toggle.click();
+
+	await expect(row.getByRole('alert')).toHaveText('Sign in to continue.');
+	await expect(toggle).toBeChecked({ checked: before });
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # the old handler: call the command, catch nothing
+$ pnpm exec playwright test e2e/alerts.e2e.ts -g 'refuses'
+
+  ✘ a toggle the server refuses says why, and the box goes back
+      Expected: &quot;Sign in to continue.&quot;
+      Error: element(s) not found
+
+  2 failed</code></pre>
+</figure>
+<h3 id="what-a-boundary-catches">What a boundary can catch</h3>
+<p>The explore page puts its results in one <code>&lt;svelte:boundary&gt;</code>, and the comment above it promised that a refused query — a 400 from the checker is the common case — would be explained by the boundary’s <code>failed</code> snippet. It never was. Pressing Run on <code>from logs | where</code> replaced the whole page with SvelteKit’s error page: a “400” heading, “Expected a value” under it, and no editor to fix the query in.</p>
+<p>The result is awaited in the script, and the boundary catches what is read inside it. The trouble was three values made from the result — the rows, the columns and the chart — which were <code>$derived</code>s in the script too. A <code>$derived</code> belongs to the component that declares it, and when one throws, Svelte reports the error from there: to the boundary around the component, not to the one around whatever was reading it. For a page, that is the boundary SvelteKit puts around every page, and its <code>failed</code> is the error page. The traces page reads its result straight from the markup, and never had the problem.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:451-466</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary onerror={(_, reset) =&gt; (resetResults = reset)}&gt;
 	&lt;!--
-		A checkbox, not a switch made of two divs.
+		EVERYTHING DERIVED FROM `result` IS DECLARED HERE, NOT IN THE SCRIPT.
 
-		It is announced correctly, it is reachable with Tab, it toggles
-		with Space, and the label is associated with it. Every one of
-		those is work to rebuild and easy to get subtly wrong.
+		A `$derived` belongs to the component that declares it, and when it
+		throws, the error goes to that component's boundary rather than to the
+		one around whatever was reading it. These three were in the script, so a
+		refused query took the whole page down to SvelteKit's error page — the
+		editor and the Run button with it — and this boundary's `failed` never
+		ran. Declared in the boundary, they belong to it.
 	--&gt;
-	&lt;label class=&quot;toggle&quot;&gt;
-		&lt;input
-			type=&quot;checkbox&quot;
-			checked={rule.enabled}
-			onchange={(event) =&gt;
-				toggleRule({
-					tenant: data.tenant,
-					id: rule.id,
-					enabled: event.currentTarget.checked
-				})}</code></pre>
+	{const rows = $derived(tailing ? tailRows : result.rows)}
+	{const columns = $derived(
+		tailing &amp;&amp; tailRows.length &gt; 0 ? Object.keys(tailRows[0]!) : result.columns
+	)}
+	{const chart = $derived(chartOf())}</code></pre>
+</figure>
+<p>Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they belong to it, so “errors in <code>await</code> expressions will bubble to the nearest error boundary” now means this one. The chart became a plain function, <code>chartOf()</code>, so that its <code>$derived</code> could be declared here with the other two.</p>
+<p>A boundary that has failed then has to be told to draw again. Its content is gone, so nothing in it reads the result any more, and the next answer would never reach it. The boundary’s <code>onerror</code> hands over its <code>reset</code>, and an effect that reads the result only to hear it change calls it when the next answer lands — rows, or the next refusal. A first version timed the reset with <code>settled()</code> instead, with and without a <code>tick()</code> before it, and either way one of Run and Try again drew the area before its answer had arrived.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:152-173</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A FAILED RESULTS AREA HAS TO BE TOLD TO DRAW AGAIN.
+ *
+ * Once the boundary below shows `failed`, nothing left inside it reads
+ * `result`, so the next answer would never reach it. Its `onerror` leaves its
+ * `reset` here, and this effect — which reads `result` only to hear it
+ * change — calls it when that answer arrives: rows, or the next refusal. The
+ * `try` matters. Reading a `result` that holds an error throws, and a throw
+ * from this script would go to the page's boundary, not the results'.
+ */
+let resetResults: (() =&gt; void) | null = null;
+
+$effect(() =&gt; {
+	try {
+		void result;
+	} catch {
+		// A refusal. The boundary draws it, once the reset below has run.
+	}
+	const reset = resetResults;
+	resetResults = null;
+	if (reset) queueMicrotask(reset);
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why “Try again” refreshes the query</h4>
+	<p>The boundary’s own <code>reset</code> only draws the area afresh, and the client remembers a refused query: drawn again, it shows the same refusal without asking the server anything. After a dropped connection or an expired session that is no use, so the button calls <code>refresh()</code> on the query and lets the answer arrive through the result, like any other.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:125-135</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * &quot;Try again&quot; asks the server again. The client remembers a refused query,
+ * so redrawing the results area on its own would show the same refusal
+ * without making a request — no use after a dropped connection or an expired
+ * session. Whatever comes back arrives through `result`, like any answer.
+ */
+function retry(): void {
+	void runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range })
+		.refresh()
+		.catch(() =&gt; {});
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:340-375</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A QUERY THE SERVER REFUSES
+ * ==========================
+ *
+ * The claim in `+page.svelte` is that a refused query — a 400 from the checker
+ * is the common case — is explained in the results area, by its boundary's
+ * `failed` snippet, with the editor left where it was to fix the query in.
+ *
+ * It used to take the whole page down instead. The values derived from the
+ * result were declared in the script, a `$derived` that throws reports to the
+ * boundary of the component that declared it, and so the refusal went past the
+ * results' boundary to SvelteKit's error page: a &quot;400&quot; heading, the server's
+ * sentence under it, and no editor.
+ */
+test('a query the server refuses is explained where its results would be', async ({ page }) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&amp;range=-6h`);
+	// Only the client adds `view`, so this is also the proof that the page is live.
+	await expect(page).toHaveURL(/view=table/);
+
+	const editor = page.getByRole('combobox', { name: 'Query' });
+	const run = page.getByRole('button', { name: 'Run', exact: false });
+	const results = page.getByRole('region', { name: 'Results' });
+
+	await editor.fill('from logs | where');
+	await run.click();
+
+	// The parser's own sentence, as the server said it, where the rows would be.
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(editor).toHaveValue('from logs | where');
+
+	// And the next query that works draws its rows in the same place.
+	await editor.fill('from logs | take 3');
+	await run.click();
+	await expect(results.getByRole('grid')).toBeVisible();
+	await expect(results.getByRole('alert')).toHaveCount(0);
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # the old page: rows, columns and chart as $derived in the script
+$ pnpm exec playwright test e2e/explore.e2e.ts -g 'refuses is explained'
+
+  ✘ a query the server refuses is explained where its results would be
+      Expected: &quot;Expected a value&quot;
+      Error: element(s) not found
+
+  2 failed</code></pre>
 </figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A results table draws forty sparklines in one round trip.</li><li>Your rule form works with JavaScript disabled.</li><li>An invalid rule shows a message beside the field rather than an error page.</li></ul>
+	<ul><li>A results table draws forty sparklines in one round trip.</li><li>Your rule form works with JavaScript disabled.</li><li>An invalid rule shows a message beside the field rather than an error page.</li><li>A toggle the server refuses goes back to how it was and says why.</li><li>A query the server refuses is explained where its rows would be, with the editor still there.</li></ul>
 </aside>
 		</article>
 

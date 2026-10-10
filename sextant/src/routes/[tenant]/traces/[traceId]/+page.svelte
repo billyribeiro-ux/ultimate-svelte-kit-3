@@ -68,10 +68,9 @@
 			<p class="empty" role="status">Loading the trace…</p>
 		{/snippet}
 
+		<!-- An `App.Error`, not an `HttpError`: the server's words are on `message`. Why: the traces page. -->
 		{#snippet failed(error)}
-			<p class="empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'The trace could not load.'}
-			</p>
+			<p class="empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

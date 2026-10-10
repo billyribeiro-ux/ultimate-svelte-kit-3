@@ -58,3 +58,41 @@ test('a change by one person reaches the other through the live query', async ({
 	await anaContext.close();
 	await benContext.close();
 });
+
+test('a save the server refuses says what the server said', async ({ browser }) => {
+	const anaContext = await browser.newContext();
+	const benContext = await browser.newContext();
+	const ana = await anaContext.newPage();
+	const ben = await benContext.newPage();
+	await signIn(ana, USERS.ana, `/t/${TRIPS.iberia}`);
+	await signIn(ben, USERS.ben, `/t/${TRIPS.iberia}`);
+
+	// Ben adds Bilbao, which the seed does not have, and starts renaming it.
+	await ben.getByRole('button', { name: 'Add a stop' }).first().click();
+	const dialog = ben.getByRole('dialog');
+	await dialog.getByPlaceholder('Search a place').pressSequentially('Bilbao');
+	await ben.getByRole('option', { name: 'Bilbao' }).click();
+	await dialog.getByRole('button', { name: 'Save stop' }).click();
+	await expect(ben.getByText('Stop added')).toBeVisible();
+	await ben
+		.locator('article.stop', { hasText: 'Bilbao' })
+		.getByRole('button', { name: 'Edit stop' })
+		.click();
+	await dialog.getByLabel('Name').fill('Bilbao, two nights');
+
+	// Meanwhile Ana removes it — after a reload, so nothing waits on the live query.
+	await ana.reload();
+	await ana
+		.locator('article.stop', { hasText: 'Bilbao' })
+		.getByRole('button', { name: 'Remove' })
+		.click();
+	await expect(ana.getByText('Stop removed')).toBeVisible();
+
+	// The command rejects with the `HttpError` the browser rebuilt from the
+	// answer; the toast prints its `body.message`, the server's own words.
+	await dialog.getByRole('button', { name: 'Save stop' }).click();
+	await expect(ben.locator('[data-sonner-toast]', { hasText: 'Not found' })).toBeVisible();
+
+	await anaContext.close();
+	await benContext.close();
+});

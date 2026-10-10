@@ -396,11 +396,7 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 			<Button size="sm" type="submit">{t.comments.post}</Button>
 		</form>
 
-		<Button
-			size="sm"
-			variant="ghost"
-			onclick={() => resolveThread({ boardId, id: thread.id, resolved: true })}
-		>
+		<Button size="sm" variant="ghost" onclick={() => setResolved(thread.id, true)}>
 			{t.comments.resolve}
 		</Button>`
 			},
@@ -417,11 +413,90 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 				text: 'Note `resolveThread`’s `where` clause: `and(eq(comment.id, id), isNull(comment.parentId))`. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.'
 			},
 
+			{ type: 'h3', id: 'refused', text: 'When the server says no' },
+			{
+				type: 'p',
+				text: 'A viewer can see the Resolve button. Hiding it would be a courtesy, and courtesies get forgotten; what actually stops a viewer is `requireAccess(board, who.id, \'commenter\')` in `resolveThread`, which answers 403. The interface’s job is to say so, in the server’s words.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+/** Why the last resolve or reopen was refused, in the server's words. */
+let refusal = $state<string | null>(null);
+
+async function setResolved(id: string, done: boolean) {
+	refusal = null;
+	try {
+		await resolveThread({ boardId, id, resolved: done });
+	} catch (thrown) {
+		/*
+		 * \`thrown.body.message\`, not \`thrown.message\`.
+		 *
+		 * A command the server refuses — a viewer pressing Resolve, say — rejects
+		 * with an \`HttpError\`: \`{ status, body }\`, where \`body\` is the \`App.Error\`.
+		 * It is not an \`Error\` and has no \`message\` of its own, so reading one
+		 * shows nothing. Anything that is not an \`HttpError\` is a request that
+		 * never got an answer, and that gets the generic line.
+		 */
+		refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+	}
+}`
+			},
+			{
+				type: 'why',
+				title: 'Why `body.message`',
+				text: 'A command the server refuses rejects with an `HttpError` — `{ status, body }` — and an `HttpError` is not an `Error`, so `thrown.message` is `undefined` and the obvious line shows nothing at all. The first version did not even get that far: it had no `catch`, the rejection went nowhere, and pressing the button did nothing anybody could see. `isHttpError(thrown)` narrows the type, `body.message` is the server’s sentence, and anything that is not an `HttpError` — a request that never got an answer — gets the generic line.'
+			},
+			{
+				type: 'p',
+				text: 'The query that lists the threads has its own failure to show, and it reaches the screen by a different road:'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+<!--
+	The query read through its properties rather than awaited, because
+	\`open\` and \`resolved\` are derived from it in the script — and an \`await\`
+	there would suspend this whole component, leaving the board page's
+	boundary to replace the entire editor. So the query's own failure is
+	shown from \`list.error\`, which is the same \`App.Error\` a boundary would
+	have been handed, and this boundary is for errors thrown while rendering
+	a thread.
+-->
+{#if list.error}
+	<p class="comments__error" role="alert">{list.error.message}</p>
+{:else if list.current === undefined}
+	<p class="comments__empty">{t.sync.connecting}</p>
+{:else if open.length === 0 && resolved.length === 0}
+	<p class="comments__empty">{t.comments.none}</p>
+{/if}`
+			},
+			{
+				type: 'p',
+				text: '`list.error` is the `App.Error` itself — the same object a boundary would have been handed — so here it is `.message`, not `.body.message`. The reason it is not awaited generalises beyond this panel: an `await` in a component’s *script* suspends the whole component, so the boundary that answers is the nearest one above it, not the one in its own markup. And the empty state now waits for `list.current`. Before, a query that had failed showed “No comments yet”: a fallback that always won, and the one line on the panel that was confidently wrong.'
+			},
+			{
+				type: 'terminal',
+				code: `
+[features] comments › tells a viewer, in the server’s words, why they cannot resolve one
+
+  the owner posts a thread on a new board   → it appears
+  the viewer opens it and presses Resolve   → resolveThread answers 403
+  the panel's alert                         → "You have view-only access to this board."
+
+  before: nothing — the rejection was unhandled, and .message would have been undefined anyway`
+			},
+
 			{
 				type: 'checkpoint',
 				items: [
 					'A colleague’s comment appears without a refresh.',
 					'A failed reply shows its error under one thread only.',
+					'A viewer who presses Resolve is told why not, in the server’s words.',
 					'A `commenter` can comment and cannot move a box.'
 				]
 			}
@@ -678,6 +753,36 @@ export const restoreTo = command(
 			{
 				type: 'p',
 				text: 'And the restore goes through `ingest` — the same function every client’s edits go through, with the same per-operation permission check and the same broadcast. That is what makes a restore arrive on everybody else’s screen as an ordinary batch of edits, live, while they are working.'
+			},
+			{
+				type: 'p',
+				text: 'In the browser, the Restore button is a command call, so a refusal comes back the way chapter 36’s does — as an `HttpError` — and is caught the same way. The list itself is awaited inside `History.svelte`’s boundary, so its `pending` and `failed` snippets are the ones that run.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/History.svelte',
+				lang: 'svelte',
+				code: `
+async function restore(seq: number) {
+	restoring = seq;
+	refusal = null;
+	try {
+		await restoreTo({ boardId, seq });
+	} catch (thrown) {
+		/*
+		 * \`thrown.body.message\`, not \`thrown.message\`.
+		 *
+		 * A command the server refuses rejects with an \`HttpError\`: \`{ status,
+		 * body }\`, where \`body\` is the \`App.Error\` a boundary would have been
+		 * handed. It is not an \`Error\` and has no \`message\` of its own. Anything
+		 * that is not an \`HttpError\` is a request that never got an answer, and
+		 * that gets the generic line.
+		 */
+		refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+	} finally {
+		restoring = null;
+	}
+}`
 			},
 			{
 				type: 'terminal',

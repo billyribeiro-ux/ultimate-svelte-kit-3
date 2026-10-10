@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The jam room — Building Ostinato</title>
-<meta name="description" content="The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command.">
+<meta name="description" content="The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 31</p>
 			<h1>The jam room</h1>
-			<p class="lede">The live query on screen: <code>$derived(await room)</code> so the page follows every yield, overridable <code>{let}</code> deriveds for knobs in mid-gesture, <code>room.connected</code> and <code>reconnect()</code>, <code>online</code> from the window, presence with <code>animate:flip</code>, a handle form that carries the room id, and every edit as a command.</p>
+			<p class="lede">The live query on screen: <code>$derived(await room)</code> so the page follows every yield, overridable <code>{let}</code> deriveds for knobs in mid-gesture, <code>room.connected</code> and <code>reconnect()</code>, <code>online</code> from the window, presence with <code>animate:flip</code>, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Consume a <code>query.live</code> correctly — including the mistake that shows the first snapshot forever — and let a person edit a value that the server also updates, without the two fighting.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:22-41</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:23-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const params = $derived(page.params as RouteParams&lt;'/(app)/jam/[room]'&gt;);
@@ -54,11 +54,17 @@
  */
 const room = $derived(watchRoom(params.room));
 
+/**
+ * Every edit is a `command`, and a command the server refuses rejects with
+ * an `HttpError` — not an `Error` — whose sentence is on `body.message`.
+ * `messageOf` reads it, so a click on a track somebody else has just
+ * replaced says &quot;No such track in this room&quot; rather than nothing at all.
+ */
 async function run(action: Promise&lt;unknown&gt;) {
 	try {
 		await action;
 	} catch (e) {
-		toast((e as Error).message, 'error');
+		toast(messageOf(e, 'That change did not reach the room'), 'error');
 	}
 }</code></pre>
 </figure>
@@ -66,7 +72,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:49-66</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:56-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -97,7 +103,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:68-98</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:75-105</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;jam__head&quot;&gt;
@@ -136,7 +142,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:100-119</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:107-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- Who this browser is, from the same query the header uses; refreshed by the form below. --&gt;
@@ -164,7 +170,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:121-160</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:128-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Player
@@ -212,7 +218,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:162-186</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:169-193</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;cluster&quot;&gt;
@@ -241,10 +247,36 @@ async function run(action: Promise&lt;unknown&gt;) {
 	{/each}
 &lt;/section&gt;</code></pre>
 </figure>
+<p>Every chip and every preset button goes through <code>run</code>, at the top of the file. A command the server refuses — a mute for a track that a preset loaded in another browser has just replaced — rejects with an <code>HttpError</code>, and <code>run</code> puts its <code>body.message</code> in a toast: “No such track in this room”. Before <code>messageOf</code> (ch. 24) it read <code>(e as Error).message</code>, which on an <code>HttpError</code> is <code>undefined</code>, and every refused edit produced an empty toast.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:195-207</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#snippet pending()}
+	&lt;p class=&quot;hint&quot;&gt;Joining the room…&lt;/p&gt;
+{/snippet}
+
+&lt;!--
+	The other shape: a boundary is handed the `App.Error` that `handleError`
+	made — `{ status, message }` — so the server's &quot;No such room&quot; is
+	`error.message`, with no `body` in between.
+--&gt;
+{#snippet failed(error, reset)}
+	&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
+	&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+{/snippet}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why the <code>failed</code> snippet reads <code>error.message</code> and <code>run</code> does not</h4>
+	<p>They are handed different things. A room that does not exist makes <code>watchRoom</code> throw <code>error(404, &quot;No such room&quot;)</code>; the boundary catches it, and SvelteKit runs it through <code>handleError</code> before the snippet sees it. The documentation puts it in a comment on its own example: the error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>” — <code>{ status, message }</code>, so <code>error.message</code> is the server’s sentence. An awaited command is not inside a boundary at all: its promise rejects with the <code>HttpError</code> itself, <code>{ status, body }</code>, and the sentence is one level down. Same server, same <code>error(…)</code> call, two shapes — and a probe that threw both in a browser is how this project found out which code read which.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what would be on screen if line 57 lost its <code>$derived</code>.</li><li>You can explain what happens to a knob override when the next snapshot arrives.</li><li>You can trace one pad click from this page to every other browser in the room.</li></ul>
+	<ul><li>You can say what would be on screen if line 64 lost its <code>$derived</code>.</li><li>You can explain what happens to a knob override when the next snapshot arrives.</li><li>You can trace one pad click from this page to every other browser in the room.</li><li>You can say what a refused command hands <code>run</code>, and what a failed room hands the <code>failed</code> snippet.</li></ul>
 </aside>
 		</article>
 

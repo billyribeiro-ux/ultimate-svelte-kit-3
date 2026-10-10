@@ -829,6 +829,11 @@ try {
 				text: 'A network error is retryable and the outbox keeps the work. A 403 or 422 is not: sending it again fails identically, forever, and the operations would sit in the outbox for the life of the browser profile. Those are surfaced and **the queue is left alone** for a person to decide about. Losing somebody’s work silently in order to tidy up a queue is not a trade a tool gets to make on their behalf.'
 			},
 
+			{
+				type: 'note',
+				text: 'Why `body?.message`, and not `message`? An awaited command that fails rejects with an `HttpError`: `{ status, body }`, with the server’s `App.Error` as the `body`. It is not an `Error` and has no `message` of its own, so `status` and `body.message` are the two things worth reading — which is exactly what this method reads. Chapter 30 puts this shape next to the other one, the `App.Error` a boundary is handed.'
+			},
+
 			{ type: 'h3', id: 'snapshots', text: 'Local snapshots, debounced' },
 			{
 				type: 'code',

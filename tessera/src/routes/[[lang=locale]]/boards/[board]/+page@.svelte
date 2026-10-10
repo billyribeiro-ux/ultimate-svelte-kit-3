@@ -20,8 +20,19 @@
 	 * should not have a site header above it, and the alternative — a layout that
 	 * hides itself when the URL looks like a board — is a conditional in a
 	 * component that has no business knowing about routes.
+	 *
+	 * The board is *awaited* in the markup below, not read through
+	 * `board.current`. `.current` never throws: a query that fails leaves it
+	 * `undefined` and puts the error on `board.error`, so a boundary around
+	 * `{#if board.current}` never reaches its `failed` snippet, and a board that
+	 * does not exist renders as an empty screen. `await` is what hands the
+	 * rejection — `openBoard`'s "No such board." — to the boundary.
 	 */
 	const board = openBoard(page.params.board!);
+
+	/** The headline above the server's own message, by status. */
+	const heading = (status: number) =>
+		status === 404 ? t.errors.notFound : status === 403 ? t.errors.forbidden : t.errors.generic;
 </script>
 
 <svelte:head>
@@ -31,18 +42,24 @@
 </svelte:head>
 
 <svelte:boundary>
-	{#if board.current}
-		<Workspace loaded={board.current} {t} locale={data.locale} />
-	{/if}
+	<Workspace loaded={await board} {t} locale={data.locale} />
 
 	{#snippet pending()}
 		<p class="state">{t.sync.connecting}</p>
 	{/snippet}
 
+	<!--
+		`error` is an `App.Error` — `{ status, message }` plus this app's `id` —
+		because SvelteKit runs everything a boundary catches through `handleError`
+		first. So the server's words are its `message`; `String(error)` prints
+		"[object Object]". Svelte types `error` as `unknown`, since it cannot know
+		what SvelteKit's `transformError` returns, which is what the cast is for.
+	-->
 	{#snippet failed(error)}
+		{const caught = $derived(error as App.Error)}
 		<div class="state">
-			<p>{t.errors.notFound}</p>
-			<p class="state__detail">{String(error)}</p>
+			<p>{heading(caught.status)}</p>
+			<p class="state__detail">{caught.message}</p>
 		</div>
 	{/snippet}
 </svelte:boundary>

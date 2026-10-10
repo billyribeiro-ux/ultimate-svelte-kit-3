@@ -141,7 +141,9 @@ function renderBlock(block) {
 			return `<aside class="callout callout--note"><p>${inline(block.text)}</p></aside>`;
 
 		case 'warn':
-			return `<aside class="callout callout--warn"><p>${inline(block.text)}</p></aside>`;
+			// The title is optional here, unlike `why`; without this a titled warning
+			// ("Trap one: …") lost its heading silently.
+			return `<aside class="callout callout--warn">${block.title ? `<h4>${inline(block.title)}</h4>` : ''}<p>${inline(block.text)}</p></aside>`;
 
 		case 'why':
 			return `

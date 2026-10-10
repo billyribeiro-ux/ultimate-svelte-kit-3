@@ -13,6 +13,11 @@
  * else (the network went away, a bug) is not something the person can act
  * on in detail, and the browser's own text for it is English, so it gets
  * the product's one sentence for "that did not work".
+ *
+ * Not for a `<svelte:boundary>`. Its `failed` snippet is handed an
+ * `App.Error` — the `{ status, message }` that `handleError` made — which is
+ * not an `HttpError` either, so this would answer the fallback every time.
+ * A boundary reads `error.message`; a `catch` around a command calls this.
  */
 
 import { isHttpError } from '@sveltejs/kit';

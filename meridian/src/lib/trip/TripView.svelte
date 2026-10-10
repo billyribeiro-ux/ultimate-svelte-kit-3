@@ -364,7 +364,7 @@
 	>
 		<nav class="tabs" aria-label={m.app_name()} bind:this={strip} onscroll={edges}>
 			{#each TABS as name (name)}
-				{@const Icon = tabIcons[name]}
+				{const Icon = $derived(tabIcons[name])}
 				<a
 					class="tabs__link"
 					href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
@@ -436,7 +436,9 @@
 				guards it because a WebGL scene has no server-rendered form.
 
 				The frame is painted night before the chunk arrives, so the tab
-				never flashes cream and then space.
+				never flashes cream and then space. `failed` is handed an
+				`App.Error`, not the `Error` the import threw: `handleError` in
+				`src/hooks.client.ts` has already turned it into words.
 			-->
 			<div class="full-map full-map--night">
 				{#if browser}
@@ -446,7 +448,7 @@
 						{/snippet}
 						{#snippet failed(error, reset)}
 							<p class="night__status issue">
-								{error instanceof Error ? error.message : m.error_title()}
+								{(error as App.Error).message}
 								<button class="btn btn--sm" type="button" onclick={reset}
 									>{m.live_reconnect()}</button
 								>

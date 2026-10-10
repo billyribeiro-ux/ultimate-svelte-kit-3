@@ -203,7 +203,7 @@
 			<header class="day__header">
 				<h3 class="day__title">
 					{#if group.date}
-						{@const day = fromIso(group.date).toDate('UTC')}
+						{const day = $derived(fromIso(group.date).toDate('UTC'))}
 						<span class="day__long">{heading.format(day)}</span>
 						<span class="day__short">{headingShort.format(day)}</span>
 					{:else}

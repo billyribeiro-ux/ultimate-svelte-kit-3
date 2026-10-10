@@ -77,7 +77,7 @@ export const part7 = [
 		slug: 'end-to-end-and-what-it-found',
 		title: 'End to end, and what it found',
 		summary:
-			'Thirty-three scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.',
+			'Thirty-six scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address — and two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced.',
 		goal: 'Run a suite against the adapter’s output rather than a dev server, and treat every flake as a bug until proven otherwise.',
 		blocks: [
 			code('playwright.config.ts', 3, 24),
@@ -132,12 +132,28 @@ export const part7 = [
 				type: 'note',
 				text: 'None of the five would have been found by unit tests, and four of them were framework-level rather than application-level. That is the case for an end-to-end suite against the real build: it is the only test that runs the same code a person does.'
 			},
+			{ type: 'h3', id: 'what-a-failure-says', text: 'What a failure says' },
+			{
+				type: 'p',
+				text: 'The suite above tests what happens when things work. Three of its scenarios test what a person reads when the server says no — and they exist because a probe, not the suite, found that nobody had looked. The probe was a scratch copy of the app in which every remote function could be made to throw a real `error(…)` on demand, and every `catch`, `failed` snippet and `onerror` handler recorded what it was handed. Two shapes came back: a boundary is handed the `App.Error` itself, `{ status, message }`, and every boundary in the app read it correctly; an awaited command or form submission is handed an `HttpError`, `{ status, body }`, and every `catch` around one read it wrongly (ch. 24).'
+			},
+			code('e2e/jam.e2e.ts', 109, 135),
+			{
+				type: 'p',
+				text: 'A refused command, made to happen for real rather than faked. The test cuts this browser off from the room’s live stream — every attempt to reopen it is aborted, and SvelteKit keeps the last snapshot on screen while it retries — then loads a preset, which gives every track a new id. The browser still shows the old tracks, so a click on one sends a mute for a track the room no longer has, and the server answers `error(404, "No such track in this room")`. Before the fix the toast was there and empty: `(e as Error).message` on an `HttpError` is `undefined`. The scenario before it in the same file is the boundary’s half — `/jam/nowhere` says “No such room”, served and navigated to — and it passed before the fix as well, which is the point of keeping it: it fails if somebody “fixes” a `failed` snippet to read `body.message`.'
+			},
+			code('e2e/gallery.e2e.ts', 75, 117),
+			{
+				type: 'warn',
+				text: '**The delete forms were never enhanced.** The probe found a second fault behind the first: in a tab loaded from the server, Delete did not run its `enhance` callback at all. It fell back to the plain POST that works with JavaScript off — which still deletes, so the older gallery test passed — and a refusal became an error page. Against the old code this test fails on that, before the shape of the error matters: there is no toast to read. The cause was a boundary inside a boundary around the “Yours” list (ch. 30); the fix was to remove the inner one. And the test itself needed `bringToFront()`: with two tabs open, a click on the phone profile aimed at the one in the background landed on the card’s title instead of its button, four times in five.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say what the suite runs against and why not `vite preview`.',
 					'You can name the flake that turned out to be `forkPreloads` and say how it was bisected.',
-					'You can add a two-browser test for a new jam-room command.'
+					'You can add a two-browser test for a new jam-room command.',
+					'You can make a real server refusal happen in a test without faking the response.'
 				]
 			}
 		]
@@ -170,7 +186,7 @@ $ pnpm run verify
   lint      prettier + eslint: clean
   test:unit 58 passed  (server: node · client: chromium)
   build     adapter-ostinato · pages: 8 routes · api: 3 routes · 1 prerendered
-  test:e2e  66 passed  (33 scenarios × desktop, phone)
+  test:e2e  72 passed  (36 scenarios × desktop, phone)
 `
 			},
 			{ type: 'h3', id: 'five-directions', text: 'Five directions' },

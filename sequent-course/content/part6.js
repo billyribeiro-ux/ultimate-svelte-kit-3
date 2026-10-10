@@ -889,7 +889,7 @@ export const getVenue = query.live(async function* () {
 			{ type: 'h3', id: 'the-test-trap', text: 'The test that could never pass' },
 			{
 				type: 'p',
-				text: 'One more trap, from the days when this project drove its pages with Playwright (the browser tests have since gone, and the lesson has not):'
+				text: 'One more trap, which this project has walked into more than once — its first browser suite did, and so did the throwaway probe that the suite in chapter 41 grew out of:'
 			},
 			{
 				type: 'code',

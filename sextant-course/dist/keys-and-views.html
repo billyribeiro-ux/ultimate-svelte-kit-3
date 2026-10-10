@@ -324,7 +324,7 @@ keepTyped(createKey.fields.name, createKey.fields.scopes);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:138-141</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:175-178</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">// After that `await` and before the template: the last moment the server's
@@ -456,7 +456,7 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 		&lt;ul class=&quot;list&quot;&gt;
 			{#each list as saved (saved.id)}
 				&lt;!-- One instance per row: see the note in the alerts page. --&gt;
-				{@const remove = deleteView.for(saved.id)}
+				{const remove = $derived(deleteView.for(saved.id))}
 				&lt;li&gt;
 					&lt;a
 						class=&quot;list__main&quot;
@@ -483,8 +483,8 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 		&lt;p class=&quot;empty&quot; role=&quot;status&quot;&gt;Loading…&lt;/p&gt;
 	{/snippet}
 
-	{#snippet failed()}
-		&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;Could not load saved views.&lt;/p&gt;
+	{#snippet failed(error)}
+		&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
@@ -497,21 +497,21 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/settings/+page.svelte<span class="code__lines">:201-210</span></span>
+		<span class="code__file">src/routes/[tenant]/settings/+page.svelte<span class="code__lines">:201-209</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
 	What arrives here is SvelteKit's `App.Error`, not the `HttpError` that
 	was thrown: its `message` is the server's own, such as &quot;Sign in to
-	continue.&quot;
+	continue.&quot; Every boundary error has been through `handleError`, so there
+	is always a message and nothing for a fallback to stand in for.
 --&gt;
 {#snippet failed(error)}
-	&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;
-		{(error as App.Error | undefined)?.message ?? 'Could not load keys.'}
-	&lt;/p&gt;
+	&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
 {/snippet}</code></pre>
 </figure>
 <p>When the <code>failed</code> snippet finally ran, it showed one more mistake. The keys’ snippet looked for the server’s message on <code>error.body</code>, which is where an <code>HttpError</code> keeps it, and found nothing there. The boundary is not handed the error that was thrown. Svelte’s <code>mount</code> and <code>hydrate</code> take a <code>transformError</code> function that “transforms a render-time error before it is passed to a <code>failed</code> snippet”, and SvelteKit passes one that returns an <code>App.Error</code>. The message is on that object directly.</p>
+<p>The same lookup sat in four more boundaries — the traces list, the trace page, the drawer and the alerts page — and each showed its fallback sentence whatever the server had said. The views’ snippet did not look at the error at all and had one sentence for every failure. All of them read <code>message</code> now, with no fallback, because every error a boundary is handed has been through <code>handleError</code> and has one. A command’s rejection is the exception, and the remote-functions chapter shows both shapes side by side.</p>
 <h3 id="testing-the-lists">Tests for the lists</h3>
 
 <figure class="code">
@@ -608,7 +608,7 @@ const isBundle = (url: URL) =&gt; /^\/_app\/immutable\/entry\/start\.[^/]+\.js$/
 	await expect(views.getByRole('status')).toHaveCount(0);
 });</code></pre>
 </figure>
-<p>The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. The keys’ <code>failed</code> snippet must show the server’s own words, and that is also the check that catches the <code>error.body</code> lookup.</p>
+<p>The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. Both lists’ <code>failed</code> snippets must show the server’s own words, which is also the check that catches an <code>error.body</code> lookup, or a fixed sentence in its place.</p>
 
 <figure class="code">
 	<figcaption>
@@ -628,12 +628,12 @@ const isBundle = (url: URL) =&gt; /^\/_app\/immutable\/entry\/start\.[^/]+\.js$/
 	release();
 	await expect(hydrated(page)).toHaveCount(1);
 
-	// The keys say what the server said; the views have one sentence for every failure.
+	// Both say what the server said, from the `App.Error` each boundary is handed.
 	await expect(page.getByRole('region', { name: 'API keys' }).getByRole('alert')).toHaveText(
 		'Sign in to continue.'
 	);
 	await expect(page.getByRole('region', { name: 'Saved views' }).getByRole('alert')).toHaveText(
-		'Could not load saved views.'
+		'Sign in to continue.'
 	);
 });</code></pre>
 </figure>

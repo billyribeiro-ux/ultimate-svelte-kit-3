@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Environment and hooks — Building Meridian</title>
-<meta name="description" content="`src/env.ts` declares every variable with a schema; `hooks.server.ts` composes three handlers with `sequence` — locale, identity, security — and adds `handleFetch`, `handleError` told apart by `kind`, and `init`; `hooks.ts` carries `reroute` and `transport` to the browser; `params.ts` matches the slug.">
+<meta name="description" content="`src/env.ts` declares every variable with a schema; `hooks.server.ts` composes three handlers with `sequence` — locale, identity, security — and adds `handleFetch`, `handleError` told apart by `kind`, and `init`; `hooks.client.ts` gives the browser’s own failures words; `hooks.ts` carries `reroute` and `transport` to the browser; `params.ts` matches the slug.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 14</p>
 			<h1>Environment and hooks</h1>
-			<p class="lede"><code>src/env.ts</code> declares every variable with a schema; <code>hooks.server.ts</code> composes three handlers with <code>sequence</code> — locale, identity, security — and adds <code>handleFetch</code>, <code>handleError</code> told apart by <code>kind</code>, and <code>init</code>; <code>hooks.ts</code> carries <code>reroute</code> and <code>transport</code> to the browser; <code>params.ts</code> matches the slug.</p>
+			<p class="lede"><code>src/env.ts</code> declares every variable with a schema; <code>hooks.server.ts</code> composes three handlers with <code>sequence</code> — locale, identity, security — and adds <code>handleFetch</code>, <code>handleError</code> told apart by <code>kind</code>, and <code>init</code>; <code>hooks.client.ts</code> gives the browser’s own failures words; <code>hooks.ts</code> carries <code>reroute</code> and <code>transport</code> to the browser; <code>params.ts</code> matches the slug.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a request’s whole path through SvelteKit 3 — from environment validation at boot to the response headers — and know which hook owns which decision.</p></aside>
 			<p>SvelteKit 3 replaced the <code>$env/*</code> magic modules with a file you write. A variable not declared in it cannot be imported, <code>public</code> is a word you have to type, and the schema runs once at boot against the real environment — so a missing secret is a process that refuses to start, not an <code>undefined</code> three weeks later.</p>
 
@@ -389,6 +389,47 @@ export const init: ServerInit = async () =&gt; {
 
 <figure class="code">
 	<figcaption>
+		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * CLIENT HOOKS
+ * ============
+ *
+ * The browser's `handleError`: what SvelteKit makes of a failure in this
+ * tab — a `&lt;svelte:boundary&gt;` whose content threw, a chunk that never
+ * arrived, a component that broke while hydrating — before a `failed`
+ * snippet or `+error.svelte` sees it. Both of those are handed the result,
+ * an `App.Error` — `{ status, message }` — and print `message`.
+ *
+ * It looks at `kind`, as the server's hook does. An `app` error already
+ * says what it means, and a remote function's refusal does not come here at
+ * all: it went through the server's hook, in the request's language, and
+ * arrives finished. Only an `unknown` error needs words, because SvelteKit's
+ * own are `'Internal Error'`, in English, on a page that may be German — so
+ * it gets the product's one sentence for &quot;that did not work&quot;, in the page's
+ * language. The detail goes to the console, where somebody debugging looks.
+ */
+
+import type { HandleClientError } from '@sveltejs/kit/hooks';
+import { m } from '#lib/paraglide/messages.js';
+
+export const handleError: HandleClientError = ({ error, kind }) =&gt; {
+	if (kind !== 'unknown') return;
+
+	console.error('[meridian]', error);
+	return { message: m.error_title() };
+};</code></pre>
+</figure>
+<p>The browser has a <code>handleError</code> of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at <code>kind</code> the same way, and only <code>unknown</code> needs words, because SvelteKit’s default for it is <code>'Internal Error'</code>, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this matters</h4>
+	<p>Why does the shape matter? Because a <code>failed</code> snippet, and <code>+error.svelte</code> through <code>page.error</code>, are handed the *result* of <code>handleError</code>: an <code>App.Error</code>, <code>{ status, message }</code>, a plain object and not an <code>Error</code>. The first versions of four boundaries tested <code>error instanceof Error</code>, which is never true here, so they printed the fallback every time — or, in the trips list, <code>String(error)</code>, which is <code>[object Object]</code>. A boundary reads <code>error.message</code>; this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an <code>HttpError</code>, with the server’s words on <code>body.message</code>.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
 		<span class="code__file">src/hooks.ts<span class="code__lines">:1-35</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
@@ -461,7 +502,7 @@ export const params = defineParams({
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why <code>PUBLIC_ORIGIN</code> is both <code>public</code> and <code>static</code>, and what breaks if it were not.</li><li>You can give the order of the three handlers and one reason for each position.</li><li>You can name the four <code>kind</code>s in <code>handleError</code> and say which one gets an id.</li></ul>
+	<ul><li>You can say why <code>PUBLIC_ORIGIN</code> is both <code>public</code> and <code>static</code>, and what breaks if it were not.</li><li>You can give the order of the three handlers and one reason for each position.</li><li>You can name the four <code>kind</code>s in <code>handleError</code> and say which one gets an id.</li><li>You can say what a <code>failed</code> snippet is handed in a SvelteKit app, and what the browser’s <code>handleError</code> adds to it.</li></ul>
 </aside>
 		</article>
 

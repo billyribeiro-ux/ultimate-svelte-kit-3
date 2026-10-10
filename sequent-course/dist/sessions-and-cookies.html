@@ -83,16 +83,39 @@ export const signIn = form(
  *
  * Distinguishing them turns this form into a tool for discovering which
  * firms are members of the venue.
+ *
+ * `invalid`, not `error`. An `error(401, …)` thrown from a form handler
+ * renders the error page in place of the form, so a mistyped password
+ * cost the person the form itself. `invalid` with a plain string is an
+ * issue for the form as a whole: it comes back in `fields.allIssues()`,
+ * which the page already shows above the fields, with the email still
+ * filled in.
  */
 if (!row || Number(row['is_active']) !== 1) {
-	error(401, 'That email and password do not match an account.');
+	invalid('That email and password do not match an account.');
 }
 if (!verifySecret(data.password, String(row['password_hash']))) {
-	error(401, 'That email and password do not match an account.');
+	invalid('That email and password do not match an account.');
 }</code></pre>
 </figure>
 <p>On a consumer app this is a mild privacy nicety. On an exchange it is competitive intelligence: &quot;is <code>trading@rival-fund.com</code> a member here?&quot; is a question worth money, and a sign-in form that answers it with a different error message is answering it for free, to anyone, all day.</p>
 <p>The same reasoning applies to the *deactivated* case, which is folded into the first branch. &quot;That account exists but is switched off&quot; tells you the account exists.</p>
+<p>Both branches refuse with <code>invalid</code>, and the first version used <code>error(401, …)</code> instead. That looks like the more honest status code, and it is the wrong tool. A form handler that throws <code>error</code> hands the failure to the nearest <code>+error.svelte</code>, which renders <strong>in place of the page</strong> — so somebody who mistyped their password lost the form, the email they had typed and the button, and was left reading a 401. <code>invalid</code> is the form's own way of saying no: the submission fails, the message comes back as an issue, and the page shows it where it already shows validation problems.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/sign-in/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if signIn.fields.allIssues()?.length}
+	&lt;p class=&quot;error&quot; role=&quot;alert&quot;&gt;{signIn.fields.allIssues()?.[0]?.message}&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A refusal the person can fix is a validation result</h4>
+	<p>The line to draw is whether the person can do anything about it. A wrong password is fixed by retyping it, so it belongs on the form, beside &quot;Enter your password&quot;. A failure they cannot fix — the venue is down, their role may not open the page — belongs on the error page. And <code>invalid</code> is given a plain string, which attaches the message to the form as a whole rather than to <code>password</code>, on purpose: pinning it on the password field would say &quot;the email was fine&quot;, which is exactly what the single message exists not to say.</p>
+</aside>
 <h3 id="the-cookie">The cookie</h3>
 
 <figure class="code">
@@ -163,7 +186,7 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);</
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain what an open redirect is and why <code>//evil.example</code> is not a path</li><li>You can explain why sign-in has one error message for two different failures</li><li>You can name each cookie flag and what it defends against</li><li>You can explain why the session is a database row rather than a signed token</li></ul>
+	<ul><li>You can explain what an open redirect is and why <code>//evil.example</code> is not a path</li><li>You can explain why sign-in has one error message for two different failures</li><li>You can choose between <code>invalid</code> and <code>error</code> in a form handler, and say why the message is not pinned to the password field</li><li>You can name each cookie flag and what it defends against</li><li>You can explain why the session is a database row rather than a signed token</li></ul>
 </aside>
 		</article>
 

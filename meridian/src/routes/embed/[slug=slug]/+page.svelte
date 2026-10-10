@@ -12,7 +12,7 @@
 	const locale = getLocale();
 </script>
 
-{const { document } = await tripBySlug(slug)}
+{const { document } = $derived(await tripBySlug(slug))}
 
 <!--
 	Only a trip visible by link may be framed. `tripBySlug` already refuses a
@@ -23,7 +23,7 @@
 	{error(404, 'No such trip.')}
 {/if}
 
-{const scheduled = document.stops.filter((stop) => stop.date !== null)}
+{const scheduled = $derived(document.stops.filter((stop) => stop.date !== null))}
 
 <svelte:head>
 	<title>{m.embed_title({ name: document.trip.name })}</title>

@@ -68,10 +68,10 @@
 		<p class="prose">
 			On the left, the engine this project wrote by hand: cells in a <code>Map</code>, edges
 			recorded when a formula is parsed, a dirty set, a topological sort. On the right, nine
-			<code>$derived</code>s that read each other through a lookup function and nothing else. Change
-			a cell in either and watch the other follow — and watch the count of cells each one evaluated.
-			They agree, because they are the same algorithm: Svelte's runtime is a spreadsheet engine with
-			the cells hidden.
+			<code>$derived</code>s that read each other through a lookup function, and nothing else to put
+			them in order. Change a cell in either and watch the other follow — and watch the count of
+			cells each one evaluated. They agree, because they are the same algorithm: Svelte's runtime is
+			a spreadsheet engine with the cells hidden.
 		</p>
 
 		<div class="twins">
@@ -127,14 +127,15 @@
 												onchange={(e) => edit(name, e.currentTarget.value)}
 											/>
 										</label>
-										<svelte:boundary>
-											<output class={['shown', { error: cell.value instanceof ErrorValue }]}
-												>{show(cell.value)}</output
-											>
-											{#snippet failed(error)}
-												<output class="shown error" title={(error as Error).message}>cycle!</output>
-											{/snippet}
-										</svelte:boundary>
+										<!--
+											No <svelte:boundary> around this. A cycle is a value (see `set` in
+											reactive.svelte.ts), and an exception thrown inside a $derived goes to
+											the boundary of the effect that created it — this page — not to one
+											around the markup that read it.
+										-->
+										<output class={['shown', { error: cell.value instanceof ErrorValue }]}
+											>{show(cell.value)}</output
+										>
 									</td>
 								{/each}
 							</tr>
@@ -158,10 +159,14 @@
 					another cell.
 				</li>
 				<li>
-					Type <code>=C3</code> into <code>A1</code>. The engine marks the cycle as
-					<code>#CYCLE!</code> and carries on; the reactive sheet throws, and the boundary around that
-					cell catches it. A spreadsheet must tolerate a person's mistake; a program must not tolerate
-					its own.
+					Type <code>=C3</code> into <code>A1</code>. Both sides mark the cycle as
+					<code>#CYCLE!</code>, and both need a graph to do it. Svelte's own answer to a derived
+					that reads itself is an exception — <code>derived_references_self</code> in development;
+					in a production build the deriveds call each other until the stack runs out — so the
+					right-hand sheet reads the formulas' references whenever an input changes, and a cell on a
+					cycle answers
+					<code>#CYCLE!</code> without reading another. That is the engine's bookkeeping again. A spreadsheet
+					must tolerate a person's mistake; a program must not tolerate its own.
 				</li>
 				<li>
 					Notice that <code>C2</code>, which reads four cells, is evaluated once per change, never

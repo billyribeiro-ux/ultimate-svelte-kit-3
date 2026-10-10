@@ -143,13 +143,13 @@ export const part5 = [
 				text: 'The browser’s answer arrives as JSON, and a remote command validates its argument with valibot. The schema names every field the library reads — base64url strings, the two attachment kinds, the extension outputs — and `v.object` drops anything else a client sends. The output type is assignable to the library’s `RegistrationResponseJSON`, and the library’s type from the browser package is assignable to the schema’s input, so both directions are checked by the compiler with no casts. The first draft used `looseObject` and needed two `as unknown as` casts; that was the sign the schema was wrong, not the types.'
 			},
 			code('src/lib/remote/auth.remote.ts', 67, 81),
-			code('src/lib/auth/passkey.ts', 1, 27),
-			code('src/lib/auth/passkey.ts', 40, 64),
+			code('src/lib/auth/passkey.ts', 1, 28),
+			code('src/lib/auth/passkey.ts', 41, 73),
 			{
 				type: 'p',
-				text: 'The browser’s half: ask for options, hand them to `startRegistration` or `startAuthentication`, send the answer back. `explain` turns the credential API’s error names into sentences a person can act on — `NotAllowedError` is a cancelled prompt, `InvalidStateError` is “this device already has a passkey for that account”.'
+				text: 'The browser’s half: ask for options, hand them to `startRegistration` or `startAuthentication`, send the answer back. `explain` turns a failure from either half into a sentence a person can act on. The server’s half fails with SvelteKit’s `HttpError` — `finishAuthentication` refusing a passkey it has never seen — and its sentence is in `body.message`. The browser’s half throws an `Error` whose `name` says what happened: `NotAllowedError` is a cancelled prompt, `InvalidStateError` is “this device already has a passkey for that account”. The first version checked only for an `Error`, and an `HttpError` is not one, so every refusal from the server came out as “Something went wrong with the passkey.” Chapter 29 has the two shapes side by side.'
 			},
-			code('e2e/passkeys.ts', 1, 44),
+			code('e2e/passkeys.ts', 1, 64),
 			{
 				type: 'p',
 				text: 'How this is tested: Chromium’s DevTools protocol attaches a *virtual authenticator* — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.'
@@ -248,14 +248,14 @@ export const part5 = [
 			code('src/lib/server/sheets.ts', 172, 217),
 
 			{ type: 'h3', id: 'the-browser', text: 'The browser’s side' },
-			code('src/lib/sheet/live.svelte.ts', 1, 48, { partial: true }),
-			code('src/lib/sheet/live.svelte.ts', 50, 58),
-			code('src/lib/sheet/live.svelte.ts', 90, 128),
+			code('src/lib/sheet/live.svelte.ts', 1, 50, { partial: true }),
+			code('src/lib/sheet/live.svelte.ts', 52, 60),
+			code('src/lib/sheet/live.svelte.ts', 92, 132),
 			{
 				type: 'p',
-				text: '`LiveSheet` hooks the sheet’s `onop`: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. A 409, 413 or 404 is a conflict the page must show and a reload must fix; anything else is a network failure, the operations are put back, and it tries again in two seconds. `status` is the honest state of the connection, and the page shows it, because a sheet that silently stopped saving is worse than one that says so.'
+				text: '`LiveSheet` hooks the sheet’s `onop`: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. A 409, 413 or 404 is a conflict the page must show and a reload must fix, and `problem` keeps the server’s own sentence for the page to show — “A sheet may hold at most 50,000 cells” says something “Could not save” does not; anything else is a network failure, the operations are put back, and it tries again in two seconds. `status` is the honest state of the connection, and the page shows it, because a sheet that silently stopped saving is worse than one that says so.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 31, 54),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 32, 55),
 			{
 				type: 'p',
 				text: 'On the page, `watchSheet(...)` returns the live query. Its `current` is the latest message and is reactive, so an effect that reads it runs once per message — which is where the room’s operations are applied. `beforeNavigate` flushes the queue before the page is left, and the effect’s cleanup disposes the connection.'
@@ -275,7 +275,7 @@ export const part5 = [
 		slug: 'hooks',
 		title: 'Hooks: identity, headers, one framed route, errors by kind',
 		summary:
-			'`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones, `init`, and the `transport` that carries an `ErrorValue` across the wire.',
+			'`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones on the server and leaves a deliberate `error(…)` alone in the browser, `init`, the `transport` that carries an `ErrorValue` across the wire, and the two shapes of error a page has to read.',
 		goal: 'Read every hook in the project and say what each is for — and what the September 2026 releases changed in them.',
 		blocks: [
 			code('src/hooks.server.ts', 1, 37),
@@ -307,13 +307,26 @@ export const part5 = [
 				type: 'p',
 				text: 'SvelteKit serialises what crosses the boundary with devalue, which knows about `Map`, `Set` and `Date` and nothing about a class called `ErrorValue`. A transporter teaches it: `encode` returns a plain value for an instance (and something falsy for anything else, which is how devalue asks “is this yours?”), `decode` builds the instance back. A published sheet’s values arrive with real errors in them — `instanceof` works — rather than objects every consumer would have to rehydrate.'
 			},
-			code('src/hooks.client.ts', 1, 20),
+			code('src/hooks.client.ts', 1, 30),
+			{
+				type: 'p',
+				text: 'The client hook looks at `kind` as the server’s does. An `error(404, \'No such template\')` thrown by a universal `load` while the browser is navigating arrives as `app`, and returning nothing keeps its status and message, so the error page says *No such template* and shows no reference — a 404 is not a bug. Only an `unknown` error, a component that threw, is logged and given one. In SvelteKit 2 the hook never saw an `error(…)` at all, so a hook that answered everything with “Something went wrong in this tab.” was harmless; SvelteKit 3 sends it every error, and the same five lines started hiding every deliberate message behind one sentence and putting a reference number on a missing page. The end-to-end suite now follows a link to a template that does not exist, and fails if that comes back.'
+			},
+
+			{ type: 'h3', id: 'two-shapes', text: 'Two shapes of error in the browser' },
+			code('src/lib/errors.ts', 1, 27),
+			{
+				type: 'why',
+				title: 'Why a catch block and a failed snippet read different fields',
+				text: 'Await a remote function in a handler — `await publish(id)`, `await form.submit()`, `await getPublished(id)` outside the markup — and a refusal rejects with SvelteKit’s `HttpError`: `{ status, body }`, where `body` is the `App.Error` the server’s hook produced. The sentence is `body.message`. It is not an `Error`, so `(e as Error).message` is `undefined` — an empty toast — and `e instanceof Error ? e.message : \'Something went wrong\'` throws the server’s words away every time; this project had both. A boundary is the other shape. The SvelteKit docs say a `failed` snippet’s error “went through the `handleError` hook and is of type `App.Error`”: `{ status, message }`, read as `error.message`. Neither was taken on trust. In a built app, a query that threw `error(418, \'probe\')` reached a `failed` snippet as a plain `{ status: 418, message: \'probe\' }`, and a command that threw `error(409, …)` rejected its caller with an object whose own keys were `status` and `body`. In SvelteKit 2, sending render errors through `handleError` was an experimental option, `handleRenderingErrors`; in SvelteKit 3 it is how every boundary works, so the hook — not whatever was thrown — decides what a `failed` snippet shows.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say what goes wrong if the hook types are imported from `@sveltejs/kit`.',
 					'You can explain how `/embed/` gets a different `frame-ancestors` from everything else.',
-					'You can list the four `kind`s and what each one gets from `handleError`.'
+					'You can list the four `kind`s and what each one gets from `handleError`, on the server and in the browser.',
+					'You can say what a `catch` around a remote call receives, what a `failed` snippet receives, and where the server’s sentence is in each.'
 				]
 			}
 		]

@@ -336,3 +336,97 @@ test('a write held back by a navigation to this same page is made once it lands'
 	 */
 	await expect(page).toHaveURL(/\/demo\/explore\?.*range=\d+\.\.\d+.*view=table/);
 });
+
+/**
+ * A QUERY THE SERVER REFUSES
+ * ==========================
+ *
+ * The claim in `+page.svelte` is that a refused query — a 400 from the checker
+ * is the common case — is explained in the results area, by its boundary's
+ * `failed` snippet, with the editor left where it was to fix the query in.
+ *
+ * It used to take the whole page down instead. The values derived from the
+ * result were declared in the script, a `$derived` that throws reports to the
+ * boundary of the component that declared it, and so the refusal went past the
+ * results' boundary to SvelteKit's error page: a "400" heading, the server's
+ * sentence under it, and no editor.
+ */
+test('a query the server refuses is explained where its results would be', async ({ page }) => {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&range=-6h`);
+	// Only the client adds `view`, so this is also the proof that the page is live.
+	await expect(page).toHaveURL(/view=table/);
+
+	const editor = page.getByRole('combobox', { name: 'Query' });
+	const run = page.getByRole('button', { name: 'Run', exact: false });
+	const results = page.getByRole('region', { name: 'Results' });
+
+	await editor.fill('from logs | where');
+	await run.click();
+
+	// The parser's own sentence, as the server said it, where the rows would be.
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(editor).toHaveValue('from logs | where');
+
+	// And the next query that works draws its rows in the same place.
+	await editor.fill('from logs | take 3');
+	await run.click();
+	await expect(results.getByRole('grid')).toBeVisible();
+	await expect(results.getByRole('alert')).toHaveCount(0);
+});
+
+/*
+ * The same refusal, when the server renders the page: a link somebody shared,
+ * a new tab, a reload. The query used to be awaited in the page's script, the
+ * server waits for every such `await` before it renders anything, and so the
+ * refusal failed the render as a whole and came back as SvelteKit's 400 page.
+ * The status is checked as well as the screen, because the screen alone could
+ * be the client recovering from a page the server had refused.
+ */
+test('a link to a query the server refuses opens with the editor, and says why', async ({
+	page
+}) => {
+	const response = await page.goto(
+		`${DEMO}?q=${encodeURIComponent('from logs | where')}&range=-6h`
+	);
+	expect(response?.status()).toBe(200);
+
+	const results = page.getByRole('region', { name: 'Results' });
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(page.getByRole('combobox', { name: 'Query' })).toHaveValue('from logs | where');
+});
+
+test('a refused query is still explained after a reload', async ({ page }) => {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&range=-6h`);
+	await expect(page).toHaveURL(/view=table/);
+
+	const editor = page.getByRole('combobox', { name: 'Query' });
+	const results = page.getByRole('region', { name: 'Results' });
+
+	await editor.fill('from logs | where');
+	await page.getByRole('button', { name: 'Run', exact: false }).click();
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+
+	// The run is in the address bar now, so a reload asks the server for it.
+	await expect(page).toHaveURL((url) => url.searchParams.get('q') === 'from logs | where');
+
+	const response = await page.reload();
+	expect(response?.status()).toBe(200);
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(editor).toHaveValue('from logs | where');
+});
+
+test('a tail the server refuses says why', async ({ page }) => {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | summarize n = count()')}&range=-6h`);
+	await expect(page).toHaveURL(/view=table/);
+
+	await page.getByRole('button', { name: 'Live tail' }).click();
+
+	/*
+	 * The endpoint's own sentence, which reaches the tail only because its
+	 * request accepts JSON as well as a stream. Asking for the stream alone, it
+	 * got SvelteKit's HTML error page and said "The tail could not start (400)."
+	 */
+	await expect(page.getByRole('status').filter({ hasText: 'Stopped' })).toContainText(
+		'A tail cannot summarize. Remove the summarize, or use the chart instead.'
+	);
+});

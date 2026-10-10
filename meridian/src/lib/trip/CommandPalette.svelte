@@ -91,7 +91,7 @@
 
 <!-- One stop as a palette item; the dated stops and the ideas both render it. -->
 {#snippet stopItem(stop: (typeof view.document.stops)[number])}
-	{@const Icon = KIND_ICONS[stop.kind]}
+	{const Icon = $derived(KIND_ICONS[stop.kind])}
 	<Command.Item
 		class="cmd__item"
 		value={`${stop.name} ${stop.id}`}

@@ -144,7 +144,7 @@ write status AND outbox row in one transaction; a worker delivers
 				type: 'p',
 				text: 'The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing. Its script has a top-level `await`, and the call goes after it, because code after a top-level `await` still runs before the template, and later is better here: it reads whatever was typed while the `await` was waiting too.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 138, 141),
+			code('src/routes/[tenant]/explore/+page.svelte', 175, 178),
 			{
 				type: 'warn',
 				text: 'The select is the worse half. An emptied name at least stops the form; a `read` scope chosen before hydration comes back as `ingest` and submits perfectly happily — a key that cannot do the one thing it was made for, and nothing on the screen to say so.'
@@ -191,10 +191,14 @@ write status AND outbox row in one transaction; a worker delivers
 				type: 'p',
 				text: 'So the server drew “Loading…”, because during server-side rendering a boundary with a `pending` snippet renders that snippet. Then the page hydrated and the block put nothing in its place. A list that was slow showed a blank space, and a list that failed stayed blank, with nothing in the console either. An `await` puts both states back. “Errors in `await` expressions will bubble to the nearest error boundary”, and the remote-functions documentation says the same of a query: “until the promise resolves — and if it errors — the nearest `<svelte:boundary>` will be invoked.”'
 			},
-			code('src/routes/[tenant]/settings/+page.svelte', 201, 210),
+			code('src/routes/[tenant]/settings/+page.svelte', 201, 209),
 			{
 				type: 'p',
 				text: 'When the `failed` snippet finally ran, it showed one more mistake. The keys’ snippet looked for the server’s message on `error.body`, which is where an `HttpError` keeps it, and found nothing there. The boundary is not handed the error that was thrown. Svelte’s `mount` and `hydrate` take a `transformError` function that “transforms a render-time error before it is passed to a `failed` snippet”, and SvelteKit passes one that returns an `App.Error`. The message is on that object directly.'
+			},
+			{
+				type: 'p',
+				text: 'The same lookup sat in four more boundaries — the traces list, the trace page, the drawer and the alerts page — and each showed its fallback sentence whatever the server had said. The views’ snippet did not look at the error at all and had one sentence for every failure. All of them read `message` now, with no fallback, because every error a boundary is handed has been through `handleError` and has one. A command’s rejection is the exception, and the remote-functions chapter shows both shapes side by side.'
 			},
 
 			{ type: 'h3', id: 'testing-the-lists', text: 'Tests for the lists' },
@@ -212,7 +216,7 @@ write status AND outbox row in one transaction; a worker delivers
 			code('e2e/settings.e2e.ts', 130, 150),
 			{
 				type: 'p',
-				text: 'The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. The keys’ `failed` snippet must show the server’s own words, and that is also the check that catches the `error.body` lookup.'
+				text: 'The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. Both lists’ `failed` snippets must show the server’s own words, which is also the check that catches an `error.body` lookup, or a fixed sentence in its place.'
 			},
 			code('e2e/settings.e2e.ts', 152, 172),
 			{
@@ -437,7 +441,7 @@ $ pnpm exec playwright test e2e/csp.e2e.ts
 		slug: 'verifying-it',
 		title: 'Verifying it, and the six bugs the tests found',
 		summary:
-			'337 unit tests, 85 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
+			'337 unit tests, 123 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
 		goal: 'Get to green, and understand what each kind of test is actually for.',
 		blocks: [
 			{
@@ -476,6 +480,10 @@ $ pnpm exec playwright test e2e/csp.e2e.ts
 					'**Remote form fields must come from `fields.<key>.as(type)`**; a plain `name=` attribute throws and the submission 500s. Chapter 39.',
 					'**`forkPreloads` broke opening a trace one time in three on the phone profile.** Three runs on, three failures; three off, three passes. Chapter 3.'
 				]
+			},
+			{
+				type: 'p',
+				text: 'A later audit of every error path found four more, by forcing each error under a live page and reading what reached the screen. Five `failed` snippets looked for the message where an `HttpError` keeps it, and always showed their fallback. The explore page’s results boundary never ran at all, because the values made from the result were `$derived`s in the script. The alert toggle’s refusal went unhandled. And the live tail asked for a stream alone and was answered with an HTML error page. Each has a test now that fails on the old code. Chapters 38, 39 and 43.'
 			},
 			{
 				type: 'why',
@@ -538,7 +546,7 @@ $ npx vitest run src/routes/api/v1/query
 				type: 'terminal',
 				code: `
 $ node sextant-course/verify.js
-46 chapters · 232 blocks quoted from sextant/ by line range · 0 illustrative
+46 chapters · 256 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
@@ -546,7 +554,7 @@ $ pnpm verify
 ✓ eslint           clean
 ✓ vitest           337 passed
 ✓ vite build       done
-✓ playwright       85 passed, 4 skipped, 2 viewports`
+✓ playwright       123 passed, 4 skipped, 2 viewports`
 			},
 
 			{

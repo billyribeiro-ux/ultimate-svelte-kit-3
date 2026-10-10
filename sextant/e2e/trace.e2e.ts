@@ -144,3 +144,22 @@ test('a trace with no root still renders as one tree, and says so', async ({ pag
 	// "the gateway span is missing" is frequently the answer.
 	await expect(page.getByText(/no parent in this trace/i)).toBeVisible();
 });
+
+test('a list of traces that cannot load says what the server said', async ({ page, context }) => {
+	await page.goto('/demo/traces');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+	await expect(page.getByRole('list', { name: 'Recent traces' })).toBeVisible();
+
+	// The session ends under a live page. Re-sorting asks the server again, and
+	// the server refuses for real.
+	await context.clearCookies();
+	await page.getByRole('button', { name: 'Newest' }).click();
+
+	/*
+	 * The boundary is handed SvelteKit's `App.Error`, so the server's sentence is
+	 * its `message`. The snippet used to look on `body`, where a thrown
+	 * `HttpError` keeps it, found nothing there, and said "Could not load
+	 * traces." whatever had gone wrong.
+	 */
+	await expect(page.getByRole('alert')).toHaveText('Sign in to continue.');
+});

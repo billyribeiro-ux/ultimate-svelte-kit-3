@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { error, redirect } from '@sveltejs/kit';
+import { invalid, redirect } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
 import { verifySecret } from '@sequent/store';
 import { db } from '#lib/server/db.ts';
@@ -38,12 +38,19 @@ export const signIn = form(
 		 *
 		 * Distinguishing them turns this form into a tool for discovering which
 		 * firms are members of the venue.
+		 *
+		 * `invalid`, not `error`. An `error(401, …)` thrown from a form handler
+		 * renders the error page in place of the form, so a mistyped password
+		 * cost the person the form itself. `invalid` with a plain string is an
+		 * issue for the form as a whole: it comes back in `fields.allIssues()`,
+		 * which the page already shows above the fields, with the email still
+		 * filled in.
 		 */
 		if (!row || Number(row['is_active']) !== 1) {
-			error(401, 'That email and password do not match an account.');
+			invalid('That email and password do not match an account.');
 		}
 		if (!verifySecret(data.password, String(row['password_hash']))) {
-			error(401, 'That email and password do not match an account.');
+			invalid('That email and password do not match an account.');
 		}
 
 		const sessionId = crypto.randomUUID();

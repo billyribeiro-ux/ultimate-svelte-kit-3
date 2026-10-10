@@ -115,7 +115,7 @@
 						>Try again</button
 					>
 				</p>
-				<p class="hint">{(error as Error).message}</p>
+				<p class="hint">{(error as App.Error).message}</p>
 			{/snippet}
 		</svelte:boundary>
 	</Section>

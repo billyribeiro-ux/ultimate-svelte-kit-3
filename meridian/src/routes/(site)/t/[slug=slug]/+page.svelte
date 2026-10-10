@@ -20,7 +20,7 @@
 	In the browser, SvelteKit holds a navigation until the await settles, so
 	nothing flashes; keyed on the slug, a different trip is a fresh view.
 -->
-{const initial = await tripBySlug(slug)}
+{const initial = $derived(await tripBySlug(slug))}
 
 {#key slug}
 	<TripView {initial} {slug} />

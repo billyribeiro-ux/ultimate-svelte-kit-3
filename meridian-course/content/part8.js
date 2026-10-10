@@ -216,20 +216,25 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter 36). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
 			},
-			code('e2e/account.e2e.ts', 13, 36),
+			code('e2e/account.e2e.ts', 13, 43),
 			{
 				type: 'p',
-				text: 'A fresh account with a unique email per run, so the test can run twice against the same database. It walks the whole loop — refused at `/trips`, sent to sign in with `redirectTo` remembered, creates the account, lands on an empty trips page, signs out, signs back in — and the `openMenu` calls are the phone project earning its keep.'
+				text: 'A fresh account with a unique email per run, so the test can run twice against the same database. It walks the whole loop — refused at `/trips`, sent to sign in with `redirectTo` remembered, creates the account, lands on an empty trips page, signs out, signs back in — and the `openMenu` calls are the phone project earning its keep. The two assertions on the header’s “Trips” link are about a page that did not reload: the header was drawn on the sign-in page, signed out, and the person is now signed in. They failed against a header whose link list was a bare `{const}`, worked out once (chapter 23).'
 			},
-			code('e2e/account.e2e.ts', 72, 83),
+			code('e2e/account.e2e.ts', 79, 90),
 			{
 				type: 'p',
 				text: 'The German test is about which code produced a sentence, not about German. The sign-in *handler*’s message — “that email and password do not match” — was always localised, because it is written with `m.*()` in the handler. The *schema*’s message for a malformed email runs before the handler, and it answered in English on every page until two things changed: the messages became functions called at failure time (chapter 12), and the Paraglide middleware read the locale from the page the form is on rather than the `/_app/remote` URL it posts to (chapter 20). The test asserts both halves — the German sentence is there, the English one is not — because a test that only looked for German would pass on a page that printed both.'
 			},
-			code('e2e/account.e2e.ts', 120, 142),
+			code('e2e/account.e2e.ts', 127, 149),
 			{
 				type: 'p',
 				text: 'The delete test answers the dialog twice. Playwright accepts nothing by default — a `confirm()` with no handler is dismissed — so `page.once(\'dialog\', …)` decides each answer explicitly. First “Cancel”: the page must still be the settings page and the trip must still be in the list. Then “OK”: the trip must be gone. The first half is new, and it is new because it failed: the `confirm()` lived in an `onsubmit` that called `preventDefault()`, the remote form’s own submit listener does not look at `defaultPrevented`, and Cancel deleted the trip (chapter 31). Testing only the “yes” path of a question is testing half of it.'
+			},
+			code('e2e/account.e2e.ts', 152, 192),
+			{
+				type: 'p',
+				text: 'Two tests for things that used to go wrong without a sound. The first needs the server to refuse something the page asked for, and nothing on the trips list ever asks for anything wrong — so the test rewrites the request on its way out. `page.route` holds the `tripPreview` batch, swaps every argument for one the schema refuses, and lets it go on; the server’s `handleError` answers with its sentence for a failed validation, and the boundary must print it. *Where* it is printed is half of the assertion. `+error.svelte` shows `page.error.message` too, so a test that looked for the sentence anywhere on the page would still pass with the boundary gone and the whole page swapped for the error page. So the test looks inside the trips page: under its “Your trips” heading, in the snippet’s `.issue` paragraph, beside the Reconnect button that runs `reset`, where only the `failed` snippet can have put it. Against the old `failed` snippet the page said `[object Object]` (chapter 33). The second presses Refresh on the diagnostics page and expects the newest row to change, which it did not while the report was a bare `{const}` (chapter 35). Neither waits longer than the default: each change happens once a single request comes back.'
 			},
 			code('e2e/trip.e2e.ts', 14, 30),
 			{
@@ -255,6 +260,11 @@ $ pnpm run test:unit -- --run
 			{
 				type: 'p',
 				text: 'This is the test the project was built to pass. `browser.newContext()` twice gives two independent browser profiles — two cookie jars, two sessions — in one test. Ana and Ben sign in separately, and everything after that is a statement about the live query (chapter 18): Ben adds a stop and *Ana’s page* shows it, without a reload, because both pages hold the same `query.live` open and the server publishes to the room when the trip changes. The presence assertions ride on the same stream — Ana sees Ben arrive, and sees which stop he is looking at. The timeouts are longer than the default, deliberately: the presence heartbeat is fifteen seconds apart, and a test that asserts within five would be asserting on luck.'
+			},
+			code('e2e/collab.e2e.ts', 62, 98),
+			{
+				type: 'p',
+				text: 'The second test uses the two people for something else: a command the server refuses for a real reason. Ben opens a stop to rename it; Ana removes it — after a reload, so nothing waits on the live query; Ben saves, and `updateStop` answers 404. What the browser’s `await` rejects with is the `HttpError` SvelteKit rebuilt from the answer, with the server’s words on `body.message`, and the toast must say them: “Not found”, not the product’s fallback. It passed against the old code too — `errorMessage` was already right (chapter 25) — and it is here so that it stays right.'
 			},
 			code('e2e/invite.e2e.ts', 63, 93),
 			{
@@ -697,11 +707,11 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 				type: 'ul',
 				items: [
 					'**Runes** — `$state`, `$derived`, `$derived.by`, `$effect`, `$effect.pre`, `$props`, `$bindable`, `$state.raw`, `$state.snapshot`, assignable `$derived`: chapters 06, 24, 25, 31. `untrack` and the effect-loop it prevents: 31. Classes with runes in `.svelte.ts`: 06, 24.',
-					'**Templates** — snippets and `{@render}`: 23, 25; `{#await}` and `await` in markup with `{const … = await …}`: 24, 33, 36; `<svelte:boundary>` with `pending` and `failed`: 24, 28; `{@attach}` attachments: 27, 30; `animate:flip` with `svelte-dnd-action`: 25; `<svelte:options customElement>`: 36; `{#key}`: 31.',
+					'**Templates** — snippets and `{@render}`: 23, 25; `{#await}` and `await` in markup with `{const … = $derived(await …)}`: 24, 33, 35, 36; `<svelte:boundary>` with `pending` and `failed`: 24, 28; `{@attach}` attachments: 27, 30; `animate:flip` with `svelte-dnd-action`: 25; `<svelte:options customElement>`: 36; `{#key}`: 31.',
 					'**Reactivity utilities** — `MediaQuery`, `createSubscriber`, `scrollY` from `svelte/reactivity/window`, `SvelteMap` versus a plain `Map`: 40; `Debounced` from runed: 35, 40.',
 					'**Remote functions** — `query`, `query.batch`, `query.live`, `prerender`, `form`, `command`: 16, 17, 18; single-flight `.updates()` and `requested().refreshAll()`: 17, 18, 31; `invalid(issue.field())` and `fields.x.as(…)`: 17, 29; the transport hook: 14.',
 					'**Routing and loading** — route groups, `defineParams` matchers, `resolve()` with typed route ids including groups: 03, 23, 33; `entries()` with `prerender` and `csr = false`: 34, 36; `reroute` for locales: 20; `+server.ts` endpoints with CORS and `OPTIONS`: 36, 43; the root layout with no `load` so prerendered pages do not bake a user in: 23.',
-					'**Hooks** — `sequence`, `handleFetch`, `handleError` with `kind`, `init`, `transport`, `reroute`; hook types from `@sveltejs/kit/hooks`: 14, 43, 44.',
+					'**Hooks** — `sequence`, `handleFetch`, `handleError` with `kind` on the server and in the browser, `init`, `transport`, `reroute`; hook types from `@sveltejs/kit/hooks`: 14, 43, 44.',
 					'**Configuration** — everything in `vite.config.ts`: `dynamicCompileOptions` for a client-only custom element, `tracing`, `csp` in `auto` mode, `csrf`, `version`, `preprocess` for mdsvex, `optimizeDeps` for the browser tests: 03, 41, 43.',
 					'**Build and runtime** — `@sveltejs/package` with publint and arethetypeswrong: 08; `@sveltejs/enhanced-img`: 22; `read()` for a bundled asset from an endpoint: 27; a second Vite config for the element’s IIFE: 36; `$app/env`’s `browser`, `building`, `version`: 14, 24, 44; view transitions with `onNavigate` and an update banner from `version.pollInterval`: 23.',
 					'**The ecosystem** — headless (Bits UI, TanStack Table): 26, 29, 38; wrappers (svelte-maplibre, Threlte, LayerChart): 27, 28, 29, 39; imperative through an attachment (Tiptap, GSAP): 30, 22; compilers (Paraglide, mdsvex, Phosphor’s plugin): 20, 34, 22; the survey and the rejections: 37.',

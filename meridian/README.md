@@ -74,6 +74,7 @@ image, and checks the course.
 | `src/lib/styles/`, `src/lib/ui/`         | tokens, mobile-first CSS, the shell, the theme                                                   |
 | `src/lib/href.ts`                        | the one way to write an internal link: `resolve()` with a typed route id, then the locale        |
 | `src/hooks.server.ts`, `src/hooks.ts`    | locale, identity, security headers, `reroute`, `transport`                                       |
+| `src/hooks.client.ts`                    | the browser's `handleError`: an unexpected failure is put into the page's language               |
 | `vite.config.ts`                         | every SvelteKit option, commented: CSP, tracing, version, prerender, the test projects           |
 | `e2e/`                                   | seven Playwright suites; `collab.e2e.ts` runs two browsers on one trip, `visual.e2e.ts` runs axe |
 | `Dockerfile`, `compose.yaml`             | three stages, one process, a health check                                                        |

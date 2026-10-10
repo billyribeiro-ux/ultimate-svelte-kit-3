@@ -163,7 +163,7 @@
 		<!-- A tier-2 track; the pressed tool lifts onto a tier-3 pill. Not the primary button: formatting is a state, not an action. -->
 		<div class="toolbar no-print" role="toolbar" aria-label={m.notes_title()}>
 			{#each tools as tool, i (tool.key)}
-				{@const Icon = tool.icon}
+				{const Icon = $derived(tool.icon)}
 				{#if i === 2}<span class="toolbar__sep" aria-hidden="true"></span>{/if}
 				<button
 					class="btn btn--icon btn--sm btn--ghost toolbar__tool"

@@ -480,10 +480,18 @@
 			{/if}
 		</div>
 
+		<!--
+			`error` is an `App.Error`, not the thrown value: SvelteKit passes what a
+			boundary catches through `handleError` first, and `hooks.client.ts`
+			answers an unexpected throw with "Your board is safe on this device". The
+			text is its `message`; `String(error)` prints "[object Object]". Svelte
+			types `error` as `unknown` — it cannot know what SvelteKit's
+			`transformError` returns — hence the cast.
+		-->
 		{#snippet failed(error, reset)}
 			<div class="board__failed">
 				<p><strong>{t.errors.generic}</strong></p>
-				<p class="board__failed-detail">{String(error)}</p>
+				<p class="board__failed-detail">{(error as App.Error).message}</p>
 				<button type="button" onclick={reset}>Try rendering again</button>
 			</div>
 		{/snippet}

@@ -1,5 +1,6 @@
 import {
 	SHOP,
+	arriveClientSide,
 	chooseAvailableSlot,
 	chooseDay,
 	expect,
@@ -218,6 +219,62 @@ test.describe('managing a booking', () => {
 		// Too short to be a token, so the schema refuses it.
 		const response = await page.goto('/booking/nope');
 		expect(response?.status()).toBeGreaterThanOrEqual(400);
+	});
+
+	test('an unknown token gets the server s own sentence, not a fallback', async ({ page }) => {
+		/*
+		 * The query the page awaits calls `error(404, 'We could not find that
+		 * booking.')`. SvelteKit's boundary around the page renders `+error.svelte`
+		 * with an `App.Error` — `{ status, message }`, no `body` — so the screen
+		 * shows the sentence only if the component reads `error.message`.
+		 */
+		const response = await page.goto('/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
+		expect(response?.status()).toBe(404);
+		await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+	});
+
+	test('the same failure after a client-side navigation shows the same sentence', async ({
+		page
+	}) => {
+		/*
+		 * The server-rendered failure goes through the server's `handleError`; this
+		 * one goes through the client's, which is a different hook in a different
+		 * file and could disagree.
+		 */
+		await arriveClientSide(page, '/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
+		await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+	});
+
+	test('cancelling from a stale second window is refused in the server s words', async ({
+		page
+	}) => {
+		await page.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseAvailableSlot(page, 3);
+		await submitBooking(page, 'Twice Tess');
+		await expect(page).toHaveURL(/\/booking\//);
+		const managePath = new URL(page.url()).pathname;
+
+		// The same link, open in a second window before the cancellation.
+		const other = await page.context().newPage();
+		await arriveClientSide(other, managePath);
+		const otherCancel = other.getByRole('button', { name: 'Cancel this appointment' });
+		await expect(otherCancel).toBeVisible();
+
+		page.once('dialog', (dialog) => void dialog.accept());
+		await page.getByRole('button', { name: 'Cancel this appointment' }).click();
+		await expect(page.getByText('This appointment is cancelled')).toBeVisible();
+
+		/*
+		 * The second window reads a plain query, so it still offers the button, and
+		 * the command reaches the server, which calls `error(400, 'That booking is
+		 * already cancelled.')`. The browser receives an `HttpError` — not an
+		 * `Error` — with that sentence in `body.message`. Reading `.message` off the
+		 * rejection instead would show the fallback, "We could not cancel that."
+		 */
+		other.once('dialog', (dialog) => void dialog.accept());
+		await otherCancel.click();
+		await expect(other.getByRole('alert')).toContainText('That booking is already cancelled.');
+		await other.close();
 	});
 });
 

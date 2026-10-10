@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:428-465</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:428-467</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{:else if tab === 'globe'}
@@ -53,7 +53,9 @@
 		guards it because a WebGL scene has no server-rendered form.
 
 		The frame is painted night before the chunk arrives, so the tab
-		never flashes cream and then space.
+		never flashes cream and then space. `failed` is handed an
+		`App.Error`, not the `Error` the import threw: `handleError` in
+		`src/hooks.client.ts` has already turned it into words.
 	--&gt;
 	&lt;div class=&quot;full-map full-map--night&quot;&gt;
 		{#if browser}
@@ -63,7 +65,7 @@
 				{/snippet}
 				{#snippet failed(error, reset)}
 					&lt;p class=&quot;night__status issue&quot;&gt;
-						{error instanceof Error ? error.message : m.error_title()}
+						{(error as App.Error).message}
 						&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}
 							&gt;{m.live_reconnect()}&lt;/button
 						&gt;
@@ -81,7 +83,7 @@
 		{/if}
 	&lt;/div&gt;</code></pre>
 </figure>
-<p>Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: <code>{const { default: Globe } = await import(...)}</code>. The <code>pending</code> snippet shows until the chunk arrives and the <code>failed</code> snippet if the network does not deliver it, with a <code>reset</code> that tries again. <code>browser</code> guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.</p>
+<p>Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: <code>{const { default: Globe } = await import(...)}</code>. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s <code>{const initial = $derived(await tripBySlug(slug))}</code> follows the slug. The <code>pending</code> snippet shows until the chunk arrives and the <code>failed</code> snippet if the network does not deliver it, with a <code>reset</code> that tries again. <code>failed</code> prints <code>error.message</code>, because what it is handed is an <code>App.Error</code> — the failure after <code>handleError</code> in <code>src/hooks.client.ts</code> has put it into words, in the page’s language (chapter 14) — and not the <code>Error</code> the import threw. The first version tested <code>error instanceof Error</code>, which an <code>App.Error</code> never is, so it showed its fallback whatever had happened. <code>browser</code> guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.</p>
 
 <figure class="code">
 	<figcaption>
@@ -143,7 +145,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:53-106</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:53-107</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;globe&quot;&gt;
@@ -151,9 +153,10 @@
 		{#snippet pending()}
 			&lt;p class=&quot;globe__status&quot;&gt;{m.globe_loading()}&lt;/p&gt;
 		{/snippet}
+		&lt;!-- An `App.Error` from `handleError`, not the `Error` thrown below: the words are on `message`. --&gt;
 		{#snippet failed(error, reset)}
 			&lt;p class=&quot;globe__status issue&quot;&gt;
-				{error instanceof Error ? error.message : m.error_title()}
+				{(error as App.Error).message}
 				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button&gt;
 			&lt;/p&gt;
 		{/snippet}

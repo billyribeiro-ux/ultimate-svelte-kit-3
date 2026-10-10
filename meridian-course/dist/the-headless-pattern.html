@@ -238,7 +238,7 @@ const table = createTable({
 	<pre><code class="lang-svelte">{#each table.getHeaderGroups() as group (group.id)}
 	&lt;tr&gt;
 		{#each group.headers as header (header.id)}
-			{@const sorted = header.column.getIsSorted()}
+			{const sorted = $derived(header.column.getIsSorted())}
 			&lt;th
 				class=&quot;sortable&quot;
 				class:num={header.column.columnDef.meta?.align === 'end'}

@@ -44,7 +44,9 @@
 {#if others.length > 0}
 	<ul class="presence" role="list" aria-label={m.companions_here()}>
 		{#each shown as person (person.userId)}
-			{@const stop = person.stopId ? view.document.stops.find((s) => s.id === person.stopId) : null}
+			{const stop = $derived(
+				person.stopId ? view.document.stops.find((s) => s.id === person.stopId) : null
+			)}
 			<li
 				class="presence__chip"
 				title={stop

@@ -265,6 +265,34 @@ export const restoreTo = command(
 </figure>
 <p>A checkpoint records the board’s sequence <strong>at the moment it is saved</strong> rather than computing it later, because &quot;the checkpoint I saved at 3pm&quot; must not drift as the board does.</p>
 <p>And the restore goes through <code>ingest</code> — the same function every client’s edits go through, with the same per-operation permission check and the same broadcast. That is what makes a restore arrive on everybody else’s screen as an ordinary batch of edits, live, while they are working.</p>
+<p>In the browser, the Restore button is a command call, so a refusal comes back the way chapter 36’s does — as an <code>HttpError</code> — and is caught the same way. The list itself is awaited inside <code>History.svelte</code>’s boundary, so its <code>pending</code> and <code>failed</code> snippets are the ones that run.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/History.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">async function restore(seq: number) {
+	restoring = seq;
+	refusal = null;
+	try {
+		await restoreTo({ boardId, seq });
+	} catch (thrown) {
+		/*
+		 * `thrown.body.message`, not `thrown.message`.
+		 *
+		 * A command the server refuses rejects with an `HttpError`: `{ status,
+		 * body }`, where `body` is the `App.Error` a boundary would have been
+		 * handed. It is not an `Error` and has no `message` of its own. Anything
+		 * that is not an `HttpError` is a request that never got an answer, and
+		 * that gets the generic line.
+		 */
+		refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+	} finally {
+		restoring = null;
+	}
+}</code></pre>
+</figure>
 
 <figure class="code code--terminal">
 	<figcaption>

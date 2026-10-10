@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { HeartIcon } from 'phosphor-svelte';
 	import { resolve } from '$app/paths';
+	import { messageOf } from '#lib/errors.ts';
 	import { getCounts, lovePattern, recordPlay } from '#lib/remote/patterns.remote.ts';
 	import type { Published } from '#lib/server/patterns.ts';
 	import { vanityPath } from '#lib/vanity.ts';
@@ -33,8 +34,8 @@
 			await lovePattern(published.id).updates(
 				getCounts(published.id).withOverride((counts) => ({ ...counts, likes: counts.likes + 1 }))
 			);
-		} catch {
-			toast('Could not love that right now', 'error');
+		} catch (e) {
+			toast(messageOf(e, 'Could not love that right now'), 'error');
 		}
 	}
 

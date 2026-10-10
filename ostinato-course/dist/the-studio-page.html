@@ -289,7 +289,7 @@ function visibility() {
 	transition from the old one plays against the new.
 --&gt;
 {#key session.generation}
-	&lt;svelte:boundary onerror={(error) =&gt; toast((error as Error).message, 'error')}&gt;
+	&lt;svelte:boundary onerror={(error) =&gt; toast((error as App.Error).message, 'error')}&gt;
 		&lt;StepGrid
 			pattern={session.pattern}
 			step={scheduler.step}
@@ -311,13 +311,13 @@ function visibility() {
 		/&gt;
 
 		{#snippet failed(error, reset)}
-			&lt;p class=&quot;issue&quot;&gt;The grid could not be drawn: {(error as Error).message}&lt;/p&gt;
+			&lt;p class=&quot;issue&quot;&gt;The grid could not be drawn: {(error as App.Error).message}&lt;/p&gt;
 			&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={reset}&gt;Try again&lt;/button&gt;
 		{/snippet}
 	&lt;/svelte:boundary&gt;
 {/key}</code></pre>
 </figure>
-<p><code>{#key session.generation}</code> destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, <code>&lt;svelte:boundary&gt;</code> catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the <code>failed</code> snippet with a “Try again” button instead of taking the page down. <code>onerror</code> sends the message to a toast as well.</p>
+<p><code>{#key session.generation}</code> destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, <code>&lt;svelte:boundary&gt;</code> catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the <code>failed</code> snippet with a “Try again” button instead of taking the page down. <code>onerror</code> sends the message to a toast as well. Both are handed the same thing — the <code>App.Error</code> that <code>handleError</code> made, <code>{ status, message }</code>, not the value that was thrown — which is why they read <code>error.message</code> and cast to <code>App.Error</code> rather than to <code>Error</code>.</p>
 
 <figure class="code">
 	<figcaption>

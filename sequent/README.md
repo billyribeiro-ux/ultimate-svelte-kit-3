@@ -131,18 +131,28 @@ a way that takes an auditor to find.
 ```sh
 pnpm test        # 375 tests
 pnpm check       # types, across all six packages
-pnpm verify      # both, plus a production build
+pnpm test:e2e    # the browser tests, against the production build
+pnpm verify      # all of it: check, test, a production build, then the browser tests
 ```
+
+The browser tests (`apps/web/e2e/`) need Chromium once:
+`pnpm --filter @sequent/web exec playwright install chromium`. They serve the
+build on port 4173 against their own `e2e.db`, which they seed fresh every run
+— never the database you develop against.
 
 The build needs `PUBLIC_ORIGIN`. It is declared `static` in `apps/web/src/env.ts`,
 so SvelteKit reads it at build time and refuses to build without it — a missing
 origin is a venue whose CSRF check compares against `undefined`, and that is
 better discovered by the build than by the first POST. `pnpm dev` supplies a
-default; for `verify` either copy `.env.example` to `.env` or set it inline:
+default; for `verify`, set it inline:
 
 ```sh
 PUBLIC_ORIGIN=http://localhost:4173 pnpm verify
 ```
+
+It has to be that origin, not the development one in `.env.example`: the
+browser tests post to `http://localhost:4173`, and a build that expects
+`:5173` refuses every one of their commands as cross-site.
 
 Two kinds worth knowing about:
 

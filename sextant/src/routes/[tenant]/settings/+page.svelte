@@ -55,7 +55,7 @@
 				<ul class="list">
 					{#each list as saved (saved.id)}
 						<!-- One instance per row: see the note in the alerts page. -->
-						{@const remove = deleteView.for(saved.id)}
+						{const remove = $derived(deleteView.for(saved.id))}
 						<li>
 							<a
 								class="list__main"
@@ -82,8 +82,8 @@
 				<p class="empty" role="status">Loading…</p>
 			{/snippet}
 
-			{#snippet failed()}
-				<p class="empty" role="alert">Could not load saved views.</p>
+			{#snippet failed(error)}
+				<p class="empty" role="alert">{(error as App.Error).message}</p>
 			{/snippet}
 		</svelte:boundary>
 	</section>
@@ -166,7 +166,7 @@
 				{:else}
 					<ul class="list">
 						{#each list as key (key.id)}
-							{@const revoke = revokeKey.for(key.id)}
+							{const revoke = $derived(revokeKey.for(key.id))}
 							<li>
 								<div class="list__main">
 									<strong>{key.name}</strong>
@@ -201,12 +201,11 @@
 				<!--
 					What arrives here is SvelteKit's `App.Error`, not the `HttpError` that
 					was thrown: its `message` is the server's own, such as "Sign in to
-					continue."
+					continue." Every boundary error has been through `handleError`, so there
+					is always a message and nothing for a fallback to stand in for.
 				-->
 				{#snippet failed(error)}
-					<p class="empty" role="alert">
-						{(error as App.Error | undefined)?.message ?? 'Could not load keys.'}
-					</p>
+					<p class="empty" role="alert">{(error as App.Error).message}</p>
 				{/snippet}
 			</svelte:boundary>
 		{/if}

@@ -209,21 +209,90 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 			&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
 		&lt;/form&gt;
 
-		&lt;Button
-			size=&quot;sm&quot;
-			variant=&quot;ghost&quot;
-			onclick={() =&gt; resolveThread({ boardId, id: thread.id, resolved: true })}
-		&gt;
+		&lt;Button size=&quot;sm&quot; variant=&quot;ghost&quot; onclick={() =&gt; setResolved(thread.id, true)}&gt;
 			{t.comments.resolve}
 		&lt;/Button&gt;</code></pre>
 </figure>
 <p>Spread the bare <code>postComment</code> into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. <code>.for(id)</code> is the fix and it is four characters.</p>
 <aside class="callout callout--note"><p><code>{const reply = $derived(…)}</code> is a <strong>declaration tag</strong> — a <code>const</code> written in markup — and it is how a block names a value: since Svelte 5.56 the older <code>{@const}</code> tag is legacy. The <code>$derived</code> is not decoration. <code>{@const}</code> re-evaluated whenever what it read changed, and a bare <code>{const}</code> is evaluated once, so <code>$derived</code> is what keeps that reactivity. The scope is lexical, too. <code>{@const}</code> had to sit directly inside a block, a component or a <code>&lt;svelte:boundary&gt;</code>; a declaration tag can go anywhere in markup, and its name is visible to its siblings and their children — the whole <code>&lt;article&gt;</code> here — and to nothing outside this <code>{#each}</code>.</p></aside>
 <aside class="callout callout--note"><p>Note <code>resolveThread</code>’s <code>where</code> clause: <code>and(eq(comment.id, id), isNull(comment.parentId))</code>. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.</p></aside>
+<h3 id="refused">When the server says no</h3>
+<p>A viewer can see the Resolve button. Hiding it would be a courtesy, and courtesies get forgotten; what actually stops a viewer is <code>requireAccess(board, who.id, 'commenter')</code> in <code>resolveThread</code>, which answers 403. The interface’s job is to say so, in the server’s words.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Why the last resolve or reopen was refused, in the server's words. */
+let refusal = $state&lt;string | null&gt;(null);
+
+async function setResolved(id: string, done: boolean) {
+	refusal = null;
+	try {
+		await resolveThread({ boardId, id, resolved: done });
+	} catch (thrown) {
+		/*
+		 * `thrown.body.message`, not `thrown.message`.
+		 *
+		 * A command the server refuses — a viewer pressing Resolve, say — rejects
+		 * with an `HttpError`: `{ status, body }`, where `body` is the `App.Error`.
+		 * It is not an `Error` and has no `message` of its own, so reading one
+		 * shows nothing. Anything that is not an `HttpError` is a request that
+		 * never got an answer, and that gets the generic line.
+		 */
+		refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>body.message</code></h4>
+	<p>A command the server refuses rejects with an <code>HttpError</code> — <code>{ status, body }</code> — and an <code>HttpError</code> is not an <code>Error</code>, so <code>thrown.message</code> is <code>undefined</code> and the obvious line shows nothing at all. The first version did not even get that far: it had no <code>catch</code>, the rejection went nowhere, and pressing the button did nothing anybody could see. <code>isHttpError(thrown)</code> narrows the type, <code>body.message</code> is the server’s sentence, and anything that is not an <code>HttpError</code> — a request that never got an answer — gets the generic line.</p>
+</aside>
+<p>The query that lists the threads has its own failure to show, and it reaches the screen by a different road:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The query read through its properties rather than awaited, because
+	`open` and `resolved` are derived from it in the script — and an `await`
+	there would suspend this whole component, leaving the board page's
+	boundary to replace the entire editor. So the query's own failure is
+	shown from `list.error`, which is the same `App.Error` a boundary would
+	have been handed, and this boundary is for errors thrown while rendering
+	a thread.
+--&gt;
+{#if list.error}
+	&lt;p class=&quot;comments__error&quot; role=&quot;alert&quot;&gt;{list.error.message}&lt;/p&gt;
+{:else if list.current === undefined}
+	&lt;p class=&quot;comments__empty&quot;&gt;{t.sync.connecting}&lt;/p&gt;
+{:else if open.length === 0 &amp;&amp; resolved.length === 0}
+	&lt;p class=&quot;comments__empty&quot;&gt;{t.comments.none}&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p><code>list.error</code> is the <code>App.Error</code> itself — the same object a boundary would have been handed — so here it is <code>.message</code>, not <code>.body.message</code>. The reason it is not awaited generalises beyond this panel: an <code>await</code> in a component’s *script* suspends the whole component, so the boundary that answers is the nearest one above it, not the one in its own markup. And the empty state now waits for <code>list.current</code>. Before, a query that had failed showed “No comments yet”: a fallback that always won, and the one line on the panel that was confidently wrong.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>[features] comments › tells a viewer, in the server’s words, why they cannot resolve one
+
+  the owner posts a thread on a new board   → it appears
+  the viewer opens it and presses Resolve   → resolveThread answers 403
+  the panel's alert                         → &quot;You have view-only access to this board.&quot;
+
+  before: nothing — the rejection was unhandled, and .message would have been undefined anyway</code></pre>
+</figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A colleague’s comment appears without a refresh.</li><li>A failed reply shows its error under one thread only.</li><li>A <code>commenter</code> can comment and cannot move a box.</li></ul>
+	<ul><li>A colleague’s comment appears without a refresh.</li><li>A failed reply shows its error under one thread only.</li><li>A viewer who presses Resolve is told why not, in the server’s words.</li><li>A <code>commenter</code> can comment and cannot move a box.</li></ul>
 </aside>
 		</article>
 

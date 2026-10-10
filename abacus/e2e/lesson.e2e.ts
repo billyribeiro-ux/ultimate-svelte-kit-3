@@ -42,3 +42,31 @@ test('the engine and the deriveds agree after an edit on either side', async ({ 
 		})
 		.toBe(true);
 });
+
+test('a cycle is a value on both sides, and breaking it brings both back', async ({ page }) => {
+	await page.goto('/lesson');
+	const engine = page.locator('.twin').nth(0);
+	const reactive = page.locator('.twin').nth(1);
+	const values = async () => ({
+		engine: (await engine.locator('output').allTextContents()).map((s) => s.trim()),
+		reactive: (await reactive.locator('output').allTextContents()).map((s) => s.trim())
+	});
+	const before = await values();
+
+	// One edit sets both sides. Left to the runtime, the deriveds would call
+	// each other until the stack ran out — and the page did not recover.
+	await reactive.getByLabel('A1').fill('=C3');
+	await reactive.getByLabel('A1').press('Enter');
+	await expect(engine.locator('output').first()).toHaveText('#CYCLE!');
+	await expect(reactive.locator('output').first()).toHaveText('#CYCLE!');
+	// A2 reads nothing, and still shows its number on both sides.
+	await expect(engine.locator('output').nth(3)).toHaveText('5');
+	await expect(reactive.locator('output').nth(3)).toHaveText('5');
+	const cyclic = await values();
+	expect(cyclic.reactive).toEqual(cyclic.engine);
+
+	// Break the cycle where it was made: every cell is what it was.
+	await reactive.getByLabel('A1').fill('10');
+	await reactive.getByLabel('A1').press('Enter');
+	await expect.poll(values).toEqual(before);
+});

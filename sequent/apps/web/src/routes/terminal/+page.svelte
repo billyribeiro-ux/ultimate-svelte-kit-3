@@ -35,6 +35,7 @@
 	let sending = $state(false);
 	let lastError = $state<string | null>(null);
 	let lastSent = $state<string | null>(null);
+	let cancelError = $state<string | null>(null);
 
 	/** Whether the order ticket is open, on phones where it is a sheet. */
 	let ticketOpen = $state(false);
@@ -63,7 +64,6 @@
 	const market = $derived(chosen ? await watchMarket({ instrumentId: chosen }) : null);
 
 	const orders = $derived(await getMyOrders());
-	const positions = $derived(await getMyPositions());
 
 	/*
 	 * Announce a phase change with the venue's one dramatic gesture.
@@ -151,6 +151,28 @@
 			lastError = messageFrom(thrown);
 		} finally {
 			sending = false;
+		}
+	}
+
+	/*
+	 * Cancel, and say so when the venue refuses.
+	 *
+	 * This used to be `void cancelOrder(...)` straight from the button, and a
+	 * refusal went nowhere: an unhandled rejection in the console, and on screen
+	 * a Cancel button that looked as if it had worked. A cancel that silently did
+	 * not happen is the most expensive kind of nothing — somebody walks away
+	 * believing an order is gone while it is still resting in the book.
+	 *
+	 * What arrives here is an `HttpError`, `{ status, body }`, with the server's
+	 * message at `body.message` — the same shape `send` gets, so the same reader.
+	 */
+	async function cancel(clientOrderId: string) {
+		cancelError = null;
+
+		try {
+			await cancelOrder({ clientOrderId });
+		} catch (thrown) {
+			cancelError = messageFrom(thrown);
 		}
 	}
 
@@ -324,6 +346,11 @@
 	<section class="card" {@attach reveal({ delay: 0.12 })}>
 		<h3>Your orders</h3>
 
+		{#if cancelError}
+			<!-- `alert`, not `status`: the order this was about is still working. -->
+			<p class="error under-heading" role="alert">{cancelError}</p>
+		{/if}
+
 		<!--
 			A scroll container, not a stacked card layout.
 			These are dense numeric rows that exist to be *compared* down a column —
@@ -371,7 +398,7 @@
 									<button
 										type="button"
 										class="link"
-										onclick={() => void cancelOrder({ clientOrderId: order.clientOrderId })}
+										onclick={() => void cancel(order.clientOrderId)}
 										aria-label="Cancel {order.clientOrderId}">Cancel</button
 									>
 								{/if}
@@ -387,43 +414,64 @@
 
 	<section class="card" {@attach reveal({ delay: 0.16 })}>
 		<h3>Positions</h3>
-		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
-			<table>
-				<thead>
-					<tr>
-						<th scope="col" class="pin">Account</th>
-						<th scope="col">Instrument</th>
-						<th scope="col">Quantity</th>
-						<th scope="col">Average</th>
-						<th scope="col">Realised</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each positions as position (position.accountId + position.instrumentId)}
+		<!--
+			Its own boundary, so this panel can fail without taking the terminal with
+			it. A venue operator may watch the book but holds no positions to see, and
+			the server refuses the query. Awaited in the script, that refusal rejected
+			the whole page and the operator lost the book, the tape and every Cancel
+			button with it. Awaited here, it costs one panel, which says why.
+
+			The `failed` snippet's `error` is an `App.Error` — a plain
+			`{ status, message }` that went through `handleError`, not an `Error` — so
+			the reason is `error.message`, read as it is. Svelte types it `unknown`,
+			because a boundary in plain Svelte can catch anything at all; under
+			SvelteKit every boundary's error has been through `handleError` first, so
+			the cast states what Kit guarantees rather than guessing.
+		-->
+		<svelte:boundary>
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
+				<table>
+					<thead>
 						<tr>
-							<td class="mono small pin">{position.accountId}</td>
-							<td class="mono small">{position.instrumentId}</td>
-							<td class="mono {position.quantity > 0 ? 'up' : position.quantity < 0 ? 'down' : ''}"
-								>{position.quantity.toLocaleString('en-GB')}</td
-							>
-							<td class="mono">{position.averageLabel}</td>
-							<td
-								class="mono {position.realisedPnl > 0
-									? 'up'
-									: position.realisedPnl < 0
-										? 'down'
-										: ''}"
-							>
-								{position.realisedPnl < 0 ? '−' : ''}{position.realisedLabel}
-							</td>
+							<th scope="col" class="pin">Account</th>
+							<th scope="col">Instrument</th>
+							<th scope="col">Quantity</th>
+							<th scope="col">Average</th>
+							<th scope="col">Realised</th>
 						</tr>
-					{:else}
-						<tr><td colspan="5" class="muted small">Flat.</td></tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+					</thead>
+					<tbody>
+						{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
+							<tr>
+								<td class="mono small pin">{position.accountId}</td>
+								<td class="mono small">{position.instrumentId}</td>
+								<td
+									class="mono {position.quantity > 0 ? 'up' : position.quantity < 0 ? 'down' : ''}"
+									>{position.quantity.toLocaleString('en-GB')}</td
+								>
+								<td class="mono">{position.averageLabel}</td>
+								<td
+									class="mono {position.realisedPnl > 0
+										? 'up'
+										: position.realisedPnl < 0
+											? 'down'
+											: ''}"
+								>
+									{position.realisedPnl < 0 ? '−' : ''}{position.realisedLabel}
+								</td>
+							</tr>
+						{:else}
+							<tr><td colspan="5" class="muted small">Flat.</td></tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+
+			{#snippet failed(error)}
+				<p class="muted small under-heading">{(error as App.Error).message}</p>
+			{/snippet}
+		</svelte:boundary>
 	</section>
 </div>
 
@@ -729,6 +777,10 @@
 		border-radius: var(--radius);
 		padding: var(--space-2);
 		font-size: var(--text-sm);
+	}
+	/* The two panel messages sit under an `h3` in a card that is not a `.stack`. */
+	.under-heading {
+		margin-block-start: var(--space-2);
 	}
 	.sent {
 		border-inline-start: 2px solid var(--accent);

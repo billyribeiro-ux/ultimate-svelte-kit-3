@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hooks: identity, headers, one framed route, errors by kind — Building Abacus</title>
-<meta name="description" content="sequence of two handles, a preload filter that names font files by source filename, a per-route frame-ancestors swap, handleFetch, handleError that tells validation failures from real ones, init, and the transport that carries an ErrorValue across the wire.">
+<meta name="description" content="sequence of two handles, a preload filter that names font files by source filename, a per-route frame-ancestors swap, handleFetch, handleError that tells validation failures from real ones on the server and leaves a deliberate error(…) alone in the browser, init, the transport that carries an ErrorValue across the wire, and the two shapes of error a page has to read.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 29</p>
 			<h1>Hooks: identity, headers, one framed route, errors by kind</h1>
-			<p class="lede"><code>sequence</code> of two handles, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route <code>frame-ancestors</code> swap, <code>handleFetch</code>, <code>handleError</code> that tells validation failures from real ones, <code>init</code>, and the <code>transport</code> that carries an <code>ErrorValue</code> across the wire.</p>
+			<p class="lede"><code>sequence</code> of two handles, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route <code>frame-ancestors</code> swap, <code>handleFetch</code>, <code>handleError</code> that tells validation failures from real ones on the server and leaves a deliberate <code>error(…)</code> alone in the browser, <code>init</code>, the <code>transport</code> that carries an <code>ErrorValue</code> across the wire, and the two shapes of error a page has to read.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read every hook in the project and say what each is for — and what the September 2026 releases changed in them.</p></aside>
 			
 <figure class="code">
@@ -272,7 +272,7 @@ export const transport: Transport = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-20</span></span>
+		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-30</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -283,23 +283,74 @@ export const transport: Transport = {
  * navigation or a render: a `load` that threw on the client, a component
  * that threw while hydrating. The server's `handleError` never sees these.
  *
- * It logs, and it hands the error page a message and a reference. A real
- * deployment would send the reference and the stack to an error tracker
- * here; this one keeps the shape so that adding it is one line.
+ * It looks at `kind`, as the server's does. An `app` error is an
+ * `error(404, 'No such template')` that a universal `load` threw in this tab;
+ * it already says what it means, and returning nothing keeps its status and
+ * message. Only an `unknown` error — a component that threw, a bug — is
+ * logged and given a reference. A real deployment would send the reference
+ * and the stack to an error tracker here; this one keeps the shape so that
+ * adding it is one line.
+ *
+ * What a remote function threw on the server is not handled here at all: it
+ * arrives already through the server's hook and is not passed to this one a
+ * second time.
  */
 
 import type { HandleClientError } from '@sveltejs/kit/hooks';
 
-export const handleError: HandleClientError = ({ error, event }) =&gt; {
+export const handleError: HandleClientError = ({ error, event, kind }) =&gt; {
+	if (kind !== 'unknown') return;
+
 	const id = crypto.randomUUID();
 	console.error(`[${id}] at ${event.url.pathname}`, error);
 	return { message: 'Something went wrong in this tab.', id };
 };</code></pre>
 </figure>
+<p>The client hook looks at <code>kind</code> as the server’s does. An <code>error(404, 'No such template')</code> thrown by a universal <code>load</code> while the browser is navigating arrives as <code>app</code>, and returning nothing keeps its status and message, so the error page says <em>No such template</em> and shows no reference — a 404 is not a bug. Only an <code>unknown</code> error, a component that threw, is logged and given one. In SvelteKit 2 the hook never saw an <code>error(…)</code> at all, so a hook that answered everything with “Something went wrong in this tab.” was harmless; SvelteKit 3 sends it every error, and the same five lines started hiding every deliberate message behind one sentence and putting a reference number on a missing page. The end-to-end suite now follows a link to a template that does not exist, and fails if that comes back.</p>
+<h3 id="two-shapes">Two shapes of error in the browser</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.ts<span class="code__lines">:1-27</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT THE SERVER SAID
+ * ====================
+ *
+ * A remote call awaited in the browser — `await publish(id)`, `await
+ * form.submit()`, `await getPublished(id)` outside the markup — rejects with
+ * SvelteKit's `HttpError`: `{ status, body }`, where `body` is the `App.Error`
+ * the server's `handleError` produced. The server's words are in
+ * `body.message`. There is no `message` on the error itself, and it is not an
+ * `Error` at all, so the obvious `(e as Error).message` is `undefined` — a
+ * toast with nothing in it — and `e instanceof Error ? … : 'Something went
+ * wrong'` throws the server's sentence away every time.
+ *
+ * A `failed` snippet is different: what it receives has already been through
+ * `handleError` and *is* the `App.Error`, so it reads `error.message`
+ * directly. This function is for the `catch` blocks.
+ *
+ * Anything that is not an `HttpError` — the network dropped, the tab is
+ * offline — has no message meant for a person, and gets the caller's
+ * `fallback`, which says what was being attempted.
+ */
+
+import { isHttpError } from '@sveltejs/kit';
+
+export function messageOf(error: unknown, fallback: string): string {
+	return isHttpError(error) ? error.body.message : fallback;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a catch block and a failed snippet read different fields</h4>
+	<p>Await a remote function in a handler — <code>await publish(id)</code>, <code>await form.submit()</code>, <code>await getPublished(id)</code> outside the markup — and a refusal rejects with SvelteKit’s <code>HttpError</code>: <code>{ status, body }</code>, where <code>body</code> is the <code>App.Error</code> the server’s hook produced. The sentence is <code>body.message</code>. It is not an <code>Error</code>, so <code>(e as Error).message</code> is <code>undefined</code> — an empty toast — and <code>e instanceof Error ? e.message : 'Something went wrong'</code> throws the server’s words away every time; this project had both. A boundary is the other shape. The SvelteKit docs say a <code>failed</code> snippet’s error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>”: <code>{ status, message }</code>, read as <code>error.message</code>. Neither was taken on trust. In a built app, a query that threw <code>error(418, 'probe')</code> reached a <code>failed</code> snippet as a plain <code>{ status: 418, message: 'probe' }</code>, and a command that threw <code>error(409, …)</code> rejected its caller with an object whose own keys were <code>status</code> and <code>body</code>. In SvelteKit 2, sending render errors through <code>handleError</code> was an experimental option, <code>handleRenderingErrors</code>; in SvelteKit 3 it is how every boundary works, so the hook — not whatever was thrown — decides what a <code>failed</code> snippet shows.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what goes wrong if the hook types are imported from <code>@sveltejs/kit</code>.</li><li>You can explain how <code>/embed/</code> gets a different <code>frame-ancestors</code> from everything else.</li><li>You can list the four <code>kind</code>s and what each one gets from <code>handleError</code>.</li></ul>
+	<ul><li>You can say what goes wrong if the hook types are imported from <code>@sveltejs/kit</code>.</li><li>You can explain how <code>/embed/</code> gets a different <code>frame-ancestors</code> from everything else.</li><li>You can list the four <code>kind</code>s and what each one gets from <code>handleError</code>, on the server and in the browser.</li><li>You can say what a <code>catch</code> around a remote call receives, what a <code>failed</code> snippet receives, and where the server’s sentence is in each.</li></ul>
 </aside>
 		</article>
 

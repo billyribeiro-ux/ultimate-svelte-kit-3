@@ -166,6 +166,57 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 </figure>
 <p>The <code>.refresh()</code> call is the part worth stealing. A command can tell a query it is stale, and Kit sends the fresh data back <strong>in the same HTTP response as the command's result</strong>. One round trip places the order and updates the blotter. Without it you need a second request, and the gap between them is the window where the screen shows an order the person just placed as not existing.</p>
 <p><code>void</code> in front is deliberate: we are not awaiting it, because we do not want the command's response held up by a refresh, and an un-awaited promise without <code>void</code> is the kind of thing a linter should complain about.</p>
+<h3 id="refused">When the server says no</h3>
+<p>A command can be refused, and on a venue it often is. The gateway answers an auditor's cancel with <code>error(403, 'Your role does not allow that.')</code>, an expired session gets <code>error(401, 'Sign in to continue.')</code>, and a paused venue answers a new order with a 503 that explains itself. In the browser, the <code>await</code> in front of the command <strong>rejects</strong>. The person deserves the server's sentence rather than a shrug, so the only question is where in the rejected value that sentence lives.</p>
+<p>Rather than guess, force one and look. A throwaway command that does nothing but <code>error(409, 'probe command')</code>, called from a button, caught, and described:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>{&quot;instanceofError&quot;:false,&quot;ctor&quot;:&quot;HandledHttpError&quot;,&quot;keys&quot;:[&quot;status&quot;,&quot;body&quot;],&quot;status&quot;:409,&quot;body&quot;:{&quot;status&quot;:409,&quot;message&quot;:&quot;probe command&quot;}}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>It is not an Error</h4>
+	<p>What a rejected remote call hands you is SvelteKit's <code>HttpError</code> — here its subclass <code>HandledHttpError</code>, which means <code>handleError</code> has already run on the server — and it has exactly two properties: <code>status</code>, and <code>body</code>, the <code>App.Error</code> the server sent. The message is <code>body.message</code>. There is no <code>message</code> on the object itself and it does not extend <code>Error</code>, so the reflex <code>thrown instanceof Error ? thrown.message : 'Something went wrong'</code> takes the fallback <strong>every time the server refused on purpose</strong> — the one case where it had something worth saying.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function messageFrom(thrown: unknown): string {
+	if (typeof thrown === 'object' &amp;&amp; thrown !== null) {
+		const body = (thrown as { body?: { message?: unknown } }).body;
+		if (body &amp;&amp; typeof body.message === 'string') return body.message;
+		const message = (thrown as { message?: unknown }).message;
+		if (typeof message === 'string' &amp;&amp; message) return message;
+	}
+	return 'That did not work.';
+}</code></pre>
+</figure>
+<p>Three branches, in order of how often they are right. <code>body.message</code> is the server's refusal. A response that was not SvelteKit's JSON at all — the plain-text 403 from our own CSRF hook in chapter 26, say — still arrives as an <code>HttpError</code>, with the status text (<code>Forbidden</code>) as its <code>body.message</code>. <code>message</code> is for a real <code>Error</code>: the ticket throws one itself when the person has no trading account, and a dropped connection makes <code>fetch</code> reject with a <code>TypeError</code> before any server was involved. The last line should almost never be read.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">async function cancel(clientOrderId: string) {
+	cancelError = null;
+
+	try {
+		await cancelOrder({ clientOrderId });
+	} catch (thrown) {
+		cancelError = messageFrom(thrown);
+	}
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The first version had no <code>try</code> at all — <code>onclick={() =&gt; void cancelOrder(...)}</code>, straight from the button. Here the <code>void</code> was not a decision, it was a way of quietening the linter, and the rejection went to the console as an unhandled error while the screen showed a Cancel button that looked as if it had worked. Three of the five roles that open the terminal are refused that cancel: an auditor reads everything and changes nothing, and a risk manager's or firm admin's cancel is the firm-wide one. A cancel that silently does not happen is the expensive kind of nothing — somebody walks away believing an order is out of the book while it is still resting there.</p></aside>
+<p>The message is shown above the orders table with <code>role=&quot;alert&quot;</code>, not <code>role=&quot;status&quot;</code>, because the order it is about is still working: that is news somebody should hear now, not when the screen reader next has a moment.</p>
 <h3 id="form">form — progressive enhancement</h3>
 <p><code>form()</code> is <code>command()</code> for things that should work with JavaScript switched off. It takes the same schema, and it returns an object you spread onto a <code>&lt;form&gt;</code> element.</p>
 
@@ -240,7 +291,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can write a <code>query</code>, a <code>command</code>, a <code>form</code> and a <code>query.live</code></li><li>You can explain why every argument needs a schema even for your own page</li><li>You can explain what <code>.refresh()</code> inside a command saves you</li><li>You can explain why the live generator coalesces, and what <code>request.signal</code> prevents</li></ul>
+	<ul><li>You can write a <code>query</code>, a <code>command</code>, a <code>form</code> and a <code>query.live</code></li><li>You can explain why every argument needs a schema even for your own page</li><li>You can explain what <code>.refresh()</code> inside a command saves you</li><li>You can say where a refused command's message lives, and why <code>instanceof Error</code> never finds it</li><li>You can explain why the live generator coalesces, and what <code>request.signal</code> prevents</li></ul>
 </aside>
 		</article>
 

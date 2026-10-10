@@ -450,7 +450,7 @@
 		-->
 		{#each groups as group (group.key)}
 			{#if group.members.length === 1}
-				{@const { stop, number } = group.members[0]!}
+				{const { stop, number } = $derived(group.members[0]!)}
 				<Marker
 					lngLat={group.lngLat}
 					zIndex={stop.id === selected ? 10 : 1}
@@ -477,7 +477,7 @@
 					</span>
 				</Marker>
 			{:else}
-				{@const names = group.members.map((member) => member.stop.name).join(', ')}
+				{const names = $derived(group.members.map((member) => member.stop.name).join(', '))}
 				<Marker lngLat={group.lngLat} zIndex={5} asButton onclick={() => zoomInto(group)}>
 					<span class="pin pin--cluster tabular" title={names}>
 						{group.label}<span class="visually-hidden"

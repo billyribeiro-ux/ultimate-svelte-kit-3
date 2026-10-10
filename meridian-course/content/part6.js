@@ -46,7 +46,7 @@ export const part6 = [
 				type: 'p',
 				text: 'The fix uses an ordering guarantee worth knowing: a component’s `<script>` runs *before* its template is hydrated, while the server’s HTML is still on the page. So the helper reads what is in each input now, and makes it the field’s value with `set()`, and hydration writes the typed text back instead of nothing. It finds the input by the exact generated name the field’s own `as()` reports — `email/<hash>/signIn` — so a field on some other form can never be mistaken for this one, and on a client-side navigation there is no server HTML, the query finds nothing, and nothing happens.'
 			},
-			code('e2e/account.e2e.ts', 38, 61),
+			code('e2e/account.e2e.ts', 45, 68),
 			{
 				type: 'p',
 				text: 'The test that pins it holds the client bundle back with `page.route`, types into the server-rendered page, checks that the root element has no `data-hydrated` attribute yet, lets the bundle through, waits for the attribute the root layout sets in `onMount` (chapter 23), and only then asserts that the text is still there and that the sign-in goes through. Without the attribute the test would have nothing honest to wait for, and a `waitForTimeout` would be a guess.'
@@ -57,7 +57,7 @@ export const part6 = [
 				type: 'p',
 				text: 'The `(auth)` group is the brand mark over the form — straight on the paper on a phone, where a card inside a page inside a screen was a box in a box, and one card from 40em; the `(app)` group is a guard. Every route under `(app)` needs a person, and checking once in a layout `load` means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with `redirectTo` carrying the page they wanted. The remote functions check too, with `requireUser()`, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.'
 			},
-			code('src/lib/ui/Header.svelte', 138, 161),
+			code('src/lib/ui/Header.svelte', 141, 164),
 			{
 				type: 'p',
 				text: 'Signing out is a `<form>` spread from `signOut`, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s `load` runs again and the header renders the signed-out state. The header’s account corner is the same on every page — “New trip” for a person, “Sign in” for a stranger — so nothing in the header moves when the page changes under it. On its own page the action says so with `aria-current="page"`: `onNewTrip` and `onSignIn` read `page.route.id`, which is the same in every language, so `/de/signin` is recognised without a German string in the check.'
@@ -81,10 +81,10 @@ export const part6 = [
 		goal: 'Compose a page from two remote reads and one remote form, and let a headless picker participate in a form it knows nothing about.',
 		blocks: [
 			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 1, 32),
-			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 47, 119, { partial: true }),
+			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 47, 124, { partial: true }),
 			{
 				type: 'p',
-				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses `href()` from chapter 23 — `resolve()` with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an `::after` on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes `view-transition-name: trip-title` — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s `<h1>` carries the same name, so the title morphs into the header during the navigation.'
+				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. Both declarations are `$derived`, so a refreshed query redraws the list rather than leaving the first answer on screen. When the server refuses, the `failed` snippet prints `error.message`: it is handed an `App.Error`, `{ status, message }`, the failure after `handleError` (chapter 14). The first version wrote `error instanceof Error ? error.message : String(error)`, and since an `App.Error` is a plain object the list read `[object Object]`. Now an end-to-end test makes the preview request invalid on its way out and expects the server’s own sentence (chapter 42). The card link uses `href()` from chapter 23 — `resolve()` with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an `::after` on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes `view-transition-name: trip-title` — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s `<h1>` carries the same name, so the title morphs into the header during the navigation.'
 			},
 			code('src/lib/ui/Empty.svelte', 1, 57),
 			{
@@ -240,10 +240,10 @@ Error: Cannot access url.search on a page with prerendering enabled
 				text: 'The ring is module-level state shared by every request, which is usually the bug and here is the point: it holds nothing private, and only the diagnostics page reads it. `record` flattens a span to the fields the page shows; `recentSpans` returns a copy, newest first, so a reader cannot reach into the ring. The exporter is the OpenTelemetry interface — an `export` with a callback, and a `shutdown` — implemented in twelve lines.'
 			},
 			code('src/lib/remote/diagnostics.remote.ts', 1, 30),
-			code(`${ROUTES}/(site)/(app)/diagnostics/+page.svelte`, 52, 120, { partial: true }),
+			code(`${ROUTES}/(site)/(app)/diagnostics/+page.svelte`, 52, 126, { partial: true }),
 			{
 				type: 'p',
-				text: 'The page is one query and a table: version, Node version, uptime formatted by `Intl` units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Open the trip page in another tab, come back, refresh — and the `watchTrip` span is there, with the `heartbeat` commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.'
+				text: 'The page is one query and a table: version, Node version, uptime formatted by `Intl` units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Refresh calls `diagnostics().refresh()`, and the table redraws because the report is `{const report = $derived(await diagnostics())}`. It was a bare `{const}` at first, which awaits the first report and keeps it: the button fetched a new one and the page went on showing the old, until an end-to-end test pressed it (chapter 42). Open the trip page in another tab, come back, refresh — and the `watchTrip` span is there, with the `heartbeat` commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.'
 			},
 			{
 				type: 'checkpoint',
@@ -289,10 +289,10 @@ Error: Cannot access url.search on a page with prerendering enabled
 				type: 'p',
 				text: '`<svelte:options customElement>` names the tag, asks for an open shadow root, and maps two attributes onto props — so `<meridian-route slug="…">` on a host page becomes `slug` in the component. The element fetches the JSON and draws the stops as a projected line the way `RouteThumb` does. It is deliberately not the app’s component: an element that imported the design tokens would bring the tokens with it, and a shadow root means the host page’s CSS cannot reach in and ours cannot leak out.'
 			},
-			code('src/lib/embed/MeridianRoute.svelte', 85, 122),
+			code('src/lib/embed/MeridianRoute.svelte', 85, 130),
 			{
 				type: 'p',
-				text: 'Inside, a boundary with `pending` and `failed` around an `await` in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same six pairs `tokens.css` holds — paper, raised paper, the hairline, two inks and the sea — written as `light-dark()`. Inside a shadow root `light-dark()` resolves against the `color-scheme` the element inherits from the host page, so the host decides: a page that declares `color-scheme: light dark` gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A `prefers-color-scheme` query would have asked the visitor instead, and put a dark card on a light page.'
+				text: 'Inside, a boundary with `pending` and `failed` around an `await` in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. That is the one difference, and the comment above the boundary spells it out: with no SvelteKit around it, no `handleError` runs, so `failed` is handed what `load` threw — an `Error`, tested with `instanceof` — where every boundary inside the app is handed an `App.Error`. The two declarations are `$derived`, so a host page that changes the `slug` attribute gets the new route. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same six pairs `tokens.css` holds — paper, raised paper, the hairline, two inks and the sea — written as `light-dark()`. Inside a shadow root `light-dark()` resolves against the `color-scheme` the element inherits from the host page, so the host decides: a page that declares `color-scheme: light dark` gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A `prefers-color-scheme` query would have asked the visitor instead, and put a dark card on a light page.'
 			},
 			code('vite.config.ts', 80, 103),
 			code('vite.element.config.ts', 1, 42),

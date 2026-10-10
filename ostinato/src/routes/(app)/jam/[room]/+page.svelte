@@ -13,6 +13,7 @@
 		toggleRoomMute,
 		watchRoom
 	} from '#lib/remote/rooms.remote.ts';
+	import { messageOf } from '#lib/errors.ts';
 	import { cycleVelocity } from '#lib/pattern/model.ts';
 	import { PRESET_NAMES, preset } from '#lib/pattern/presets.ts';
 	import Player from '#lib/studio/Player.svelte';
@@ -32,11 +33,17 @@
 	 */
 	const room = $derived(watchRoom(params.room));
 
+	/**
+	 * Every edit is a `command`, and a command the server refuses rejects with
+	 * an `HttpError` — not an `Error` — whose sentence is on `body.message`.
+	 * `messageOf` reads it, so a click on a track somebody else has just
+	 * replaced says "No such track in this room" rather than nothing at all.
+	 */
 	async function run(action: Promise<unknown>) {
 		try {
 			await action;
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			toast(messageOf(e, 'That change did not reach the room'), 'error');
 		}
 	}
 </script>
@@ -189,8 +196,13 @@
 			<p class="hint">Joining the room…</p>
 		{/snippet}
 
+		<!--
+			The other shape: a boundary is handed the `App.Error` that `handleError`
+			made — `{ status, message }` — so the server's "No such room" is
+			`error.message`, with no `body` in between.
+		-->
 		{#snippet failed(error, reset)}
-			<p class="issue">{(error as Error).message}</p>
+			<p class="issue">{(error as App.Error).message}</p>
 			<button type="button" class="btn" onclick={reset}>Try again</button>
 		{/snippet}
 	</svelte:boundary>

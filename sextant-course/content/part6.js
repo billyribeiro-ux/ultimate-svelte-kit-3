@@ -174,7 +174,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 				type: 'p',
 				text: 'Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 230, 274),
+			code('src/routes/[tenant]/explore/+page.svelte', 267, 310),
 			{
 				type: 'p',
 				text: '`goto(url, { shallow: true, state })` adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of `pushState(url, state)` so that one function owns every change to the address bar, and so that the URL has to be one `resolve()` can vouch for.'
@@ -185,7 +185,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'page-state', text: 'The drawer reads history, not a variable' },
-			code('src/routes/[tenant]/explore/+page.svelte', 482, 492),
+			code('src/routes/[tenant]/explore/+page.svelte', 530, 540),
 			{
 				type: 'warn',
 				text: 'A local `open` variable that the shallow `goto` also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading `page.state` directly means there is exactly one source of truth, and the browser’s own navigation is it.'
@@ -266,7 +266,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'consuming', text: 'And nothing to show while it lands' },
-			code('src/routes/[tenant]/explore/+page.svelte', 331, 345),
+			code('src/routes/[tenant]/explore/+page.svelte', 362, 376),
 			{
 				type: 'p',
 				text: '`{#await … then}` with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.'
@@ -321,7 +321,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'sse-by-hand', text: 'Parsing SSE, which is fifteen lines' },
-			code('src/lib/components/LiveTail.svelte', 106, 128, { partial: true }),
+			code('src/lib/components/LiveTail.svelte', 116, 138, { partial: true }),
 			{
 				type: 'warn',
 				text: '`decode(value, { stream: true })` is the part that is correct on a slow network and wrong without it. A chunk boundary can fall in the middle of a UTF-8 sequence — which happens the moment a log line contains an emoji or an accent — and a decoder without it emits a replacement character for the split byte and another for its partner. The bug looks like corrupt data from the server.'
@@ -331,12 +331,21 @@ cause:  the write that adds \`view=table\` fired while the router was
 				text: 'And an abort is the *normal* way this ends: the query changed, or the component unmounted. Reporting it as a failure would put a red error on the screen every time somebody edits their query.'
 			},
 
+			{ type: 'h3', id: 'a-readable-refusal', text: 'A refusal the tail can read' },
+			code('src/lib/components/LiveTail.svelte', 87, 104),
+			{
+				type: 'p',
+				text: 'The tail used to ask for `text/event-stream` and nothing else, and that decided what a refusal looked like. SvelteKit answers an `error()` from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s `Accept` headers”. A tail of a query that summarizes got the HTML page, `response.json()` could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as `{ status, message }`.'
+			},
+			code('e2e/explore.e2e.ts', 377, 391),
+
 			{
 				type: 'checkpoint',
 				items: [
 					'Editing the query tears down the old stream before the new one starts.',
 					'A log line with an emoji arrives intact across a chunk boundary.',
-					'Stopping the tail does not produce an error.'
+					'Stopping the tail does not produce an error.',
+					'A tail the server refuses says why, in the server’s words.'
 				]
 			}
 		]
@@ -346,7 +355,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 		slug: 'remote-functions',
 		title: 'Remote functions: query, batch, form and command',
 		summary:
-			'Four kinds, one rule for choosing between them, and two mistakes that both render a 500 page over a working form.',
+			'Four kinds, one rule for choosing between them, two mistakes that both render a 500 page over a working form, and the two shapes a refusal arrives in.',
 		goal: 'Call the server without writing an endpoint, and know which kind each call should be.',
 		blocks: [
 			code('src/lib/remote/query.remote.ts', 1, 8),
@@ -379,7 +388,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'fields', text: 'Fields come from the form, not from a `name` attribute' },
-			code('src/routes/[tenant]/alerts/+page.svelte', 213, 234),
+			code('src/routes/[tenant]/alerts/+page.svelte', 242, 263),
 			{
 				type: 'terminal',
 				code: `
@@ -395,7 +404,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'default-value', text: '`defaultValue`, because a remote form resets itself' },
-			code('src/routes/[tenant]/alerts/+page.svelte', 241, 264),
+			code('src/routes/[tenant]/alerts/+page.svelte', 270, 293),
 			{
 				type: 'p',
 				text: 'A remote form resets after a successful submission — and a reset does not restore what is *selected*, it restores what each option says is its **default**: `option.defaultSelected`, which is the `selected` attribute. `fields.as(\'select\', …)` sets the select’s value **property** and marks no option at all, so before this line every option’s default was `false` and a reset fell to the first one.'
@@ -421,7 +430,7 @@ $ npx playwright test e2e/alerts.e2e.ts -g "form reset keeps the direction"
 			code('src/lib/remote/alerts.remote.ts', 117, 143),
 			{
 				type: 'warn',
-				text: '`error(400, …)` inside a form handler throws an `HttpError`, which SvelteKit turns into a 500 error **page** — the whole form, and the list around it, replaced by "Internal Error". `invalid(issue.query(…))` puts the message beside the field and marks the input. Both mistakes in this chapter were found by one end-to-end test that creates a rule; both looked perfectly reasonable in review.'
+				text: '`error(400, …)` inside a form handler throws an `HttpError`, which SvelteKit turns into a 500 error **page** — the whole form, and the list around it, replaced by "Internal Error". `invalid(issue.query(…))` puts the message beside the field and marks the input. Both of these mistakes were found by one end-to-end test that creates a rule; both looked perfectly reasonable in review.'
 			},
 
 			{ type: 'h3', id: 'per-instance', text: 'One instance per row' },
@@ -429,14 +438,97 @@ $ npx playwright test e2e/alerts.e2e.ts -g "form reset keeps the direction"
 				type: 'p',
 				text: 'A remote form is a single object with one attached `<form>` element, so spreading the same one inside an `{#each}` throws — and the page then renders its error branch, which looks like the query failed rather than like a markup mistake. `.for(id)` mints one instance per id, which is also what gives each row its own pending state.'
 			},
-			code('src/routes/[tenant]/alerts/+page.svelte', 84, 103),
+			code('src/routes/[tenant]/alerts/+page.svelte', 102, 111),
+
+			{ type: 'h3', id: 'a-refused-command', text: 'A command the server refuses' },
+			{
+				type: 'p',
+				text: 'The toggle used to call `toggleRule(…)` and forget it. When the server refused, nothing said so: the rejection went unhandled, and the box went on showing what had been asked for rather than what the server had kept. A boundary could not have helped. The Svelte documentation is plain that errors “in event handlers or after a `setTimeout` or async work” are **not** caught by error boundaries. So the page catches the rejection itself, puts the box back, and shows the refusal in the row.'
+			},
+			code('src/routes/[tenant]/alerts/+page.svelte', 38, 66),
+			{
+				type: 'p',
+				text: 'The line that matters is the one that reads the message, because a refusal reaches the browser in two shapes. A `failed` snippet is handed what SvelteKit’s `handleError` made of the error, and the documentation says so in a comment on its own example: “error went through the `handleError` hook and is of type `App.Error`” — `{ status, message }`, plus whatever the app adds. Awaiting a command hands back something else: the `HttpError` the client rebuilt from the response, with the message on `body` and none of its own. A probe that ended the session under a live page, then made a list reload and pressed the toggle, printed both.'
+			},
+			{
+				type: 'terminal',
+				code: `
+boundary (traces list)  {"status":401,"message":"Sign in to continue."}
+                        a plain object: not an Error, and no body
+
+command (toggleRule)    HandledHttpError, which extends HttpError
+                        {"status":401,"body":{"status":401,"message":"Sign in to continue."}}
+                        not an Error, and no message`
+			},
+			{
+				type: 'p',
+				text: 'So a boundary reads `message`, a command’s `catch` reads `body.message`, and each is the wrong field for the other: the wrong one is `undefined`, and a fallback sentence quietly takes its place. `isHttpError` tells a refusal from a request that never reached the server, which is the one case the fallback here is for. Server code is unchanged by any of this. A remote function or a hook that catches an `error()` holds the `HttpError` itself, and `isHttpError(e) && e.body.message` is still right there.'
+			},
+			{
+				type: 'note',
+				text: 'The documentation writes the snippet as `failed(error: App.Error)`. Svelte types a boundary’s `failed` as `Snippet<[error: unknown, reset: () => void]>`, so `svelte-check` refuses that annotation — “Type `unknown` is not assignable to type `Error`” — and the snippets here take `error` untyped and cast it where they read it: `(error as App.Error).message`.'
+			},
+			code('e2e/alerts.e2e.ts', 132, 157),
+			{
+				type: 'terminal',
+				code: `
+$ # the old handler: call the command, catch nothing
+$ pnpm exec playwright test e2e/alerts.e2e.ts -g 'refuses'
+
+  ✘ a toggle the server refuses says why, and the box goes back
+      Expected: "Sign in to continue."
+      Error: element(s) not found
+
+  2 failed`
+			},
+
+			{ type: 'h3', id: 'what-a-boundary-catches', text: 'What a boundary can catch' },
+			{
+				type: 'p',
+				text: 'The explore page puts its results in one `<svelte:boundary>`, and the comment above it promised that a refused query — a 400 from the checker is the common case — would be explained by the boundary’s `failed` snippet. It never was. Pressing Run on `from logs | where` replaced the whole page with SvelteKit’s error page: a “400” heading, “Expected a value” under it, and no editor to fix the query in.'
+			},
+			{
+				type: 'p',
+				text: 'The result is awaited in the script, and the boundary catches what is read inside it. The trouble was three values made from the result — the rows, the columns and the chart — which were `$derived`s in the script too. A `$derived` belongs to the component that declares it, and when one throws, Svelte reports the error from there: to the boundary around the component, not to the one around whatever was reading it. For a page, that is the boundary SvelteKit puts around every page, and its `failed` is the error page. The traces page reads its result straight from the markup, and never had the problem.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 451, 466),
+			{
+				type: 'p',
+				text: 'Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they belong to it, so “errors in `await` expressions will bubble to the nearest error boundary” now means this one. The chart became a plain function, `chartOf()`, so that its `$derived` could be declared here with the other two.'
+			},
+			{
+				type: 'p',
+				text: 'A boundary that has failed then has to be told to draw again. Its content is gone, so nothing in it reads the result any more, and the next answer would never reach it. The boundary’s `onerror` hands over its `reset`, and an effect that reads the result only to hear it change calls it when the next answer lands — rows, or the next refusal. A first version timed the reset with `settled()` instead, with and without a `tick()` before it, and either way one of Run and Try again drew the area before its answer had arrived.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 152, 173),
+			{
+				type: 'why',
+				title: 'Why “Try again” refreshes the query',
+				text: 'The boundary’s own `reset` only draws the area afresh, and the client remembers a refused query: drawn again, it shows the same refusal without asking the server anything. After a dropped connection or an expired session that is no use, so the button calls `refresh()` on the query and lets the answer arrive through the result, like any other.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 125, 135),
+			code('e2e/explore.e2e.ts', 340, 375),
+			{
+				type: 'terminal',
+				code: `
+$ # the old page: rows, columns and chart as $derived in the script
+$ pnpm exec playwright test e2e/explore.e2e.ts -g 'refuses is explained'
+
+  ✘ a query the server refuses is explained where its results would be
+      Expected: "Expected a value"
+      Error: element(s) not found
+
+  2 failed`
+			},
 
 			{
 				type: 'checkpoint',
 				items: [
 					'A results table draws forty sparklines in one round trip.',
 					'Your rule form works with JavaScript disabled.',
-					'An invalid rule shows a message beside the field rather than an error page.'
+					'An invalid rule shows a message beside the field rather than an error page.',
+					'A toggle the server refuses goes back to how it was and says why.',
+					'A query the server refuses is explained where its rows would be, with the editor still there.'
 				]
 			}
 		]

@@ -91,6 +91,27 @@ export const myBoards = query.live(async function* () {
 	<h4>A five-second poll, said out loud</h4>
 	<p>The generator could just as easily be driven by an event. It is not, and the comment says why: the board list is a page people leave open in a background tab, and it changes a few times an hour. An event bus for it would be infrastructure serving a list nobody is watching. <strong>The operation stream is where push matters, and it has its own channel</strong> — which is the honest way to make this trade rather than reaching for the same mechanism everywhere.</p>
 </aside>
+<p>The board list awaits its live query in the markup, the same way the board page awaits <code>openBoard</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/boards/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * A live query, so a board created in another tab — or by a colleague in a
+ * workspace you belong to — appears here without a reload.
+ *
+ * Awaited in the markup, inside the boundary, rather than read through
+ * `boards.current`. Awaiting a live query is not a one-off: every value the
+ * stream yields resolves it again, so the list still updates in place. What
+ * `await` adds is that the boundary sees the wait (its `pending` snippet) and
+ * the failure (its `failed` snippet). `.current` is `undefined` in both cases
+ * and says nothing — a stream that fails just leaves an empty page.
+ */
+const boards = myBoards();</code></pre>
+</figure>
+<p>Awaiting a live query is not a one-off. Each value the stream yields resolves it again, so <code>{const list = $derived(await boards)}</code> inside the boundary is a list that keeps itself up to date — with the boundary’s <code>pending</code> snippet covering the wait for the first value, and its <code>failed</code> snippet showing the server’s message if the stream is refused. Read through <code>boards.current</code> instead, a refused stream leaves the space under the heading blank, with nothing to say why.</p>
 <h3 id="reconnect">Refreshing a live query</h3>
 
 <figure class="code">

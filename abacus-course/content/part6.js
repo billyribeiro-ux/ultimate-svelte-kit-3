@@ -134,13 +134,17 @@ export const part6 = [
 			},
 
 			{ type: 'h3', id: 'the-page', text: 'The page' },
-			code('src/routes/(app)/sheet/local/+page.svelte', 15, 47),
+			code('src/routes/(app)/sheet/local/+page.svelte', 16, 48),
 			{
 				type: 'p',
 				text: 'Every operation the sheet emits goes to the channel and schedules a save, debounced by four hundred milliseconds. `?template=budget` starts from a template; `?from=<id>` starts from a published sheet — both are “make me a copy of this” without an account.'
 			},
-			code('src/routes/(app)/sheet/local/+page.svelte', 49, 101),
-			code('src/routes/(app)/sheet/local/+page.svelte', 108, 143),
+			code('src/routes/(app)/sheet/local/+page.svelte', 50, 104),
+			{
+				type: 'p',
+				text: 'If `?from=` names a sheet that is not published, `getPublished` throws `error(404, \'No such published sheet\')`. Awaited here, in `onMount`, rather than in the markup, that rejects with an `HttpError`, and the toast reads the sentence from its `body` with `messageOf` (ch. 29) before the page falls back to an empty sheet. The first version read `(e as Error).message`, which an `HttpError` does not have: the toast appeared, red and empty.'
+			},
+			code('src/routes/(app)/sheet/local/+page.svelte', 111, 146),
 			{
 				type: 'why',
 				title: 'Why the title is a function binding',
@@ -174,32 +178,32 @@ export const part6 = [
 				type: 'p',
 				text: 'A universal `load`, so the remote queries run on the server for the first visit and in the browser after. Nobody signed in is sent to sign in and brought back afterwards — the `next` parameter — and the sheet and the person’s locale are loaded together.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 15, 34),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 16, 35),
 			{
 				type: 'p',
 				text: 'The first document is read *once*, at creation, with `untrack`. A later `data` change — a refresh, a navigation to the same route — must not throw away the edits in the sheet model, so the model is built from a snapshot rather than from a reactive read.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 56, 68),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 57, 69),
 			{
 				type: 'why',
 				title: 'Why the record comes from the query and not from data',
 				text: 'The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call `getSheet(id).refresh()`. A query awaited in the component updates in place when it is refreshed; `data` is a snapshot of what the load returned. The first version read `data.sheet` and the Unpublish button never appeared, because the load did not re-run. `await` inside `$derived` resolves at once from the cache the load already filled, so there is no second request and no flash.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 79, 107),
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 114, 119),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 80, 108),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 115, 120),
 			{
 				type: 'p',
 				text: '`<svelte:window>` adds the one listener this page needs on the window. While `live.pending` says an edit is still queued or on its way to the server, `event.preventDefault()` in `beforeunload` makes the browser ask before the tab closes. Below it, the page is one `<div>` holding the header and the workbench.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 122, 157),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 123, 158),
 			{
 				type: 'p',
-				text: 'The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, “Could not save” — and a chip for everybody else in the room. `stream.current` being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.'
+				text: 'The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, and when the server refuses a batch, its own reason from `live.problem` — and a chip for everybody else in the room. `stream.current` being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 159, 238),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 160, 239),
 			{
 				type: 'p',
-				text: 'Sharing and publishing live in a native popover. The access setting is a *form* — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button.'
+				text: 'Sharing and publishing live in a native popover. The access setting is a *form* — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button, and a refusal — “Sign in with a passkey first”, if the session has gone — is the server’s sentence in the toast.'
 			},
 			{
 				type: 'checkpoint',
@@ -219,17 +223,17 @@ export const part6 = [
 			'A list of sheets with a create form (`preflight`, `enhance`), per-card rename and delete (`.for(id)`, `withOverride`), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.',
 		goal: 'Use every remote-form feature for something: client-side preflight, enhanced submission, per-instance forms, optimistic overrides, and a form that reissues the session cookie.',
 		blocks: [
-			code('src/routes/(app)/sheets/+page.svelte', 10, 39),
+			code('src/routes/(app)/sheets/+page.svelte', 11, 43),
 			{
 				type: 'p',
-				text: '`create.preflight(schema)` validates on the client before anything is sent — the same valibot the server runs, so “give it a title” appears on the keystroke — and `.enhance` wraps the submission so a failure becomes a toast rather than a page.'
+				text: '`create.preflight(schema)` validates on the client before anything is sent — the same valibot the server runs, so “give it a title” appears on the keystroke — and `.enhance` wraps the submission so a failure becomes a toast rather than a page. The toast is the server’s own sentence: a refused submission rejects with an `HttpError`, and `messageOf` reads its `body.message` (ch. 29).'
 			},
-			code('src/routes/(app)/sheets/+page.svelte', 48, 73),
-			code('src/routes/(app)/sheets/+page.svelte', 75, 139),
+			code('src/routes/(app)/sheets/+page.svelte', 52, 77),
+			code('src/routes/(app)/sheets/+page.svelte', 79, 149),
 			{
 				type: 'why',
 				title: 'Why delete takes the card off the screen before the server answers',
-				text: '`remove.for(sheet.id)` gives each card its own form instance, so a pending delete disables its own button and no other. `f.submit().updates(getMine().withOverride(list => …))` applies an optimistic override to the workspace query — the card disappears now — and the server’s `requested(getMine, 1).refreshAll()` replaces the override with the truth in the same response. If the delete fails, the override is dropped and the card comes back. The `{:else}` on the `each` is the empty state, and `failed` on the boundary is the error state with a `reset`.'
+				text: '`remove.for(sheet.id)` gives each card its own form instance, so a pending delete disables its own button and no other. `f.submit().updates(getMine().withOverride(list => …))` applies an optimistic override to the workspace query — the card disappears now — and the server’s `requested(getMine, 1).refreshAll()` replaces the override with the truth in the same response. If the delete fails, the override is dropped, the card comes back, and the toast says why rather than a fixed “Could not delete that”. The `{:else}` on the `each` is the empty state, and `failed` on the boundary is the error state with a `reset`. What `failed` is handed has been through `handleError` — an `App.Error`, so it reads `.message` — and the cast is there because Svelte, which knows nothing of SvelteKit, types the parameter `unknown`; annotating the snippet `failed(error: App.Error)` instead does not type-check.'
 			},
 
 			{ type: 'h3', id: 'signin', text: 'Sign in' },
@@ -241,16 +245,16 @@ export const part6 = [
 			code('src/routes/(app)/signin/+page.svelte', 83, 132),
 
 			{ type: 'h3', id: 'settings', text: 'Settings' },
-			code('src/routes/(app)/settings/+page.svelte', 15, 58),
-			code('src/routes/(app)/settings/+page.svelte', 82, 121, { partial: true }),
+			code('src/routes/(app)/settings/+page.svelte', 16, 59),
+			code('src/routes/(app)/settings/+page.svelte', 83, 122, { partial: true }),
 			{
 				type: 'p',
 				text: 'The block stops at the end of the profile: the boundary and the `{#if me}` stay open around the passkeys below and close after them. The profile is awaited in markup with a declaration tag, `{const me = $derived(await getProfile())}`, and the form is `updateProfile` with a preflight. The name is in the session cookie, so the handler reissues it — `startSession` again — and refreshes `whoAmI`, which is why the header changes without a reload. The locale select shows what each locale does to the same number, which is the one thing a person picking a locale wants to see.'
 			},
-			code('src/routes/(app)/settings/+page.svelte', 123, 175),
+			code('src/routes/(app)/settings/+page.svelte', 124, 177),
 			{
 				type: 'p',
-				text: 'Passkeys are listed from a query, each with its own `removePasskey.for(id)` form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.'
+				text: 'Passkeys are listed from a query, each with its own `removePasskey.for(id)` form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open — with a 409 whose sentence the toast shows as it is. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.'
 			},
 			{
 				type: 'checkpoint',

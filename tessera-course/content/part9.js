@@ -398,7 +398,7 @@ export default defineConfig({
 					'**`lint`** — `prettier --check .` and `eslint .`. Formatting is checked rather than applied, so a badly formatted commit fails rather than silently rewriting somebody’s working tree.',
 					'**`test:unit`** — 115 tests in about a second and a half, of which the interesting four are a few hundred thousand delivery schedules.',
 					'**`build`** — the real one, including the service worker’s separate Vite environment and the adapter.',
-					'**`test:e2e`** — 30 tests across two device profiles, against that build.'
+					'**`test:e2e`** — 34 tests across two device profiles, against that build.'
 				]
 			},
 			{
@@ -411,7 +411,7 @@ $ pnpm run verify
   eslint         clean
   vitest         Test Files 9 passed (9) · Tests 115 passed (115)   1.10s
   vite build     ✓ built in 889ms   (+ service worker, 42ms)
-  playwright     30 passed (33.7s)`
+  playwright     34 passed (43.4s)`
 			},
 			{
 				type: 'why',

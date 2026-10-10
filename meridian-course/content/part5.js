@@ -91,12 +91,12 @@ export const part5 = [
 				type: 'p',
 				text: 'The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a `Tween` from `svelte/motion`, the check mark on a copy button pops in with a ten-line custom transition in `src/lib/motion/transitions.ts`, and all of it reads its duration from the `--dur-*` tokens or from the one `MediaQuery` in `src/lib/motion/prefers.svelte.ts`. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with four rules the comment states: nothing is hidden until JavaScript runs, nothing that has been seen is taken away, reduced motion means no motion, and it plays once. The second rule is the one a review found. On a first load the server’s hero is painted long before the JavaScript arrives, and the timeline then snapped the title, the lede and the image to nothing and faded them back — the sentence a visitor had started to read blinked out. So `alreadySeen()` asks two questions: is this a hydration (the root layout has not yet set `data-hydrated`), and has the browser painted (a `first-contentful-paint` entry exists)? Both yes, and the hero stays exactly as it is; the timeline plays when the hero arrives with a client-side navigation, as new elements nobody has seen. The copy and the image are found by `data-hero-copy` and `data-hero-image`, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.'
 			},
-			code('src/routes/(site)/+page.svelte', 160, 188),
+			code('src/routes/(site)/+page.svelte', 160, 192),
 			code('src/lib/motion/hero.ts', 74, 104),
-			code('src/routes/(site)/+page.svelte', 290, 313),
+			code('src/routes/(site)/+page.svelte', 294, 317),
 			{
 				type: 'p',
-				text: 'The feature cards need no timeline, so they get none. `inview` only decides *when*: it sets `data-animate` in the browser while the grid is still below the fold, and `data-inview` the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on `--dur-5`, each card 70ms after the one before through the `--i` the markup sets — and rule 1 lives in the selector: a card is hidden only under `[data-animate]`, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match.'
+				text: 'The feature cards need no timeline, so they get none. `inview` only decides *when*: it sets `data-animate` in the browser while the grid is still below the fold, and `data-inview` the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on `--dur-5`, each card 70ms after the one before through the `--i` the markup sets — and rule 1 lives in the selector: a card is hidden only under `[data-animate]`, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match. The list itself is a bare `{const}`, worked out once, and that is all it needs: the one thing that could change it is the language, and a language switch loads a new page, which works the list out again in the new language. The next chapter says what a declaration tag is, and when one has to be `$derived` instead.'
 			},
 
 			{ type: 'h3', id: 'checked', text: 'Contrast, checked on every lint' },
@@ -136,7 +136,7 @@ export const part5 = [
 		slug: 'the-shell',
 		title: 'The shell: a root that knows nobody',
 		summary:
-			'The root layout has no header and no `load`; the `(site)` group has both; the header computes its links with `{const}` and reads `scrollY` from `svelte/reactivity/window`; view transitions in `onNavigate`; a version banner from `updated.current`; two error pages sharing one view.',
+			'The root layout has no header and no `load`; the `(site)` group has both; the header computes its links in a `{const}` declaration tag and reads `scrollY` from `svelte/reactivity/window`; view transitions in `onNavigate`; a version banner from `updated.current`; two error pages sharing one view.',
 		goal: 'Arrange layouts so that prerendered pages and per-request pages can coexist, and know what belongs at the root and what does not.',
 		blocks: [
 			{
@@ -167,12 +167,12 @@ export const part5 = [
 
 			{ type: 'h3', id: 'header', text: 'The header' },
 			code(`${UI}/Header.svelte`, 1, 97),
-			code(`${UI}/Header.svelte`, 101, 111),
+			code(`${UI}/Header.svelte`, 101, 114),
 			{
 				type: 'p',
-				text: 'Two small Svelte 5 things. `scrollY` from `svelte/reactivity/window` is the window’s scroll position as a reactive value with the listener managed for us — `undefined` on the server, where there is no window — and one `$derived` turns it into the border that appears when the page has scrolled. `{const}` is a declaration tag: a value computed in the markup, scoped to the block, re-evaluated when its dependencies change. The link list depends on whether somebody is signed in, and the header is the only place that needs it, so it lives where it is used.'
+				text: 'Two small Svelte 5 things. `scrollY` from `svelte/reactivity/window` is the window’s scroll position as a reactive value with the listener managed for us — `undefined` on the server, where there is no window — and one `$derived` turns it into the border that appears when the page has scrolled. `{const}` is a declaration tag: a value computed in the markup and visible to its siblings and their children. It is what Svelte 5.56 put in place of `{@const}`, which still compiles but is legacy — the old tag could only sit directly inside a block and only hold a constant, where a declaration tag works anywhere in the markup and can be a `let` holding `$state`. A bare one is worked out once, when the block is created; to follow what it reads it says so with `$derived`, as a `const` in a `<script>` would. The link list depends on whether somebody is signed in, and the header sits in the layout, so it outlives a sign-in. The first version was a bare `{const}`: after signing in there was no “Trips” link until a reload, and after signing out the link stayed. The sign-up test in chapter 42 now looks for it both ways. The header is the only place that needs the list, so it lives where it is used.'
 			},
-			code(`${UI}/Header.svelte`, 113, 189),
+			code(`${UI}/Header.svelte`, 116, 192),
 			{
 				type: 'p',
 				text: 'Mobile first: the nav is a sheet under the header, opened by a button with `aria-expanded` and `aria-controls`, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: `inert` on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and `afterNavigate` to close it whatever caused the navigation. The scrim is rendered after the `<header>`, not inside it: the header’s `backdrop-filter` makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And `open` is an assignable `$derived` that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header is also the same on every page. The first version left out whatever the page already was — no “New trip” on the trips list, no “Sign in” on the sign-in page — and the result was a header whose links, language switcher and theme toggle jumped 130px sideways on the most travelled path in the app, from the trips list into a trip. Now the action is always there, and on its own page it carries `aria-current="page"`, like a nav link: a screen reader says “current page”, and the stylesheet can mark it without a second rule for the same idea. Signing out is a `<form>` spread from a remote `form` with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every `href` in it is a call to `href()` — the next section — so the link list is a list of typed route ids, `/(site)/(app)/trips` and friends, not strings that happen to look like paths.'
@@ -227,7 +227,7 @@ export const part5 = [
 			code('src/routes/(site)/t/[slug=slug]/+page.svelte', 1, 27),
 			{
 				type: 'p',
-				text: 'One `await`, in the markup, with no boundary. The comment says why twice over: a `pending` snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to `+error.svelte` with the right status and language — where an uncaught error from a remote function goes. `{#key slug}` makes a different trip a fresh `TripView`, which is what lets the view read its props once.'
+				text: 'One `await`, in the markup, with no boundary. The comment says why twice over: a `pending` snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to `+error.svelte` with the right status and language — where an uncaught error from a remote function goes. The `await` sits inside `$derived` in a declaration tag, so `initial` follows the slug and the query; a bare `{const}` is worked out once, and would go on holding the first trip it was given. `{#key slug}` makes a different trip a fresh `TripView`, which is what lets the view read its props once.'
 			},
 
 			{ type: 'h3', id: 'state', text: 'The state object' },
@@ -294,7 +294,7 @@ export const part5 = [
 				type: 'p',
 				text: 'The panel has a `view-transition-name` of its own, so a tab switch cross-fades the panel while the header and the strip hold still. The itinerary tab is a split view from 64em, with the map sticky beside the days, and the list alone below that — the Map tab is one tap away. The map is not hidden with CSS on a phone but not rendered at all: `wide` is a `MediaQuery`, and a hidden MapLibre would still be a WebGL context, two of them for one trip on the device least able to afford it. Both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
 			},
-			code(`${TRIP}/TripView.svelte`, 476, 484),
+			code(`${TRIP}/TripView.svelte`, 478, 486),
 			{
 				type: 'checkpoint',
 				items: [
@@ -377,10 +377,10 @@ export const part5 = [
 				type: 'p',
 				text: 'Before anything is sent, `check()` runs the schema the server will run — `StopInputSchema` or `StopPatchSchema`, the same import — with `v.safeParse`, and `v.flatten` turns its issues into one message per field. A name of three spaces passes the input’s `required` and fails the schema’s trim; it used to reach the server and come back as a toast of raw JSON, and now it is a line under the field, the field is `aria-invalid` and `aria-describedby` points at the line, and nothing is sent. `issues` is an assignable `$derived` like the fields, so it resets whenever the dialog opens for something else. The toast for the errors that *do* come back reads `errorMessage(error)`, which the next block is.'
 			},
-			code('src/lib/ui/errors.ts', 1, 24),
+			code('src/lib/ui/errors.ts', 1, 29),
 			{
 				type: 'p',
-				text: 'A failed `command` throws SvelteKit’s `HttpError` in the browser, and an `HttpError` is not an `Error` — so the `error instanceof Error ? error.message : String(error)` every component used to write fell through to `String()`, and the toast read `{"status":400,"message":"…"}`. `isHttpError()` from `@sveltejs/kit` is the test that knows the difference, and `body.message` is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place.'
+				text: 'A failed `command` throws SvelteKit’s `HttpError` in the browser, and an `HttpError` is not an `Error` — so the `error instanceof Error ? error.message : String(error)` every component used to write fell through to `String()`, and the toast read `{"status":400,"message":"…"}`. `isHttpError()` from `@sveltejs/kit` is the test that knows the difference, and `body.message` is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place. A boundary is the other half of the rule, as the comment’s last paragraph says: its `failed` snippet is handed an `App.Error`, which is not an `HttpError` either, so this function would answer its fallback every time — a boundary reads `error.message` instead (chapter 14). The end-to-end suite holds the toast to it: Ben saves a stop that Ana has just removed, and the toast says the server’s “Not found” (chapter 42).'
 			},
 			code(`${TRIP}/StopDialog.svelte`, 211, 378),
 			{
@@ -568,13 +568,13 @@ export const part5 = [
 				type: 'p',
 				text: 'Threlte is Svelte for three.js. `<T.Mesh>` is a `THREE.Mesh`; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.'
 			},
-			code(`${TRIP}/TripView.svelte`, 428, 465, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 428, 467, { partial: true }),
 			{
 				type: 'p',
-				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'
+				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s `{const initial = $derived(await tripBySlug(slug))}` follows the slug. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `failed` prints `error.message`, because what it is handed is an `App.Error` — the failure after `handleError` in `src/hooks.client.ts` has put it into words, in the page’s language (chapter 14) — and not the `Error` the import threw. The first version tested `error instanceof Error`, which an `App.Error` never is, so it showed its fallback whatever had happened. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'
 			},
 			code('src/lib/globe/Globe.svelte', 1, 51),
-			code('src/lib/globe/Globe.svelte', 53, 106),
+			code('src/lib/globe/Globe.svelte', 53, 107),
 			{
 				type: 'p',
 				text: 'The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from the app’s one `MediaQuery` in `src/lib/motion/prefers.svelte.ts`, and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded. The hint under them is a second `MediaQuery`, `(pointer: coarse)`: with a mouse a scroll wheel zooms the globe, and on a touch screen a scroll moves the page and a pinch zooms, so the sentence says pinch where a pinch is what works.'
@@ -750,7 +750,7 @@ export const part5 = [
 			code(`${TRIP}/Companions.svelte`, 91, 154),
 			code(`${TRIP}/Companions.svelte`, 156, 200),
 			code(`${TRIP}/Presence.svelte`, 1, 42),
-			code(`${TRIP}/Presence.svelte`, 44, 67),
+			code(`${TRIP}/Presence.svelte`, 44, 69),
 			{
 				type: 'p',
 				text: 'Presence is an overlapping stack of initials, one circle per other person, with the stop under their pointer in the tooltip, fed entirely by `view.presence` — which the server refreshes from its thirty-second time-to-live. Four faces, then a “+N”: a crowd is a number, not a row of circles — and the people behind it are still in the list, in a visually hidden “and 2 more: Ana and Cal” built with `Intl.ListFormat`, because a list named “here now” has to contain everybody who is. The name beside each circle shows from 48em and is visually hidden below it, so a screen reader and the end-to-end test still find it. The initials are computed from the name; there are no avatars in this app, and a coloured circle with two letters is what a person recognises across a table. Nobody arrives with a bounce: a chip appearing is information, and a chip bouncing is a slot machine.'
@@ -767,7 +767,7 @@ export const part5 = [
 			code('src/routes/(site)/t/[slug=slug]/settings/+page.svelte', 1, 32),
 			{
 				type: 'p',
-				text: 'The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — `error()` in markup, which SvelteKit turns into the right status on the server and the error page in the browser.'
+				text: 'The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — `error()` in markup, which SvelteKit turns into the right status on the server and the error page in the browser, where `+error.svelte` prints the sentence from `page.error.message`. `initial` is `$derived(await query)`, like the trip page’s, so after a save it is the saved trip: the tab’s title changes with the name.'
 			},
 			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 1, 29),
 			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 31, 56),

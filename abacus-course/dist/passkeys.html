@@ -368,7 +368,7 @@ const RegistrationResponseSchema = v.object({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -383,6 +383,7 @@ const RegistrationResponseSchema = v.object({
  * the authenticator.
  */
 
+import { isHttpError } from '@sveltejs/kit';
 import {
 	browserSupportsWebAuthn,
 	startAuthentication,
@@ -402,7 +403,7 @@ export const passkeysSupported = (): boolean =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:40-64</span></span>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:41-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Create a passkey — for a new account with `name`, or as an extra key for the current one. */
@@ -419,8 +420,16 @@ export async function signInWithPasskey(): Promise&lt;User&gt; {
 	return finishAuthentication({ challengeId, response });
 }
 
-/** A message a person can act on, from the errors the credential API throws. */
+/**
+ * A message a person can act on, from whichever half failed.
+ *
+ * The server's half — `finishAuthentication` refusing a passkey it has never
+ * seen — rejects with an `HttpError`, which is not an `Error`: its sentence
+ * is in `body.message`. The browser's half throws an `Error` whose `name`
+ * says what happened, and the three that mean something are told apart.
+ */
 export function explain(error: unknown): string {
+	if (isHttpError(error)) return error.body.message;
 	if (error instanceof Error) {
 		if (error.name === 'NotAllowedError') return 'The passkey prompt was cancelled or timed out.';
 		if (error.name === 'InvalidStateError')
@@ -431,14 +440,15 @@ export function explain(error: unknown): string {
 	return 'Something went wrong with the passkey.';
 }</code></pre>
 </figure>
-<p>The browser’s half: ask for options, hand them to <code>startRegistration</code> or <code>startAuthentication</code>, send the answer back. <code>explain</code> turns the credential API’s error names into sentences a person can act on — <code>NotAllowedError</code> is a cancelled prompt, <code>InvalidStateError</code> is “this device already has a passkey for that account”.</p>
+<p>The browser’s half: ask for options, hand them to <code>startRegistration</code> or <code>startAuthentication</code>, send the answer back. <code>explain</code> turns a failure from either half into a sentence a person can act on. The server’s half fails with SvelteKit’s <code>HttpError</code> — <code>finishAuthentication</code> refusing a passkey it has never seen — and its sentence is in <code>body.message</code>. The browser’s half throws an <code>Error</code> whose <code>name</code> says what happened: <code>NotAllowedError</code> is a cancelled prompt, <code>InvalidStateError</code> is “this device already has a passkey for that account”. The first version checked only for an <code>Error</code>, and an <code>HttpError</code> is not one, so every refusal from the server came out as “Something went wrong with the passkey.” Chapter 29 has the two shapes side by side.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:1-44</span></span>
+		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:1-64</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import type { Page } from '@playwright/test';
+	<pre><code class="lang-ts">import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import type { Page } from '@playwright/test';
 
 /**
  * A PASSKEY DEVICE THAT EXISTS FOR ONE TEST
@@ -475,6 +485,25 @@ export async function attachAuthenticator(page: Page) {
 		async credentials() {
 			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
 			return credentials;
+		},
+		/**
+		 * A passkey for this site that no server ever issued — what a person
+		 * holds after the database their account lived in was reset. The
+		 * browser offers it; the server has never heard of it.
+		 */
+		async addUnknownPasskey() {
+			const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+			await cdp.send('WebAuthn.addCredential', {
+				authenticatorId,
+				credential: {
+					credentialId: randomBytes(16).toString('base64'),
+					isResidentCredential: true,
+					rpId: 'localhost',
+					privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+					userHandle: randomBytes(16).toString('base64'),
+					signCount: 0
+				}
+			});
 		},
 		async detach() {
 			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });

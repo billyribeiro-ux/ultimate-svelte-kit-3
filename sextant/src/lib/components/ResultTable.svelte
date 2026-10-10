@@ -173,7 +173,7 @@
 				style="height: {virtualizer.total}px"
 			>
 				{#each virtualizer.visible as slot (slot.index)}
-					{@const row = rows[slot.index]}
+					{const row = $derived(rows[slot.index])}
 					{#if row}
 						<div
 							class="tr"

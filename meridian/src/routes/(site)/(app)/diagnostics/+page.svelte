@@ -49,12 +49,18 @@
 		</button>
 	</header>
 
+	<!--
+		`failed` is handed an `App.Error`, the `{ status, message }` that
+		`handleError` made of the failure — not an `Error` — so the words are
+		on `message`. `$derived` is what makes Refresh redraw: a bare `{const}`
+		would await the first report and keep it.
+	-->
 	<svelte:boundary>
 		{#snippet failed(error)}
-			<p class="issue">{error instanceof Error ? error.message : m.error_title()}</p>
+			<p class="issue">{(error as App.Error).message}</p>
 		{/snippet}
 
-		{const report = await diagnostics()}
+		{const report = $derived(await diagnostics())}
 
 		<dl class="facts card card--pad">
 			<div>

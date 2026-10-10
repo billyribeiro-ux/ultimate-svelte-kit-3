@@ -20,7 +20,7 @@
 	whether the link still works; one remote form accepts it — a real form,
 	so the button works on a phone that has not finished loading the script.
 -->
-{const invite = await inviteByToken(token)}
+{const invite = $derived(await inviteByToken(token))}
 
 <section class="container join">
 	<div class="card card--pad stack">

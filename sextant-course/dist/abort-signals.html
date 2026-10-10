@@ -150,7 +150,7 @@ const result = await run(parsed.query, {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:106-128</span></span>
+		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:116-138</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	/*
@@ -179,10 +179,59 @@ status = 'idle';</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>decode(value, { stream: true })</code> is the part that is correct on a slow network and wrong without it. A chunk boundary can fall in the middle of a UTF-8 sequence — which happens the moment a log line contains an emoji or an accent — and a decoder without it emits a replacement character for the split byte and another for its partner. The bug looks like corrupt data from the server.</p></aside>
 <p>And an abort is the *normal* way this ends: the query changed, or the component unmounted. Reporting it as a failure would put a red error on the screen every time somebody edits their query.</p>
+<h3 id="a-readable-refusal">A refusal the tail can read</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LiveTail.svelte<span class="code__lines">:87-104</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `application/json` too, for the refusal. SvelteKit answers an `error()`
+ * from an endpoint as JSON only when the request accepts JSON, and as its
+ * HTML error page otherwise. Asking for the stream alone got the page,
+ * `response.json()` could not read it, and &quot;could not start (400)&quot; stood
+ * in for the server's own sentence every time.
+ */
+const response = await fetch(url, {
+	signal,
+	headers: { accept: 'text/event-stream, application/json' }
+});
+
+if (!response.ok || !response.body) {
+	const body = (await response.json().catch(() =&gt; null)) as { message?: string } | null;
+	status = 'error';
+	message = body?.message ?? `The tail could not start (${response.status}).`;
+	return;
+}</code></pre>
+</figure>
+<p>The tail used to ask for <code>text/event-stream</code> and nothing else, and that decided what a refusal looked like. SvelteKit answers an <code>error()</code> from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s <code>Accept</code> headers”. A tail of a query that summarizes got the HTML page, <code>response.json()</code> could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as <code>{ status, message }</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:377-391</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a tail the server refuses says why', async ({ page }) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | summarize n = count()')}&amp;range=-6h`);
+	await expect(page).toHaveURL(/view=table/);
+
+	await page.getByRole('button', { name: 'Live tail' }).click();
+
+	/*
+	 * The endpoint's own sentence, which reaches the tail only because its
+	 * request accepts JSON as well as a stream. Asking for the stream alone, it
+	 * got SvelteKit's HTML error page and said &quot;The tail could not start (400).&quot;
+	 */
+	await expect(page.getByRole('status').filter({ hasText: 'Stopped' })).toContainText(
+		'A tail cannot summarize. Remove the summarize, or use the chart instead.'
+	);
+});</code></pre>
+</figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>Editing the query tears down the old stream before the new one starts.</li><li>A log line with an emoji arrives intact across a chunk boundary.</li><li>Stopping the tail does not produce an error.</li></ul>
+	<ul><li>Editing the query tears down the old stream before the new one starts.</li><li>A log line with an emoji arrives intact across a chunk boundary.</li><li>Stopping the tail does not produce an error.</li><li>A tail the server refuses says why, in the server’s words.</li></ul>
 </aside>
 		</article>
 

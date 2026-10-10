@@ -133,7 +133,7 @@ export const csr = false;</code></pre>
 	const locale = getLocale();
 &lt;/script&gt;
 
-{const { document } = await tripBySlug(slug)}
+{const { document } = $derived(await tripBySlug(slug))}
 
 &lt;!--
 	Only a trip visible by link may be framed. `tripBySlug` already refuses a
@@ -144,7 +144,7 @@ export const csr = false;</code></pre>
 	{error(404, 'No such trip.')}
 {/if}
 
-{const scheduled = document.stops.filter((stop) =&gt; stop.date !== null)}
+{const scheduled = $derived(document.stops.filter((stop) =&gt; stop.date !== null))}
 
 &lt;svelte:head&gt;
 	&lt;title&gt;{m.embed_title({ name: document.trip.name })}&lt;/title&gt;
@@ -309,10 +309,18 @@ if (event.url.pathname.startsWith('/embed/')) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-122</span></span>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	This boundary is the one in the project that is handed the thrown value
+	itself. Inside the app SvelteKit passes every failure through
+	`handleError` first and a `failed` snippet gets an `App.Error`; this
+	element runs on somebody else's page with no SvelteKit around it, so what
+	`load` threw — an `Error` — is what arrives. The two declarations are
+	`$derived` so that a host page changing `slug` gets the new route.
+--&gt;
+&lt;svelte:boundary&gt;
 	{#snippet pending()}
 		&lt;div class=&quot;card&quot;&gt;&lt;p class=&quot;muted&quot;&gt;Loading the route…&lt;/p&gt;&lt;/div&gt;
 	{/snippet}
@@ -324,8 +332,8 @@ if (event.url.pathname.startsWith('/embed/')) {
 		&lt;/div&gt;
 	{/snippet}
 
-	{const route = await load(slug, base)}
-	{const points = project(route.stops)}
+	{const route = $derived(await load(slug, base))}
+	{const points = $derived(project(route.stops))}
 
 	&lt;div class=&quot;card&quot;&gt;
 		&lt;p class=&quot;title&quot;&gt;{route.name}&lt;/p&gt;
@@ -334,7 +342,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 			{#if points}
 				&lt;polyline {points} /&gt;
 				{#each points.split(' ') as point, index (index)}
-					{@const [x, y] = point.split(',')}
+					{const [x, y] = $derived(point.split(','))}
 					&lt;circle cx={x} cy={y} r=&quot;4&quot; /&gt;
 				{/each}
 			{/if}
@@ -351,7 +359,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 	&lt;/div&gt;
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same six pairs <code>tokens.css</code> holds — paper, raised paper, the hairline, two inks and the sea — written as <code>light-dark()</code>. Inside a shadow root <code>light-dark()</code> resolves against the <code>color-scheme</code> the element inherits from the host page, so the host decides: a page that declares <code>color-scheme: light dark</code> gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A <code>prefers-color-scheme</code> query would have asked the visitor instead, and put a dark card on a light page.</p>
+<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. That is the one difference, and the comment above the boundary spells it out: with no SvelteKit around it, no <code>handleError</code> runs, so <code>failed</code> is handed what <code>load</code> threw — an <code>Error</code>, tested with <code>instanceof</code> — where every boundary inside the app is handed an <code>App.Error</code>. The two declarations are <code>$derived</code>, so a host page that changes the <code>slug</code> attribute gets the new route. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same six pairs <code>tokens.css</code> holds — paper, raised paper, the hairline, two inks and the sea — written as <code>light-dark()</code>. Inside a shadow root <code>light-dark()</code> resolves against the <code>color-scheme</code> the element inherits from the host page, so the host decides: a page that declares <code>color-scheme: light dark</code> gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A <code>prefers-color-scheme</code> query would have asked the visitor instead, and put a dark card on a light page.</p>
 
 <figure class="code">
 	<figcaption>

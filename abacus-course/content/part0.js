@@ -215,7 +215,7 @@ export const part0 = [
 					'**Attachments** — `{@attach cinematic()}` on the landing page (ch. 31); focusing an input on mount in the cell editor and find bar (ch. 21, 22).',
 					'**Function bindings** — `bind:textContent={get, set}` on the editable title (ch. 32).',
 					'**`bind:files`** with a `DataTransfer` to clear a file input so the same file can be chosen twice (ch. 22).',
-					'**`<svelte:boundary>`** with `pending` and `failed` — around every `await` in markup, and around each reactive cell in the lesson so a cycle throws into a boundary instead of the page (ch. 17, 34).',
+					'**`<svelte:boundary>`** with `pending` and `failed` — around every `await` in markup, where `failed` is handed the `App.Error` that `handleError` made rather than whatever was thrown (ch. 29, 34). And one place there is deliberately none: a reactive cell in the lesson, because an exception inside a `$derived` goes to the boundary of the effect that created it (ch. 17).',
 					'**`await` in markup and `{const x = $derived(await …)}`** — the workspace list, the settings profile, “who am I” in the header (ch. 30, 34).',
 					'**`SvelteMap`/`SvelteSet`** — column widths, row heights and flash highlights, where fine-grained reactivity is wanted; a plain `Map` in the engine, where it is not (ch. 15).',
 					'**`untrack`** — reading the initial `data` once so a later change cannot throw away edits (ch. 33).',
@@ -230,7 +230,8 @@ export const part0 = [
 				items: [
 					'**The environment layer** — `defineEnvVars` in `src/env.ts`, with valibot schemas, a `public` flag you have to type, and a `static` variable that is inlined at build time (this chapter, below).',
 					'**Remote functions** — `query` for reads, `form` for anything a page without JavaScript must still be able to do, `command` for everything else, and `query.live` for the collaboration stream (ch. 26–28). `requested(q, n).refreshAll()`, `withOverride`, `.for(id)`, `.preflight()`, `.enhance()`, `invalid(issue.field(…))`, and `redirect` from inside a form handler all appear where they are needed (ch. 27, 34).',
-					'**Hooks from `@sveltejs/kit/hooks`** — `sequence`, a `preload` filter that names font files by source `filename`, a per-route Content Security Policy swap, `handleFetch`, `handleError` told apart by `kind`, `init`, `transport` (ch. 29).',
+					'**Hooks from `@sveltejs/kit/hooks`** — `sequence`, a `preload` filter that names font files by source `filename`, a per-route Content Security Policy swap, `handleFetch`, `handleError` told apart by `kind` on the server and in the browser, `init`, `transport` (ch. 29).',
+					'**Two shapes of client error** — a remote call awaited in a handler rejects with an `HttpError` whose sentence is `body.message`, and `messageOf` reads it for every toast; a boundary is handed an `App.Error`, read as `error.message` (ch. 29, 34).',
 					'**Universal `load` that calls remote queries** — the sheet page (ch. 33); `csr = false` pages that ship no JavaScript (ch. 35); `prerender` with `entries()` for the templates (ch. 31).',
 					'**A layout reset** — `+page@.svelte` for the embed, which must not inherit the app shell (ch. 35).',
 					'**`+server.ts` handlers** — a streamed CSV response, a `QUERY` handler, a health check (ch. 35).',

@@ -1,3 +1,4 @@
+import { generateKeyPairSync, randomBytes } from 'node:crypto';
 import type { Page } from '@playwright/test';
 
 /**
@@ -35,6 +36,25 @@ export async function attachAuthenticator(page: Page) {
 		async credentials() {
 			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
 			return credentials;
+		},
+		/**
+		 * A passkey for this site that no server ever issued — what a person
+		 * holds after the database their account lived in was reset. The
+		 * browser offers it; the server has never heard of it.
+		 */
+		async addUnknownPasskey() {
+			const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+			await cdp.send('WebAuthn.addCredential', {
+				authenticatorId,
+				credential: {
+					credentialId: randomBytes(16).toString('base64'),
+					isResidentCredential: true,
+					rpId: 'localhost',
+					privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+					userHandle: randomBytes(16).toString('base64'),
+					signCount: 0
+				}
+			});
 		},
 		async detach() {
 			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });

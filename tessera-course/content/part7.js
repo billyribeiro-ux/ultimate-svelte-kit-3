@@ -153,6 +153,106 @@ export const openBoard = query(boardId, async (id) => {
 				text: 'The alternative — a server that materialises the current state on every open — looks tidier and gives the server an **opinion about the document**, which then has to agree with the client’s opinion forever. When two authorities disagree about a CRDT, the one with the database usually wins, and the user’s unsynced work is what loses.'
 			},
 
+			{ type: 'h3', id: 'awaiting-the-board', text: 'Awaiting the board, and what a boundary is handed' },
+			{
+				type: 'p',
+				text: 'On the page, the query is called once in the script and **awaited in the markup**, inside a `<svelte:boundary>`. That one `await` gives the boundary both of its jobs: until the promise resolves it shows its `pending` snippet, and if the promise rejects it shows its `failed` snippet instead. In the documentation’s words, “until the promise resolves — and if it errors — the nearest `<svelte:boundary>` will be invoked.”'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page@.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * \`+page@.svelte\` — the \`@\` resets the layout.
+ *
+ * This page inherits the root layout only, skipping the marketing chrome from
+ * \`[[lang=locale]]/+layout.svelte\`. An editor that is meant to fill the screen
+ * should not have a site header above it, and the alternative — a layout that
+ * hides itself when the URL looks like a board — is a conditional in a
+ * component that has no business knowing about routes.
+ *
+ * The board is *awaited* in the markup below, not read through
+ * \`board.current\`. \`.current\` never throws: a query that fails leaves it
+ * \`undefined\` and puts the error on \`board.error\`, so a boundary around
+ * \`{#if board.current}\` never reaches its \`failed\` snippet, and a board that
+ * does not exist renders as an empty screen. \`await\` is what hands the
+ * rejection — \`openBoard\`'s "No such board." — to the boundary.
+ */
+const board = openBoard(page.params.board!);`
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page@.svelte',
+				lang: 'svelte',
+				code: `
+<svelte:boundary>
+	<Workspace loaded={await board} {t} locale={data.locale} />
+
+	{#snippet pending()}
+		<p class="state">{t.sync.connecting}</p>
+	{/snippet}
+
+	<!--
+		\`error\` is an \`App.Error\` — \`{ status, message }\` plus this app's \`id\` —
+		because SvelteKit runs everything a boundary catches through \`handleError\`
+		first. So the server's words are its \`message\`; \`String(error)\` prints
+		"[object Object]". Svelte types \`error\` as \`unknown\`, since it cannot know
+		what SvelteKit's \`transformError\` returns, which is what the cast is for.
+	-->
+	{#snippet failed(error)}
+		{const caught = $derived(error as App.Error)}
+		<div class="state">
+			<p>{heading(caught.status)}</p>
+			<p class="state__detail">{caught.message}</p>
+		</div>
+	{/snippet}
+</svelte:boundary>`
+			},
+			{
+				type: 'why',
+				title: 'Why `await`, and not `.current`',
+				text: 'A query also has `current`, `loading` and `error` properties, and `current` looks like the simpler thing to read: `{#if board.current}<Workspace … />{/if}`. That is what this page first did, and a board that did not exist rendered as an empty screen. **`.current` never throws.** A query that fails leaves it `undefined` and puts the error on `.error`, so nothing inside the boundary ever fails and its `failed` snippet never runs — the person sees a blank page and nothing is logged anywhere. `await` is what hands the rejection to the boundary.'
+			},
+			{
+				type: 'p',
+				text: 'What arrives in `failed` is worth knowing exactly, because it is not the value that was thrown. SvelteKit passes everything a boundary catches through the `handleError` hook first, so the snippet receives an **`App.Error`**: `{ status, message }`, plus whatever fields you declared in `app.d.ts` — here the correlation `id`. The server’s `error(404, \'No such board.\')` arrives as `{ status: 404, message: \'No such board.\' }`. A plain exception thrown while rendering arrives as whatever `hooks.client.ts` made of it — “Something went wrong in the browser. Your board is safe on this device.” Either way the text is its `message`. `String(error)`, which is what this snippet first printed, gives `[object Object]`.'
+			},
+			{
+				type: 'note',
+				text: 'The documentation writes the snippet as `failed(error: App.Error)`. Under this project’s strict settings `svelte-check` rejects that annotation: Svelte types the parameter as `unknown`, because it cannot know what SvelteKit’s `transformError` returns, and a snippet that only accepts an `App.Error` is not assignable to one that must accept anything. So the parameter stays untyped and the value is cast where it is read. The cast says out loud what the type system cannot know, and the end-to-end test below is what keeps it honest.'
+			},
+
+			{ type: 'h3', id: 'when-a-command-says-no', text: 'The other shape: a command that says no' },
+			{
+				type: 'p',
+				text: 'A command, or a form submission you `await` yourself, fails differently. It never goes near a boundary: it rejects, at the `await`, with an **`HttpError`** — `{ status, body }`, where `body` is the `App.Error`. An `HttpError` is not an `Error`, so it has no `message` of its own. The server’s words are `body.message`, and `isHttpError` from `@sveltejs/kit` is the type guard that lets TypeScript see it.'
+			},
+			{
+				type: 'ul',
+				items: [
+					'A boundary’s `failed` snippet or `onerror` handler, a query’s `.error`, and `page.error` on an error page: an `App.Error`. Read `error.message`.',
+					'An awaited `command()`, or `form.submit()` inside `enhance`: an `HttpError`. Read `thrown.body.message`.',
+					'A `form()` spread without `enhance` that fails: SvelteKit renders the nearest `+error.svelte`, where `page.error` is an `App.Error` again.'
+				]
+			},
+			{
+				type: 'p',
+				text: 'Mixing them up fails quietly in both directions. `error.body.message` in a `failed` snippet throws inside the snippet; `thrown.message` in a `catch` is `undefined`, and the line meant to explain the refusal is blank. Chapter 36 has the second case, where a viewer presses a button the server will refuse — and chapter 23’s `#onPushFailure` has been reading `body.message` all along, for exactly this reason.'
+			},
+			{
+				type: 'terminal',
+				code: `
+[board] a board › that does not exist says so, in the server’s words
+
+  sign in, open /boards/no-such-board
+  openBoard throws error(404, 'No such board.')
+  the boundary's failed snippet  → "That board does not exist, or you do not have access to it."
+                                   "No such board."
+
+  before: an empty screen — .current never threw, and String(error) was [object Object]`
+			},
+
 			{ type: 'h3', id: 'transport', text: 'Returning something with behaviour' },
 			{
 				type: 'p',
@@ -277,6 +377,8 @@ export const transport: Transport = {
 				items: [
 					'You can call the server from a component with no `fetch`, no route and no manual types.',
 					'Changing a schema breaks the caller at build time.',
+					'A board that does not exist says “No such board.” rather than showing an empty page.',
+					'You can say which of the two error shapes a `failed` snippet gets, and which one a `catch` gets.',
 					'You can name the two things a remote function is not for.'
 				]
 			}
@@ -347,6 +449,33 @@ export const myBoards = query.live(async function* () {
 				type: 'why',
 				title: 'A five-second poll, said out loud',
 				text: 'The generator could just as easily be driven by an event. It is not, and the comment says why: the board list is a page people leave open in a background tab, and it changes a few times an hour. An event bus for it would be infrastructure serving a list nobody is watching. **The operation stream is where push matters, and it has its own channel** — which is the honest way to make this trade rather than reaching for the same mechanism everywhere.'
+			},
+
+			{
+				type: 'p',
+				text: 'The board list awaits its live query in the markup, the same way the board page awaits `openBoard`:'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/+page.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * A live query, so a board created in another tab — or by a colleague in a
+ * workspace you belong to — appears here without a reload.
+ *
+ * Awaited in the markup, inside the boundary, rather than read through
+ * \`boards.current\`. Awaiting a live query is not a one-off: every value the
+ * stream yields resolves it again, so the list still updates in place. What
+ * \`await\` adds is that the boundary sees the wait (its \`pending\` snippet) and
+ * the failure (its \`failed\` snippet). \`.current\` is \`undefined\` in both cases
+ * and says nothing — a stream that fails just leaves an empty page.
+ */
+const boards = myBoards();`
+			},
+			{
+				type: 'p',
+				text: 'Awaiting a live query is not a one-off. Each value the stream yields resolves it again, so `{const list = $derived(await boards)}` inside the boundary is a list that keeps itself up to date — with the boundary’s `pending` snippet covering the wait for the first value, and its `failed` snippet showing the server’s message if the stream is refused. Read through `boards.current` instead, a refused stream leaves the space under the heading blank, with nothing to say why.'
 			},
 
 			{ type: 'h3', id: 'reconnect', text: 'Refreshing a live query' },

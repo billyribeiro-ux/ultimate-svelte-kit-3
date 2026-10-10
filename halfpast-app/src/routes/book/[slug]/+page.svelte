@@ -112,8 +112,8 @@
 	/**
 	 * `await` inside `$derived` is the whole reason this page server-renders.
 	 *
-	 * SvelteKit waits for the boundary in the root layout to settle before it
-	 * sends any HTML, so a customer — and a search engine — receives a fully
+	 * SvelteKit waits for the boundary it wraps around this page to settle before
+	 * it sends any HTML, so a customer — and a search engine — receives a fully
 	 * rendered list of services rather than an empty div that fills in later.
 	 * Reading `.ready` / `.current` instead would render nothing on the server
 	 * and hydrate into content, which is a blank first paint and no SEO at all.

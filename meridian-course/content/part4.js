@@ -128,7 +128,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 				type: 'p',
 				text: 'Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
 			},
-			code('src/routes/(site)/(app)/trips/+page.svelte', 105, 113),
+			code('src/routes/(site)/(app)/trips/+page.svelte', 110, 118),
 			{
 				type: 'p',
 				text: 'The trips page puts them together with the plural messages from the last chapter: a date range from `Intl`, three counts through Paraglide’s plural rules, and a distance through the library’s `formatDistance`. Four sources of locale-awareness in one paragraph, and the component knows about none of them.'

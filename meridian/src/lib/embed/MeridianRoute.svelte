@@ -82,6 +82,14 @@
 	}
 </script>
 
+<!--
+	This boundary is the one in the project that is handed the thrown value
+	itself. Inside the app SvelteKit passes every failure through
+	`handleError` first and a `failed` snippet gets an `App.Error`; this
+	element runs on somebody else's page with no SvelteKit around it, so what
+	`load` threw — an `Error` — is what arrives. The two declarations are
+	`$derived` so that a host page changing `slug` gets the new route.
+-->
 <svelte:boundary>
 	{#snippet pending()}
 		<div class="card"><p class="muted">Loading the route…</p></div>
@@ -94,8 +102,8 @@
 		</div>
 	{/snippet}
 
-	{const route = await load(slug, base)}
-	{const points = project(route.stops)}
+	{const route = $derived(await load(slug, base))}
+	{const points = $derived(project(route.stops))}
 
 	<div class="card">
 		<p class="title">{route.name}</p>
@@ -104,7 +112,7 @@
 			{#if points}
 				<polyline {points} />
 				{#each points.split(' ') as point, index (index)}
-					{@const [x, y] = point.split(',')}
+					{const [x, y] = $derived(point.split(','))}
 					<circle cx={x} cy={y} r="4" />
 				{/each}
 			{/if}

@@ -77,7 +77,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:47-119</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:47-124</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;!--
@@ -89,14 +89,19 @@
 		Every card also awaits `tripPreview(trip.id)`. Those calls are made in
 		the same tick, and `query.batch` sends them as ONE request — a list of
 		twenty trips is two round trips (the list, the previews), not twenty-one.
+
+		`failed` is handed an `App.Error` — what `handleError` made of the
+		failure, `{ status, message }`, and not an `Error` — so the server's
+		sentence is on `message`. Both declarations are `$derived`, so a
+		refreshed query redraws the list; a bare `{const}` would keep the first.
 	--&gt;
 	&lt;svelte:boundary&gt;
 		{#snippet failed(error, reset)}
-			&lt;p class=&quot;issue&quot;&gt;{error instanceof Error ? error.message : String(error)}&lt;/p&gt;
+			&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
 			&lt;button class=&quot;btn&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button&gt;
 		{/snippet}
 
-		{const trips = await myTrips()}
+		{const trips = $derived(await myTrips())}
 
 		{#if trips.length === 0}
 			&lt;Empty icon={MapTrifoldIcon} title={m.trips_empty_title()} body={m.trips_empty()}&gt;
@@ -110,7 +115,7 @@
 		{:else}
 			&lt;ul class=&quot;grid&quot; role=&quot;list&quot; style:--grid-min=&quot;18rem&quot;&gt;
 				{#each trips as { trip, role, members, stops } (trip.id)}
-					{const preview = await tripPreview(trip.id)}
+					{const preview = $derived(await tripPreview(trip.id))}
 					&lt;li class=&quot;card card--link trip&quot;&gt;
 						&lt;div class=&quot;trip__thumb&quot;&gt;
 							&lt;RouteThumb points={preview.points} label={trip.name} /&gt;
@@ -154,7 +159,7 @@
 	&lt;/svelte:boundary&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an <code>::after</code> on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes <code>view-transition-name: trip-title</code> — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s <code>&lt;h1&gt;</code> carries the same name, so the title morphs into the header during the navigation.</p>
+<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. Both declarations are <code>$derived</code>, so a refreshed query redraws the list rather than leaving the first answer on screen. When the server refuses, the <code>failed</code> snippet prints <code>error.message</code>: it is handed an <code>App.Error</code>, <code>{ status, message }</code>, the failure after <code>handleError</code> (chapter 14). The first version wrote <code>error instanceof Error ? error.message : String(error)</code>, and since an <code>App.Error</code> is a plain object the list read <code>[object Object]</code>. Now an end-to-end test makes the preview request invalid on its way out and expects the server’s own sentence (chapter 42). The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an <code>::after</code> on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes <code>view-transition-name: trip-title</code> — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s <code>&lt;h1&gt;</code> carries the same name, so the title morphs into the header during the navigation.</p>
 
 <figure class="code">
 	<figcaption>

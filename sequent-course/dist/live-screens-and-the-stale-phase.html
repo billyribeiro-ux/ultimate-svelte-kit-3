@@ -117,7 +117,7 @@ export const getVenue = query.live(async function* () {
 <p>The test is not &quot;does this change often?&quot; — it is <strong>&quot;who writes the value I am about to read, and have they finished?&quot;</strong></p>
 <aside class="callout callout--note"><p>Note that the order blotter *does* still call <code>refresh()</code> after placing an order — but as best-effort immediacy, not as the truth. The gateway writes no rows: the blotter's <code>working</code> row appears in <code>order_record</code> only when the projector applies the engine's <code>order_accepted</code> event, so a refresh fired in the same response can only return the list as it stood before the engine ran. The REST API states the same gap out loud — its <code>202</code> body carries <code>status: 'accepted'</code> and tells the caller to watch the event stream for the outcome. The refresh is a cheap chance to be early; the event-driven data is what is guaranteed to be right.</p></aside>
 <h3 id="the-test-trap">The test that could never pass</h3>
-<p>One more trap, from the days when this project drove its pages with Playwright (the browser tests have since gone, and the lesson has not):</p>
+<p>One more trap, which this project has walked into more than once — its first browser suite did, and so did the throwaway probe that the suite in chapter 41 grew out of:</p>
 
 <figure class="code">
 	<figcaption>

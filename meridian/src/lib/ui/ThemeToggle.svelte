@@ -18,7 +18,7 @@
 <fieldset class="theme">
 	<legend class="visually-hidden">{m.theme_label()}</legend>
 	{#each options as option (option.value)}
-		{@const Icon = option.icon}
+		{const Icon = $derived(option.icon)}
 		<label class="theme__option" title={option.label()}>
 			<input
 				class="visually-hidden"

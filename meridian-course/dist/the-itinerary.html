@@ -194,7 +194,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 			&lt;header class=&quot;day__header&quot;&gt;
 				&lt;h3 class=&quot;day__title&quot;&gt;
 					{#if group.date}
-						{@const day = fromIso(group.date).toDate('UTC')}
+						{const day = $derived(fromIso(group.date).toDate('UTC'))}
 						&lt;span class=&quot;day__long&quot;&gt;{heading.format(day)}&lt;/span&gt;
 						&lt;span class=&quot;day__short&quot;&gt;{headingShort.format(day)}&lt;/span&gt;
 					{:else}
@@ -668,7 +668,7 @@ const gazetteer = browser ? places() : undefined;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/errors.ts<span class="code__lines">:1-24</span></span>
+		<span class="code__file">src/lib/ui/errors.ts<span class="code__lines">:1-29</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -686,6 +686,11 @@ const gazetteer = browser ? places() : undefined;</code></pre>
  * else (the network went away, a bug) is not something the person can act
  * on in detail, and the browser's own text for it is English, so it gets
  * the product's one sentence for &quot;that did not work&quot;.
+ *
+ * Not for a `&lt;svelte:boundary&gt;`. Its `failed` snippet is handed an
+ * `App.Error` — the `{ status, message }` that `handleError` made — which is
+ * not an `HttpError` either, so this would answer the fallback every time.
+ * A boundary reads `error.message`; a `catch` around a command calls this.
  */
 
 import { isHttpError } from '@sveltejs/kit';
@@ -696,7 +701,7 @@ export function errorMessage(error: unknown): string {
 	return m.error_title();
 }</code></pre>
 </figure>
-<p>A failed <code>command</code> throws SvelteKit’s <code>HttpError</code> in the browser, and an <code>HttpError</code> is not an <code>Error</code> — so the <code>error instanceof Error ? error.message : String(error)</code> every component used to write fell through to <code>String()</code>, and the toast read <code>{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}</code>. <code>isHttpError()</code> from <code>@sveltejs/kit</code> is the test that knows the difference, and <code>body.message</code> is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place.</p>
+<p>A failed <code>command</code> throws SvelteKit’s <code>HttpError</code> in the browser, and an <code>HttpError</code> is not an <code>Error</code> — so the <code>error instanceof Error ? error.message : String(error)</code> every component used to write fell through to <code>String()</code>, and the toast read <code>{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}</code>. <code>isHttpError()</code> from <code>@sveltejs/kit</code> is the test that knows the difference, and <code>body.message</code> is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place. A boundary is the other half of the rule, as the comment’s last paragraph says: its <code>failed</code> snippet is handed an <code>App.Error</code>, which is not an <code>HttpError</code> either, so this function would answer its fallback every time — a boundary reads <code>error.message</code> instead (chapter 14). The end-to-end suite holds the toast to it: Ben saves a stop that Ana has just removed, and the toast says the server’s “Not found” (chapter 42).</p>
 
 <figure class="code">
 	<figcaption>
@@ -761,7 +766,7 @@ export function errorMessage(error: unknown): string {
 					&lt;legend class=&quot;label&quot;&gt;{m.stop_kind()}&lt;/legend&gt;
 					&lt;div class=&quot;kinds&quot;&gt;
 						{#each STOP_KINDS as k (k)}
-							{@const Icon = KIND_ICONS[k]}
+							{const Icon = $derived(KIND_ICONS[k])}
 							&lt;label class=&quot;kinds__option&quot; data-kind={k}&gt;
 								&lt;input
 									class=&quot;visually-hidden&quot;

@@ -3,6 +3,7 @@
 	import { innerWidth } from 'svelte/reactivity/window';
 	import { goto, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
+	import { messageOf } from '#lib/errors.ts';
 	import { whoAmI } from '#lib/remote/artist.remote.ts';
 	import {
 		getCounts,
@@ -126,59 +127,66 @@
 				<p class="hint">Loading the gallery…</p>
 			{/snippet}
 			{#snippet failed(error, reset)}
-				<p class="issue">The gallery could not be loaded: {(error as Error).message}</p>
+				<p class="issue">The gallery could not be loaded: {(error as App.Error).message}</p>
 				<button type="button" class="btn" onclick={reset}>Try again</button>
 			{/snippet}
 		</svelte:boundary>
 	</Section>
 
+	<!--
+		ONE BOUNDARY, NOT TWO
+		A second boundary inside this one, around the list, is the natural place
+		for a "Loading yours…" line — and there was one. On a full page load
+		(Svelte 5.57.2) it hydrated its markup and never ran its effects: no
+		attachments, so the delete forms were never enhanced and Delete fell
+		back to a plain POST. That still deletes, which is why nothing noticed;
+		a refusal became an error page instead of a toast. Removing either the
+		inner boundary or the batched `await getCounts` inside it was enough, so
+		the inner boundary went — this one already waits for everything in it,
+		and the end-to-end suite checks that a refused delete is a toast.
+	-->
 	<svelte:boundary>
 		{const me = $derived(await whoAmI())}
 		{#if me}
 			<Section eyebrow="@{me.handle}" title="Yours">
-				<svelte:boundary>
-					<ul class="cards" id="yours">
-						{#each await getMine() as mine (mine.id)}
-							{const del = remove.for(mine.id)}
-							<li>
-								<PatternCard published={mine} counts={await getCounts(mine.id)}>
-									{#snippet actions()}
-										<!--
+				<ul class="cards" id="yours">
+					{#each await getMine() as mine (mine.id)}
+						{const del = remove.for(mine.id)}
+						<li>
+							<PatternCard published={mine} counts={await getCounts(mine.id)}>
+								{#snippet actions()}
+									<!--
 										One form per card, isolated by `remove.for(id)`, so a pending
 										delete disables *its* button and no other. The optimistic
 										override removes the card before the server has answered;
-										a failure puts it back.
+										a refusal puts it back, and the toast says what the server
+										said — "Not yours, or not there" for a card another tab has
+										already deleted.
 									-->
-										<form
-											{...del.enhance(async (f) => {
-												try {
-													await f
-														.submit()
-														.updates(
-															getMine().withOverride((list) => list.filter((p) => p.id !== mine.id))
-														);
-													toast('Deleted');
-												} catch {
-													toast('Could not delete that', 'error');
-												}
-											})}
-										>
-											<input {...del.fields.id.as('hidden', mine.id)} />
-											<button class="btn btn--sm btn--danger" disabled={!!del.pending}
-												>Delete</button
-											>
-										</form>
-									{/snippet}
-								</PatternCard>
-							</li>
-						{:else}
-							<li class="hint">You have not published anything from this browser yet.</li>
-						{/each}
-					</ul>
-					{#snippet pending()}
-						<p class="hint">Loading yours…</p>
-					{/snippet}
-				</svelte:boundary>
+									<form
+										{...del.enhance(async (f) => {
+											try {
+												await f
+													.submit()
+													.updates(
+														getMine().withOverride((list) => list.filter((p) => p.id !== mine.id))
+													);
+												toast('Deleted');
+											} catch (e) {
+												toast(messageOf(e, 'Could not delete that'), 'error');
+											}
+										})}
+									>
+										<input {...del.fields.id.as('hidden', mine.id)} />
+										<button class="btn btn--sm btn--danger" disabled={!!del.pending}>Delete</button>
+									</form>
+								{/snippet}
+							</PatternCard>
+						</li>
+					{:else}
+						<li class="hint">You have not published anything from this browser yet.</li>
+					{/each}
+				</ul>
 			</Section>
 		{/if}
 	</svelte:boundary>

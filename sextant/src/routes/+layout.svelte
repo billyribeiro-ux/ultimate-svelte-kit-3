@@ -117,13 +117,13 @@
 		</a>
 
 		{#if page.params.tenant}
-			{@const tenant = page.params.tenant}
-			{@const links = [
+			{const tenant = $derived(page.params.tenant)}
+			{const links = $derived([
 				{ href: resolve('/[tenant]/explore', { tenant }), label: 'Explore' },
 				{ href: resolve('/[tenant]/traces', { tenant }), label: 'Traces' },
 				{ href: resolve('/[tenant]/alerts', { tenant }), label: 'Alerts' },
 				{ href: resolve('/[tenant]/settings', { tenant }), label: 'Settings' }
-			]}
+			])}
 			<nav aria-label="Workspace">
 				<ul class="nav">
 					{#each links as item (item.href)}

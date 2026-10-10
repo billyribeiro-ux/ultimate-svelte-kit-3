@@ -22,6 +22,9 @@
 
 	let { data }: PageProps = $props();
 
+	/** What a query sends back: its columns, its rows and how it ran. */
+	type Answer = Awaited<ReturnType<typeof runQuery>>;
+
 	/**
 	 * The workspace, seeded from the URL that rendered this page.
 	 *
@@ -117,23 +120,94 @@
 	 */
 	let submitted = $state(untrack(() => ({ q: data.q, range: data.range })));
 
+	/** The query for the run that is on screen — the request, not its answer. */
+	const query = $derived(runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range }));
+
 	function run(): void {
 		workspace.flush();
 		submitted = { q: workspace.q, range: workspace.range };
 	}
 
 	/**
-	 * `await` in a `$derived`, inside a `<svelte:boundary>`.
+	 * `await` in a `$derived`, and a refusal kept as a value.
 	 *
 	 * This is what the async compiler option buys: the result of a query is
-	 * *literally* the awaited value, with no `loading` flag, no `error` field and
-	 * no effect that assigns into state. The boundary below supplies the pending
-	 * and failed states for the whole subtree, which means those two states are
-	 * declared once rather than in every component that can be waiting.
+	 * *literally* the awaited value, with no `loading` flag and no effect that
+	 * assigns into state. The boundary below supplies the pending and failed
+	 * states for the whole subtree, which means those two states are declared
+	 * once rather than in every component that can be waiting.
+	 *
+	 * A refusal is caught here and thrown again inside the boundary, by
+	 * `answerOf`, because where a value throws decides who catches it. Thrown
+	 * from this script, it goes past the results' boundary: in the browser to the
+	 * page's, and on the server — which waits for every `await` in a script
+	 * before it renders anything — it fails the render as a whole. Either way the
+	 * person got SvelteKit's error page, with no editor to fix the query in.
+	 *
+	 * The server still waits for the answer, so the answer travels with the page,
+	 * rows or refusal, and the browser does not have to ask for it again.
 	 */
-	const result = $derived(
-		await runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range })
+	type Outcome = { answer: Answer } | { refusal: unknown };
+
+	const outcome = $derived(
+		await query.then(
+			(answer): Outcome => ({ answer }),
+			(refusal: unknown): Outcome => ({ refusal })
+		)
 	);
+
+	/** The rows, for the results boundary — or the refusal, thrown where it can catch it. */
+	function answerOf(current: Outcome): Answer {
+		if ('refusal' in current) {
+			failedOn = current;
+			throw current.refusal;
+		}
+		return current.answer;
+	}
+
+	/*
+	 * A FAILED RESULTS AREA HAS TO BE TOLD TO DRAW AGAIN.
+	 *
+	 * Once the boundary below shows `failed`, its content is gone, so nothing in
+	 * it reads `outcome`, and the next answer would never reach it. Its `onerror`
+	 * leaves its `reset` here, and the area is drawn again as soon as the
+	 * outcome on hand is not the one it failed on: rows, or a different refusal.
+	 *
+	 * Both sides check, because runs overlap. A refusal that arrives late can
+	 * fail the area while a newer run is still on its way (this effect then
+	 * hears it land), or after it has already landed (`onerror` then sees it).
+	 * `reset` goes in a microtask: Svelte refuses one called while `onerror` is
+	 * still running.
+	 */
+	let failedOn: Outcome | null = null;
+	let resetResults: (() => void) | null = null;
+
+	function redraw(): void {
+		const reset = resetResults;
+		resetResults = null;
+		if (reset) queueMicrotask(reset);
+	}
+
+	function onfailure(_: unknown, reset: () => void): void {
+		resetResults = reset;
+		if (outcome !== failedOn) redraw();
+	}
+
+	$effect(() => {
+		// Read first, every time: an effect that never reads `outcome` never runs again.
+		const current = outcome;
+		if (resetResults && current !== failedOn) redraw();
+	});
+
+	/**
+	 * "Try again" asks the server again. The client remembers a refused query,
+	 * so redrawing the results area on its own would show the same refusal
+	 * without making a request — no use after a dropped connection or an expired
+	 * session. Whatever comes back arrives through `outcome`, like any answer.
+	 */
+	function retry(): void {
+		void query.refresh().catch(() => {});
+	}
 
 	// After that `await` and before the template: the last moment the server's
 	// controls are still on the page as somebody left them, so a view name typed
@@ -155,12 +229,10 @@
 	 * way, this looks at the result and says what is missing. "Add `by bucket =
 	 * bin(timestamp, 1m)`" is a sentence somebody can act on; a blank chart is not.
 	 */
-	const chart = $derived.by((): { series: Series[]; problem: string | null } => {
-		const columns = result.columns;
+	function chartOf({ columns, rows }: Answer): { series: Series[]; problem: string | null } {
 		const timeColumn = columns.find((column) => column === 'bucket' || column === 'timestamp');
 		const valueColumns = columns.filter(
-			(column) =>
-				column !== timeColumn && result.rows.some((row) => typeof row[column] === 'number')
+			(column) => column !== timeColumn && rows.some((row) => typeof row[column] === 'number')
 		);
 
 		if (!timeColumn) {
@@ -190,7 +262,7 @@
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const byKey = new Map<string, { label: string; points: { x: number; y: number }[] }>();
 
-		for (const row of result.rows) {
+		for (const row of rows) {
 			const at = Number(row[timeColumn]);
 			if (!Number.isFinite(at)) continue;
 
@@ -218,7 +290,7 @@
 			})),
 			problem: null
 		};
-	});
+	}
 
 	/* ---- Live tail ---- */
 
@@ -254,8 +326,7 @@
 		);
 	}
 
-	function openRow(index: number): void {
-		const row = rows[index];
+	function openRow(index: number, row: Row | undefined): void {
 		// `trace_id`, the name SQF uses — not Drizzle's `traceId`. The storage layer
 		// projects rows into the schema's names precisely so that this file, the
 		// query text and the documentation all say the same word.
@@ -272,11 +343,6 @@
 			});
 		}
 	}
-
-	const rows = $derived(tailing ? tailRows : result.rows);
-	const columns = $derived(
-		tailing && tailRows.length > 0 ? Object.keys(tailRows[0]!) : result.columns
-	);
 
 	/**
 	 * `export const snapshot` — what survives leaving the page and coming back.
@@ -411,13 +477,31 @@
 	<!--
 		ONE BOUNDARY FOR THE WHOLE RESULT AREA.
 
-		`pending` renders while the awaited query is in flight, and `failed` renders
-		when it throws — including a 400 from the checker, which is the common case
-		and is not an exceptional condition at all. Doing this with flags would mean
-		three states threaded through four components; doing it with a boundary means
-		the components below can be written as though the data is simply there.
+		`pending` is what the server draws here, because it renders nothing else of a
+		boundary that has one, and `failed` renders when the result throws — including
+		a 400 from the checker, which is the common case and is not an exceptional
+		condition at all. Doing this with flags would mean three states threaded
+		through four components; doing it with a boundary means the components below
+		can be written as though the data is simply there.
 	-->
-	<svelte:boundary>
+	<svelte:boundary onerror={onfailure}>
+		<!--
+			EVERYTHING MADE FROM THE RESULT IS DECLARED HERE, NOT IN THE SCRIPT.
+
+			A `$derived` belongs to the component that declares it, and when it
+			throws, the error goes to that component's boundary rather than to the
+			one around whatever was reading it. These were in the script, so a refused
+			query took the whole page down to SvelteKit's error page — the editor and
+			the Run button with it — and this boundary's `failed` never ran. Declared
+			here, they belong to it, and so does the throw in `answerOf`.
+		-->
+		{const result = $derived(answerOf(outcome))}
+		{const rows = $derived(tailing ? tailRows : result.rows)}
+		{const columns = $derived(
+			tailing && tailRows.length > 0 ? Object.keys(tailRows[0]!) : result.columns
+		)}
+		{const chart = $derived(chartOf(result))}
+
 		<section class="explore__results" aria-label="Results">
 			{#if workspace.view === 'chart' && !tailing}
 				{#if chart.problem}
@@ -438,7 +522,7 @@
 					range={window_}
 					truncated={!tailing && result.truncated}
 					selected={page.state.row ?? null}
-					onselect={openRow}
+					onselect={(index) => openRow(index, rows[index])}
 				/>
 			{/if}
 		</section>
@@ -466,15 +550,16 @@
 			</div>
 		{/snippet}
 
-		{#snippet failed(error, reset)}
-			<div class="explore__results">
-				<p class="notice notice--error" role="alert">
-					{(error as { body?: { message?: string } })?.body?.message ??
-						(error as Error)?.message ??
-						'The query failed.'}
-				</p>
-				<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
-			</div>
+		<!--
+			The same region as the rows it replaces, so the reason is where the
+			answer would have been. `error` is SvelteKit's `App.Error`, made by
+			`handleError`, so the checker's sentence is on `message`.
+		-->
+		{#snippet failed(error)}
+			<section class="explore__results" aria-label="Results">
+				<p class="notice notice--error" role="alert">{(error as App.Error).message}</p>
+				<button type="button" class="btn btn--sm" onclick={retry}>Try again</button>
+			</section>
 		{/snippet}
 	</svelte:boundary>
 </div>

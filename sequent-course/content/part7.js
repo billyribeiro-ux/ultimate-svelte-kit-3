@@ -698,13 +698,78 @@ export async function withTransaction<T>(
 				title: 'What actually found the bugs',
 				text: 'A browser at 390px found two layout bugs no unit test could see. `curl` found four API bugs in an afternoon. A load test found a file-descriptor leak. Fault injection found the corrupt-snapshot dependency. A property test found a crossed book. The single highest-value habit in this whole project was **running the thing**, repeatedly, in the shape a real user would.'
 			},
+
+			{ type: 'h3', id: 'browser-tests', text: 'Four browser tests, each of which failed first' },
+			{
+				type: 'p',
+				text: 'A unit test cannot see what a person sees when the venue refuses them, so a short Playwright suite in `apps/web/e2e/` does. Four tests, run against the production build by `pnpm verify`, each making the server say no for a real reason and asserting that the person is told the server\'s own words:'
+			},
+			{
+				type: 'ul',
+				items: [
+					'**A venue operator\'s positions panel.** The refusal used to take the whole terminal down with it (chapter 27).',
+					'**An auditor\'s cancel.** Refused at the gateway, and the screen used to show nothing at all (chapter 24).',
+					'**A trader opening the risk console.** Used to get SvelteKit\'s bare default error page, because the layout\'s failure card could never be reached (chapter 27).',
+					'**A wrong password.** Used to replace the sign-in form with an error page (chapter 25).'
+				]
+			},
+			{
+				type: 'p',
+				text: 'The warning above was applied to them literally. Every one was run against the code from before its fix — the old pages, the new tests — and every one failed, each for its own reason: no Tape heading, no alert, no failure card, no form. A test that had passed there would have been testing nothing.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/e2e/errors.e2e.ts',
+				lang: 'ts',
+				code: `
+test('a cancel the venue refuses says so, rather than appearing to work', async ({ page }) => {
+	// An auditor sees the firm's working orders, each with a Cancel button, and
+	// may cancel none of them: reads everything, changes nothing. So do risk
+	// managers and firm admins, whose cancel is the firm-wide one. Three of the
+	// five roles on this screen meet this refusal.
+	await signIn(page, 'quinn@northgate.test');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	const cancel = page.getByRole('button', { name: /^Cancel SEED-/ }).first();
+	await cancel.click();
+
+	await expect(panel(page, 'Your orders').getByRole('alert')).toHaveText(
+		'Your role does not allow that.'
+	);
+	// Refused at the gateway, so the order never left the book.
+	await expect(cancel).toBeVisible();
+});`
+			},
+			{
+				type: 'p',
+				text: 'The second line is the one that is easy to leave out. It waits for an attribute the root layout sets:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/+layout.svelte',
+				lang: 'ts',
+				code: `
+$effect(() => {
+	document.documentElement.dataset['hydrated'] = '';
+});`
+			},
+			{
+				type: 'why',
+				title: 'Wait for hydration, not for time',
+				text: 'Server rendering puts every button on the screen before any of them has a handler. A test that clicks in that gap clicks nothing, then times out waiting for a reaction that was never coming — which looks exactly like the bug it was written to catch. An `$effect` only runs in a browser, once the component is mounted, so the attribute appears at precisely the moment the page can respond. Waiting for it costs nothing on a fast machine and is still correct on a slow one, which no `waitForTimeout` can say.'
+			},
+			{
+				type: 'warn',
+				text: 'The first draft of that test signed in as a trader and cleared the cookies, to stand in for an expired session. It failed for the wrong reason: the terminal was still settling after the sign-in redirect, something on it met the missing cookie before the click did, and the whole page went to the error page. Changing state underneath a page that is still loading tests the loading, not the thing you meant. The auditor is refused every time, and is the commoner case anyway.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can name the venue\'s four invariants and assert them after any operation',
 					'You can explain what shrinking gives you that a random failure does not',
 					'You can explain why a corrupt snapshot must not stop the engine',
-					'You can explain why a vacuous test is worse than a missing one'
+					'You can explain why a vacuous test is worse than a missing one',
+					'You can explain why each browser test was run against the old code, and why they wait for `data-hydrated`'
 				]
 			}
 		]

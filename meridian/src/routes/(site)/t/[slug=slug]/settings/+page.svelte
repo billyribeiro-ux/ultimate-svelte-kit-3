@@ -26,7 +26,7 @@
 	anybody else; this refuses to *show* the page, with a 403 rather than a
 	404 because a member who is not the owner already knows the trip exists.
 -->
-{const initial = await query}
+{const initial = $derived(await query)}
 {#if initial.role !== 'owner'}
 	{error(403, 'Only the owner can change a trip.')}
 {/if}

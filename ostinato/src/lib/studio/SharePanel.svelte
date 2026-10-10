@@ -6,6 +6,7 @@
 	import { getStudio } from '#lib/audio/context.ts';
 	import { bufferToWav, renderPattern } from '#lib/audio/render.ts';
 	import { HandleSchema } from '#lib/handle.ts';
+	import { messageOf } from '#lib/errors.ts';
 	import { toDto } from '#lib/pattern/dto.ts';
 	import { whoAmI } from '#lib/remote/artist.remote.ts';
 	import { publish } from '#lib/remote/patterns.remote.ts';
@@ -139,8 +140,11 @@
 				session.markSaved();
 				toast(`Published as ${publish.result?.url ?? 'a new pattern'}`);
 			}
-		} catch {
-			toast('Publishing failed — try again in a moment', 'error');
+		} catch (e) {
+			// Not a validation issue — those resolve `false` and appear under the
+			// fields. A rejection is the server refusing outright, and it said why
+			// in `body.message`; the fallback is for a request that never arrived.
+			toast(messageOf(e, 'Publishing failed — try again in a moment'), 'error');
 		}
 	});
 </script>
@@ -234,8 +238,14 @@
 					<p class="hint" role="status">Rendering {bars} bars…</p>
 				{/snippet}
 
+				<!--
+					What a boundary is handed is the `App.Error` that `handleError` made,
+					not the thing that was thrown. A WAV render that fails throws a plain
+					`Error` in the browser, which is not safe to show as it is, so this
+					reads "Internal Error" and the console has the real one.
+				-->
 				{#snippet failed(error, reset)}
-					<p class="issue">Rendering failed: {(error as Error).message}</p>
+					<p class="issue">Rendering failed: {(error as App.Error).message}</p>
 					<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
 				{/snippet}
 			</svelte:boundary>

@@ -413,7 +413,7 @@ export const part3 = [
 			code('src/routes/(app)/studio/+page.svelte', 288, 320),
 			{
 				type: 'p',
-				text: '`{#key session.generation}` destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, `<svelte:boundary>` catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the `failed` snippet with a “Try again” button instead of taking the page down. `onerror` sends the message to a toast as well.'
+				text: '`{#key session.generation}` destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, `<svelte:boundary>` catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the `failed` snippet with a “Try again” button instead of taking the page down. `onerror` sends the message to a toast as well. Both are handed the same thing — the `App.Error` that `handleError` made, `{ status, message }`, not the value that was thrown — which is why they read `error.message` and cast to `App.Error` rather than to `Error`.'
 			},
 			code('src/routes/(app)/studio/+page.svelte', 183, 193),
 			code('src/routes/(app)/studio/+page.svelte', 265, 273),
@@ -461,45 +461,45 @@ export const part3 = [
 				text: '“Audition” plays the sound once with the current knobs, without pressing play. It is the same `switch` as the scheduler’s (ch. 10), `satisfies never` and all, which is what guarantees that adding a kind to the model breaks this file at compile time until it is handled.'
 			},
 			{ type: 'h3', id: 'the-link', text: 'The link' },
-			code('src/lib/studio/SharePanel.svelte', 31, 35),
+			code('src/lib/studio/SharePanel.svelte', 32, 36),
 			{
 				type: 'p',
 				text: '`session.encoded` is a getter over the whole pattern, so the link is a `$derived.by` that recomputes on every edit. Copy it, paste it into a chat, and the other person opens your groove — the studio’s `load` (ch. 19) decodes `?p=` on arrival.'
 			},
 			{ type: 'h3', id: 'fork', text: 'A WAV, rendered before the click' },
-			code('src/lib/studio/SharePanel.svelte', 168, 199),
+			code('src/lib/studio/SharePanel.svelte', 172, 203),
 			{
 				type: 'p',
 				text: 'Two small things first. `<select defaultValue="2">` is the element *uncontrolled* with a starting value — new in Svelte 5.57 — and only the change handler reads it. And the render button has five handlers: pointer enter and focus start something; pointer leave and focus out cancel it; click commits it.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 50, 80),
+			code('src/lib/studio/SharePanel.svelte', 51, 81),
 			{
 				type: 'why',
 				title: 'Why `fork`',
 				text: 'Rendering two bars through an `OfflineAudioContext` (ch. 13) takes a few hundred milliseconds. `fork` runs a state change *speculatively*: `wanted = true` happens in a fork, the `await render(bars)` it unlocks in the markup below starts immediately, but nothing is shown until the fork is committed. Hover the button and the render begins; click and it is already half done; leave and `discard()` throws the work away — which it must, or the fork leaks. This is the same primitive SvelteKit uses to preload pages on hover, exposed for your own state.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 82, 105),
-			code('src/lib/studio/SharePanel.svelte', 201, 241),
+			code('src/lib/studio/SharePanel.svelte', 83, 106),
+			code('src/lib/studio/SharePanel.svelte', 205, 251),
 			{
 				type: 'warn',
 				text: '`{const rendered = $derived(await render(bars))}` — with the `$derived`. A bare `{const x = await …}` in markup runs *once*; wrapped in `$derived` it re-runs when `bars` changes, which is the whole feature. This distinction cost an afternoon during the jam room (ch. 38), and it appears here first: when an `await` in a template should follow its inputs, it needs `$derived` around it.'
 			},
 			{
 				type: 'p',
-				text: '`$effect.pending()` counts the `await`s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The `pending` snippet covers the *first* render, the `failed` snippet a thrown error, with `reset` to try again. And `bind:paused`, `bind:currentTime` and `bind:duration` on the `<audio>` make a play button and a clock with no event handlers at all.'
+				text: '`$effect.pending()` counts the `await`s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The `pending` snippet covers the *first* render, the `failed` snippet a thrown error, with `reset` to try again. What `failed` is handed is not the thrown value but the `App.Error` that `handleError` made from it — and a WAV render that fails throws a plain `Error` in the browser, which is not safe to show as it is, so the line reads “Rendering failed: Internal Error” while the console has the real one. And `bind:paused`, `bind:currentTime` and `bind:duration` on the `<audio>` make a play button and a clock with no event handlers at all.'
 			},
 			{ type: 'h3', id: 'publishing', text: 'Publishing: a form with preflight' },
-			code('src/lib/studio/SharePanel.svelte', 111, 145),
+			code('src/lib/studio/SharePanel.svelte', 112, 149),
 			{
 				type: 'p',
-				text: '`publish` is a remote form function (ch. 24). `.preflight(schema)` checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why `_pattern`, `remixOf` and `action` are typed here but barely checked. `.enhance()` takes over the submission: `submit()` resolves `true` on success, the handler’s return value is on `publish.result`, and the page never reloads.'
+				text: '`publish` is a remote form function (ch. 24). `.preflight(schema)` checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why `_pattern`, `remixOf` and `action` are typed here but barely checked. `.enhance()` takes over the submission: `submit()` resolves `true` on success, the handler’s return value is on `publish.result`, and the page never reloads. A schema failure resolves `false` and appears under the fields; a refusal *rejects*, and the `catch` shows the server’s reason through `messageOf` (ch. 24), keeping “Publishing failed — try again in a moment” for a request that never arrived.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 252, 282),
+			code('src/lib/studio/SharePanel.svelte', 262, 292),
 			{
 				type: 'p',
 				text: 'Validate on every keystroke *and* on blur. SvelteKit only reports issues for fields a person has finished with — it marks a field touched on `focusout` — so the blur is what turns a rule into a message under the field. The handle input sits in its own `<svelte:boundary>` with `{const me = $derived(await whoAmI())}` so that a browser that already has a handle sees it filled in, and one that does not sees a placeholder while the query is in flight.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 304, 319),
+			code('src/lib/studio/SharePanel.svelte', 314, 329),
 			{
 				type: 'p',
 				text: 'Two submit buttons, one field: `publish.fields.action.as("submit", "stay")` and `as("submit", "open")`. Whichever is pressed sends its value as `action`, and the server either returns the result or redirects to the new page — a redirect from inside an enhanced submission navigates, in SvelteKit 3. With JavaScript off, the form posts, the hidden `_pattern` field carries the JSON, and everything still works.'

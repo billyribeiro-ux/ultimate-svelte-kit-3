@@ -162,6 +162,87 @@ export const openBoard = query(boardId, async (id) =&gt; {
  */</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>The alternative — a server that materialises the current state on every open — looks tidier and gives the server an <strong>opinion about the document</strong>, which then has to agree with the client’s opinion forever. When two authorities disagree about a CRDT, the one with the database usually wins, and the user’s unsynced work is what loses.</p></aside>
+<h3 id="awaiting-the-board">Awaiting the board, and what a boundary is handed</h3>
+<p>On the page, the query is called once in the script and <strong>awaited in the markup</strong>, inside a <code>&lt;svelte:boundary&gt;</code>. That one <code>await</code> gives the boundary both of its jobs: until the promise resolves it shows its <code>pending</code> snippet, and if the promise rejects it shows its <code>failed</code> snippet instead. In the documentation’s words, “until the promise resolves — and if it errors — the nearest <code>&lt;svelte:boundary&gt;</code> will be invoked.”</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/boards/[board]/+page@.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * `+page@.svelte` — the `@` resets the layout.
+ *
+ * This page inherits the root layout only, skipping the marketing chrome from
+ * `[[lang=locale]]/+layout.svelte`. An editor that is meant to fill the screen
+ * should not have a site header above it, and the alternative — a layout that
+ * hides itself when the URL looks like a board — is a conditional in a
+ * component that has no business knowing about routes.
+ *
+ * The board is *awaited* in the markup below, not read through
+ * `board.current`. `.current` never throws: a query that fails leaves it
+ * `undefined` and puts the error on `board.error`, so a boundary around
+ * `{#if board.current}` never reaches its `failed` snippet, and a board that
+ * does not exist renders as an empty screen. `await` is what hands the
+ * rejection — `openBoard`'s &quot;No such board.&quot; — to the boundary.
+ */
+const board = openBoard(page.params.board!);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/boards/[board]/+page@.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	&lt;Workspace loaded={await board} {t} locale={data.locale} /&gt;
+
+	{#snippet pending()}
+		&lt;p class=&quot;state&quot;&gt;{t.sync.connecting}&lt;/p&gt;
+	{/snippet}
+
+	&lt;!--
+		`error` is an `App.Error` — `{ status, message }` plus this app's `id` —
+		because SvelteKit runs everything a boundary catches through `handleError`
+		first. So the server's words are its `message`; `String(error)` prints
+		&quot;[object Object]&quot;. Svelte types `error` as `unknown`, since it cannot know
+		what SvelteKit's `transformError` returns, which is what the cast is for.
+	--&gt;
+	{#snippet failed(error)}
+		{const caught = $derived(error as App.Error)}
+		&lt;div class=&quot;state&quot;&gt;
+			&lt;p&gt;{heading(caught.status)}&lt;/p&gt;
+			&lt;p class=&quot;state__detail&quot;&gt;{caught.message}&lt;/p&gt;
+		&lt;/div&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>await</code>, and not <code>.current</code></h4>
+	<p>A query also has <code>current</code>, <code>loading</code> and <code>error</code> properties, and <code>current</code> looks like the simpler thing to read: <code>{#if board.current}&lt;Workspace … /&gt;{/if}</code>. That is what this page first did, and a board that did not exist rendered as an empty screen. <strong><code>.current</code> never throws.</strong> A query that fails leaves it <code>undefined</code> and puts the error on <code>.error</code>, so nothing inside the boundary ever fails and its <code>failed</code> snippet never runs — the person sees a blank page and nothing is logged anywhere. <code>await</code> is what hands the rejection to the boundary.</p>
+</aside>
+<p>What arrives in <code>failed</code> is worth knowing exactly, because it is not the value that was thrown. SvelteKit passes everything a boundary catches through the <code>handleError</code> hook first, so the snippet receives an <strong><code>App.Error</code></strong>: <code>{ status, message }</code>, plus whatever fields you declared in <code>app.d.ts</code> — here the correlation <code>id</code>. The server’s <code>error(404, 'No such board.')</code> arrives as <code>{ status: 404, message: 'No such board.' }</code>. A plain exception thrown while rendering arrives as whatever <code>hooks.client.ts</code> made of it — “Something went wrong in the browser. Your board is safe on this device.” Either way the text is its <code>message</code>. <code>String(error)</code>, which is what this snippet first printed, gives <code>[object Object]</code>.</p>
+<aside class="callout callout--note"><p>The documentation writes the snippet as <code>failed(error: App.Error)</code>. Under this project’s strict settings <code>svelte-check</code> rejects that annotation: Svelte types the parameter as <code>unknown</code>, because it cannot know what SvelteKit’s <code>transformError</code> returns, and a snippet that only accepts an <code>App.Error</code> is not assignable to one that must accept anything. So the parameter stays untyped and the value is cast where it is read. The cast says out loud what the type system cannot know, and the end-to-end test below is what keeps it honest.</p></aside>
+<h3 id="when-a-command-says-no">The other shape: a command that says no</h3>
+<p>A command, or a form submission you <code>await</code> yourself, fails differently. It never goes near a boundary: it rejects, at the <code>await</code>, with an <strong><code>HttpError</code></strong> — <code>{ status, body }</code>, where <code>body</code> is the <code>App.Error</code>. An <code>HttpError</code> is not an <code>Error</code>, so it has no <code>message</code> of its own. The server’s words are <code>body.message</code>, and <code>isHttpError</code> from <code>@sveltejs/kit</code> is the type guard that lets TypeScript see it.</p>
+<ul><li>A boundary’s <code>failed</code> snippet or <code>onerror</code> handler, a query’s <code>.error</code>, and <code>page.error</code> on an error page: an <code>App.Error</code>. Read <code>error.message</code>.</li><li>An awaited <code>command()</code>, or <code>form.submit()</code> inside <code>enhance</code>: an <code>HttpError</code>. Read <code>thrown.body.message</code>.</li><li>A <code>form()</code> spread without <code>enhance</code> that fails: SvelteKit renders the nearest <code>+error.svelte</code>, where <code>page.error</code> is an <code>App.Error</code> again.</li></ul>
+<p>Mixing them up fails quietly in both directions. <code>error.body.message</code> in a <code>failed</code> snippet throws inside the snippet; <code>thrown.message</code> in a <code>catch</code> is <code>undefined</code>, and the line meant to explain the refusal is blank. Chapter 36 has the second case, where a viewer presses a button the server will refuse — and chapter 23’s <code>#onPushFailure</code> has been reading <code>body.message</code> all along, for exactly this reason.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>[board] a board › that does not exist says so, in the server’s words
+
+  sign in, open /boards/no-such-board
+  openBoard throws error(404, 'No such board.')
+  the boundary's failed snippet  → &quot;That board does not exist, or you do not have access to it.&quot;
+                                   &quot;No such board.&quot;
+
+  before: an empty screen — .current never threw, and String(error) was [object Object]</code></pre>
+</figure>
 <h3 id="transport">Returning something with behaviour</h3>
 <p><code>openBoard</code> returns a <code>LoadedBoard</code>, which is a *class*. That works because of the <code>transport</code> hook, and it is worth seeing what it buys.</p>
 
@@ -266,7 +347,7 @@ export const transport: Transport = {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can call the server from a component with no <code>fetch</code>, no route and no manual types.</li><li>Changing a schema breaks the caller at build time.</li><li>You can name the two things a remote function is not for.</li></ul>
+	<ul><li>You can call the server from a component with no <code>fetch</code>, no route and no manual types.</li><li>Changing a schema breaks the caller at build time.</li><li>A board that does not exist says “No such board.” rather than showing an empty page.</li><li>You can say which of the two error shapes a <code>failed</code> snippet gets, and which one a <code>catch</code> gets.</li><li>You can name the two things a remote function is not for.</li></ul>
 </aside>
 		</article>
 

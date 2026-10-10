@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>End to end, and what it found — Building Ostinato</title>
-<meta name="description" content="Thirty-three scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.">
+<meta name="description" content="Thirty-six scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address — and two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 38</p>
 			<h1>End to end, and what it found</h1>
-			<p class="lede">Thirty-three scenarios on a desktop and a Pixel 7, against <code>node build/index.js</code> on a fresh database — and the five real bugs the suite found: a back navigation that never rendered, an <code>await</code> that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address.</p>
+			<p class="lede">Thirty-six scenarios on a desktop and a Pixel 7, against <code>node build/index.js</code> on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an <code>await</code> that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address — and two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run a suite against the adapter’s output rather than a dev server, and treat every flake as a bug until proven otherwise.</p></aside>
 			
 <figure class="code">
@@ -339,10 +339,98 @@ forkPreloads: false</code></pre>
 <p><strong>Headless Chromium crashed.</strong> A context torn down with a registered service worker and audio still running took the browser down with <code>SEGV_MAPERR</code>, in a container with no sound device. Two changes: the suite blocks service workers and checks the worker as a document (ch. 35), and the embed test stops playback before it ends.</p>
 <p><strong>A 500 on every vanity address.</strong> <code>handleFetch</code> annotated the current span — and during <code>reroute</code> there is no route yet and no span. Two optional chains (ch. 26). The vanity-address test is why it was found before a person did.</p>
 <aside class="callout callout--note"><p>None of the five would have been found by unit tests, and four of them were framework-level rather than application-level. That is the case for an end-to-end suite against the real build: it is the only test that runs the same code a person does.</p></aside>
+<h3 id="what-a-failure-says">What a failure says</h3>
+<p>The suite above tests what happens when things work. Three of its scenarios test what a person reads when the server says no — and they exist because a probe, not the suite, found that nobody had looked. The probe was a scratch copy of the app in which every remote function could be made to throw a real <code>error(…)</code> on demand, and every <code>catch</code>, <code>failed</code> snippet and <code>onerror</code> handler recorded what it was handed. Two shapes came back: a boundary is handed the <code>App.Error</code> itself, <code>{ status, message }</code>, and every boundary in the app read it correctly; an awaited command or form submission is handed an <code>HttpError</code>, <code>{ status, body }</code>, and every <code>catch</code> around one read it wrongly (ch. 24).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:109-135</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('an edit the room refuses says why', async ({ page }) =&gt; {
+	await page.goto('/jam/lobby');
+	await expect(page.getByText('live')).toBeVisible();
+
+	// Freeze this browser's view of the room: drop the stream, and fail every
+	// attempt to reopen it. SvelteKit keeps the last snapshot on screen and
+	// retries, so what is drawn stops following the server.
+	await page.route(/\/_app\/remote\/[^/]+\/watchRoom/, (route) =&gt; route.abort());
+	await page.getByRole('button', { name: 'Reconnect' }).click();
+	await expect(page.getByText('reconnecting…')).toBeVisible();
+
+	// Replace the room's pattern. A preset arrives with new track ids, and this
+	// browser does not hear about it…
+	const loaded = page.waitForResponse((r) =&gt; r.url().includes('/loadRoomPreset'));
+	await page.getByRole('button', { name: 'Boom bap' }).click();
+	expect((await loaded).ok()).toBe(true);
+
+	// …so muting a track it still shows names a track the room no longer has,
+	// and the command is refused with the server's own sentence.
+	await page.locator('button.chip[aria-pressed]').first().click();
+	await expect(page.locator('.toast')).toHaveText('No such track in this room');
+
+	// Leave the room as the other tests expect to find it.
+	const restored = page.waitForResponse((r) =&gt; r.url().includes('/loadRoomPreset'));
+	await page.getByRole('button', { name: 'Four on the floor' }).click();
+	expect((await restored).ok()).toBe(true);
+});</code></pre>
+</figure>
+<p>A refused command, made to happen for real rather than faked. The test cuts this browser off from the room’s live stream — every attempt to reopen it is aborted, and SvelteKit keeps the last snapshot on screen while it retries — then loads a preset, which gives every track a new id. The browser still shows the old tracks, so a click on one sends a mute for a track the room no longer has, and the server answers <code>error(404, &quot;No such track in this room&quot;)</code>. Before the fix the toast was there and empty: <code>(e as Error).message</code> on an <code>HttpError</code> is <code>undefined</code>. The scenario before it in the same file is the boundary’s half — <code>/jam/nowhere</code> says “No such room”, served and navigated to — and it passed before the fix as well, which is the point of keeping it: it fails if somebody “fixes” a <code>failed</code> snippet to read <code>body.message</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:75-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a delete the server refuses says why, and the card comes back', async ({ page }, info) =&gt; {
+	const title = `Deleted twice by ${info.project.name}`;
+	const handle = `twice_${info.project.name}_${Date.now().toString(36).slice(-5)}`;
+
+	await page.goto('/studio?preset=two-step');
+	await page.getByLabel('Pattern title').fill(title);
+	await page.getByRole('button', { name: 'Share' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Share' });
+	await dialog.getByLabel('Handle').fill(handle);
+	// The submission, not one of the validation requests the form sends as the
+	// fields change: only the submission's answer carries the new address.
+	const published = page.waitForResponse(
+		async (r) =&gt; r.url().includes('/publish') &amp;&amp; (await r.text()).includes(`/@${handle}/`)
+	);
+	await dialog.getByRole('button', { name: 'Publish', exact: true }).click();
+	expect((await published).ok()).toBe(true);
+
+	// Two tabs on the gallery, both loaded from the server, so both delete
+	// forms are hydrated rather than mounted — the case that once went
+	// unenhanced and fell back to a plain POST.
+	const card = (p: Page) =&gt; p.locator('#yours .pattern-card', { hasText: title });
+	const other = await page.context().newPage();
+	await other.goto('/gallery');
+	await expect(card(other)).toHaveCount(1);
+
+	// Each tab is brought to the front before it is used. A background tab is
+	// not painted, and on the phone profile a click aimed at one lands on
+	// stale layout — the card's title, not its Delete button.
+	await page.bringToFront();
+	await page.goto('/gallery');
+	await card(page).getByRole('button', { name: 'Delete' }).click();
+	await expect(card(page)).toHaveCount(0);
+
+	// The other tab still shows the card; the server no longer has it. The
+	// optimistic removal is undone, and the toast is the server's sentence
+	// from `body.message` rather than a guess of the page's own.
+	await other.bringToFront();
+	await other.waitForLoadState('networkidle');
+	await card(other).getByRole('button', { name: 'Delete' }).click();
+	await expect(other.locator('.toast')).toHaveText('Not yours, or not there');
+	await expect(card(other)).toHaveCount(1);
+	await other.close();
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p><strong>The delete forms were never enhanced.</strong> The probe found a second fault behind the first: in a tab loaded from the server, Delete did not run its <code>enhance</code> callback at all. It fell back to the plain POST that works with JavaScript off — which still deletes, so the older gallery test passed — and a refusal became an error page. Against the old code this test fails on that, before the shape of the error matters: there is no toast to read. The cause was a boundary inside a boundary around the “Yours” list (ch. 30); the fix was to remove the inner one. And the test itself needed <code>bringToFront()</code>: with two tabs open, a click on the phone profile aimed at the one in the background landed on the card’s title instead of its button, four times in five.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what the suite runs against and why not <code>vite preview</code>.</li><li>You can name the flake that turned out to be <code>forkPreloads</code> and say how it was bisected.</li><li>You can add a two-browser test for a new jam-room command.</li></ul>
+	<ul><li>You can say what the suite runs against and why not <code>vite preview</code>.</li><li>You can name the flake that turned out to be <code>forkPreloads</code> and say how it was bisected.</li><li>You can add a two-browser test for a new jam-room command.</li><li>You can make a real server refusal happen in a test without faking the response.</li></ul>
 </aside>
 		</article>
 

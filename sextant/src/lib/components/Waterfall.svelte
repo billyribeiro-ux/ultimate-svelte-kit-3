@@ -311,7 +311,7 @@
 	-->
 	<div class="waterfall__list" role="tree" aria-label="Spans" bind:this={list}>
 		{#each lines as line (line.node.spanId)}
-			{@const node = line.node}
+			{const node = $derived(line.node)}
 			<div
 				class="row"
 				class:row--error={node.status === 'error'}

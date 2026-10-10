@@ -55,9 +55,10 @@
 		{#snippet pending()}
 			<p class="globe__status">{m.globe_loading()}</p>
 		{/snippet}
+		<!-- An `App.Error` from `handleError`, not the `Error` thrown below: the words are on `message`. -->
 		{#snippet failed(error, reset)}
 			<p class="globe__status issue">
-				{error instanceof Error ? error.message : m.error_title()}
+				{(error as App.Error).message}
 				<button class="btn btn--sm" type="button" onclick={reset}>{m.live_reconnect()}</button>
 			</p>
 		{/snippet}

@@ -159,8 +159,12 @@
 
 <!--
 	`{const}` in markup: the list of features exists only for this loop, so it
-	is declared where the loop is, in the markup, rather than a screen away in
-	the script. It re-runs when the messages' locale changes.
+	is declared where the loop is, rather than a screen away in the script. It
+	is bare on purpose. A bare declaration tag is worked out once, and nothing
+	it reads changes while the page is open: a language switch is a full
+	reload (the `LocaleSwitcher` links carry `data-sveltekit-reload`), and the
+	new page works the list out afresh in the new language. The header's
+	links, which must follow a sign-in, are the opposite case: `$derived`.
 -->
 {const features = [
 	{ icon: MapPinIcon, title: m.home_feature_map_title(), text: m.home_feature_map_text() },
@@ -176,7 +180,7 @@
 <!-- The cards rise in 70ms apart the first time they scroll into view; CSS does the motion, `inview` says when. -->
 <section class="container features grid" {@attach inview()}>
 	{#each features as feature, i (feature.title)}
-		{@const Icon = feature.icon}
+		{const Icon = $derived(feature.icon)}
 		<article class="card card--pad feature stack stack--sm" style:--i={i}>
 			<span class="feature__icon" aria-hidden="true">
 				<Icon size={28} weight="duotone" />

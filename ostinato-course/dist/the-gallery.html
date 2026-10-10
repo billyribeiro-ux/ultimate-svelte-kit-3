@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:21-31</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:22-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const sorts: { value: Sort; label: string }[] = [
@@ -57,7 +57,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:90-100</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:91-101</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav class=&quot;cluster&quot; aria-label=&quot;Sort&quot;&gt;
@@ -75,7 +75,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:102-132</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:103-133</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -105,17 +105,17 @@ const sort = $derived.by((): Sort =&gt; {
 		&lt;p class=&quot;hint&quot;&gt;Loading the gallery…&lt;/p&gt;
 	{/snippet}
 	{#snippet failed(error, reset)}
-		&lt;p class=&quot;issue&quot;&gt;The gallery could not be loaded: {(error as Error).message}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;The gallery could not be loaded: {(error as App.Error).message}&lt;/p&gt;
 		&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={reset}&gt;Try again&lt;/button&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>Two <code>await</code>s in one <code>{#each}</code>: the list, and each card’s counts. Every <code>await getCounts(published.id)</code> in this render is one batched request (ch. 23). The boundary shows the <code>pending</code> snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache.</p>
+<p>Two <code>await</code>s in one <code>{#each}</code>: the list, and each card’s counts. Every <code>await getCounts(published.id)</code> in this render is one batched request (ch. 23). The boundary shows the <code>pending</code> snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache. If <code>getPatterns</code> fails, the <code>failed</code> snippet shows the server’s sentence: what a boundary is handed has been through <code>handleError</code> already and is the <code>App.Error</code> itself, so it is <code>error.message</code> — no <code>body</code> in between (ch. 24 has the other shape).</p>
 <h3 id="preview">Preview without leaving</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:47-76</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:48-77</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -157,7 +157,7 @@ async function open(event: MouseEvent, id: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:187-216</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:195-224</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if page.state.preview}
@@ -196,7 +196,7 @@ async function open(event: MouseEvent, id: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:33-45</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:34-46</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -218,65 +218,73 @@ const [send, receive] = crossfade({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:135-184</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:136-192</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	ONE BOUNDARY, NOT TWO
+	A second boundary inside this one, around the list, is the natural place
+	for a &quot;Loading yours…&quot; line — and there was one. On a full page load
+	(Svelte 5.57.2) it hydrated its markup and never ran its effects: no
+	attachments, so the delete forms were never enhanced and Delete fell
+	back to a plain POST. That still deletes, which is why nothing noticed;
+	a refusal became an error page instead of a toast. Removing either the
+	inner boundary or the batched `await getCounts` inside it was enough, so
+	the inner boundary went — this one already waits for everything in it,
+	and the end-to-end suite checks that a refused delete is a toast.
+--&gt;
+&lt;svelte:boundary&gt;
 	{const me = $derived(await whoAmI())}
 	{#if me}
 		&lt;Section eyebrow=&quot;@{me.handle}&quot; title=&quot;Yours&quot;&gt;
-			&lt;svelte:boundary&gt;
-				&lt;ul class=&quot;cards&quot; id=&quot;yours&quot;&gt;
-					{#each await getMine() as mine (mine.id)}
-						{const del = remove.for(mine.id)}
-						&lt;li&gt;
-							&lt;PatternCard published={mine} counts={await getCounts(mine.id)}&gt;
-								{#snippet actions()}
-									&lt;!--
+			&lt;ul class=&quot;cards&quot; id=&quot;yours&quot;&gt;
+				{#each await getMine() as mine (mine.id)}
+					{const del = remove.for(mine.id)}
+					&lt;li&gt;
+						&lt;PatternCard published={mine} counts={await getCounts(mine.id)}&gt;
+							{#snippet actions()}
+								&lt;!--
 									One form per card, isolated by `remove.for(id)`, so a pending
 									delete disables *its* button and no other. The optimistic
 									override removes the card before the server has answered;
-									a failure puts it back.
+									a refusal puts it back, and the toast says what the server
+									said — &quot;Not yours, or not there&quot; for a card another tab has
+									already deleted.
 								--&gt;
-									&lt;form
-										{...del.enhance(async (f) =&gt; {
-											try {
-												await f
-													.submit()
-													.updates(
-														getMine().withOverride((list) =&gt; list.filter((p) =&gt; p.id !== mine.id))
-													);
-												toast('Deleted');
-											} catch {
-												toast('Could not delete that', 'error');
-											}
-										})}
-									&gt;
-										&lt;input {...del.fields.id.as('hidden', mine.id)} /&gt;
-										&lt;button class=&quot;btn btn--sm btn--danger&quot; disabled={!!del.pending}
-											&gt;Delete&lt;/button
-										&gt;
-									&lt;/form&gt;
-								{/snippet}
-							&lt;/PatternCard&gt;
-						&lt;/li&gt;
-					{:else}
-						&lt;li class=&quot;hint&quot;&gt;You have not published anything from this browser yet.&lt;/li&gt;
-					{/each}
-				&lt;/ul&gt;
-				{#snippet pending()}
-					&lt;p class=&quot;hint&quot;&gt;Loading yours…&lt;/p&gt;
-				{/snippet}
-			&lt;/svelte:boundary&gt;
+								&lt;form
+									{...del.enhance(async (f) =&gt; {
+										try {
+											await f
+												.submit()
+												.updates(
+													getMine().withOverride((list) =&gt; list.filter((p) =&gt; p.id !== mine.id))
+												);
+											toast('Deleted');
+										} catch (e) {
+											toast(messageOf(e, 'Could not delete that'), 'error');
+										}
+									})}
+								&gt;
+									&lt;input {...del.fields.id.as('hidden', mine.id)} /&gt;
+									&lt;button class=&quot;btn btn--sm btn--danger&quot; disabled={!!del.pending}&gt;Delete&lt;/button&gt;
+								&lt;/form&gt;
+							{/snippet}
+						&lt;/PatternCard&gt;
+					&lt;/li&gt;
+				{:else}
+					&lt;li class=&quot;hint&quot;&gt;You have not published anything from this browser yet.&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
 		&lt;/Section&gt;
 	{/if}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p><code>remove.for(mine.id)</code> gives each card its own instance of the form, so a pending delete disables *its* button and no other. The <code>enhance</code> callback submits with <code>.updates(getMine().withOverride(list =&gt; list.filter(...)))</code>: the card disappears before the server has answered, and comes back if the server refuses. The <code>id</code> travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.</p>
+<p><code>remove.for(mine.id)</code> gives each card its own instance of the form, so a pending delete disables *its* button and no other. The <code>enhance</code> callback submits with <code>.updates(getMine().withOverride(list =&gt; list.filter(...)))</code>: the card disappears before the server has answered, and comes back if the server refuses — with the refusal in the toast. A second tab that still shows a card this one has deleted gets “Not yours, or not there”, the server’s own <code>error(404, …)</code>, read from <code>body.message</code> by <code>messageOf</code> (ch. 24). The <code>id</code> travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.</p>
+<aside class="callout callout--warn"><p>One boundary around this section, not two, and the comment says why. There used to be a second boundary inside it, around the list, for a “Loading yours…” line. On a full page load that inner boundary hydrated its markup and never ran its effects — no attachments, so the delete forms were never enhanced, and Delete fell back to the plain POST that works with JavaScript off. It still deleted, which is why the suite did not notice; it only showed when a refused delete arrived as an error page instead of a toast. Taking away either the inner boundary or the batched <code>await getCounts</code> inside it was enough to bring the forms back, which points at that combination during hydration rather than at anything the page’s own code does. The inner boundary went, because the outer one already waits for everything in it — and the end-to-end test that deletes from two tabs (ch. 38) is the criterion for putting it back.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what <code>preloadData</code> returns and why the code checks <code>result.type</code>.</li><li>You can explain what <code>send</code> and <code>receive</code> need in common to animate as one element.</li><li>You can say why <code>remove.for(id)</code> exists rather than one shared <code>remove</code> form.</li></ul>
+	<ul><li>You can say what <code>preloadData</code> returns and why the code checks <code>result.type</code>.</li><li>You can explain what <code>send</code> and <code>receive</code> need in common to animate as one element.</li><li>You can say why <code>remove.for(id)</code> exists rather than one shared <code>remove</code> form.</li><li>You can say what a refused delete looks like with the form enhanced, and without.</li></ul>
 </aside>
 		</article>
 

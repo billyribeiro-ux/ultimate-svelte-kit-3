@@ -46,7 +46,7 @@ Chrome and a Pixel 7 profile.
 | `src/instrumentation.server.ts`        | OpenTelemetry, exporting to an in-memory ring the diagnostics page reads                                                        |
 | `src/service-worker/`                  | The application shell cached from `$app/manifest`, versioned by `$app/env`, type-checked as its own project                     |
 | `adapters/ostinato`                    | An adapter written from scratch: two functions and a catch-all joined by `applyReroute`                                         |
-| `e2e/`                                 | Thirty-three end-to-end scenarios on desktop and a Pixel 7 profile, including two-browser jam sessions                          |
+| `e2e/`                                 | Thirty-six end-to-end scenarios on desktop and a Pixel 7 profile, including two-browser jam sessions                            |
 
 ## Environment
 

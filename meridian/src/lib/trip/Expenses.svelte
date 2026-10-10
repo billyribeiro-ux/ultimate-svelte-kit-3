@@ -403,7 +403,7 @@
 					{#each table.getHeaderGroups() as group (group.id)}
 						<tr>
 							{#each group.headers as header (header.id)}
-								{@const sorted = header.column.getIsSorted()}
+								{const sorted = $derived(header.column.getIsSorted())}
 								<th
 									class="sortable"
 									class:num={header.column.columnDef.meta?.align === 'end'}

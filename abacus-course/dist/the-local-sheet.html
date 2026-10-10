@@ -180,7 +180,7 @@ export function tabId(): string {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:15-47</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:16-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -221,7 +221,7 @@ sheet.onop = (op) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:49-101</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:50-104</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">onMount(() =&gt; {
@@ -244,7 +244,9 @@ sheet.onop = (op) =&gt; {
 				sheet.load(saved ?? emptyDocument('My sheet'));
 			}
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			// `getPublished` is awaited here, not in markup, so a 404 rejects
+			// with an `HttpError` and its sentence is in `body.message`.
+			toast(messageOf(e, 'Could not open that sheet'), 'error');
 			sheet.load(emptyDocument('My sheet'));
 		}
 		ready = true;
@@ -278,10 +280,11 @@ const storageLabel = $derived(
 					: 'Loading…'
 );</code></pre>
 </figure>
+<p>If <code>?from=</code> names a sheet that is not published, <code>getPublished</code> throws <code>error(404, 'No such published sheet')</code>. Awaited here, in <code>onMount</code>, rather than in the markup, that rejects with an <code>HttpError</code>, and the toast reads the sentence from its <code>body</code> with <code>messageOf</code> (ch. 29) before the page falls back to an empty sheet. The first version read <code>(e as Error).message</code>, which an <code>HttpError</code> does not have: the toast appeared, red and empty.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:108-143</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:111-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;page sheetpage&quot;&gt;

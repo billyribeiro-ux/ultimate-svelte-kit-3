@@ -295,6 +295,7 @@ ostinato/
 │  │  ├─ toast/
 │  │  │  ├─ Toast.svelte
 │  │  │  └─ toast.ts
+│  │  ├─ errors.ts
 │  │  ├─ handle.ts
 │  │  ├─ vanity.spec.ts
 │  │  └─ vanity.ts
@@ -380,7 +381,7 @@ ostinato/
 					'Declaration tags `{const …}` / `{let … = $state()}` / `$derived(await …)` — the grid, the jam room, the share panel (ch. 16, 31, 20)',
 					'`class={[…]}` and `class={{…}}` — the pad, the mixer (ch. 16)',
 					'`{#key}`, `animate:flip`, `transition:` (fade, fly, scale, slide, draw), `crossfade` — the studio, the grid, the logo, the gallery (ch. 16, 19, 27, 30)',
-					'`<svelte:boundary>` with `pending`, `failed`, `onerror` — everywhere something is awaited (ch. 19, 20, 28)',
+					'`<svelte:boundary>` with `pending`, `failed`, `onerror` — everywhere something is awaited, each handed the `App.Error` that `handleError` made (ch. 19, 20, 28, 31)',
 					'`<svelte:window>`, `<svelte:document>`, `<svelte:body>`, `<svelte:head>`, `<svelte:element>`, `<svelte:options customElement>` — the studio page, `Section.svelte`, the element (ch. 19, 28, 33)',
 					'Snippets with parameters, `Snippet<[T]>`, `{@render}` — `Player.svelte` (ch. 29)',
 					'`bind:value`, function bindings `bind:checked={get, set}`, `bind:group`, `bind:indeterminate`, `bind:files`, `bind:textContent`, `bind:clientWidth`, media bindings — the grid, the sound panel, the meter, the share panel (ch. 16, 17, 20)',
@@ -405,7 +406,7 @@ ostinato/
 			{
 				type: 'ul',
 				items: [
-					'Remote functions: `query`, `query.batch`, `query.live`, `prerender`, `command`, `form` with `preflight`, `validate`, `issues`, `allIssues`, `invalid`, `.for(id)`, multiple submits, the `_` prefix; single-flight mutations with `refresh`, `requested().refreshAll()`, `.updates()`, `withOverride`, `reconnect` — `src/lib/remote/*` (ch. 23–25)',
+					'Remote functions: `query`, `query.batch`, `query.live`, `prerender`, `command`, `form` with `preflight`, `validate`, `issues`, `allIssues`, `invalid`, `.for(id)`, multiple submits, the `_` prefix; single-flight mutations with `refresh`, `requested().refreshAll()`, `.updates()`, `withOverride`, `reconnect`; a refused call’s `HttpError` read by `isHttpError` and `body.message` — `src/lib/remote/*`, `src/lib/errors.ts` (ch. 23–25)',
 					'Hooks: `transport`, async `reroute` with `fetch`, `handle` with the `preload` filter (`filename`), `handleFetch`, `handleError` with `kind` (including `validation`), `init` — `src/hooks*.ts` (ch. 26)',
 					'`load` with `RouteParams`, `$app/types`, `resolve` from `$app/paths`, snapshots, shallow routing with `goto(…, { shallow: true })`, `preloadData`, `page.state` — the studio, the pattern page, the gallery (ch. 19, 29, 30)',
 					'`$app/state`: `page`, `navigating`, `updated` with `check()`; `version.pollInterval` — the layouts, diagnostics (ch. 27, 32)',

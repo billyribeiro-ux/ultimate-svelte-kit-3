@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 	import { CopyIcon, GlobeIcon, LinkIcon, UsersIcon } from 'phosphor-svelte';
 	import type { PageProps } from './$types.js';
+	import { messageOf } from '#lib/errors.ts';
 	import Workbench from '#lib/grid/Workbench.svelte';
 	import { watchSheet } from '#lib/remote/live.remote.ts';
 	import { getSheet, publish, setAccess, unpublish } from '#lib/remote/sheets.remote.ts';
@@ -86,7 +87,7 @@
 				toast(`Published at ${url}`);
 			}
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			toast(messageOf(e, 'Could not change publishing'), 'error');
 		}
 	}
 
@@ -102,7 +103,7 @@
 			live: stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…',
 			saving: 'Saving…',
 			offline: 'Offline — changes are kept and will be sent',
-			conflict: 'Could not save — reload to continue'
+			conflict: live.problem ?? 'Could not save — reload to continue'
 		}[live.status]
 	);
 </script>

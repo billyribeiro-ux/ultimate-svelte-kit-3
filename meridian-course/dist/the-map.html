@@ -640,7 +640,7 @@ function onclick(e: MapMouseEvent) {
 		--&gt;
 		{#each groups as group (group.key)}
 			{#if group.members.length === 1}
-				{@const { stop, number } = group.members[0]!}
+				{const { stop, number } = $derived(group.members[0]!)}
 				&lt;Marker
 					lngLat={group.lngLat}
 					zIndex={stop.id === selected ? 10 : 1}
@@ -667,7 +667,7 @@ function onclick(e: MapMouseEvent) {
 					&lt;/span&gt;
 				&lt;/Marker&gt;
 			{:else}
-				{@const names = group.members.map((member) =&gt; member.stop.name).join(', ')}
+				{const names = $derived(group.members.map((member) =&gt; member.stop.name).join(', '))}
 				&lt;Marker lngLat={group.lngLat} zIndex={5} asButton onclick={() =&gt; zoomInto(group)}&gt;
 					&lt;span class=&quot;pin pin--cluster tabular&quot; title={names}&gt;
 						{group.label}&lt;span class=&quot;visually-hidden&quot;

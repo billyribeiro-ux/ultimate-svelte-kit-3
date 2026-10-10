@@ -64,13 +64,13 @@
 	In the browser, SvelteKit holds a navigation until the await settles, so
 	nothing flashes; keyed on the slug, a different trip is a fresh view.
 --&gt;
-{const initial = await tripBySlug(slug)}
+{const initial = $derived(await tripBySlug(slug))}
 
 {#key slug}
 	&lt;TripView {initial} {slug} /&gt;
 {/key}</code></pre>
 </figure>
-<p>One <code>await</code>, in the markup, with no boundary. The comment says why twice over: a <code>pending</code> snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to <code>+error.svelte</code> with the right status and language — where an uncaught error from a remote function goes. <code>{#key slug}</code> makes a different trip a fresh <code>TripView</code>, which is what lets the view read its props once.</p>
+<p>One <code>await</code>, in the markup, with no boundary. The comment says why twice over: a <code>pending</code> snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to <code>+error.svelte</code> with the right status and language — where an uncaught error from a remote function goes. The <code>await</code> sits inside <code>$derived</code> in a declaration tag, so <code>initial</code> follows the slug and the query; a bare <code>{const}</code> is worked out once, and would go on holding the first trip it was given. <code>{#key slug}</code> makes a different trip a fresh <code>TripView</code>, which is what lets the view read its props once.</p>
 <h3 id="state">The state object</h3>
 
 <figure class="code">
@@ -402,7 +402,7 @@ const status: 'live' | 'connecting' | 'lost' = $derived(
 &gt;
 	&lt;nav class=&quot;tabs&quot; aria-label={m.app_name()} bind:this={strip} onscroll={edges}&gt;
 		{#each TABS as name (name)}
-			{@const Icon = tabIcons[name]}
+			{const Icon = $derived(tabIcons[name])}
 			&lt;a
 				class=&quot;tabs__link&quot;
 				href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
@@ -605,7 +605,7 @@ const wide = new MediaQuery('(min-width: 64em)');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:476-484</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:478-486</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}

@@ -18,7 +18,7 @@ export const part3 = [
 		slug: 'environment-and-hooks',
 		title: 'Environment and hooks',
 		summary:
-			'`src/env.ts` declares every variable with a schema; `hooks.server.ts` composes three handlers with `sequence` — locale, identity, security — and adds `handleFetch`, `handleError` told apart by `kind`, and `init`; `hooks.ts` carries `reroute` and `transport` to the browser; `params.ts` matches the slug.',
+			'`src/env.ts` declares every variable with a schema; `hooks.server.ts` composes three handlers with `sequence` — locale, identity, security — and adds `handleFetch`, `handleError` told apart by `kind`, and `init`; `hooks.client.ts` gives the browser’s own failures words; `hooks.ts` carries `reroute` and `transport` to the browser; `params.ts` matches the slug.',
 		goal: 'Read a request’s whole path through SvelteKit 3 — from environment validation at boot to the response headers — and know which hook owns which decision.',
 		blocks: [
 			{
@@ -72,6 +72,15 @@ export const part3 = [
 				type: 'p',
 				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404)`, `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
 			},
+			code('src/hooks.client.ts', 1, 28),
+			{
+				type: 'p',
+				text: 'The browser has a `handleError` of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at `kind` the same way, and only `unknown` needs words, because SvelteKit’s default for it is `\'Internal Error\'`, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose.'
+			},
+			{
+				type: 'why',
+				text: 'Why does the shape matter? Because a `failed` snippet, and `+error.svelte` through `page.error`, are handed the *result* of `handleError`: an `App.Error`, `{ status, message }`, a plain object and not an `Error`. The first versions of four boundaries tested `error instanceof Error`, which is never true here, so they printed the fallback every time — or, in the trips list, `String(error)`, which is `[object Object]`. A boundary reads `error.message`; this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an `HttpError`, with the server’s words on `body.message`.'
+			},
 			code('src/hooks.ts', 1, 35),
 			{
 				type: 'p',
@@ -87,7 +96,8 @@ export const part3 = [
 				items: [
 					'You can say why `PUBLIC_ORIGIN` is both `public` and `static`, and what breaks if it were not.',
 					'You can give the order of the three handlers and one reason for each position.',
-					'You can name the four `kind`s in `handleError` and say which one gets an id.'
+					'You can name the four `kind`s in `handleError` and say which one gets an id.',
+					'You can say what a `failed` snippet is handed in a SvelteKit app, and what the browser’s `handleError` adds to it.'
 				]
 			}
 		]

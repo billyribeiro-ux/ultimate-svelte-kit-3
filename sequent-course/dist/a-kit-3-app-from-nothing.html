@@ -159,7 +159,9 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		&quot;src/**/*.js&quot;,
 		&quot;src/**/*.svelte&quot;,
 		&quot;scripts/**/*.ts&quot;,
+		&quot;e2e/**/*.ts&quot;,
 		&quot;vite.config.ts&quot;,
+		&quot;playwright.config.ts&quot;,
 		&quot;.svelte-kit/types/**/*.ts&quot;
 	],
 	&quot;exclude&quot;: [&quot;build&quot;, &quot;node_modules&quot;, &quot;.svelte-kit/output&quot;, &quot;.svelte-kit/adapter-node&quot;],
@@ -175,6 +177,7 @@ build/server/chunks/index-BqK2v8.js:1:2847
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>.svelte-kit/types/**/*.ts</code> <strong>must</strong> be in <code>include</code>. That is where Kit writes the generated route types that <code>./$types</code> resolves to. Leave it out and every <code>PageServerLoad</code> import fails with a module-not-found for a file that is sitting right there on disk.</p></aside>
+<p>The list is also how the browser tests get type-checked. <code>e2e/**/*.ts</code> and <code>playwright.config.ts</code> are the end-to-end suite you meet in chapter 41; listing them means <code>svelte-check</code> reads them like any other file, so a test that calls a locator method that does not exist fails <code>pnpm check</code> rather than failing in a browser five minutes into <code>verify</code>.</p>
 <p><code>noUncheckedIndexedAccess</code> deserves a note. It makes <code>array[0]</code> have type <code>T | undefined</code>, which sounds pedantic until you remember what this application is. Half the code on a trading screen is &quot;the best bid&quot; — and on a book with nothing in it, the honest answer genuinely is &quot;there isn't one&quot;. The flag stops us pretending otherwise.</p>
 
 <aside class="callout callout--check">

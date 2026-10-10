@@ -208,7 +208,7 @@ async function audition() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:31-35</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:32-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const link = $derived.by(() =&gt; {
@@ -222,7 +222,7 @@ async function audition() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:168-199</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:172-203</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;stack&quot;&gt;
@@ -262,7 +262,7 @@ async function audition() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:50-80</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:51-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">let bars = $state(2);
@@ -305,7 +305,7 @@ function commit() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:82-105</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:83-106</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">let objectUrl: string | null = null;
@@ -336,7 +336,7 @@ const clock = (seconds: number) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:201-241</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:205-251</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -375,19 +375,25 @@ const clock = (seconds: number) =&gt;
 		&lt;p class=&quot;hint&quot; role=&quot;status&quot;&gt;Rendering {bars} bars…&lt;/p&gt;
 	{/snippet}
 
+	&lt;!--
+		What a boundary is handed is the `App.Error` that `handleError` made,
+		not the thing that was thrown. A WAV render that fails throws a plain
+		`Error` in the browser, which is not safe to show as it is, so this
+		reads &quot;Internal Error&quot; and the console has the real one.
+	--&gt;
 	{#snippet failed(error, reset)}
-		&lt;p class=&quot;issue&quot;&gt;Rendering failed: {(error as Error).message}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;Rendering failed: {(error as App.Error).message}&lt;/p&gt;
 		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>{const rendered = $derived(await render(bars))}</code> — with the <code>$derived</code>. A bare <code>{const x = await …}</code> in markup runs *once*; wrapped in <code>$derived</code> it re-runs when <code>bars</code> changes, which is the whole feature. This distinction cost an afternoon during the jam room (ch. 38), and it appears here first: when an <code>await</code> in a template should follow its inputs, it needs <code>$derived</code> around it.</p></aside>
-<p><code>$effect.pending()</code> counts the <code>await</code>s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The <code>pending</code> snippet covers the *first* render, the <code>failed</code> snippet a thrown error, with <code>reset</code> to try again. And <code>bind:paused</code>, <code>bind:currentTime</code> and <code>bind:duration</code> on the <code>&lt;audio&gt;</code> make a play button and a clock with no event handlers at all.</p>
+<p><code>$effect.pending()</code> counts the <code>await</code>s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The <code>pending</code> snippet covers the *first* render, the <code>failed</code> snippet a thrown error, with <code>reset</code> to try again. What <code>failed</code> is handed is not the thrown value but the <code>App.Error</code> that <code>handleError</code> made from it — and a WAV render that fails throws a plain <code>Error</code> in the browser, which is not safe to show as it is, so the line reads “Rendering failed: Internal Error” while the console has the real one. And <code>bind:paused</code>, <code>bind:currentTime</code> and <code>bind:duration</code> on the <code>&lt;audio&gt;</code> make a play button and a clock with no event handlers at all.</p>
 <h3 id="publishing">Publishing: a form with preflight</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:111-145</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:112-149</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -421,16 +427,19 @@ const form = publish.preflight(preflight).enhance(async (f) =&gt; {
 			session.markSaved();
 			toast(`Published as ${publish.result?.url ?? 'a new pattern'}`);
 		}
-	} catch {
-		toast('Publishing failed — try again in a moment', 'error');
+	} catch (e) {
+		// Not a validation issue — those resolve `false` and appear under the
+		// fields. A rejection is the server refusing outright, and it said why
+		// in `body.message`; the fallback is for a request that never arrived.
+		toast(messageOf(e, 'Publishing failed — try again in a moment'), 'error');
 	}
 });</code></pre>
 </figure>
-<p><code>publish</code> is a remote form function (ch. 24). <code>.preflight(schema)</code> checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why <code>_pattern</code>, <code>remixOf</code> and <code>action</code> are typed here but barely checked. <code>.enhance()</code> takes over the submission: <code>submit()</code> resolves <code>true</code> on success, the handler’s return value is on <code>publish.result</code>, and the page never reloads.</p>
+<p><code>publish</code> is a remote form function (ch. 24). <code>.preflight(schema)</code> checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why <code>_pattern</code>, <code>remixOf</code> and <code>action</code> are typed here but barely checked. <code>.enhance()</code> takes over the submission: <code>submit()</code> resolves <code>true</code> on success, the handler’s return value is on <code>publish.result</code>, and the page never reloads. A schema failure resolves <code>false</code> and appears under the fields; a refusal *rejects*, and the <code>catch</code> shows the server’s reason through <code>messageOf</code> (ch. 24), keeping “Publishing failed — try again in a moment” for a request that never arrived.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:252-282</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:262-292</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -469,7 +478,7 @@ const form = publish.preflight(preflight).enhance(async (f) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:304-319</span></span>
+		<span class="code__file">src/lib/studio/SharePanel.svelte<span class="code__lines">:314-329</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;cluster&quot;&gt;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The shell: a root that knows nobody — Building Meridian</title>
-<meta name="description" content="The root layout has no header and no `load`; the `(site)` group has both; the header computes its links with `{const}` and reads `scrollY` from `svelte/reactivity/window`; view transitions in `onNavigate`; a version banner from `updated.current`; two error pages sharing one view.">
+<meta name="description" content="The root layout has no header and no `load`; the `(site)` group has both; the header computes its links in a `{const}` declaration tag and reads `scrollY` from `svelte/reactivity/window`; view transitions in `onNavigate`; a version banner from `updated.current`; two error pages sharing one view.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 23</p>
 			<h1>The shell: a root that knows nobody</h1>
-			<p class="lede">The root layout has no header and no <code>load</code>; the <code>(site)</code> group has both; the header computes its links with <code>{const}</code> and reads <code>scrollY</code> from <code>svelte/reactivity/window</code>; view transitions in <code>onNavigate</code>; a version banner from <code>updated.current</code>; two error pages sharing one view.</p>
+			<p class="lede">The root layout has no header and no <code>load</code>; the <code>(site)</code> group has both; the header computes its links in a <code>{const}</code> declaration tag and reads <code>scrollY</code> from <code>svelte/reactivity/window</code>; view transitions in <code>onNavigate</code>; a version banner from <code>updated.current</code>; two error pages sharing one view.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Arrange layouts so that prerendered pages and per-request pages can coexist, and know what belongs at the root and what does not.</p></aside>
 			<p>The layout split is the decision this chapter is about, and it came from a failure. The first version had the header in the root layout, fed by a root <code>+layout.server.ts</code> that loaded the signed-in person. Then the guides were prerendered, and a prerendered page is rendered once, at build time, with nobody signed in — and that answer is baked into its data. A signed-in person navigating to a guide would see “Sign in” in the header. So the root knows nobody, and the pages that need to know live in a group.</p>
 
@@ -404,26 +404,29 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:101-111</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:101-114</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
-	`{const}` is a declaration tag: a value computed in the markup, scoped to
-	the block it sits in, re-evaluated when its dependencies change. The links
-	depend on whether somebody is signed in, and the header is the only place
-	that needs the list — so the list lives here, not in the script.
+	`{const}` is a declaration tag: a value computed in the markup and scoped
+	to the block it sits in. A bare one is worked out once, when the block is
+	created; wrapped in `$derived` it is worked out again whenever what it
+	reads changes. The links depend on whether somebody is signed in, and the
+	header outlives a sign-in — it is in the layout — so `$derived` is what
+	makes &quot;Trips&quot; appear without a reload. The header is the only place that
+	needs the list, so the list lives here, not in the script.
 --&gt;
-{const links = [
+{const links = $derived([
 	...(user ? [{ href: href('/(site)/(app)/trips'), label: m.nav_trips() }] : []),
 	{ href: href('/(site)/explore'), label: m.nav_explore() },
 	{ href: href('/guides'), label: m.nav_guides() }
-]}</code></pre>
+])}</code></pre>
 </figure>
-<p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup, scoped to the block, re-evaluated when its dependencies change. The link list depends on whether somebody is signed in, and the header is the only place that needs it, so it lives where it is used.</p>
+<p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup and visible to its siblings and their children. It is what Svelte 5.56 put in place of <code>{@const}</code>, which still compiles but is legacy — the old tag could only sit directly inside a block and only hold a constant, where a declaration tag works anywhere in the markup and can be a <code>let</code> holding <code>$state</code>. A bare one is worked out once, when the block is created; to follow what it reads it says so with <code>$derived</code>, as a <code>const</code> in a <code>&lt;script&gt;</code> would. The link list depends on whether somebody is signed in, and the header sits in the layout, so it outlives a sign-in. The first version was a bare <code>{const}</code>: after signing in there was no “Trips” link until a reload, and after signing out the link stayed. The sign-up test in chapter 42 now looks for it both ways. The header is the only place that needs the list, so it lives where it is used.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:113-189</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:116-192</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={scrolled}&gt;

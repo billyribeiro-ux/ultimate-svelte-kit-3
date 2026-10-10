@@ -140,7 +140,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:19-52</span></span>
+		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:20-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export async function attachAuthenticator(page: Page) {
@@ -162,6 +162,25 @@
 		async credentials() {
 			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
 			return credentials;
+		},
+		/**
+		 * A passkey for this site that no server ever issued — what a person
+		 * holds after the database their account lived in was reset. The
+		 * browser offers it; the server has never heard of it.
+		 */
+		async addUnknownPasskey() {
+			const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+			await cdp.send('WebAuthn.addCredential', {
+				authenticatorId,
+				credential: {
+					credentialId: randomBytes(16).toString('base64'),
+					isResidentCredential: true,
+					rpId: 'localhost',
+					privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+					userHandle: randomBytes(16).toString('base64'),
+					signCount: 0
+				}
+			});
 		},
 		async detach() {
 			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
@@ -407,8 +426,106 @@ export async function register(page: Page, name: string, next = '/sheets') {
 
 <aside class="callout callout--why">
 	<h4>What the suite found</h4>
-	<p>Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s <code>cellAt</code> now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test.</p>
+	<p>Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s <code>cellAt</code> now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test. Three more turned up later, in the error paths: toasts that were empty because an <code>HttpError</code> has no <code>message</code> of its own, a client hook that put one sentence in place of every deliberate message, and a lesson page that never recovered from the cycle it asks you to make (ch. 17, 29). A probe found those; the tests below and in <code>lesson.e2e.ts</code> are what keep them fixed.</p>
 </aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:1-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { expect, test } from '@playwright/test';
+import { attachAuthenticator, register } from './passkeys.ts';
+
+/**
+ * WHAT A FAILURE SAYS
+ * ===================
+ *
+ * A browser meets two shapes of error, and a page has to read the right one.
+ *
+ *   A remote call awaited in a handler — a command, a form's `submit()`, a
+ *   query outside the markup — rejects with an `HttpError`: `{ status, body }`.
+ *   The server's sentence is `body.message`; `(e as Error).message` is
+ *   `undefined`, which is an empty toast.
+ *
+ *   A boundary — `+error.svelte` is one — receives an `App.Error` that has
+ *   been through `handleError`: `{ status, message }`. The client hook decides
+ *   what that message is, and a hook that answers every kind with the same
+ *   sentence hides what a `load` meant to say.
+ *
+ * Each test makes the server, or a load, refuse something on purpose and
+ * checks that the person reads the refusal itself.
+ */
+
+test('a query awaited in the page says what the server said', async ({ page }) =&gt; {
+	// `?from=` names a published sheet to copy; this one does not exist, so
+	// `getPublished` throws `error(404, 'No such published sheet')`.
+	await page.goto('/sheet/local?from=nosuchsheet');
+	await expect(page.getByText('No such published sheet')).toBeVisible();
+	// The person still gets a sheet to work in.
+	await expect(page.getByLabel('Sheet title')).toHaveText('My sheet');
+});
+
+test('a refused form and a refused command say what the server said', async ({ page }) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Hedy', '/settings');
+	await expect(page.locator('.key')).toHaveCount(1);
+
+	// The form: `removePasskey` answers a 409 rather than lock the account.
+	await page.getByRole('button', { name: /^Remove / }).click();
+	await expect(
+		page.getByText('That is your only passkey. Add another before removing it.')
+	).toBeVisible();
+	await expect(page.locator('.key')).toHaveCount(1);
+
+	// The command: the device offers a passkey this server never issued, and
+	// `finishAuthentication` refuses it by name.
+	await page.getByRole('button', { name: 'Sign out' }).click();
+	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+	await device.detach();
+	const stranger = await attachAuthenticator(page);
+	await stranger.addUnknownPasskey();
+	await page.goto('/signin');
+	await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
+	await expect(page.getByText('That passkey is not registered here')).toBeVisible();
+	await expect(page).toHaveURL(/\/signin$/);
+	await stranger.detach();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:59-84</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a load that fails in the browser shows its own message on the error page', async ({
+	page
+}) =&gt; {
+	await page.goto('/templates');
+	// The router is listening once it has taken over scroll restoration — the
+	// first thing SvelteKit does when it starts. Before that a click is an
+	// ordinary page load, and the server would be the one answering.
+	await page.waitForFunction(() =&gt; history.scrollRestoration === 'manual');
+
+	// A link to a template that does not exist, as a typo in a page would make.
+	// Following it is a client-side navigation: the template page's universal
+	// `load` runs here, in the browser, and throws `error(404, 'No such template')`.
+	await page.evaluate(() =&gt; {
+		const link = document.createElement('a');
+		link.href = '/templates/nosuch';
+		link.textContent = 'A template that is not there';
+		document.querySelector('main')!.append(link);
+	});
+	await page.getByRole('link', { name: 'A template that is not there' }).click();
+
+	await expect(page).toHaveURL(/\/templates\/nosuch$/);
+	await expect(page.getByRole('heading', { level: 1, name: 'Nothing here' })).toBeVisible();
+	await expect(page.getByText('No such template')).toBeVisible();
+	// A 404 is not a bug, so there is no reference to quote.
+	await expect(page.getByText(/^Reference /)).toHaveCount(0);
+});</code></pre>
+</figure>
+<p>Each test makes the server, or a load, refuse something on purpose — a published sheet that does not exist, the only passkey, a passkey the server never issued, a template that is not there — and passes only if the person reads the refusal itself. Against the first version of the pages they fail with an empty toast, “Something went wrong with the passkey.” and “Something went wrong in this tab.”. <code>addUnknownPasskey</code> in <code>passkeys.ts</code> puts a key on the virtual device that no server issued. The last test waits for <code>history.scrollRestoration</code> to turn <code>'manual'</code>, the first thing SvelteKit’s router does when it starts, so the click is a client-side navigation and the browser’s hook is the one under test; clicked any sooner, it is an ordinary page load and the server answers instead.</p>
 
 <figure class="code">
 	<figcaption>
@@ -447,15 +564,15 @@ export async function register(page: Page, name: string, next = '/sheets') {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>$ pnpm exec playwright test
-Running 46 tests using 1 worker
-  ✓ [desktop] account · collab · lesson · local · platform  (23)
-  ✓ [phone]   account · collab · lesson · local · platform  (23)
-  46 passed</code></pre>
+Running 54 tests using 1 worker
+  ✓ [desktop] account · collab · errors · lesson · local · platform  (27)
+  ✓ [phone]   account · collab · errors · lesson · local · platform  (27)
+  54 passed</code></pre>
 </figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what a virtual authenticator does and does not fake.</li><li>You can explain why the suite runs against the built server.</li><li>You can pick one of the five bugs and say which assertion caught it.</li></ul>
+	<ul><li>You can say what a virtual authenticator does and does not fake.</li><li>You can explain why the suite runs against the built server.</li><li>You can pick one of the bugs and say which assertion caught it, or keeps it caught.</li></ul>
 </aside>
 		</article>
 

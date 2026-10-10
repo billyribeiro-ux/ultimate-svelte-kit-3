@@ -40,6 +40,19 @@
 	});
 
 	const current = $derived(page.url.pathname);
+
+	/*
+	 * Say, on the document, when the page has hydrated.
+	 *
+	 * Server rendering puts every button on screen before any of them has a
+	 * handler, so a click in that gap does nothing at all. The end-to-end suite
+	 * waits for this attribute before it clicks, rather than for a guessed number
+	 * of milliseconds. An effect, because effects only run in the browser and only
+	 * once the component is mounted — which is exactly the moment it describes.
+	 */
+	$effect(() => {
+		document.documentElement.dataset['hydrated'] = '';
+	});
 </script>
 
 <svelte:head>
@@ -89,23 +102,12 @@
 
 <main id="main">
 	<!--
-		No `pending` snippet on this boundary, deliberately.
-
-		A pending snippet renders immediately during server rendering and does not
-		wait for the awaits inside it, so every page would ship HTML whose entire
-		body was "Loading…" — fine in a browser, empty to anything else.
+		No `<svelte:boundary>` here. SvelteKit 3 already wraps every page in one
+		that renders the nearest `+error.svelte`, so a boundary at this level is
+		never the nearest and its `failed` snippet never runs. A page's failure
+		lands in `+error.svelte`, inside this `<main>`, with the chrome intact.
 	-->
-	<svelte:boundary>
-		{@render children()}
-
-		{#snippet failed(error, reset)}
-			<div class="container card failure" role="alert">
-				<h1>Something went wrong</h1>
-				<p class="muted">{error instanceof Error ? error.message : 'We could not load this.'}</p>
-				<button type="button" onclick={reset}>Try again</button>
-			</div>
-		{/snippet}
-	</svelte:boundary>
+	{@render children()}
 </main>
 
 <style>
@@ -203,12 +205,5 @@
 
 	main {
 		padding-block: var(--space-5);
-	}
-
-	.failure {
-		margin-block-start: var(--space-6);
-	}
-	.failure button {
-		margin-block-start: var(--space-3);
 	}
 </style>

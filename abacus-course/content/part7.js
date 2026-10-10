@@ -71,7 +71,7 @@ $ pnpm run test:unit --run
 				type: 'p',
 				text: 'Against `node build/index.js`, not `vite preview`, because the health endpoint, graceful shutdown and the Content Security Policy belong to the built server. Two projects, because the toolbar and the grid render differently at phone widths. One worker and no retries, because one SQLite file has one writer and a suite that passes on retry is a suite that hides races. `PUBLIC_ORIGIN` is identical in the build and in the server’s environment, and the config says why.'
 			},
-			code('e2e/passkeys.ts', 19, 52),
+			code('e2e/passkeys.ts', 20, 72),
 
 			{ type: 'h3', id: 'the-tests', text: 'The tests' },
 			code('e2e/local.e2e.ts', 27, 44),
@@ -90,24 +90,30 @@ $ pnpm run test:unit --run
 			{
 				type: 'why',
 				title: 'What the suite found',
-				text: 'Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s `cellAt` now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test.'
+				text: 'Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s `cellAt` now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test. Three more turned up later, in the error paths: toasts that were empty because an `HttpError` has no `message` of its own, a client hook that put one sentence in place of every deliberate message, and a lesson page that never recovered from the cycle it asks you to make (ch. 17, 29). A probe found those; the tests below and in `lesson.e2e.ts` are what keep them fixed.'
+			},
+			code('e2e/errors.e2e.ts', 1, 57),
+			code('e2e/errors.e2e.ts', 59, 84),
+			{
+				type: 'p',
+				text: 'Each test makes the server, or a load, refuse something on purpose — a published sheet that does not exist, the only passkey, a passkey the server never issued, a template that is not there — and passes only if the person reads the refusal itself. Against the first version of the pages they fail with an empty toast, “Something went wrong with the passkey.” and “Something went wrong in this tab.”. `addUnknownPasskey` in `passkeys.ts` puts a key on the virtual device that no server issued. The last test waits for `history.scrollRestoration` to turn `\'manual\'`, the first thing SvelteKit’s router does when it starts, so the click is a client-side navigation and the browser’s hook is the one under test; clicked any sooner, it is an ordinary page load and the server answers instead.'
 			},
 			code('e2e/platform.e2e.ts', 45, 68),
 			{
 				type: 'terminal',
 				code: `
 $ pnpm exec playwright test
-Running 46 tests using 1 worker
-  ✓ [desktop] account · collab · lesson · local · platform  (23)
-  ✓ [phone]   account · collab · lesson · local · platform  (23)
-  46 passed`
+Running 54 tests using 1 worker
+  ✓ [desktop] account · collab · errors · lesson · local · platform  (27)
+  ✓ [phone]   account · collab · errors · lesson · local · platform  (27)
+  54 passed`
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say what a virtual authenticator does and does not fake.',
 					'You can explain why the suite runs against the built server.',
-					'You can pick one of the five bugs and say which assertion caught it.'
+					'You can pick one of the bugs and say which assertion caught it, or keeps it caught.'
 				]
 			}
 		]
@@ -189,7 +195,7 @@ $ pnpm run verify
   lint      prettier + eslint: clean
   test:unit 86 passed  (server: node · client: chromium)
   build     adapter-node · 11 routes · 5 prerendered · precompressed
-  test:e2e  46 passed  (23 scenarios × desktop, phone)`
+  test:e2e  54 passed  (27 scenarios × desktop, phone)`
 			},
 			{ type: 'h3', id: 'five-directions', text: 'Five directions' },
 			{

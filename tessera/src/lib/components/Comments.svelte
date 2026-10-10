@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isHttpError } from '@sveltejs/kit';
 	import { postComment, resolveThread, threads } from '#lib/remote/comments.remote.ts';
 	import { requireMessages } from '#lib/i18n/context.ts';
 	import Button from './Button.svelte';
@@ -26,6 +27,27 @@
 	const list = $derived(threads(boardId));
 	const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt === null));
 	const resolved = $derived((list.current ?? []).filter((thread) => thread.resolvedAt !== null));
+
+	/** Why the last resolve or reopen was refused, in the server's words. */
+	let refusal = $state<string | null>(null);
+
+	async function setResolved(id: string, done: boolean) {
+		refusal = null;
+		try {
+			await resolveThread({ boardId, id, resolved: done });
+		} catch (thrown) {
+			/*
+			 * `thrown.body.message`, not `thrown.message`.
+			 *
+			 * A command the server refuses — a viewer pressing Resolve, say — rejects
+			 * with an `HttpError`: `{ status, body }`, where `body` is the `App.Error`.
+			 * It is not an `Error` and has no `message` of its own, so reading one
+			 * shows nothing. Anything that is not an `HttpError` is a request that
+			 * never got an answer, and that gets the generic line.
+			 */
+			refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+		}
+	}
 </script>
 
 <section class="comments" aria-label={t.comments.heading}>
@@ -47,8 +69,25 @@
 		<Button size="sm" variant="primary" type="submit">{t.comments.post}</Button>
 	</form>
 
+	{#if refusal}
+		<p class="comments__error" role="alert">{refusal}</p>
+	{/if}
+
 	<svelte:boundary>
-		{#if open.length === 0 && resolved.length === 0}
+		<!--
+			The query read through its properties rather than awaited, because
+			`open` and `resolved` are derived from it in the script — and an `await`
+			there would suspend this whole component, leaving the board page's
+			boundary to replace the entire editor. So the query's own failure is
+			shown from `list.error`, which is the same `App.Error` a boundary would
+			have been handed, and this boundary is for errors thrown while rendering
+			a thread.
+		-->
+		{#if list.error}
+			<p class="comments__error" role="alert">{list.error.message}</p>
+		{:else if list.current === undefined}
+			<p class="comments__empty">{t.sync.connecting}</p>
+		{:else if open.length === 0 && resolved.length === 0}
 			<p class="comments__empty">{t.comments.none}</p>
 		{/if}
 
@@ -80,11 +119,7 @@
 					<Button size="sm" type="submit">{t.comments.post}</Button>
 				</form>
 
-				<Button
-					size="sm"
-					variant="ghost"
-					onclick={() => resolveThread({ boardId, id: thread.id, resolved: true })}
-				>
+				<Button size="sm" variant="ghost" onclick={() => setResolved(thread.id, true)}>
 					{t.comments.resolve}
 				</Button>
 			</article>
@@ -97,11 +132,7 @@
 					<article class="thread thread--done">
 						<header class="thread__head"><strong>{thread.author}</strong></header>
 						<p class="thread__body">{thread.body}</p>
-						<Button
-							size="sm"
-							variant="ghost"
-							onclick={() => resolveThread({ boardId, id: thread.id, resolved: false })}
-						>
+						<Button size="sm" variant="ghost" onclick={() => setResolved(thread.id, false)}>
 							{t.comments.reopen}
 						</Button>
 					</article>
@@ -109,12 +140,15 @@
 			</details>
 		{/if}
 
-		{#snippet pending()}
-			<p class="comments__empty">{t.sync.connecting}</p>
-		{/snippet}
-
+		<!--
+			An `App.Error`, already through `handleError`, so the text is its
+			`message`. Svelte types `error` as `unknown` — it cannot know what
+			SvelteKit's `transformError` returns — hence the cast.
+		-->
 		{#snippet failed(error)}
-			<p class="comments__error">{t.errors.generic} <small>{String(error)}</small></p>
+			<p class="comments__error">
+				{t.errors.generic} <small>{(error as App.Error).message}</small>
+			</p>
 		{/snippet}
 	</svelte:boundary>
 </section>

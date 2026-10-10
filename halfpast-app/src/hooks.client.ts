@@ -7,9 +7,9 @@ import type { HandleClientError } from '@sveltejs/kit/hooks';
  * The server has `handleError` in `hooks.server.ts`; this is its counterpart,
  * and it is easy to forget precisely because everything appears to work without
  * it. It does not: an error thrown during a client-side navigation — a remote
- * query rejecting, say — renders SvelteKit's default error page with the words
- * "Internal Error" and writes nothing anywhere. The server log stays clean,
- * because the server was never involved. Hours can be lost to that.
+ * query rejecting, say — renders `+error.svelte` with the words "Internal
+ * Error" and writes nothing anywhere. The server log stays clean, because the
+ * server was never involved. Hours can be lost to that.
  *
  * `kind` discriminates the same four categories as on the server. Only `unknown`
  * is a bug; a 404 from a mistyped URL is not worth a console entry.

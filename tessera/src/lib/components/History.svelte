@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isHttpError } from '@sveltejs/kit';
 	import { restoreTo, revisions, saveCheckpoint } from '#lib/remote/history.remote.ts';
 	import type { Locale } from '#lib/i18n/index.ts';
 	import { requireMessages } from '#lib/i18n/context.ts';
@@ -16,14 +17,29 @@
 	const t = $derived(catalogue());
 
 	// `$derived` so that opening a different board re-runs the query. See the same
-	// note in `Comments.svelte`.
+	// note in `Comments.svelte`. It is awaited inside the boundary below, so the
+	// boundary's `pending` and `failed` snippets are the ones that run.
 	const list = $derived(revisions(boardId));
 	let restoring = $state<number | null>(null);
+	/** Why the last restore was refused, in the server's words. */
+	let refusal = $state<string | null>(null);
 
 	async function restore(seq: number) {
 		restoring = seq;
+		refusal = null;
 		try {
 			await restoreTo({ boardId, seq });
+		} catch (thrown) {
+			/*
+			 * `thrown.body.message`, not `thrown.message`.
+			 *
+			 * A command the server refuses rejects with an `HttpError`: `{ status,
+			 * body }`, where `body` is the `App.Error` a boundary would have been
+			 * handed. It is not an `Error` and has no `message` of its own. Anything
+			 * that is not an `HttpError` is a request that never got an answer, and
+			 * that gets the generic line.
+			 */
+			refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
 		} finally {
 			restoring = null;
 		}
@@ -44,9 +60,13 @@
 		</form>
 	{/if}
 
+	{#if refusal}
+		<p class="history__error" role="alert">{refusal}</p>
+	{/if}
+
 	<svelte:boundary>
 		<ol class="history__list">
-			{#each list.current ?? [] as revision (revision.seq)}
+			{#each await list as revision (revision.seq)}
 				<li class="history__item" class:history__item--mark={revision.isCheckpoint}>
 					<!--
 						`revision.describe(...)` — a method on an object that came from the
@@ -78,8 +98,15 @@
 			<p class="history__empty">{t.sync.connecting}</p>
 		{/snippet}
 
+		<!--
+			An `App.Error`, already through `handleError`, so the text is its
+			`message`. Svelte types `error` as `unknown` — it cannot know what
+			SvelteKit's `transformError` returns — hence the cast.
+		-->
 		{#snippet failed(error)}
-			<p class="history__empty">{t.errors.generic} <small>{String(error)}</small></p>
+			<p class="history__empty">
+				{t.errors.generic} <small>{(error as App.Error).message}</small>
+			</p>
 		{/snippet}
 	</svelte:boundary>
 </section>
@@ -142,6 +169,11 @@
 
 	.history__empty {
 		color: var(--text-faint);
+		font-size: var(--fs-sm);
+	}
+
+	.history__error {
+		color: var(--danger);
 		font-size: var(--fs-sm);
 	}
 </style>

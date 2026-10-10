@@ -128,3 +128,30 @@ test('a rule can be disabled from the list', async ({ page }) => {
 	// Put it back, so the suite leaves the workspace as it found it.
 	await page.getByRole('checkbox', { name: 'Enabled' }).first().check();
 });
+
+test('a toggle the server refuses says why, and the box goes back', async ({ page, context }) => {
+	await page.goto('/demo/alerts');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	const row = page
+		.getByRole('listitem')
+		.filter({ has: page.getByRole('checkbox', { name: 'Enabled' }) })
+		.first();
+	const toggle = row.getByRole('checkbox', { name: 'Enabled' });
+	const before = await toggle.isChecked();
+
+	/*
+	 * The session ends under a live page, so the command is refused for real:
+	 * a 401 that says "Sign in to continue.". `click`, not `check` or `uncheck`,
+	 * which insist the box ends up changed — and the point is that it does not.
+	 *
+	 * The message comes from the rejection's `body`. Awaiting a command rejects
+	 * with the `HttpError` the client rebuilt from the response, not with the
+	 * `App.Error` a boundary is handed, and it has no `message` of its own.
+	 */
+	await context.clearCookies();
+	await toggle.click();
+
+	await expect(row.getByRole('alert')).toHaveText('Sign in to continue.');
+	await expect(toggle).toBeChecked({ checked: before });
+});

@@ -84,7 +84,17 @@
 
 	async function consume(url: string, signal: AbortSignal): Promise<void> {
 		try {
-			const response = await fetch(url, { signal, headers: { accept: 'text/event-stream' } });
+			/*
+			 * `application/json` too, for the refusal. SvelteKit answers an `error()`
+			 * from an endpoint as JSON only when the request accepts JSON, and as its
+			 * HTML error page otherwise. Asking for the stream alone got the page,
+			 * `response.json()` could not read it, and "could not start (400)" stood
+			 * in for the server's own sentence every time.
+			 */
+			const response = await fetch(url, {
+				signal,
+				headers: { accept: 'text/event-stream, application/json' }
+			});
 
 			if (!response.ok || !response.body) {
 				const body = (await response.json().catch(() => null)) as { message?: string } | null;

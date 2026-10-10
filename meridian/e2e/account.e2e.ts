@@ -25,10 +25,17 @@ test('signing up, signing out and signing in', async ({ page }) => {
 	await expect(page).toHaveURL(/\/trips$/);
 	await expect(page.getByText('No trips yet.')).toBeVisible();
 
+	// The header was drawn on the sign-in page, signed out, and outlived the
+	// sign-up: its links follow the person without a reload, both ways.
+	const trips = page
+		.getByRole('navigation', { name: 'Primary' })
+		.getByRole('link', { name: 'Trips', exact: true });
 	await openMenu(page);
+	await expect(trips).toBeVisible();
 	await page.getByRole('button', { name: 'Sign out' }).click();
 	await openMenu(page);
 	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+	await expect(trips).toHaveCount(0);
 
 	// The account exists: the same email and password sign in.
 	await signIn(page, email);
@@ -140,4 +147,46 @@ test('a trip is started from the explore page, listed, and deleted from its sett
 	await page.getByRole('button', { name: 'Delete trip' }).click();
 	await expect(page).toHaveURL(/\/trips$/);
 	await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toHaveCount(0);
+});
+
+test('a refusal inside the trips list is shown in the server’s words', async ({ page }) => {
+	await signIn(page, USERS.ana);
+	await page.goto('/explore');
+
+	// Reached from here by a client-side navigation, the list's previews are
+	// fetched by the browser as one `query.batch` request. Each argument is
+	// swapped on the way out for one the schema refuses, so the server answers
+	// with the sentence its `handleError` gives a failed validation — and the
+	// boundary's `failed` snippet, handed an `App.Error`, has to print it.
+	const refused = Buffer.from(JSON.stringify(['not-an-id'])).toString('base64url');
+	await page.route('**/_app/remote/*/tripPreview', (route) => {
+		const { payloads } = JSON.parse(route.request().postData() ?? '{}') as { payloads: string[] };
+		return route.continue({ postData: JSON.stringify({ payloads: payloads.map(() => refused) }) });
+	});
+
+	await openMenu(page);
+	await page
+		.getByRole('navigation', { name: 'Primary' })
+		.getByRole('link', { name: 'Trips', exact: true })
+		.click();
+
+	// Caught by the boundary, not by the error page. `+error.svelte` prints
+	// the same sentence, so the sentence alone would pass with no boundary at
+	// all. Inside the trips page, under its own heading and beside the
+	// Reconnect button that runs `reset`, it can only be the `failed` snippet.
+	const list = page.locator('section.trips');
+	await expect(list.getByRole('heading', { level: 1, name: 'Your trips' })).toBeVisible();
+	await expect(list.locator('p.issue')).toHaveText('That request did not make sense.');
+	await expect(list.getByRole('button', { name: 'Reconnect' })).toBeVisible();
+});
+
+test('the diagnostics page draws a new report when it is refreshed', async ({ page }) => {
+	await signIn(page, USERS.ana, '/diagnostics');
+
+	// Newest span first; the refresh's own request is newer than all of them.
+	const newest = page.locator('.diagnostics tbody tr').first();
+	await expect(newest).toBeVisible();
+	const before = (await newest.textContent()) ?? '';
+	await page.getByRole('button', { name: 'Refresh' }).click();
+	await expect(newest).not.toHaveText(before);
 });

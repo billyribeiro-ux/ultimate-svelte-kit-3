@@ -31,6 +31,8 @@ export class LiveSheet {
 	/** The server version this tab has caught up to. */
 	version = $state(0);
 	status = $state<LiveStatus>('live');
+	/** In `conflict`, what the server said — the 409's or the 413's own sentence. */
+	problem = $state<string | null>(null);
 	/** Everybody else on the sheet. */
 	present = $state<Presence[]>([]);
 
@@ -111,6 +113,8 @@ export class LiveSheet {
 				(error.status === 409 || error.status === 413 || error.status === 404)
 			) {
 				this.status = 'conflict';
+				// An `HttpError` carries the server's words in `body`, not on itself.
+				this.problem = error.body.message;
 				this.#queue.length = 0;
 				throw error;
 			}

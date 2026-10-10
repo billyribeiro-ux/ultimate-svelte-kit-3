@@ -205,7 +205,7 @@ const countries: Country[] = $derived.by(() =&gt; {
 			&lt;/h2&gt;
 			&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
 				{#each country.places as place (place.id)}
-					{@const guide = guideForPlace(place.id)}
+					{const guide = $derived(guideForPlace(place.id))}
 					&lt;li class=&quot;card place&quot;&gt;
 						&lt;div class=&quot;place__body&quot;&gt;
 							&lt;strong class=&quot;place__name&quot;&gt;{place.name}&lt;/strong&gt;
@@ -427,15 +427,21 @@ export const diagnostics = query(async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/diagnostics/+page.svelte<span class="code__lines">:52-120</span></span>
+		<span class="code__file">src/routes/(site)/(app)/diagnostics/+page.svelte<span class="code__lines">:52-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	`failed` is handed an `App.Error`, the `{ status, message }` that
+	`handleError` made of the failure — not an `Error` — so the words are
+	on `message`. `$derived` is what makes Refresh redraw: a bare `{const}`
+	would await the first report and keep it.
+--&gt;
+&lt;svelte:boundary&gt;
 	{#snippet failed(error)}
-		&lt;p class=&quot;issue&quot;&gt;{error instanceof Error ? error.message : m.error_title()}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
 	{/snippet}
 
-	{const report = await diagnostics()}
+	{const report = $derived(await diagnostics())}
 
 	&lt;dl class=&quot;facts card card--pad&quot;&gt;
 		&lt;div&gt;
@@ -500,7 +506,7 @@ export const diagnostics = query(async () =&gt; {
 	&lt;/section&gt;
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>The page is one query and a table: version, Node version, uptime formatted by <code>Intl</code> units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Open the trip page in another tab, come back, refresh — and the <code>watchTrip</code> span is there, with the <code>heartbeat</code> commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.</p>
+<p>The page is one query and a table: version, Node version, uptime formatted by <code>Intl</code> units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Refresh calls <code>diagnostics().refresh()</code>, and the table redraws because the report is <code>{const report = $derived(await diagnostics())}</code>. It was a bare <code>{const}</code> at first, which awaits the first report and keeps it: the button fetched a new one and the page went on showing the old, until an end-to-end test pressed it (chapter 42). Open the trip page in another tab, come back, refresh — and the <code>watchTrip</code> span is there, with the <code>heartbeat</code> commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

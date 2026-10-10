@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { CloudArrowUpIcon } from 'phosphor-svelte';
+	import { messageOf } from '#lib/errors.ts';
 	import Workbench from '#lib/grid/Workbench.svelte';
 	import { whoAmI } from '#lib/remote/auth.remote.ts';
 	import { create, getPublished } from '#lib/remote/sheets.remote.ts';
@@ -66,7 +67,9 @@
 					sheet.load(saved ?? emptyDocument('My sheet'));
 				}
 			} catch (e) {
-				toast((e as Error).message, 'error');
+				// `getPublished` is awaited here, not in markup, so a 404 rejects
+				// with an `HttpError` and its sentence is in `body.message`.
+				toast(messageOf(e, 'Could not open that sheet'), 'error');
 				sheet.load(emptyDocument('My sheet'));
 			}
 			ready = true;

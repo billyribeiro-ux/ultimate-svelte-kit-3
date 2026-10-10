@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { messageFrom } from '#lib/errors.ts';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import '#lib/styles/app.css';
@@ -65,46 +64,37 @@
 
 	<main id="main" class="main">
 		<!--
-			ONE BOUNDARY FOR THE WHOLE APP
-			==============================
+			NO BOUNDARY HERE, AND THAT IS DELIBERATE
+			========================================
 
 			With Svelte's async mode, `await` inside a `$derived` — which is how
 			every page in this app reads its data — suspends the nearest
-			`<svelte:boundary>` *above* it. A boundary cannot catch its own
-			component's script-level awaits, so it lives here, in the layout,
-			wrapping the page. Every page then gets the same error handling without
-			having to remember to provide it.
+			`<svelte:boundary>` above it, and a rejection lands in that boundary's
+			failed state. The nearest one is never in this file. SvelteKit 3 wraps
+			every layout and page in a boundary of its own, armed with the nearest
+			`+error.svelte`, so a boundary written around `children` here would sit
+			outside the page's and never see a single error. This project had one,
+			and its friendly failure card never once rendered. The app's failure
+			screen is `src/routes/+error.svelte`.
 
-			DELIBERATELY NO `pending` SNIPPET, and this is the part worth knowing.
+			NO `pending` SNIPPET ABOVE A PAGE, EITHER, and this is the part worth
+			knowing.
 
 			A `pending` snippet is rendered *immediately* on the server and the
-			awaits inside are not waited for. Add one here and every page ships HTML
-			whose entire body is the word "Loading…", with the real content arriving
-			only after hydration. For a public booking page that is the difference
-			between a search engine seeing a salon's services and seeing nothing,
-			and between a slow phone showing prices at first paint or a second later.
+			awaits inside are not waited for. Put one on a boundary around the page
+			and every page ships HTML whose entire body is the word "Loading…", with
+			the real content arriving only after hydration. For a public booking page
+			that is the difference between a search engine seeing a salon's services
+			and seeing nothing, and between a slow phone showing prices at first
+			paint or a second later.
 
-			Without it, SvelteKit waits for the awaits to settle and sends complete
+			Without one, SvelteKit waits for the awaits to settle and sends complete
 			HTML. On subsequent client-side navigations Svelte keeps the current page
 			on screen until the next one is ready — which is better than a spinner
 			anyway. Where a page needs a local "working…" state, it uses
 			`$effect.pending()` or a form's own `pending` count instead.
 		-->
-		<svelte:boundary>
-			{@render children()}
-
-			{#snippet failed(error, reset)}
-				<div class="container-narrow section">
-					<div class="failure" role="alert">
-						<h1>Something went wrong</h1>
-						<p>
-							{messageFrom(error, 'We could not load this page.')}
-						</p>
-						<button type="button" onclick={reset}>Try again</button>
-					</div>
-				</div>
-			{/snippet}
-		</svelte:boundary>
+		{@render children()}
 	</main>
 
 	<footer class="footer">
@@ -194,28 +184,6 @@
 
 	.main {
 		flex: 1;
-	}
-
-	.failure {
-		padding: var(--space-6);
-		background: var(--danger-soft);
-		border: var(--border) solid var(--danger-line);
-		border-radius: var(--radius-lg);
-	}
-
-	.failure h1 {
-		font-size: var(--text-lg);
-		margin-block-end: var(--space-2);
-	}
-
-	.failure button {
-		margin-block-start: var(--space-4);
-		padding: var(--space-2) var(--space-4);
-		min-height: 2.75rem;
-		background: var(--surface);
-		border: var(--border) solid var(--line-strong);
-		border-radius: var(--radius-md);
-		font-weight: var(--weight-medium);
 	}
 
 	.footer {

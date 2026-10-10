@@ -160,18 +160,18 @@ export const part5 = [
 			},
 			code('src/routes/(app)/p/[id]/+page.svelte', 20, 31),
 			{ type: 'h3', id: 'the-view', text: 'The view, and an optimistic heart' },
-			code('src/lib/components/PatternView.svelte', 11, 47),
+			code('src/lib/components/PatternView.svelte', 12, 48),
 			{
 				type: 'why',
 				title: 'Why `withOverride`',
-				text: 'Loving a pattern should bump the number *now*. `lovePattern(id).updates(getCounts(id).withOverride(fn))` applies `fn` to the query’s current value on screen immediately, sends the command, and asks the server to refresh that query in the same response (ch. 24). When the real count arrives, the override is dropped and the real value takes over. If the command fails, the override is dropped and the number returns to what the server last said. No spinner, no stale count, no manual rollback.'
+				text: 'Loving a pattern should bump the number *now*. `lovePattern(id).updates(getCounts(id).withOverride(fn))` applies `fn` to the query’s current value on screen immediately, sends the command, and asks the server to refresh that query in the same response (ch. 24). When the real count arrives, the override is dropped and the real value takes over. If the command fails, the override is dropped and the number returns to what the server last said — and the toast says what the server said, through `messageOf` (ch. 24), with “Could not love that right now” kept for a request that never arrived. No spinner, no stale count, no manual rollback.'
 			},
-			code('src/lib/components/PatternView.svelte', 67, 85),
+			code('src/lib/components/PatternView.svelte', 68, 86),
 			{
 				type: 'warn',
 				text: '`{const counts = $derived(await getCounts(published.id))}` — with the `$derived`. A bare `{const counts = await …}` evaluates once, and the optimistic override above would update a number nobody was watching. This is the same lesson as the WAV render (ch. 20) and the jam room (ch. 31), and it is the single most common mistake with `await` in markup.'
 			},
-			code('src/lib/components/PatternView.svelte', 88, 92),
+			code('src/lib/components/PatternView.svelte', 89, 93),
 			{ type: 'h3', id: 'the-player', text: 'A player that provides a studio only if none exists' },
 			code('src/lib/studio/Player.svelte', 10, 57),
 			{
@@ -221,47 +221,52 @@ export const part5 = [
 			'The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and a shallow `goto` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.',
 		goal: 'Build a list page with async Svelte, preview a route without navigating to it, and delete optimistically with a per-item form.',
 		blocks: [
-			code('src/routes/(app)/gallery/+page.svelte', 21, 31),
+			code('src/routes/(app)/gallery/+page.svelte', 22, 32),
 			{
 				type: 'p',
 				text: 'The sort is read from `page.url.searchParams`, so a sorted gallery is a link: `/gallery?sort=loved`. The chips are plain `<a href="?sort=…">` — SvelteKit navigates, `page.url` changes, the derived recomputes, and the query below re-runs with a new argument. No state, no handler.'
 			},
-			code('src/routes/(app)/gallery/+page.svelte', 90, 100),
-			code('src/routes/(app)/gallery/+page.svelte', 102, 132),
+			code('src/routes/(app)/gallery/+page.svelte', 91, 101),
+			code('src/routes/(app)/gallery/+page.svelte', 103, 133),
 			{
 				type: 'p',
-				text: 'Two `await`s in one `{#each}`: the list, and each card’s counts. Every `await getCounts(published.id)` in this render is one batched request (ch. 23). The boundary shows the `pending` snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache.'
+				text: 'Two `await`s in one `{#each}`: the list, and each card’s counts. Every `await getCounts(published.id)` in this render is one batched request (ch. 23). The boundary shows the `pending` snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache. If `getPatterns` fails, the `failed` snippet shows the server’s sentence: what a boundary is handed has been through `handleError` already and is the `App.Error` itself, so it is `error.message` — no `body` in between (ch. 24 has the other shape).'
 			},
 			{ type: 'h3', id: 'preview', text: 'Preview without leaving' },
-			code('src/routes/(app)/gallery/+page.svelte', 47, 76),
+			code('src/routes/(app)/gallery/+page.svelte', 48, 77),
 			{
 				type: 'why',
 				title: 'Why `preloadData` and then a shallow `goto`',
 				text: 'On a wide screen, clicking a card opens it in a dialog rather than navigating away. `preloadData(href)` runs the pattern page’s `load` — which calls `getPattern` and warms its cache — and `goto(href, { shallow: true, state: { preview } })` then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time — and SvelteKit 3 keeps the two URLs apart: `page.url` still says `/gallery`, which is what the sort chips read, and `page.shallow.url` is the address in the bar.'
 			},
-			code('src/routes/(app)/gallery/+page.svelte', 187, 216),
+			code('src/routes/(app)/gallery/+page.svelte', 195, 224),
 			{
 				type: 'p',
 				text: 'The dialog reads `page.state.preview` and calls `getPattern(id)` — cached by the preload — inside its own boundary. `data-sveltekit-reload` on “Open the full page” forces a real navigation, because the URL is already the pattern’s address and a client-side navigation to the same URL is a no-op.'
 			},
 			{ type: 'h3', id: 'crossfade', text: 'Crossfade' },
-			code('src/routes/(app)/gallery/+page.svelte', 33, 45),
+			code('src/routes/(app)/gallery/+page.svelte', 34, 46),
 			{
 				type: 'p',
 				text: '`crossfade` returns a pair of transitions. An element leaving with `out:send` and another entering with `in:receive` under the same key are animated as one thing moving between two places — here, the card’s picture travelling into the dialog and back. The card renders its picture through the `grid` snippet with `{#if page.state.preview !== published.id}`, so opening the preview *removes* the card’s picture (send) as the dialog’s appears (receive). When there is no partner, `fallback` fades.'
 			},
 			{ type: 'h3', id: 'yours', text: 'Yours, with a delete per card' },
-			code('src/routes/(app)/gallery/+page.svelte', 135, 184),
+			code('src/routes/(app)/gallery/+page.svelte', 136, 192),
 			{
 				type: 'p',
-				text: '`remove.for(mine.id)` gives each card its own instance of the form, so a pending delete disables *its* button and no other. The `enhance` callback submits with `.updates(getMine().withOverride(list => list.filter(...)))`: the card disappears before the server has answered, and comes back if the server refuses. The `id` travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.'
+				text: '`remove.for(mine.id)` gives each card its own instance of the form, so a pending delete disables *its* button and no other. The `enhance` callback submits with `.updates(getMine().withOverride(list => list.filter(...)))`: the card disappears before the server has answered, and comes back if the server refuses — with the refusal in the toast. A second tab that still shows a card this one has deleted gets “Not yours, or not there”, the server’s own `error(404, …)`, read from `body.message` by `messageOf` (ch. 24). The `id` travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.'
+			},
+			{
+				type: 'warn',
+				text: 'One boundary around this section, not two, and the comment says why. There used to be a second boundary inside it, around the list, for a “Loading yours…” line. On a full page load that inner boundary hydrated its markup and never ran its effects — no attachments, so the delete forms were never enhanced, and Delete fell back to the plain POST that works with JavaScript off. It still deleted, which is why the suite did not notice; it only showed when a refused delete arrived as an error page instead of a toast. Taking away either the inner boundary or the batched `await getCounts` inside it was enough to bring the forms back, which points at that combination during hydration rather than at anything the page’s own code does. The inner boundary went, because the outer one already waits for everything in it — and the end-to-end test that deletes from two tabs (ch. 38) is the criterion for putting it back.'
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say what `preloadData` returns and why the code checks `result.type`.',
 					'You can explain what `send` and `receive` need in common to animate as one element.',
-					'You can say why `remove.for(id)` exists rather than one shared `remove` form.'
+					'You can say why `remove.for(id)` exists rather than one shared `remove` form.',
+					'You can say what a refused delete looks like with the form enhanced, and without.'
 				]
 			}
 		]
@@ -271,15 +276,15 @@ export const part5 = [
 		slug: 'the-jam-page',
 		title: 'The jam room',
 		summary:
-			'The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command.',
+			'The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.',
 		goal: 'Consume a `query.live` correctly — including the mistake that shows the first snapshot forever — and let a person edit a value that the server also updates, without the two fighting.',
 		blocks: [
-			code('src/routes/(app)/jam/[room]/+page.svelte', 22, 41),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 23, 48),
 			{
 				type: 'p',
 				text: '`watchRoom(id)` is the live query from chapter 25. Awaiting it gives the current room; after that, its value updates every time the server yields. `room.connected` says whether the stream is up, and `room.reconnect()` restarts it by hand — SvelteKit reconnects on its own with backoff, and eagerly when the browser comes back online.'
 			},
-			code('src/routes/(app)/jam/[room]/+page.svelte', 49, 66),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 56, 73),
 			{
 				type: 'warn',
 				text: 'The comment in the file is the whole chapter in three sentences. A declaration tag with a plain `await` runs *once* — it is a blocking promise, not a subscription — and would show the first snapshot forever, while the server yields to nobody. Wrapping it in `$derived` is what makes it re-run every time the live query yields: the resource’s `then` is reactive, and a derived is what tracks it. This cost an afternoon and two end-to-end tests, and it is the reason every `await` in this project’s markup that should follow its inputs is written `$derived(await …)`.'
@@ -289,28 +294,39 @@ export const part5 = [
 				title: 'Why `{let bpm = $derived(...)}`',
 				text: 'The tempo knob has two writers: the person turning it, and the room’s next snapshot. An *overridable derived* — `let` rather than `const` — follows the room and can be assigned by the knob while a gesture is in progress. When the next snapshot arrives the derived recomputes and the override is gone, replaced by whatever the server settled on, which is usually the same number. Neither writer needs to know about the other.'
 			},
-			code('src/routes/(app)/jam/[room]/+page.svelte', 68, 98),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 75, 105),
 			{
 				type: 'p',
 				text: 'Presence is the `present` array from the snapshot: every open stream, by handle. Keyed by id with `animate:flip` and a `scale` transition, so a person joining slides into place and a person leaving shrinks away. `online` from `svelte/reactivity/window` is `navigator.onLine` as a reactive value, and the chip says so before the stream has noticed.'
 			},
-			code('src/routes/(app)/jam/[room]/+page.svelte', 100, 119),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 107, 126),
 			{
 				type: 'p',
 				text: 'A browser with no handle sees a form. It carries the room id as a hidden field, and the handler (ch. 24) calls `watchRoom(room).reconnect()` so that the stream — which read the cookie when it opened — restarts and shows the new name in the presence list. The same `whoAmI()` query the header reads is read here, and the form’s `refresh()` updates both.'
 			},
-			code('src/routes/(app)/jam/[room]/+page.svelte', 121, 160),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 128, 167),
 			{
 				type: 'p',
 				text: 'The grid is the studio’s `StepGrid` with `tools={false}` — no per-track buttons, because tracks are shared — and every callback is a command. `onpaint` reads the current step from the snapshot, computes the next velocity with the same `cycleVelocity` the studio uses, and sends a `Step` with a real `Note` in it; the `transport` hook (ch. 26) carries it across. Nothing is changed locally: the room’s next yield is what redraws the pad, for this browser and every other.'
 			},
-			code('src/routes/(app)/jam/[room]/+page.svelte', 162, 186),
+			code('src/routes/(app)/jam/[room]/+page.svelte', 169, 193),
+			{
+				type: 'p',
+				text: 'Every chip and every preset button goes through `run`, at the top of the file. A command the server refuses — a mute for a track that a preset loaded in another browser has just replaced — rejects with an `HttpError`, and `run` puts its `body.message` in a toast: “No such track in this room”. Before `messageOf` (ch. 24) it read `(e as Error).message`, which on an `HttpError` is `undefined`, and every refused edit produced an empty toast.'
+			},
+			code('src/routes/(app)/jam/[room]/+page.svelte', 195, 207),
+			{
+				type: 'why',
+				title: 'Why the `failed` snippet reads `error.message` and `run` does not',
+				text: 'They are handed different things. A room that does not exist makes `watchRoom` throw `error(404, "No such room")`; the boundary catches it, and SvelteKit runs it through `handleError` before the snippet sees it. The documentation puts it in a comment on its own example: the error “went through the `handleError` hook and is of type `App.Error`” — `{ status, message }`, so `error.message` is the server’s sentence. An awaited command is not inside a boundary at all: its promise rejects with the `HttpError` itself, `{ status, body }`, and the sentence is one level down. Same server, same `error(…)` call, two shapes — and a probe that threw both in a browser is how this project found out which code read which.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
-					'You can say what would be on screen if line 57 lost its `$derived`.',
+					'You can say what would be on screen if line 64 lost its `$derived`.',
 					'You can explain what happens to a knob override when the next snapshot arrives.',
-					'You can trace one pad click from this page to every other browser in the room.'
+					'You can trace one pad click from this page to every other browser in the room.',
+					'You can say what a refused command hands `run`, and what a failed room hands the `failed` snippet.'
 				]
 			}
 		]

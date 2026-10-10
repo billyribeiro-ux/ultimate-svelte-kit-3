@@ -170,7 +170,7 @@ export const part4 = [
 		slug: 'writes',
 		title: 'Writes: command and form',
 		summary:
-			'Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from inside `enhance`, and a per-card delete form with `remove.for(id)`.',
+			'Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from inside `enhance`, a per-card delete form with `remove.for(id)`, and what the browser is handed when a write is refused.',
 		goal: 'Choose between `command` and `form`, refresh exactly the queries a write changed in the same response, and turn a server error into a field message.',
 		blocks: [
 			{
@@ -219,12 +219,28 @@ export const part4 = [
 				type: 'p',
 				text: 'Both set a cookie, so both are forms. `becomeArtist` refreshes `whoAmI()` — the query the header reads — so the name appears at the top of the page without a reload. And when the form was submitted from a jam room, it calls `watchRoom(room).reconnect()`: the room’s live stream read the cookie when it opened and still thinks this browser is “someone”; `reconnect` ends that stream and starts a fresh one, carried back in the same response, and the new one reads the new cookie. The documented case for `reconnect` is exactly a mutation that changes something a live query depends on.'
 			},
+			{ type: 'h3', id: 'refused', text: 'When a write is refused, in the browser' },
+			{
+				type: 'p',
+				text: 'Everything above is the server’s half: `error(404, "Not yours, or not there")`, a 409 turned into a field message. The browser’s half is a `catch`. When a command or an enhanced form submission is refused outright, the promise the page awaited rejects — and what it rejects *with* decides whether the person reads the server’s sentence or a guess.'
+			},
+			code('src/lib/errors.ts', 1, 30),
+			{
+				type: 'why',
+				title: 'Why a helper for one line',
+				text: 'Because the obvious line is wrong twice over. The rejection is SvelteKit’s `HttpError`, `{ status, body }`, where `body` is the `App.Error` that `handleError` produced — so the server’s words are `body.message`. It is not an `Error`, so `(e as Error).message` is `undefined`: the jam room (ch. 31) showed an empty toast for every refused edit. And a `catch` that ignores the value and prints its own sentence throws away the one thing the server took the trouble to say — which is what the gallery’s “Could not delete that” and the studio’s “Publishing failed” did, before both became the fallback rather than the message. `isHttpError` tells a refusal from a request that never arrived, which is the only case that gets the caller’s fallback. A `failed` snippet is the opposite case and must *not* call this: a boundary is handed the `App.Error` itself, and `error.message` is already the sentence (ch. 30, 31).'
+			},
+			{
+				type: 'note',
+				text: 'The server side of this project already read the right field. `isHttpError(e) && e.status === 409` and `e.body.message` in `publish` and `becomeArtist` are inside remote functions, where `claimHandle` throws the `HttpError` that `error(409, …)` makes. Only the browser’s reads were wrong, and only a browser showed it: a probe that made each remote function throw, and recorded what every `catch` and `failed` snippet was handed.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say why publishing is a form and loving is a command.',
 					'You can explain the difference between `requested(...).refreshAll()` and `getPattern(id).refresh()`.',
-					'You can turn a thrown HTTP error into a message under a specific field.'
+					'You can turn a thrown HTTP error into a message under a specific field.',
+					'You can say what a `catch` around `await lovePattern(id)` is handed, and where its message is.'
 				]
 			}
 		]

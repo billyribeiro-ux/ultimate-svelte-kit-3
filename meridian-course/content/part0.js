@@ -230,7 +230,7 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 			code('vite.config.ts', 105, 121, { partial: true }),
 			{
 				type: 'p',
-				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship `.svelte` files, and the compiler decides per file. `experimental.async` is the one that changes how you write components: `await` at the top level of a `<script>`, inside `$derived`, and directly in markup, with `<svelte:boundary>` and its `pending` snippet to catch the wait. This project has more of it than any before: the globe is an `await import()` in markup, the place search is an `await` per keystroke inside a `$derived`, and opening a trip is `{const initial = await tripBySlug(slug)}` on the page.'
+				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship `.svelte` files, and the compiler decides per file. `experimental.async` is the one that changes how you write components: `await` at the top level of a `<script>`, inside `$derived`, and directly in markup, with `<svelte:boundary>` and its `pending` snippet to catch the wait. This project has more of it than any before: the globe is an `await import()` in markup, the place search is an `await` per keystroke inside a `$derived`, and opening a trip is `{const initial = $derived(await tripBySlug(slug))}` on the page.'
 			},
 
 			{ type: 'h3', id: 'adapter-and-experiments', text: 'The adapter, remote functions, and one experiment left off' },
@@ -310,7 +310,7 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 					'**`untrack`** — reading a prop once, on purpose, in a component the page keys on its slug (ch. 24, 31).',
 					'**`$state.raw`, `$state.snapshot`** — the Tiptap editor instance (ch. 30); the library’s `toJSON` (ch. 06).',
 					'**`await` in markup, in `$derived` and at the top of `<script>`; `<svelte:boundary>` with `pending` and `failed`** — the trip page, the place search, the globe, the explore page (ch. 24, 25, 28, 35).',
-					'**`{const}` declaration tags** — the header’s link list, the trip page’s initial data (ch. 23, 24).',
+					'**`{const}` declaration tags, which replaced `{@const}`, bare and with `$derived`** — the header’s link list, the trip page’s initial data, the globe’s import (ch. 23, 24, 28).',
 					'**Attachments — `{@attach}`** — Tiptap (ch. 30), the GSAP hero timeline (ch. 22), and the argument for when a wrapper library is *not* worth it (ch. 39).',
 					'**`animate:flip`** with svelte-dnd-action (ch. 25).',
 					'**`svelte/reactivity`: `MediaQuery`, `createSubscriber`; `svelte/reactivity/window`: `scrollY`** — the theme, the globe’s motion preference, geolocation, the header (ch. 22, 27, 28, 40).',
@@ -326,7 +326,7 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 					'**All configuration in `vite.config.ts`**; `preprocess`, `extensions`, `dynamicCompileOptions` (ch. 03).',
 					'**`src/env.ts` with `defineEnvVars`, `public`, `static`** (ch. 14).',
 					'**Remote functions: `query`, `query.batch`, `query.live`, `prerender`, `form`, `command`; `requested().refreshAll()`; `invalid()` with `issue.field()`; `getRequestEvent`** (ch. 16–19).',
-					'**Hooks: `handle` with `sequence`, `handleFetch`, `handleError` with `kind`, `init`; universal `reroute` and `transport`; hook types from `@sveltejs/kit/hooks`** (ch. 14, 20, 21).',
+					'**Hooks: `handle` with `sequence`, `handleFetch`, `handleError` with `kind`, `init`; the browser’s `handleError`; universal `reroute` and `transport`; hook types from `@sveltejs/kit/hooks`** (ch. 14, 20, 21).',
 					'**`defineParams` in `src/params.ts`** (ch. 24).',
 					'**Route groups and the layout split** — `(site)` with identity, guides without (ch. 23, 34).',
 					'**Prerendering with `entries`, `csr = false`, per-locale output through `reroute`** (ch. 34).',

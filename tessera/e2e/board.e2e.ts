@@ -73,6 +73,25 @@ test.describe('a board', () => {
 
 		await expect(page.locator('[data-node]')).toHaveCount(before);
 	});
+
+	test('that does not exist says so, in the server’s words', async ({ page }) => {
+		await signIn(page, OWNER);
+		await page.goto('/boards/no-such-board');
+
+		/*
+		 * The page boundary's `failed` snippet, showing what `openBoard` threw.
+		 *
+		 * `error(404, 'No such board.')` reaches the snippet as an `App.Error`, so
+		 * the detail line is its `message`. Two things used to keep it off the
+		 * screen: the page read `board.current`, which never throws, so the
+		 * boundary never failed and the page stayed empty; and the snippet printed
+		 * `String(error)`, which is "[object Object]".
+		 */
+		await expect(
+			page.getByText('That board does not exist, or you do not have access to it.')
+		).toBeVisible();
+		await expect(page.getByText('No such board.', { exact: true })).toBeVisible();
+	});
 });
 
 /** Escape a label for use inside a `RegExp`. Only `.` appears in the seeded set. */

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The lesson: the same engine, out of $derived — Building Abacus</title>
-<meta name="description" content="Nine cells whose values are $deriveds that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.">
+<meta name="description" content="Nine cells whose values are $deriveds that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm. Until a cycle, where it needs a graph of its own.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 17</p>
 			<h1>The lesson: the same engine, out of $derived</h1>
-			<p class="lede">Nine cells whose values are <code>$derived</code>s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.</p>
+			<p class="lede">Nine cells whose values are <code>$derived</code>s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm. Until a cycle, where it needs a graph of its own.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>See that Svelte’s runtime is a spreadsheet engine with the cells hidden, and know the two things a runtime cannot give a spreadsheet.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:1-29</span></span>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:1-35</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -59,9 +59,15 @@
  *     &quot;push-pull&quot; scheduling is the incremental recalculation of chapter 10.
  *   - Diamonds are fine: a cell that reads two cells that read one input
  *     recomputes once, not twice, because updates are glitch-free.
- *   - A cycle is not fine: Svelte throws rather than marking `#CYCLE!`,
- *     because a derived that reads itself is a bug in a program, not a
- *     mistake in a sheet.
+ *   - A cycle is where the two part ways. Svelte's only answer to a
+ *     derived that reads itself is an exception — `derived_references_self`
+ *     in development — and a production build has no such check: the
+ *     deriveds call each other until the stack runs out, and the runtime is
+ *     left in a state the page does not recover from. So this sheet does what
+ *     the engine does and reads the formulas first. `set` works out which
+ *     cells are on a cycle from what each formula refers to, and those cells
+ *     answer `#CYCLE!` without reading another cell. A cycle becomes a value
+ *     only because somebody kept a graph.
  *
  * WHAT IT SHOWS ABOUT THE ENGINE, TOO
  * -----------------------------------
@@ -71,17 +77,19 @@
  * both are the same algorithm, and knowing one is knowing the other.
  */</code></pre>
 </figure>
-<p>The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”.</p>
+<p>The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”. The one place that reads a formula’s references, further down, does it only to find cycles, and the next blocks say why it must.</p>
 <aside class="callout callout--note"><p>Both of the header’s “chapter 10”s mean the hand-written engine, which is chapter 09 here: the project numbers its chapters differently from this course. The note in chapter 08 has the whole mapping.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:37-78</span></span>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:44-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export class ReactiveCell {
 	readonly name: string;
 	input = $state('');
+	/** Whether this cell's formula is on a cycle. The sheet decides, in `set`. */
+	onCycle = $state(false);
 
 	/** How many times this cell has been evaluated. Bumped inside the derived — a side effect, kept only because counting is the lesson. */
 	evaluations = 0;
@@ -97,6 +105,9 @@
 	readonly value: Scalar = $derived.by(() =&gt; {
 		this.evaluations += 1;
 		const text = this.input;
+		// On a cycle, say so and read nothing: reading round the cycle is
+		// exactly what the runtime cannot survive.
+		if (this.onCycle) return CYCLE();
 		if (!text.startsWith('=')) return parseCanonical(text);
 		try {
 			const ctx: Context = {
@@ -122,12 +133,12 @@
 	}
 }</code></pre>
 </figure>
-<p><code>value</code> is a <code>$derived.by</code> <strong>as a class field</strong>. It reads <code>this.input</code> and, through <code>#lookup</code>, whichever other cells the formula references — and those reads are the dependencies. Svelte records them as the derived runs. Change A1 and every derived that read A1, transitively, is marked and recomputed in dependency order, once each. That is steps one to three of chapter 09 with no code for any of them.</p>
+<p><code>value</code> is a <code>$derived.by</code> <strong>as a class field</strong>. It reads <code>this.input</code> and, through <code>#lookup</code>, whichever other cells the formula references — and those reads are the dependencies. Svelte records them as the derived runs. Change A1 and every derived that read A1, transitively, is marked and recomputed in dependency order, once each. That is steps one to three of chapter 09 with no code for any of them. The one line that is not a formula is <code>onCycle</code>: a flag the sheet sets, and the next block is why it has to.</p>
 <p><code>evaluations += 1</code> inside a derived is a side effect, and the comment admits it: counting is the lesson. The page shows, after every edit, how many cells each side evaluated, and they agree.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:80-115</span></span>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:92-128</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** A three-by-three sheet of reactive cells. */
@@ -136,8 +147,12 @@ export class ReactiveSheet {
 	/** Filled in the constructor and never changed after; the cells inside are the reactive part. */
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	readonly cells = new Map&lt;string, ReactiveCell&gt;();
+	readonly #rows: number;
+	readonly #cols: number;
 
 	constructor(rows = 3, cols = 3) {
+		this.#rows = rows;
+		this.#cols = cols;
 		this.names = [];
 		for (let r = 0; r &lt; rows; r += 1) {
 			for (let c = 0; c &lt; cols; c += 1) {
@@ -156,17 +171,78 @@ export class ReactiveSheet {
 
 	set(name: string, input: string): void {
 		const cell = this.cells.get(name);
-		if (cell) cell.input = input;
-	}
+		if (!cell) return;
+		cell.input = input;
+		// Only a cell whose answer changes is written, so an edit that makes or
+		// breaks no cycle re-runs exactly the deriveds it did before.
+		const cyclic = this.#cyclic();
+		for (const each of this.cells.values()) each.onCycle = cyclic.has(each.name);
+	}</code></pre>
+</figure>
 
-	/** Total evaluations across every cell — the number the lesson compares. */
-	get evaluations(): number {
-		let n = 0;
-		for (const cell of this.cells.values()) n += cell.evaluations;
-		return n;
+<aside class="callout callout--why">
+	<h4>Why the sheet looks for cycles before any derived runs</h4>
+	<p>Type <code>=C3</code> into A1 and C3, which averages A1, now feeds A1: a derived that reads itself. Svelte has no answer to that but an exception. In development it notices and throws <code>derived_references_self</code>; that check sits behind <code>if (DEV)</code> in the runtime, so a production build has none, and the deriveds call each other until the stack runs out. The first version of this file caught the overflow in the formula’s <code>catch</code> and showed <code>#ERROR!</code> — after hundreds of evaluations for one edit — and the page never recovered: the engine’s side stopped updating, and breaking the cycle left five cells stuck. A check at read time is not enough either, because Svelte itself re-enters a derived when it asks whether a cell that <em>used to</em> read it has changed, and re-entering a derived that is still being worked out broke the runtime outright. So <code>set</code> reads the formulas before anything is evaluated, and a cell on a cycle answers <code>#CYCLE!</code> without reading another cell. That is a graph again — the engine’s, for nine cells — which is the lesson: a cycle is a value only because somebody kept one.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/lesson/reactive.svelte.ts<span class="code__lines">:130-180</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Every cell that can reach itself through the references in the formulas.
+ * Nine cells, so a walk from each one is plenty; the engine of chapter 10
+ * does the same job for a million.
+ */
+#cyclic(): Set&lt;string&gt; {
+	const refers: Record&lt;string, string[]&gt; = Object.fromEntries(
+		[...this.cells].map(([name, cell]) =&gt; [name, this.#referredTo(cell.input)])
+	);
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a result, built here and read once
+	const cyclic = new Set&lt;string&gt;();
+	for (const start of this.names) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local to this walk
+		const seen = new Set&lt;string&gt;();
+		const todo = [...refers[start]!];
+		while (todo.length &gt; 0) {
+			const next = todo.pop()!;
+			if (next === start) {
+				cyclic.add(start);
+				break;
+			}
+			if (seen.has(next)) continue;
+			seen.add(next);
+			todo.push(...refers[next]!);
+		}
 	}
+	return cyclic;
+}
+
+/** The cells of this sheet a formula refers to, ranges spelled out. */
+#referredTo(input: string): string[] {
+	if (!input.startsWith('=')) return [];
+	let found;
+	try {
+		found = references(parse(input.slice(1)));
+	} catch {
+		return []; // a formula that does not parse refers to nothing yet
+	}
+	const names: string[] = [];
+	for (const { ref } of found) {
+		const [from, to] = isRangeRef(ref) ? [ref.start, ref.end] : [ref, ref];
+		const lastRow = Math.min(Math.max(from.row, to.row), this.#rows - 1);
+		const lastCol = Math.min(Math.max(from.col, to.col), this.#cols - 1);
+		for (let row = Math.min(from.row, to.row); row &lt;= lastRow; row += 1) {
+			for (let col = Math.min(from.col, to.col); col &lt;= lastCol; col += 1) {
+				names.push(`${String.fromCharCode(65 + col)}${row + 1}`);
+			}
+		}
+	}
+	return names;
 }</code></pre>
 </figure>
+<p><code>#cyclic</code> walks from each cell along the references and marks the cell if the walk comes back to it; for nine cells that is plenty, and the engine of chapter 09 does the same job for a million with a proper traversal. <code>#referredTo</code> spells ranges out and clips them to the sheet, so <code>=SUM(A1:Z9999)</code> costs nine names rather than a quarter of a million. <code>set</code> writes <code>onCycle</code> on every cell, but a <code>$state</code> written with the value it already holds notifies nobody, so an edit that makes or breaks no cycle re-runs exactly the deriveds it did before — the count the lesson compares stays honest.</p>
 <h3 id="the-page">The page</h3>
 
 <figure class="code">
@@ -222,7 +298,7 @@ void lastReactive;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:112-147</span></span>
+		<span class="code__file">src/routes/(app)/lesson/+page.svelte<span class="code__lines">:112-148</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;twin card stack&quot;&gt;
@@ -243,14 +319,15 @@ void lastReactive;</code></pre>
 									onchange={(e) =&gt; edit(name, e.currentTarget.value)}
 								/&gt;
 							&lt;/label&gt;
-							&lt;svelte:boundary&gt;
-								&lt;output class={['shown', { error: cell.value instanceof ErrorValue }]}
-									&gt;{show(cell.value)}&lt;/output
-								&gt;
-								{#snippet failed(error)}
-									&lt;output class=&quot;shown error&quot; title={(error as Error).message}&gt;cycle!&lt;/output&gt;
-								{/snippet}
-							&lt;/svelte:boundary&gt;
+							&lt;!--
+								No &lt;svelte:boundary&gt; around this. A cycle is a value (see `set` in
+								reactive.svelte.ts), and an exception thrown inside a $derived goes to
+								the boundary of the effect that created it — this page — not to one
+								around the markup that read it.
+							--&gt;
+							&lt;output class={['shown', { error: cell.value instanceof ErrorValue }]}
+								&gt;{show(cell.value)}&lt;/output
+							&gt;
 						&lt;/td&gt;
 					{/each}
 				&lt;/tr&gt;
@@ -264,8 +341,8 @@ void lastReactive;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
-	<h4>Why each reactive cell is wrapped in a boundary</h4>
-	<p>Type <code>=C3</code> into A1 and the hand-written engine marks a cycle and carries on. The reactive sheet <em>throws</em> — a derived that reads itself is a bug in a program, not a mistake in a sheet — and the <code>&lt;svelte:boundary&gt;</code> around that one cell catches it and renders <code>cycle!</code> in its place while the other eight keep working. That is the first thing a runtime cannot give a spreadsheet: a cycle as a value. The second is a million cells that are not each a signal, which is chapter 15’s line. Both are why the engine exists; neither makes it a different algorithm.</p>
+	<h4>Why no reactive cell is wrapped in a boundary</h4>
+	<p>The first version put a <code>&lt;svelte:boundary&gt;</code> round each reactive output, with a <code>failed</code> snippet that said <code>cycle!</code>. Driving the page in a real browser showed that snippet never ran: the formula’s <code>catch</code> got to the exception first. With the <code>catch</code> taken out so the exception could reach it, the whole page became the error page instead. Svelte hands an exception thrown inside a <code>$derived</code> to the boundary of the effect that <em>created</em> the derived, and these deriveds were created by the page’s script — so the page’s boundary, the root <code>+error.svelte</code>, is the one that heard about it. A boundary catches what its own content throws while it renders; a value computed somewhere else fails where it was made. With cycles found in <code>set</code>, nothing here throws, and the comment in the markup says why there is no boundary. The engine still has two things the runtime cannot give a spreadsheet: cycles as values for a million cells, and a million cells that are not each a signal, which is chapter 15’s line. Neither makes it a different algorithm.</p>
 </aside>
 
 <figure class="code">
@@ -307,11 +384,45 @@ void lastReactive;</code></pre>
 		.toBe(true);
 });</code></pre>
 </figure>
-<p>The end-to-end test edits one side, then the other, and asserts all eighteen outputs agree. It is the test that says the two are the same thing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/lesson.e2e.ts<span class="code__lines">:46-72</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a cycle is a value on both sides, and breaking it brings both back', async ({ page }) =&gt; {
+	await page.goto('/lesson');
+	const engine = page.locator('.twin').nth(0);
+	const reactive = page.locator('.twin').nth(1);
+	const values = async () =&gt; ({
+		engine: (await engine.locator('output').allTextContents()).map((s) =&gt; s.trim()),
+		reactive: (await reactive.locator('output').allTextContents()).map((s) =&gt; s.trim())
+	});
+	const before = await values();
+
+	// One edit sets both sides. Left to the runtime, the deriveds would call
+	// each other until the stack ran out — and the page did not recover.
+	await reactive.getByLabel('A1').fill('=C3');
+	await reactive.getByLabel('A1').press('Enter');
+	await expect(engine.locator('output').first()).toHaveText('#CYCLE!');
+	await expect(reactive.locator('output').first()).toHaveText('#CYCLE!');
+	// A2 reads nothing, and still shows its number on both sides.
+	await expect(engine.locator('output').nth(3)).toHaveText('5');
+	await expect(reactive.locator('output').nth(3)).toHaveText('5');
+	const cyclic = await values();
+	expect(cyclic.reactive).toEqual(cyclic.engine);
+
+	// Break the cycle where it was made: every cell is what it was.
+	await reactive.getByLabel('A1').fill('10');
+	await reactive.getByLabel('A1').press('Enter');
+	await expect.poll(values).toEqual(before);
+});</code></pre>
+</figure>
+<p>The first end-to-end test edits one side, then the other, and asserts all eighteen outputs agree. It is the test that says the two are the same thing. The second makes the cycle the page tells you to make, checks both sides call it <code>#CYCLE!</code> in the same cells, and breaks it again: every value must come back. It fails against the first version, where the reactive side said <code>#ERROR!</code> and never came back.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say where the dependency edges are in <code>ReactiveCell</code> and why there is no code for them.</li><li>You can explain why the reactive sheet throws on a cycle where the engine does not, and which is right for which job.</li><li>You can name the two reasons the hand-written engine exists even though <code>$derived</code> does the same thing.</li></ul>
+	<ul><li>You can say where the dependency edges are in <code>ReactiveCell</code> and why there is no code for them.</li><li>You can say what Svelte does with a derived that reads itself, in development and in a production build, and why the reactive sheet looks at references before any derived runs.</li><li>You can say which boundary hears about an exception thrown inside a <code>$derived</code>.</li><li>You can name the two reasons the hand-written engine exists even though <code>$derived</code> does the same thing.</li></ul>
 </aside>
 		</article>
 

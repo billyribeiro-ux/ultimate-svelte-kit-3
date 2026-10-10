@@ -3,6 +3,7 @@
 	import { PlusIcon, TrashIcon } from 'phosphor-svelte';
 	import { resolve } from '$app/paths';
 	import Section from '#lib/components/Section.svelte';
+	import { messageOf } from '#lib/errors.ts';
 	import { create, getMine, remove, rename } from '#lib/remote/sheets.remote.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 	import { toast } from '#lib/toast/toast.ts';
@@ -16,6 +17,9 @@
 	 * pending delete disables its own button and no other; the optimistic
 	 * override takes the card off the screen before the server has answered,
 	 * and a failure puts it back.
+	 *
+	 * A failed submission rejects with an `HttpError`, and what the server
+	 * said is in its `body.message` — `messageOf` reads it (see `#lib/errors.ts`).
 	 */
 	const newSheet = create
 		.preflight(
@@ -29,7 +33,7 @@
 			try {
 				await form.submit();
 			} catch (e) {
-				toast((e as Error).message, 'error');
+				toast(messageOf(e, 'Could not make that sheet'), 'error');
 			}
 		});
 
@@ -106,8 +110,8 @@
 												getMine().withOverride((list) => list.filter((s) => s.id !== sheet.id))
 											);
 										toast('Deleted');
-									} catch {
-										toast('Could not delete that', 'error');
+									} catch (e) {
+										toast(messageOf(e, 'Could not delete that'), 'error');
 									}
 								})}
 							>
@@ -132,8 +136,14 @@
 			{#snippet pending()}
 				<p class="hint">Loading your sheets…</p>
 			{/snippet}
+			<!--
+				What `failed` receives has been through `handleError`: an `App.Error`,
+				`{ status, message }`, not an `HttpError`. Svelte types it `unknown`,
+				because without SvelteKit it could be anything; the cast says what
+				SvelteKit guarantees.
+			-->
 			{#snippet failed(error, reset)}
-				<p class="issue">{(error as Error).message}</p>
+				<p class="issue">{(error as App.Error).message}</p>
 				<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
 			{/snippet}
 		</svelte:boundary>

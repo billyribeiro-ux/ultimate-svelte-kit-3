@@ -291,7 +291,7 @@
 				transition from the old one plays against the new.
 			-->
 			{#key session.generation}
-				<svelte:boundary onerror={(error) => toast((error as Error).message, 'error')}>
+				<svelte:boundary onerror={(error) => toast((error as App.Error).message, 'error')}>
 					<StepGrid
 						pattern={session.pattern}
 						step={scheduler.step}
@@ -313,7 +313,7 @@
 					/>
 
 					{#snippet failed(error, reset)}
-						<p class="issue">The grid could not be drawn: {(error as Error).message}</p>
+						<p class="issue">The grid could not be drawn: {(error as App.Error).message}</p>
 						<button type="button" class="btn" onclick={reset}>Try again</button>
 					{/snippet}
 				</svelte:boundary>

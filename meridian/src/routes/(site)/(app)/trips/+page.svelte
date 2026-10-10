@@ -53,14 +53,19 @@
 		Every card also awaits `tripPreview(trip.id)`. Those calls are made in
 		the same tick, and `query.batch` sends them as ONE request — a list of
 		twenty trips is two round trips (the list, the previews), not twenty-one.
+
+		`failed` is handed an `App.Error` — what `handleError` made of the
+		failure, `{ status, message }`, and not an `Error` — so the server's
+		sentence is on `message`. Both declarations are `$derived`, so a
+		refreshed query redraws the list; a bare `{const}` would keep the first.
 	-->
 	<svelte:boundary>
 		{#snippet failed(error, reset)}
-			<p class="issue">{error instanceof Error ? error.message : String(error)}</p>
+			<p class="issue">{(error as App.Error).message}</p>
 			<button class="btn" onclick={reset}>{m.live_reconnect()}</button>
 		{/snippet}
 
-		{const trips = await myTrips()}
+		{const trips = $derived(await myTrips())}
 
 		{#if trips.length === 0}
 			<Empty icon={MapTrifoldIcon} title={m.trips_empty_title()} body={m.trips_empty()}>
@@ -74,7 +79,7 @@
 		{:else}
 			<ul class="grid" role="list" style:--grid-min="18rem">
 				{#each trips as { trip, role, members, stops } (trip.id)}
-					{const preview = await tripPreview(trip.id)}
+					{const preview = $derived(await tripPreview(trip.id))}
 					<li class="card card--link trip">
 						<div class="trip__thumb">
 							<RouteThumb points={preview.points} label={trip.name} />

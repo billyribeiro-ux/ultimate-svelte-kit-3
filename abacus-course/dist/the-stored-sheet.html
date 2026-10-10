@@ -64,7 +64,7 @@ export const load: PageLoad = async ({ params, url }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:15-34</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:16-35</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -92,7 +92,7 @@ const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);</cod
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:56-68</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:57-69</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const shareUrl = $derived(`${page.url.origin}/sheet/${initial.sheet.id}`);
@@ -117,7 +117,7 @@ const owner = $derived(record.ownerId === data.me.id);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:79-107</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:80-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function togglePublish() {
@@ -130,7 +130,7 @@ const owner = $derived(record.ownerId === data.me.id);</code></pre>
 			toast(`Published at ${url}`);
 		}
 	} catch (e) {
-		toast((e as Error).message, 'error');
+		toast(messageOf(e, 'Could not change publishing'), 'error');
 	}
 }
 
@@ -146,14 +146,14 @@ const statusLabel = $derived(
 		live: stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…',
 		saving: 'Saving…',
 		offline: 'Offline — changes are kept and will be sent',
-		conflict: 'Could not save — reload to continue'
+		conflict: live.problem ?? 'Could not save — reload to continue'
 	}[live.status]
 );</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:114-119</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:115-120</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- Leaving with unsent changes: the browser asks, because we asked it to. --&gt;
@@ -167,7 +167,7 @@ const statusLabel = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:122-157</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:123-158</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;sheetpage__head no-print&quot;&gt;
@@ -207,11 +207,11 @@ const statusLabel = $derived(
 	&lt;/div&gt;
 &lt;/header&gt;</code></pre>
 </figure>
-<p>The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, “Could not save” — and a chip for everybody else in the room. <code>stream.current</code> being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.</p>
+<p>The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, and when the server refuses a batch, its own reason from <code>live.problem</code> — and a chip for everybody else in the room. <code>stream.current</code> being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:159-238</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:160-239</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Workbench
@@ -295,7 +295,7 @@ const statusLabel = $derived(
 	{/snippet}
 &lt;/Workbench&gt;</code></pre>
 </figure>
-<p>Sharing and publishing live in a native popover. The access setting is a <em>form</em> — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button.</p>
+<p>Sharing and publishing live in a native popover. The access setting is a <em>form</em> — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button, and a refusal — “Sign in with a passkey first”, if the session has gone — is the server’s sentence in the toast.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

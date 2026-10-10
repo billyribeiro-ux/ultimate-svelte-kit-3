@@ -105,10 +105,14 @@
 			<p class="empty" role="status">Loading…</p>
 		{/snippet}
 
+		<!--
+			An `App.Error`, not the `HttpError` that was thrown: SvelteKit runs every
+			boundary's error through `handleError` first, so the server's own words
+			are on `message` and there is no `body` to look in. Svelte types the
+			argument `unknown`, which is why it is cast rather than annotated.
+		-->
 		{#snippet failed(error)}
-			<p class="empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'Could not load traces.'}
-			</p>
+			<p class="empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

@@ -66,7 +66,7 @@ code.
 | `src/lib/lesson`                       | The same engine written out of `$derived`, for the lesson page                                                   |
 | `src/hooks.server.ts` / `src/hooks.ts` | `sequence`, a font `preload` filter, a per-route `frame-ancestors`, `handleError` by `kind`, `init`, `transport` |
 | `scripts/`                             | `migrate.ts` (what the container runs), `seed.ts`, `prepare-e2e-db.js`                                           |
-| `e2e/`                                 | Twenty-three scenarios on desktop and a Pixel 7 profile, including real passkeys and two browsers on one sheet   |
+| `e2e/`                                 | Twenty-seven scenarios on desktop and a Pixel 7 profile, including real passkeys and two browsers on one sheet   |
 
 ## Environment
 

@@ -170,7 +170,9 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		"src/**/*.js",
 		"src/**/*.svelte",
 		"scripts/**/*.ts",
+		"e2e/**/*.ts",
 		"vite.config.ts",
+		"playwright.config.ts",
 		".svelte-kit/types/**/*.ts"
 	],
 	"exclude": ["build", "node_modules", ".svelte-kit/output", ".svelte-kit/adapter-node"],
@@ -188,6 +190,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 			{
 				type: 'warn',
 				text: '`.svelte-kit/types/**/*.ts` **must** be in `include`. That is where Kit writes the generated route types that `./$types` resolves to. Leave it out and every `PageServerLoad` import fails with a module-not-found for a file that is sitting right there on disk.'
+			},
+			{
+				type: 'p',
+				text: 'The list is also how the browser tests get type-checked. `e2e/**/*.ts` and `playwright.config.ts` are the end-to-end suite you meet in chapter 41; listing them means `svelte-check` reads them like any other file, so a test that calls a locator method that does not exist fails `pnpm check` rather than failing in a browser five minutes into `verify`.'
 			},
 			{
 				type: 'p',
@@ -462,6 +468,68 @@ export const placeOrder = command(
 				text: '`void` in front is deliberate: we are not awaiting it, because we do not want the command\'s response held up by a refresh, and an un-awaited promise without `void` is the kind of thing a linter should complain about.'
 			},
 
+			{ type: 'h3', id: 'refused', text: 'When the server says no' },
+			{
+				type: 'p',
+				text: 'A command can be refused, and on a venue it often is. The gateway answers an auditor\'s cancel with `error(403, \'Your role does not allow that.\')`, an expired session gets `error(401, \'Sign in to continue.\')`, and a paused venue answers a new order with a 503 that explains itself. In the browser, the `await` in front of the command **rejects**. The person deserves the server\'s sentence rather than a shrug, so the only question is where in the rejected value that sentence lives.'
+			},
+			{
+				type: 'p',
+				text: 'Rather than guess, force one and look. A throwaway command that does nothing but `error(409, \'probe command\')`, called from a button, caught, and described:'
+			},
+			{
+				type: 'terminal',
+				code: `
+{"instanceofError":false,"ctor":"HandledHttpError","keys":["status","body"],"status":409,"body":{"status":409,"message":"probe command"}}`
+			},
+			{
+				type: 'why',
+				title: 'It is not an Error',
+				text: 'What a rejected remote call hands you is SvelteKit\'s `HttpError` — here its subclass `HandledHttpError`, which means `handleError` has already run on the server — and it has exactly two properties: `status`, and `body`, the `App.Error` the server sent. The message is `body.message`. There is no `message` on the object itself and it does not extend `Error`, so the reflex `thrown instanceof Error ? thrown.message : \'Something went wrong\'` takes the fallback **every time the server refused on purpose** — the one case where it had something worth saying.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'ts',
+				code: `
+function messageFrom(thrown: unknown): string {
+	if (typeof thrown === 'object' && thrown !== null) {
+		const body = (thrown as { body?: { message?: unknown } }).body;
+		if (body && typeof body.message === 'string') return body.message;
+		const message = (thrown as { message?: unknown }).message;
+		if (typeof message === 'string' && message) return message;
+	}
+	return 'That did not work.';
+}`
+			},
+			{
+				type: 'p',
+				text: 'Three branches, in order of how often they are right. `body.message` is the server\'s refusal. A response that was not SvelteKit\'s JSON at all — the plain-text 403 from our own CSRF hook in chapter 26, say — still arrives as an `HttpError`, with the status text (`Forbidden`) as its `body.message`. `message` is for a real `Error`: the ticket throws one itself when the person has no trading account, and a dropped connection makes `fetch` reject with a `TypeError` before any server was involved. The last line should almost never be read.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'ts',
+				code: `
+async function cancel(clientOrderId: string) {
+	cancelError = null;
+
+	try {
+		await cancelOrder({ clientOrderId });
+	} catch (thrown) {
+		cancelError = messageFrom(thrown);
+	}
+}`
+			},
+			{
+				type: 'warn',
+				text: 'The first version had no `try` at all — `onclick={() => void cancelOrder(...)}`, straight from the button. Here the `void` was not a decision, it was a way of quietening the linter, and the rejection went to the console as an unhandled error while the screen showed a Cancel button that looked as if it had worked. Three of the five roles that open the terminal are refused that cancel: an auditor reads everything and changes nothing, and a risk manager\'s or firm admin\'s cancel is the firm-wide one. A cancel that silently does not happen is the expensive kind of nothing — somebody walks away believing an order is out of the book while it is still resting there.'
+			},
+			{
+				type: 'p',
+				text: 'The message is shown above the orders table with `role="alert"`, not `role="status"`, because the order it is about is still working: that is news somebody should hear now, not when the screen reader next has a moment.'
+			},
+
 			{ type: 'h3', id: 'form', text: 'form — progressive enhancement' },
 			{
 				type: 'p',
@@ -555,6 +623,7 @@ export const watchMarket = query.live(
 					'You can write a `query`, a `command`, a `form` and a `query.live`',
 					'You can explain why every argument needs a schema even for your own page',
 					'You can explain what `.refresh()` inside a command saves you',
+					'You can say where a refused command\'s message lives, and why `instanceof Error` never finds it',
 					'You can explain why the live generator coalesces, and what `request.signal` prevents'
 				]
 			}
@@ -626,12 +695,19 @@ const row = result.rows[0];
  *
  * Distinguishing them turns this form into a tool for discovering which
  * firms are members of the venue.
+ *
+ * \`invalid\`, not \`error\`. An \`error(401, …)\` thrown from a form handler
+ * renders the error page in place of the form, so a mistyped password
+ * cost the person the form itself. \`invalid\` with a plain string is an
+ * issue for the form as a whole: it comes back in \`fields.allIssues()\`,
+ * which the page already shows above the fields, with the email still
+ * filled in.
  */
 if (!row || Number(row['is_active']) !== 1) {
-	error(401, 'That email and password do not match an account.');
+	invalid('That email and password do not match an account.');
 }
 if (!verifySecret(data.password, String(row['password_hash']))) {
-	error(401, 'That email and password do not match an account.');
+	invalid('That email and password do not match an account.');
 }`
 			},
 			{
@@ -641,6 +717,24 @@ if (!verifySecret(data.password, String(row['password_hash']))) {
 			{
 				type: 'p',
 				text: 'The same reasoning applies to the *deactivated* case, which is folded into the first branch. "That account exists but is switched off" tells you the account exists.'
+			},
+			{
+				type: 'p',
+				text: 'Both branches refuse with `invalid`, and the first version used `error(401, …)` instead. That looks like the more honest status code, and it is the wrong tool. A form handler that throws `error` hands the failure to the nearest `+error.svelte`, which renders **in place of the page** — so somebody who mistyped their password lost the form, the email they had typed and the button, and was left reading a 401. `invalid` is the form\'s own way of saying no: the submission fails, the message comes back as an issue, and the page shows it where it already shows validation problems.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/sign-in/+page.svelte',
+				lang: 'svelte',
+				code: `
+{#if signIn.fields.allIssues()?.length}
+	<p class="error" role="alert">{signIn.fields.allIssues()?.[0]?.message}</p>
+{/if}`
+			},
+			{
+				type: 'why',
+				title: 'A refusal the person can fix is a validation result',
+				text: 'The line to draw is whether the person can do anything about it. A wrong password is fixed by retyping it, so it belongs on the form, beside "Enter your password". A failure they cannot fix — the venue is down, their role may not open the page — belongs on the error page. And `invalid` is given a plain string, which attaches the message to the form as a whole rather than to `password`, on purpose: pinning it on the password field would say "the email was fine", which is exactly what the single message exists not to say.'
 			},
 
 			{ type: 'h3', id: 'the-cookie', text: 'The cookie' },
@@ -727,6 +821,7 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);`
 				items: [
 					'You can explain what an open redirect is and why `//evil.example` is not a path',
 					'You can explain why sign-in has one error message for two different failures',
+					'You can choose between `invalid` and `error` in a form handler, and say why the message is not pinned to the password field',
 					'You can name each cookie flag and what it defends against',
 					'You can explain why the session is a database row rather than a signed token'
 				]
@@ -953,12 +1048,15 @@ const instrument = $derived(instruments.find((row) => row.instrumentId === chose
 // nothing else changes while somebody is looking at it.
 const market = $derived(chosen ? await watchMarket({ instrumentId: chosen }) : null);
 
-const orders = $derived(await getMyOrders());
-const positions = $derived(await getMyPositions());`
+const orders = $derived(await getMyOrders());`
 			},
 			{
 				type: 'p',
-				text: 'Six lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a `$:` block, a store subscription and an `onDestroy`.'
+				text: 'Five lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a `$:` block, a store subscription and an `onDestroy`.'
+			},
+			{
+				type: 'p',
+				text: 'There used to be a sixth, for positions. Where it went, and why, is the last section of this chapter.'
 			},
 
 			{ type: 'h3', id: 'the-trap', text: 'The trap' },
@@ -1065,13 +1163,86 @@ $effect(() => {
 				type: 'p',
 				text: 'The `seenPhase !== null` guard is the same class of thinking as the idempotent projectors: it separates "the state changed" from "this is the first time I am seeing state at all". Arriving at a market that is already open is not the market opening, and firing the venue\'s one dramatic animation at everybody who loads the page would make it mean nothing.'
 			},
+
+			{ type: 'h3', id: 'where-you-await', text: 'Where you await is what fails with it' },
+			{
+				type: 'p',
+				text: 'An awaited `$derived` in the script is a promise the whole component waits on — and if it rejects, the whole component has failed. That is the right trade for the instrument list, without which there is no page. It was the wrong one for positions.'
+			},
+			{
+				type: 'p',
+				text: 'A venue operator can open the terminal: the nav offers it, because watching the book and the tape is half the job. But an operator belongs to the venue, not to a member firm, holds no positions, and is refused `view_positions` — so `getMyPositions()` throws a 403. Awaited in the script, that one refusal failed the page, and the operator lost the book, the tape and every Cancel button to a panel they had no use for. Now the await sits in the markup, inside a boundary of its own:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'svelte',
+				code: `
+<svelte:boundary>
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
+		<table>
+			<!-- … -->
+			<tbody>
+				{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
+					<!-- … -->
+				{:else}
+					<tr><td colspan="5" class="muted small">Flat.</td></tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
+	{#snippet failed(error)}
+		<p class="muted small under-heading">{(error as App.Error).message}</p>
+	{/snippet}
+</svelte:boundary>`
+			},
+			{
+				type: 'p',
+				text: 'A `<svelte:boundary>` catches what fails inside it, during rendering or in an `await`, and shows its `failed` snippet instead of its contents. Everything outside carries on. So the operator now sees the whole terminal, and a Positions panel that says, in the server\'s words, "Your role does not allow that."'
+			},
+			{
+				type: 'why',
+				title: 'The error is an App.Error, and the cast says so',
+				text: 'What reaches `failed` under SvelteKit is not the thing that was thrown. Kit puts every boundary\'s error through its error handling first — the server\'s `handleError` for a query that called `error(...)`, the client-side `handleError` (Kit\'s default here, as there is no `hooks.client.ts`) for anything thrown in the browser — and passes on the result: an `App.Error`, a plain `{ status, message }` object. A runtime probe that forced a query to throw `error(418, \'probe query\')` printed `{"instanceofError":false,"ctor":"Object","keys":["status","message"],"message":"probe query","status":418}` — the same on the server render and after a client-side navigation. So the message is `error.message`, read directly. Svelte itself types the parameter `unknown`, because a boundary in plain Svelte can catch anything at all, and the strict checker rejects annotating it as `App.Error`; the `as App.Error` is not a guess but a statement of what Kit guarantees, and the comment above the boundary says so.'
+			},
+			{
+				type: 'p',
+				text: 'And the failure the panel cannot absorb — a page whose load refuses, a route that does not exist — goes to `src/routes/+error.svelte`, which receives the same `App.Error` as a prop:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/+error.svelte',
+				lang: 'svelte',
+				code: `
+<script lang="ts">
+	import type { ErrorProps } from './$types';
+
+	// …
+	let { error }: ErrorProps = $props();
+</script>
+
+<div class="container card stack failure" role="alert">
+	<!-- … -->
+	<h1>{error.status >= 500 ? 'Something went wrong' : 'We cannot show you this'}</h1>
+	<p class="muted">{error.message}</p>
+	<!-- … -->
+</div>`
+			},
+			{
+				type: 'warn',
+				text: 'This file replaced a boundary in the root layout that wrapped every page, guarded its message with `error instanceof Error`, and had never once run. The guard was wrong — an `App.Error` is never an `Error`, so the fallback "We could not load this." would have won every time — but it did not matter, because SvelteKit 3 wraps **each page** in a boundary of its own that renders the nearest `+error.svelte`, falling back to Kit\'s built-in one when the app has none. The page\'s failure was always caught one level below the layout, and shown as Kit\'s bare status code and message. A boundary is only reached if nothing nearer catches first.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can use `await` inside `$derived` and explain what re-runs when',
 					'You can state the declaration-order rule and the exact error breaking it produces',
 					'You can explain why a plain `$state` binding is unaffected but a member binding is not',
-					'You can decide between `$derived` and `$effect` from what the code does, not how it looks'
+					'You can decide between `$derived` and `$effect` from what the code does, not how it looks',
+					'You can decide whether an await belongs in the script or inside a boundary, from what should fail with it',
+					'You can say what a `failed` snippet and `+error.svelte` receive, and why the layout\'s boundary never ran'
 				]
 			}
 		]

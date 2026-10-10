@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { BOARD, OWNER, draw, newBoard, shape, signIn } from './helpers';
+import { BOARD, OWNER, VIEWER, draw, newBoard, shape, signIn } from './helpers';
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -28,6 +28,44 @@ test.describe('comments', () => {
 
 		await page.getByRole('button', { name: 'Resolve' }).first().click();
 		await expect(page.getByText(/Resolved \(\d+\)/)).toBeVisible({ timeout: 15_000 });
+	});
+
+	test('tells a viewer, in the server’s words, why they cannot resolve one', async ({
+		browser
+	}) => {
+		// Two contexts, two cookie jars: the owner starts the thread, the viewer tries.
+		const owner = await browser.newContext();
+		const viewer = await browser.newContext();
+
+		try {
+			const ownerPage = await owner.newPage();
+			await signIn(ownerPage, OWNER);
+			const url = await newBoard(ownerPage);
+
+			await ownerPage.getByRole('tab', { name: 'Comments' }).click();
+			await ownerPage.getByPlaceholder('Leave a comment').fill('Can a viewer resolve this?');
+			await ownerPage.getByRole('button', { name: 'Post' }).first().click();
+			await ownerPage.getByText('Can a viewer resolve this?').waitFor();
+
+			const viewerPage = await viewer.newPage();
+			await signIn(viewerPage, VIEWER);
+			await viewerPage.goto(url);
+			await viewerPage.getByRole('tab', { name: 'Comments' }).click();
+
+			/*
+			 * `resolveThread` answers 403, and the awaited command rejects with an
+			 * `HttpError` whose text is `body.message` — it has no `message` of its
+			 * own. Before the catch in `Comments.svelte` that rejection went nowhere,
+			 * and pressing the button did nothing anybody could see.
+			 */
+			await viewerPage.getByRole('button', { name: 'Resolve' }).click();
+			await expect(
+				viewerPage.getByRole('region', { name: 'Comments' }).getByRole('alert')
+			).toHaveText('You have view-only access to this board.');
+		} finally {
+			await owner.close();
+			await viewer.close();
+		}
 	});
 });
 

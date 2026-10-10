@@ -247,28 +247,38 @@ export const part3 = [
 		slug: 'the-reactivity-lesson',
 		title: 'The lesson: the same engine, out of $derived',
 		summary:
-			'Nine cells whose values are `$derived`s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm.',
+			'Nine cells whose values are `$derived`s that read each other through a lookup function and nothing else. No edges recorded, no order computed — and it agrees with the hand-written engine on every edit, because it is the same algorithm. Until a cycle, where it needs a graph of its own.',
 		goal: 'See that Svelte’s runtime is a spreadsheet engine with the cells hidden, and know the two things a runtime cannot give a spreadsheet.',
 		blocks: [
-			code('src/lib/lesson/reactive.svelte.ts', 1, 29),
+			code('src/lib/lesson/reactive.svelte.ts', 1, 35),
 			{
 				type: 'p',
-				text: 'The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”.'
+				text: 'The header is the argument of the whole course in a comment. Read it, then read the class, and notice that there is no code anywhere that says “A3 depends on A1”. The one place that reads a formula’s references, further down, does it only to find cycles, and the next blocks say why it must.'
 			},
 			{
 				type: 'note',
 				text: 'Both of the header’s “chapter 10”s mean the hand-written engine, which is chapter 09 here: the project numbers its chapters differently from this course. The note in chapter 08 has the whole mapping.'
 			},
-			code('src/lib/lesson/reactive.svelte.ts', 37, 78),
+			code('src/lib/lesson/reactive.svelte.ts', 44, 90),
 			{
 				type: 'p',
-				text: '`value` is a `$derived.by` **as a class field**. It reads `this.input` and, through `#lookup`, whichever other cells the formula references — and those reads are the dependencies. Svelte records them as the derived runs. Change A1 and every derived that read A1, transitively, is marked and recomputed in dependency order, once each. That is steps one to three of chapter 09 with no code for any of them.'
+				text: '`value` is a `$derived.by` **as a class field**. It reads `this.input` and, through `#lookup`, whichever other cells the formula references — and those reads are the dependencies. Svelte records them as the derived runs. Change A1 and every derived that read A1, transitively, is marked and recomputed in dependency order, once each. That is steps one to three of chapter 09 with no code for any of them. The one line that is not a formula is `onCycle`: a flag the sheet sets, and the next block is why it has to.'
 			},
 			{
 				type: 'p',
 				text: '`evaluations += 1` inside a derived is a side effect, and the comment admits it: counting is the lesson. The page shows, after every edit, how many cells each side evaluated, and they agree.'
 			},
-			code('src/lib/lesson/reactive.svelte.ts', 80, 115),
+			code('src/lib/lesson/reactive.svelte.ts', 92, 128, { partial: true }),
+			{
+				type: 'why',
+				title: 'Why the sheet looks for cycles before any derived runs',
+				text: 'Type `=C3` into A1 and C3, which averages A1, now feeds A1: a derived that reads itself. Svelte has no answer to that but an exception. In development it notices and throws `derived_references_self`; that check sits behind `if (DEV)` in the runtime, so a production build has none, and the deriveds call each other until the stack runs out. The first version of this file caught the overflow in the formula’s `catch` and showed `#ERROR!` — after hundreds of evaluations for one edit — and the page never recovered: the engine’s side stopped updating, and breaking the cycle left five cells stuck. A check at read time is not enough either, because Svelte itself re-enters a derived when it asks whether a cell that *used to* read it has changed, and re-entering a derived that is still being worked out broke the runtime outright. So `set` reads the formulas before anything is evaluated, and a cell on a cycle answers `#CYCLE!` without reading another cell. That is a graph again — the engine’s, for nine cells — which is the lesson: a cycle is a value only because somebody kept one.'
+			},
+			code('src/lib/lesson/reactive.svelte.ts', 130, 180),
+			{
+				type: 'p',
+				text: '`#cyclic` walks from each cell along the references and marks the cell if the walk comes back to it; for nine cells that is plenty, and the engine of chapter 09 does the same job for a million with a proper traversal. `#referredTo` spells ranges out and clips them to the sheet, so `=SUM(A1:Z9999)` costs nine names rather than a quarter of a million. `set` writes `onCycle` on every cell, but a `$state` written with the value it already holds notifies nobody, so an edit that makes or breaks no cycle re-runs exactly the deriveds it did before — the count the lesson compares stays honest.'
+			},
 
 			{ type: 'h3', id: 'the-page', text: 'The page' },
 			code('src/routes/(app)/lesson/+page.svelte', 17, 59),
@@ -276,22 +286,24 @@ export const part3 = [
 				type: 'p',
 				text: 'Both sheets start from the same nine formulas. `edit` writes the same input into both and records how many cells each evaluated — the engine reports it in its `Recalc`; the reactive side is read in full so the deriveds run now, and the difference in the counter is the answer.'
 			},
-			code('src/routes/(app)/lesson/+page.svelte', 112, 147),
+			code('src/routes/(app)/lesson/+page.svelte', 112, 148),
 			{
 				type: 'why',
-				title: 'Why each reactive cell is wrapped in a boundary',
-				text: 'Type `=C3` into A1 and the hand-written engine marks a cycle and carries on. The reactive sheet *throws* — a derived that reads itself is a bug in a program, not a mistake in a sheet — and the `<svelte:boundary>` around that one cell catches it and renders `cycle!` in its place while the other eight keep working. That is the first thing a runtime cannot give a spreadsheet: a cycle as a value. The second is a million cells that are not each a signal, which is chapter 15’s line. Both are why the engine exists; neither makes it a different algorithm.'
+				title: 'Why no reactive cell is wrapped in a boundary',
+				text: 'The first version put a `<svelte:boundary>` round each reactive output, with a `failed` snippet that said `cycle!`. Driving the page in a real browser showed that snippet never ran: the formula’s `catch` got to the exception first. With the `catch` taken out so the exception could reach it, the whole page became the error page instead. Svelte hands an exception thrown inside a `$derived` to the boundary of the effect that *created* the derived, and these deriveds were created by the page’s script — so the page’s boundary, the root `+error.svelte`, is the one that heard about it. A boundary catches what its own content throws while it renders; a value computed somewhere else fails where it was made. With cycles found in `set`, nothing here throws, and the comment in the markup says why there is no boundary. The engine still has two things the runtime cannot give a spreadsheet: cycles as values for a million cells, and a million cells that are not each a signal, which is chapter 15’s line. Neither makes it a different algorithm.'
 			},
 			code('e2e/lesson.e2e.ts', 12, 44),
+			code('e2e/lesson.e2e.ts', 46, 72),
 			{
 				type: 'p',
-				text: 'The end-to-end test edits one side, then the other, and asserts all eighteen outputs agree. It is the test that says the two are the same thing.'
+				text: 'The first end-to-end test edits one side, then the other, and asserts all eighteen outputs agree. It is the test that says the two are the same thing. The second makes the cycle the page tells you to make, checks both sides call it `#CYCLE!` in the same cells, and breaks it again: every value must come back. It fails against the first version, where the reactive side said `#ERROR!` and never came back.'
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say where the dependency edges are in `ReactiveCell` and why there is no code for them.',
-					'You can explain why the reactive sheet throws on a cycle where the engine does not, and which is right for which job.',
+					'You can say what Svelte does with a derived that reads itself, in development and in a production build, and why the reactive sheet looks at references before any derived runs.',
+					'You can say which boundary hears about an exception thrown inside a `$derived`.',
 					'You can name the two reasons the hand-written engine exists even though `$derived` does the same thing.'
 				]
 			}

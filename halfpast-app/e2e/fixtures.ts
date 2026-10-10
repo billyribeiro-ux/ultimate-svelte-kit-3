@@ -104,6 +104,42 @@ export async function signIn(page: Page, who: { email: string; password: string 
 
 export { expect };
 
+/**
+ * Arrive at `path` by following a link inside the running app, not by loading it.
+ *
+ * For a test about the client-side path, and for a page whose buttons must work
+ * the moment they are visible. Neither is safe straight after `page.goto`: the
+ * HTML arrives before SvelteKit has started, a page that awaits its data gets
+ * its click handlers only once those awaits resume, and nothing on screen says
+ * when that has happened. A page SvelteKit renders in the browser after a
+ * client-side navigation has its handlers from the moment it exists.
+ *
+ * `history.scrollRestoration` becomes `'manual'` on the first line of the
+ * function that starts SvelteKit's router, so once it reads `'manual'` a click
+ * on a link is a client-side navigation. The home page is the starting point
+ * because nothing on it can fail. The flag set on `window` survives only if no
+ * page load happened, which is checked rather than assumed.
+ */
+export async function arriveClientSide(page: Page, path: string): Promise<void> {
+	await page.goto('/');
+	await page.waitForFunction(() => history.scrollRestoration === 'manual');
+
+	await page.evaluate((href) => {
+		Object.assign(window, { arrivedClientSide: true });
+		const link = document.createElement('a');
+		link.href = href;
+		link.textContent = 'Follow this link';
+		document.body.append(link);
+	}, path);
+	await page.getByRole('link', { name: 'Follow this link' }).click();
+
+	await page.waitForURL((url) => url.pathname === path);
+	expect(
+		await page.evaluate(() => 'arrivedClientSide' in window),
+		'the link caused a page load'
+	).toBe(true);
+}
+
 /** The demo studio's public booking page. */
 export const SHOP = '/book/willow-lane';
 

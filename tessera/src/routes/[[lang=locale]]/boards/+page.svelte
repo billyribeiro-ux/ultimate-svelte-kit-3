@@ -20,9 +20,12 @@
 	 * A live query, so a board created in another tab — or by a colleague in a
 	 * workspace you belong to — appears here without a reload.
 	 *
-	 * `boards.current` is the latest value the stream has yielded. It is
-	 * `undefined` until the first arrives, which is what the boundary below is
-	 * for.
+	 * Awaited in the markup, inside the boundary, rather than read through
+	 * `boards.current`. Awaiting a live query is not a one-off: every value the
+	 * stream yields resolves it again, so the list still updates in place. What
+	 * `await` adds is that the boundary sees the wait (its `pending` snippet) and
+	 * the failure (its `failed` snippet). `.current` is `undefined` in both cases
+	 * and says nothing — a stream that fails just leaves an empty page.
 	 */
 	const boards = myBoards();
 </script>
@@ -61,9 +64,10 @@
 	</header>
 
 	<svelte:boundary>
-		{#if boards.current && boards.current.length > 0}
+		{const list = $derived(await boards)}
+		{#if list.length > 0}
 			<ul class="boards__list auto-grid" style="--min-column: 15rem">
-				{#each boards.current as board (board.id)}
+				{#each list as board (board.id)}
 					<li>
 						<a
 							class="boards__card"
@@ -78,7 +82,7 @@
 					</li>
 				{/each}
 			</ul>
-		{:else if boards.current}
+		{:else}
 			<p class="boards__empty">{t.board.empty}</p>
 		{/if}
 
@@ -86,8 +90,15 @@
 			<p class="boards__empty">{t.sync.connecting}</p>
 		{/snippet}
 
+		<!--
+			An `App.Error`, already through `handleError`, so the text is its
+			`message`. Svelte types `error` as `unknown` — it cannot know what
+			SvelteKit's `transformError` returns — hence the cast.
+		-->
 		{#snippet failed(error)}
-			<p class="boards__empty">{t.errors.generic} <small>{String(error)}</small></p>
+			<p class="boards__empty">
+				{t.errors.generic} <small>{(error as App.Error).message}</small>
+			</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

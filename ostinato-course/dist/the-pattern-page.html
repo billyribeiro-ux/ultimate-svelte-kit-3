@@ -90,7 +90,7 @@ const card = $derived(`${page.url.origin}/p/${params.id}/card.svg`);</code></pre
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:11-47</span></span>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:12-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -118,8 +118,8 @@ async function love() {
 		await lovePattern(published.id).updates(
 			getCounts(published.id).withOverride((counts) =&gt; ({ ...counts, likes: counts.likes + 1 }))
 		);
-	} catch {
-		toast('Could not love that right now', 'error');
+	} catch (e) {
+		toast(messageOf(e, 'Could not love that right now'), 'error');
 	}
 }
 
@@ -134,12 +134,12 @@ function played() {
 
 <aside class="callout callout--why">
 	<h4>Why <code>withOverride</code></h4>
-	<p>Loving a pattern should bump the number *now*. <code>lovePattern(id).updates(getCounts(id).withOverride(fn))</code> applies <code>fn</code> to the query’s current value on screen immediately, sends the command, and asks the server to refresh that query in the same response (ch. 24). When the real count arrives, the override is dropped and the real value takes over. If the command fails, the override is dropped and the number returns to what the server last said. No spinner, no stale count, no manual rollback.</p>
+	<p>Loving a pattern should bump the number *now*. <code>lovePattern(id).updates(getCounts(id).withOverride(fn))</code> applies <code>fn</code> to the query’s current value on screen immediately, sends the command, and asks the server to refresh that query in the same response (ch. 24). When the real count arrives, the override is dropped and the real value takes over. If the command fails, the override is dropped and the number returns to what the server last said — and the toast says what the server said, through <code>messageOf</code> (ch. 24), with “Could not love that right now” kept for a request that never arrived. No spinner, no stale count, no manual rollback.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:67-85</span></span>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:68-86</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -166,7 +166,7 @@ function played() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:88-92</span></span>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:89-93</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Player pattern={published.pattern} onfirstplay={played}&gt;

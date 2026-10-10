@@ -211,7 +211,7 @@
 				</h2>
 				<ul class="places" role="list">
 					{#each country.places as place (place.id)}
-						{@const guide = guideForPlace(place.id)}
+						{const guide = $derived(guideForPlace(place.id))}
 						<li class="card place">
 							<div class="place__body">
 								<strong class="place__name">{place.name}</strong>

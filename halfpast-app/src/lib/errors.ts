@@ -17,7 +17,16 @@
  * nothing looks broken, because a plausible sentence still appears on screen.
  * We only caught it because an end-to-end test asserted on the real wording.
  *
- * So: check the shapes, in the order they actually occur.
+ * So: read `body.message`, and nothing else. The other things a remote call
+ * rejects with are not sentences for a customer. A dropped connection rejects
+ * with the browser's own `TypeError: Failed to fetch`, and a bug in our code
+ * with whatever the bug said. Neither has been through `handleError`, so
+ * neither is vetted for the screen, and both get the fallback.
+ *
+ * This is for a `catch` only. A boundary's `failed` snippet and `+error.svelte`
+ * receive a different shape: an `App.Error`, `{ status, message }`, already
+ * through `handleError`, with no `body`. Hand one of those to this function and
+ * the fallback wins every time; read its `message` directly instead.
  */
 
 /** SvelteKit's `HttpError`, structurally. Not imported — it is not exported to us. */
@@ -37,20 +46,16 @@ function isHttpErrorShape(value: unknown): value is HttpErrorShape {
 }
 
 /**
- * A human-readable message for `thrown`, or `fallback` if it has nothing to say.
+ * The server's message for `thrown`, or `fallback` if the server did not send one.
  *
  * @param thrown   Whatever landed in the `catch`.
- * @param fallback What to show when the thing genuinely carries no message —
- *                 a network drop, an aborted request, a bug in our own code.
+ * @param fallback What to show when there is no server message — a network
+ *                 drop, an aborted request, a bug in our own code.
  */
 export function messageFrom(thrown: unknown, fallback: string): string {
 	if (isHttpErrorShape(thrown) && typeof thrown.body.message === 'string') {
 		const message = thrown.body.message.trim();
 		if (message) return message;
-	}
-
-	if (thrown instanceof Error && thrown.message.trim()) {
-		return thrown.message;
 	}
 
 	return fallback;

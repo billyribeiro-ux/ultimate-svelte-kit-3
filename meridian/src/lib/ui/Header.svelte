@@ -99,16 +99,19 @@
 <svelte:window {onkeydown} />
 
 <!--
-	`{const}` is a declaration tag: a value computed in the markup, scoped to
-	the block it sits in, re-evaluated when its dependencies change. The links
-	depend on whether somebody is signed in, and the header is the only place
-	that needs the list — so the list lives here, not in the script.
+	`{const}` is a declaration tag: a value computed in the markup and scoped
+	to the block it sits in. A bare one is worked out once, when the block is
+	created; wrapped in `$derived` it is worked out again whenever what it
+	reads changes. The links depend on whether somebody is signed in, and the
+	header outlives a sign-in — it is in the layout — so `$derived` is what
+	makes "Trips" appear without a reload. The header is the only place that
+	needs the list, so the list lives here, not in the script.
 -->
-{const links = [
+{const links = $derived([
 	...(user ? [{ href: href('/(site)/(app)/trips'), label: m.nav_trips() }] : []),
 	{ href: href('/(site)/explore'), label: m.nav_explore() },
 	{ href: href('/guides'), label: m.nav_guides() }
-]}
+])}
 
 <header class="header" class:header--scrolled={scrolled}>
 	<div class="container header__row">

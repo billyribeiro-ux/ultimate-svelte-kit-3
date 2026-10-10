@@ -266,7 +266,7 @@
 					<legend class="label">{m.stop_kind()}</legend>
 					<div class="kinds">
 						{#each STOP_KINDS as k (k)}
-							{@const Icon = KIND_ICONS[k]}
+							{const Icon = $derived(KIND_ICONS[k])}
 							<label class="kinds__option" data-kind={k}>
 								<input
 									class="visually-hidden"
