@@ -68,12 +68,11 @@ test('a key typed before the page has hydrated is the key that is made', async (
 	await expect(page.getByLabel('Scope')).toHaveValue('read');
 
 	// And it is what gets submitted: the key is minted and shown once, and the
-	// server — asked again from scratch — lists it with the scope that was chosen
-	// before the page woke up.
+	// server — asked again by the form's own refresh, which reads the stored row —
+	// lists it with the scope that was chosen before the page woke up.
 	await page.getByRole('button', { name: 'Create key' }).click();
 	await expect(page.getByRole('alert').getByText(/^sxt_/)).toBeVisible();
 
-	await page.reload();
 	await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText('· read');
 });
 

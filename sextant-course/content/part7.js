@@ -159,9 +159,99 @@ write status AND outbox row in one transaction; a worker delivers
 			code('e2e/hydration.e2e.ts', 33, 48),
 			{
 				type: 'p',
-				text: 'The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reloads, so the scope it reads back is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.'
+				text: 'The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reads the key list the form’s own refresh brought back, so the scope it finds is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.'
 			},
-			code('e2e/hydration.e2e.ts', 50, 78),
+			code('e2e/hydration.e2e.ts', 50, 77),
+
+			{ type: 'h3', id: 'a-list-that-redraws', text: 'A list that redraws without a reload' },
+			{
+				type: 'p',
+				text: 'That test used to reload the page before it read the list, and the reload was covering for a bug. Every form on this page refreshes the list it changed, in the same request: the handler calls `keys({ tenant }).refresh()`, and the new rows come back with the result. The page then drew the old ones. A key that had just been made was missing from the list, a revoked key still offered to be revoked, and a removed view stayed where it was. A reload put all three right, which is why nothing had noticed.'
+			},
+			code('src/routes/[tenant]/settings/+page.svelte', 31, 88),
+			{
+				type: 'p',
+				text: 'Both lists were drawn with `{#await keys(…) then list}`. A throwaway page that read the same query four ways settled what was wrong. When the form came back, the `{#await}` block did run again, and it resolved with the rows from **before** the refresh. `query.current`, a bare `{await …}` and an `await` held in a `{@const}` all showed the new rows. One more result explains why the fix removes the block rather than adding something next to it: with an `{#await}` on the same query in the same boundary, an `await` beside it went stale too.'
+			},
+			{
+				type: 'p',
+				text: 'The console had said so at every stale read, in one line: Svelte’s `derived_inert` warning, “reading a derived belonging to a now-destroyed effect may result in stale values”. A query keeps its rows in `$derived` values, and the block was reading them after they had stopped updating. The old page printed it when a key was created and again when one was revoked; the new page prints nothing.'
+			},
+			{
+				type: 'p',
+				text: 'The page holds the rows in `{const list = $derived(await …)}` rather than in a `{@const}`, because the Svelte documentation now calls the older tag legacy: “`{@const x = y}` is legacy syntax — use `{const x = $derived(y)}` instead”. An `await` in the markup is also what the remote-functions documentation reaches for first: “while using `await` is recommended, as an alternative the query also has `loading`, `error` and `current` properties”.'
+			},
+
+			{ type: 'h3', id: 'two-states-that-never-ran', text: 'Two states that never ran' },
+			{
+				type: 'p',
+				text: 'The blocks had a second fault, and it had been in plain view the whole time. Each list sits in a `<svelte:boundary>` with a `pending` snippet and a `failed` snippet, and in the browser neither one ever ran. A boundary waits for `await` expressions. Its `pending` snippet “will be shown when the boundary is first created, and will remain visible until all the `await` expressions inside the boundary have resolved”, and an `{#await}` block is not an `await` expression. It is a block that branches “on the three possible states of a Promise”, and these blocks had only the `then` branch.'
+			},
+			{
+				type: 'p',
+				text: 'So the server drew “Loading…”, because during server-side rendering a boundary with a `pending` snippet renders that snippet. Then the page hydrated and the block put nothing in its place. A list that was slow showed a blank space, and a list that failed stayed blank, with nothing in the console either. An `await` puts both states back. “Errors in `await` expressions will bubble to the nearest error boundary”, and the remote-functions documentation says the same of a query: “until the promise resolves — and if it errors — the nearest `<svelte:boundary>` will be invoked.”'
+			},
+			code('src/routes/[tenant]/settings/+page.svelte', 201, 210),
+			{
+				type: 'p',
+				text: 'When the `failed` snippet finally ran, it showed one more mistake. The keys’ snippet looked for the server’s message on `error.body`, which is where an `HttpError` keeps it, and found nothing there. The boundary is not handed the error that was thrown. Svelte’s `mount` and `hydrate` take a `transformError` function that “transforms a render-time error before it is passed to a `failed` snippet”, and SvelteKit passes one that returns an `App.Error`. The message is on that object directly.'
+			},
+
+			{ type: 'h3', id: 'testing-the-lists', text: 'Tests for the lists' },
+			code('e2e/settings.e2e.ts', 43, 55),
+			{
+				type: 'p',
+				text: 'The tests that change a list mark the document before they submit and check the mark afterwards. A list can come out right because the page was rendered again: a reload does that, and so does a click that lands before hydration and posts the form the old-fashioned way. Either one replaces the document and takes the mark with it, so neither can pass for a list that redrew in place.'
+			},
+			code('e2e/settings.e2e.ts', 65, 79),
+			{
+				type: 'p',
+				text: 'The other two are about the states, and both look only after hydration, because the server’s HTML shows “Loading…” whatever the browser goes on to do. The first holds both list requests back and expects the live page to say it is loading. Then it lets the requests through and expects the rows. Holding a request is the same small helper the explore tests use, and two matchers say which requests to hold.'
+			},
+			code('e2e/settings.e2e.ts', 26, 41),
+			code('e2e/settings.e2e.ts', 130, 150),
+			{
+				type: 'p',
+				text: 'The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. The keys’ `failed` snippet must show the server’s own words, and that is also the check that catches the `error.body` lookup.'
+			},
+			code('e2e/settings.e2e.ts', 152, 172),
+			{
+				type: 'terminal',
+				code: `
+$ # put the two {#await} blocks back, keep everything else
+$ pnpm exec playwright test e2e/settings.e2e.ts
+
+  ✘ a new key is listed as soon as it is made
+      Expected substring: "· read"
+      Error: element(s) not found
+  ✘ a revoked key says so in the list, in place
+      Expected: visible
+      Error: element(s) not found
+  ✘ a removed view leaves the list, in place
+      Expected: 0
+      Received: 1
+  ✘ each list says it is loading until its rows arrive
+      Expected: "Loading…"
+      Error: element(s) not found
+  ✘ a list that cannot load says so, with the server’s reason
+      Expected: "Sign in to continue."
+      Error: element(s) not found
+
+  10 failed
+
+$ # the await back in place, but the old \`error.body\` lookup in the keys' snippet
+$ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
+
+  ✘ a list that cannot load says so, with the server’s reason
+      Expected: "Sign in to continue."
+      Received: "Could not load keys."
+
+  2 failed`
+			},
+			{
+				type: 'p',
+				text: 'Five claims, on both viewports, and each fails on its own assertion. The revoke test makes its key and then opens the page from scratch, so it is about the revoke alone and not about the list that creating the key should have refreshed. The reload in the hydration test was then removed, because without it that test still checks what it always did — the scope the server stored — and now fails on the old page as well.'
+			},
 
 			{
 				type: 'checkpoint',
@@ -170,7 +260,9 @@ write status AND outbox row in one transaction; a worker delivers
 					'A revoked key still appears, marked, with who made it and when.',
 					'A saved view of "the last hour" means the last hour tomorrow.',
 					'A name and a scope chosen before the page hydrates are the ones the key is minted with.',
-					'A view name typed before the explore page hydrates is the name it is saved under.'
+					'A view name typed before the explore page hydrates is the name it is saved under.',
+					'A new key is listed, a revoked one says so, and a removed view is gone — all without a reload.',
+					'While a list loads it says so, and when it cannot load it says why.'
 				]
 			}
 		]

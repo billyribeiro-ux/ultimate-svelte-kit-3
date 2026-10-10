@@ -28,37 +28,55 @@
 			that happened to be current when it was saved.
 		</p>
 
-		<svelte:boundary>
-			{#await views({ tenant: data.tenant }) then list}
-				{#if list.length === 0}
-					<p class="empty">No saved views yet. Save one from the explore page.</p>
-				{:else}
-					<ul class="list">
-						{#each list as saved (saved.id)}
-							<!-- One instance per row: see the note in the alerts page. -->
-							{@const remove = deleteView.for(saved.id)}
-							<li>
-								<a
-									class="list__main"
-									href={resolve(
-										`/[tenant]/explore?q=${encodeURIComponent(saved.query)}&range=${encodeURIComponent(saved.range)}`,
-										{ tenant: data.tenant }
-									)}
-								>
-									<strong>{saved.name}</strong>
-									<span class="mono truncate">{saved.query}</span>
-								</a>
+		<!--
+			AN `await` EXPRESSION, NOT AN `{#await}` BLOCK — FOR BOTH LISTS ON THIS PAGE.
 
-								<form {...remove}>
-									<input {...remove.fields.tenant.as('hidden', data.tenant)} />
-									<input {...remove.fields.id.as('hidden', saved.id)} />
-									<button type="submit" class="btn btn--sm btn--ghost">Remove</button>
-								</form>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			{/await}
+			Every form that changes a list refreshes it in the same request: the
+			handler calls `.refresh()`, and the new rows come back with the result.
+			Both lists used to be `{#await keys(…) then list}` blocks, and those drew
+			the rows from before the refresh. The block did run again when the
+			refresh landed, and the console said why it came back stale: Svelte's
+			`derived_inert` warning, "reading a derived belonging to a now-destroyed
+			effect may result in stale values". A key just created stayed missing
+			until the page was reloaded.
+
+			The blocks also left this boundary's snippets dead in the browser. A
+			boundary waits for `await` expressions, and an `{#await}` block is not
+			one: once the page hydrated, the block drew nothing while a list loaded,
+			and nothing at all when it failed. With the `await` here, `pending` shows
+			until the first rows arrive and `failed` shows if they never do.
+		-->
+		<svelte:boundary>
+			{const list = $derived(await views({ tenant: data.tenant }))}
+
+			{#if list.length === 0}
+				<p class="empty">No saved views yet. Save one from the explore page.</p>
+			{:else}
+				<ul class="list">
+					{#each list as saved (saved.id)}
+						<!-- One instance per row: see the note in the alerts page. -->
+						{@const remove = deleteView.for(saved.id)}
+						<li>
+							<a
+								class="list__main"
+								href={resolve(
+									`/[tenant]/explore?q=${encodeURIComponent(saved.query)}&range=${encodeURIComponent(saved.range)}`,
+									{ tenant: data.tenant }
+								)}
+							>
+								<strong>{saved.name}</strong>
+								<span class="mono truncate">{saved.query}</span>
+							</a>
+
+							<form {...remove}>
+								<input {...remove.fields.tenant.as('hidden', data.tenant)} />
+								<input {...remove.fields.id.as('hidden', saved.id)} />
+								<button type="submit" class="btn btn--sm btn--ghost">Remove</button>
+							</form>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 
 			{#snippet pending()}
 				<p class="empty" role="status">Loading…</p>
@@ -139,49 +157,55 @@
 				{/if}
 			</form>
 
+			<!-- `await`, not `{#await}`, so creating and revoking redraw it: see the saved views. -->
 			<svelte:boundary>
-				{#await keys({ tenant: data.tenant }) then list}
-					{#if list.length === 0}
-						<p class="empty">No keys yet.</p>
-					{:else}
-						<ul class="list">
-							{#each list as key (key.id)}
-								{@const revoke = revokeKey.for(key.id)}
-								<li>
-									<div class="list__main">
-										<strong>{key.name}</strong>
-										<span class="mono">{key.prefix}… · {key.scopes}</span>
-										<span class="meta">
-											{#if key.revokedAt}
-												revoked {relative(key.revokedAt.getTime(), clock.now)}
-											{:else if key.lastUsedAt}
-												last used {relative(key.lastUsedAt.getTime(), clock.now)}
-											{:else}
-												never used
-											{/if}
-										</span>
-									</div>
+				{const list = $derived(await keys({ tenant: data.tenant }))}
 
-									{#if !key.revokedAt}
-										<form {...revoke}>
-											<input {...revoke.fields.tenant.as('hidden', data.tenant)} />
-											<input {...revoke.fields.id.as('hidden', key.id)} />
-											<button type="submit" class="btn btn--sm btn--danger">Revoke</button>
-										</form>
-									{/if}
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				{/await}
+				{#if list.length === 0}
+					<p class="empty">No keys yet.</p>
+				{:else}
+					<ul class="list">
+						{#each list as key (key.id)}
+							{@const revoke = revokeKey.for(key.id)}
+							<li>
+								<div class="list__main">
+									<strong>{key.name}</strong>
+									<span class="mono">{key.prefix}… · {key.scopes}</span>
+									<span class="meta">
+										{#if key.revokedAt}
+											revoked {relative(key.revokedAt.getTime(), clock.now)}
+										{:else if key.lastUsedAt}
+											last used {relative(key.lastUsedAt.getTime(), clock.now)}
+										{:else}
+											never used
+										{/if}
+									</span>
+								</div>
+
+								{#if !key.revokedAt}
+									<form {...revoke}>
+										<input {...revoke.fields.tenant.as('hidden', data.tenant)} />
+										<input {...revoke.fields.id.as('hidden', key.id)} />
+										<button type="submit" class="btn btn--sm btn--danger">Revoke</button>
+									</form>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
 
 				{#snippet pending()}
 					<p class="empty" role="status">Loading…</p>
 				{/snippet}
 
+				<!--
+					What arrives here is SvelteKit's `App.Error`, not the `HttpError` that
+					was thrown: its `message` is the server's own, such as "Sign in to
+					continue."
+				-->
 				{#snippet failed(error)}
 					<p class="empty" role="alert">
-						{(error as { body?: { message?: string } })?.body?.message ?? 'Could not load keys.'}
+						{(error as App.Error | undefined)?.message ?? 'Could not load keys.'}
 					</p>
 				{/snippet}
 			</svelte:boundary>

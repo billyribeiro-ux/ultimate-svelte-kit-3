@@ -385,11 +385,11 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 	});
 }</code></pre>
 </figure>
-<p>The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reloads, so the scope it reads back is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.</p>
+<p>The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reads the key list the form’s own refresh brought back, so the scope it finds is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:50-78</span></span>
+		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:50-77</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a key typed before the page has hydrated is the key that is made', async ({ page }) =&gt; {
@@ -413,19 +413,271 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 	await expect(page.getByLabel('Scope')).toHaveValue('read');
 
 	// And it is what gets submitted: the key is minted and shown once, and the
-	// server — asked again from scratch — lists it with the scope that was chosen
-	// before the page woke up.
+	// server — asked again by the form's own refresh, which reads the stored row —
+	// lists it with the scope that was chosen before the page woke up.
 	await page.getByRole('button', { name: 'Create key' }).click();
 	await expect(page.getByRole('alert').getByText(/^sxt_/)).toBeVisible();
 
-	await page.reload();
 	await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText('· read');
 });</code></pre>
 </figure>
+<h3 id="a-list-that-redraws">A list that redraws without a reload</h3>
+<p>That test used to reload the page before it read the list, and the reload was covering for a bug. Every form on this page refreshes the list it changed, in the same request: the handler calls <code>keys({ tenant }).refresh()</code>, and the new rows come back with the result. The page then drew the old ones. A key that had just been made was missing from the list, a revoked key still offered to be revoked, and a removed view stayed where it was. A reload put all three right, which is why nothing had noticed.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/settings/+page.svelte<span class="code__lines">:31-88</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	AN `await` EXPRESSION, NOT AN `{#await}` BLOCK — FOR BOTH LISTS ON THIS PAGE.
+
+	Every form that changes a list refreshes it in the same request: the
+	handler calls `.refresh()`, and the new rows come back with the result.
+	Both lists used to be `{#await keys(…) then list}` blocks, and those drew
+	the rows from before the refresh. The block did run again when the
+	refresh landed, and the console said why it came back stale: Svelte's
+	`derived_inert` warning, &quot;reading a derived belonging to a now-destroyed
+	effect may result in stale values&quot;. A key just created stayed missing
+	until the page was reloaded.
+
+	The blocks also left this boundary's snippets dead in the browser. A
+	boundary waits for `await` expressions, and an `{#await}` block is not
+	one: once the page hydrated, the block drew nothing while a list loaded,
+	and nothing at all when it failed. With the `await` here, `pending` shows
+	until the first rows arrive and `failed` shows if they never do.
+--&gt;
+&lt;svelte:boundary&gt;
+	{const list = $derived(await views({ tenant: data.tenant }))}
+
+	{#if list.length === 0}
+		&lt;p class=&quot;empty&quot;&gt;No saved views yet. Save one from the explore page.&lt;/p&gt;
+	{:else}
+		&lt;ul class=&quot;list&quot;&gt;
+			{#each list as saved (saved.id)}
+				&lt;!-- One instance per row: see the note in the alerts page. --&gt;
+				{@const remove = deleteView.for(saved.id)}
+				&lt;li&gt;
+					&lt;a
+						class=&quot;list__main&quot;
+						href={resolve(
+							`/[tenant]/explore?q=${encodeURIComponent(saved.query)}&amp;range=${encodeURIComponent(saved.range)}`,
+							{ tenant: data.tenant }
+						)}
+					&gt;
+						&lt;strong&gt;{saved.name}&lt;/strong&gt;
+						&lt;span class=&quot;mono truncate&quot;&gt;{saved.query}&lt;/span&gt;
+					&lt;/a&gt;
+
+					&lt;form {...remove}&gt;
+						&lt;input {...remove.fields.tenant.as('hidden', data.tenant)} /&gt;
+						&lt;input {...remove.fields.id.as('hidden', saved.id)} /&gt;
+						&lt;button type=&quot;submit&quot; class=&quot;btn btn--sm btn--ghost&quot;&gt;Remove&lt;/button&gt;
+					&lt;/form&gt;
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
+	{/if}
+
+	{#snippet pending()}
+		&lt;p class=&quot;empty&quot; role=&quot;status&quot;&gt;Loading…&lt;/p&gt;
+	{/snippet}
+
+	{#snippet failed()}
+		&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;Could not load saved views.&lt;/p&gt;
+	{/snippet}
+&lt;/svelte:boundary&gt;</code></pre>
+</figure>
+<p>Both lists were drawn with <code>{#await keys(…) then list}</code>. A throwaway page that read the same query four ways settled what was wrong. When the form came back, the <code>{#await}</code> block did run again, and it resolved with the rows from <strong>before</strong> the refresh. <code>query.current</code>, a bare <code>{await …}</code> and an <code>await</code> held in a <code>{@const}</code> all showed the new rows. One more result explains why the fix removes the block rather than adding something next to it: with an <code>{#await}</code> on the same query in the same boundary, an <code>await</code> beside it went stale too.</p>
+<p>The console had said so at every stale read, in one line: Svelte’s <code>derived_inert</code> warning, “reading a derived belonging to a now-destroyed effect may result in stale values”. A query keeps its rows in <code>$derived</code> values, and the block was reading them after they had stopped updating. The old page printed it when a key was created and again when one was revoked; the new page prints nothing.</p>
+<p>The page holds the rows in <code>{const list = $derived(await …)}</code> rather than in a <code>{@const}</code>, because the Svelte documentation now calls the older tag legacy: “<code>{@const x = y}</code> is legacy syntax — use <code>{const x = $derived(y)}</code> instead”. An <code>await</code> in the markup is also what the remote-functions documentation reaches for first: “while using <code>await</code> is recommended, as an alternative the query also has <code>loading</code>, <code>error</code> and <code>current</code> properties”.</p>
+<h3 id="two-states-that-never-ran">Two states that never ran</h3>
+<p>The blocks had a second fault, and it had been in plain view the whole time. Each list sits in a <code>&lt;svelte:boundary&gt;</code> with a <code>pending</code> snippet and a <code>failed</code> snippet, and in the browser neither one ever ran. A boundary waits for <code>await</code> expressions. Its <code>pending</code> snippet “will be shown when the boundary is first created, and will remain visible until all the <code>await</code> expressions inside the boundary have resolved”, and an <code>{#await}</code> block is not an <code>await</code> expression. It is a block that branches “on the three possible states of a Promise”, and these blocks had only the <code>then</code> branch.</p>
+<p>So the server drew “Loading…”, because during server-side rendering a boundary with a <code>pending</code> snippet renders that snippet. Then the page hydrated and the block put nothing in its place. A list that was slow showed a blank space, and a list that failed stayed blank, with nothing in the console either. An <code>await</code> puts both states back. “Errors in <code>await</code> expressions will bubble to the nearest error boundary”, and the remote-functions documentation says the same of a query: “until the promise resolves — and if it errors — the nearest <code>&lt;svelte:boundary&gt;</code> will be invoked.”</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/settings/+page.svelte<span class="code__lines">:201-210</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	What arrives here is SvelteKit's `App.Error`, not the `HttpError` that
+	was thrown: its `message` is the server's own, such as &quot;Sign in to
+	continue.&quot;
+--&gt;
+{#snippet failed(error)}
+	&lt;p class=&quot;empty&quot; role=&quot;alert&quot;&gt;
+		{(error as App.Error | undefined)?.message ?? 'Could not load keys.'}
+	&lt;/p&gt;
+{/snippet}</code></pre>
+</figure>
+<p>When the <code>failed</code> snippet finally ran, it showed one more mistake. The keys’ snippet looked for the server’s message on <code>error.body</code>, which is where an <code>HttpError</code> keeps it, and found nothing there. The boundary is not handed the error that was thrown. Svelte’s <code>mount</code> and <code>hydrate</code> take a <code>transformError</code> function that “transforms a render-time error before it is passed to a <code>failed</code> snippet”, and SvelteKit passes one that returns an <code>App.Error</code>. The message is on that object directly.</p>
+<h3 id="testing-the-lists">Tests for the lists</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/settings.e2e.ts<span class="code__lines">:43-55</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Load the page, wait for it to be live, and mark the document. */
+async function openLive(page: Page, path: string) {
+	await page.goto(path);
+	await expect(hydrated(page)).toHaveCount(1);
+	await page.evaluate(() =&gt; {
+		(window as Window &amp; { sameDocument?: boolean }).sameDocument = true;
+	});
+}
+
+/** Whether the document marked by {@link openLive} is still the one on screen. */
+function sameDocument(page: Page) {
+	return page.evaluate(() =&gt; (window as Window &amp; { sameDocument?: boolean }).sameDocument === true);
+}</code></pre>
+</figure>
+<p>The tests that change a list mark the document before they submit and check the mark afterwards. A list can come out right because the page was rendered again: a reload does that, and so does a click that lands before hydration and posts the form the old-fashioned way. Either one replaces the document and takes the mark with it, so neither can pass for a list that redrew in place.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/settings.e2e.ts<span class="code__lines">:65-79</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a new key is listed as soon as it is made', async ({ page }, testInfo) =&gt; {
+	/*
+	 * A name unique to the run. Keys are revoked, never deleted, so a fixed name
+	 * would match one row per earlier run and every locator would find several.
+	 */
+	const name = `listed key (${testInfo.project.name}) ${Date.now()}`;
+
+	await openLive(page, '/demo/settings');
+	await createKey(page, name);
+
+	const row = page.getByRole('listitem').filter({ hasText: name });
+	await expect(row).toContainText('· read');
+	await expect(row).toContainText('never used');
+	expect(await sameDocument(page)).toBe(true);
+});</code></pre>
+</figure>
+<p>The other two are about the states, and both look only after hydration, because the server’s HTML shows “Loading…” whatever the browser goes on to do. The first holds both list requests back and expects the live page to say it is loading. Then it lets the requests through and expects the rows. Holding a request is the same small helper the explore tests use, and two matchers say which requests to hold.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/settings.e2e.ts<span class="code__lines">:26-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Hold the requests `matches` picks out until the returned function is called. */
+async function hold(page: Page, matches: (url: URL) =&gt; boolean): Promise&lt;() =&gt; void&gt; {
+	let release: () =&gt; void = () =&gt; {};
+	const held = new Promise&lt;void&gt;((resolve) =&gt; (release = resolve));
+	await page.route(matches, async (route) =&gt; {
+		await held;
+		await route.continue();
+	});
+	return release;
+}
+
+/** A read of one of the two lists: `GET /_app/remote/&lt;hash&gt;/keys` or `…/views`. */
+const isList = (url: URL) =&gt; /^\/_app\/remote\/[^/]+\/(keys|views)$/.test(url.pathname);
+
+/** The client bundle's entry, which hydration waits for (as in `hydration.e2e.ts`). */
+const isBundle = (url: URL) =&gt; /^\/_app\/immutable\/entry\/start\.[^/]+\.js$/.test(url.pathname);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/settings.e2e.ts<span class="code__lines">:130-150</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('each list says it is loading until its rows arrive', async ({ page }) =&gt; {
+	const release = await hold(page, isList);
+	const asked = page.waitForRequest((request) =&gt; isList(new URL(request.url())));
+
+	await page.goto('/demo/settings');
+	await asked;
+	await expect(hydrated(page)).toHaveCount(1);
+
+	// Live, and the rows held back: this is the browser's `pending`, not the copy
+	// of it in the server's HTML.
+	const keys = page.getByRole('region', { name: 'API keys' });
+	const views = page.getByRole('region', { name: 'Saved views' });
+	await expect(keys.getByRole('status')).toHaveText('Loading…');
+	await expect(views.getByRole('status')).toHaveText('Loading…');
+
+	release();
+	await expect(keys.getByRole('list')).toBeVisible();
+	await expect(views.getByRole('list')).toBeVisible();
+	await expect(keys.getByRole('status')).toHaveCount(0);
+	await expect(views.getByRole('status')).toHaveCount(0);
+});</code></pre>
+</figure>
+<p>The second needs the server to refuse for real, so it ends the session between the page and its rows. The page is drawn signed in. The bundle is held while the cookie is cleared, and the lists are then asked for with no cookie at all. The keys’ <code>failed</code> snippet must show the server’s own words, and that is also the check that catches the <code>error.body</code> lookup.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/settings.e2e.ts<span class="code__lines">:152-172</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a list that cannot load says so, with the server’s reason', async ({ page, context }) =&gt; {
+	/*
+	 * The session ends between the page and its rows: the server draws the page
+	 * signed in, and the lists are asked for once the cookie has gone, so the
+	 * server refuses them for real. The bundle is held so the cookie is cleared
+	 * before the page can ask.
+	 */
+	const release = await hold(page, isBundle);
+	await page.goto('/demo/settings');
+	await context.clearCookies();
+	release();
+	await expect(hydrated(page)).toHaveCount(1);
+
+	// The keys say what the server said; the views have one sentence for every failure.
+	await expect(page.getByRole('region', { name: 'API keys' }).getByRole('alert')).toHaveText(
+		'Sign in to continue.'
+	);
+	await expect(page.getByRole('region', { name: 'Saved views' }).getByRole('alert')).toHaveText(
+		'Could not load saved views.'
+	);
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # put the two {#await} blocks back, keep everything else
+$ pnpm exec playwright test e2e/settings.e2e.ts
+
+  ✘ a new key is listed as soon as it is made
+      Expected substring: &quot;· read&quot;
+      Error: element(s) not found
+  ✘ a revoked key says so in the list, in place
+      Expected: visible
+      Error: element(s) not found
+  ✘ a removed view leaves the list, in place
+      Expected: 0
+      Received: 1
+  ✘ each list says it is loading until its rows arrive
+      Expected: &quot;Loading…&quot;
+      Error: element(s) not found
+  ✘ a list that cannot load says so, with the server’s reason
+      Expected: &quot;Sign in to continue.&quot;
+      Error: element(s) not found
+
+  10 failed
+
+$ # the await back in place, but the old `error.body` lookup in the keys' snippet
+$ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
+
+  ✘ a list that cannot load says so, with the server’s reason
+      Expected: &quot;Sign in to continue.&quot;
+      Received: &quot;Could not load keys.&quot;
+
+  2 failed</code></pre>
+</figure>
+<p>Five claims, on both viewports, and each fails on its own assertion. The revoke test makes its key and then opens the page from scratch, so it is about the revoke alone and not about the list that creating the key should have refreshed. The reload in the hydration test was then removed, because without it that test still checks what it always did — the scope the server stored — and now fails on the old page as well.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A key is displayed once and never again.</li><li>A revoked key still appears, marked, with who made it and when.</li><li>A saved view of &quot;the last hour&quot; means the last hour tomorrow.</li><li>A name and a scope chosen before the page hydrates are the ones the key is minted with.</li><li>A view name typed before the explore page hydrates is the name it is saved under.</li></ul>
+	<ul><li>A key is displayed once and never again.</li><li>A revoked key still appears, marked, with who made it and when.</li><li>A saved view of &quot;the last hour&quot; means the last hour tomorrow.</li><li>A name and a scope chosen before the page hydrates are the ones the key is minted with.</li><li>A view name typed before the explore page hydrates is the name it is saved under.</li><li>A new key is listed, a revoked one says so, and a removed view is gone — all without a reload.</li><li>While a list loads it says so, and when it cannot load it says why.</li></ul>
 </aside>
 		</article>
 
