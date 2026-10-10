@@ -4,6 +4,7 @@
 	import { createBoard, myBoards } from '#lib/remote/boards.remote.ts';
 	import Button from '#lib/components/Button.svelte';
 	import type { PageData } from './$types';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		data: PageData;
@@ -11,7 +12,9 @@
 
 	let { data }: Props = $props();
 	const t = $derived(messages(data.locale));
-	const prefix = $derived(data.locale === 'en' ? '' : `/${data.locale}`);
+	// `undefined` for English, so `resolve()` leaves the optional `[[lang]]`
+	// segment out — see the layout for why links are built this way.
+	const lang = $derived(data.locale === 'en' ? undefined : data.locale);
 
 	/**
 	 * A live query, so a board created in another tab — or by a colleague in a
@@ -62,7 +65,10 @@
 			<ul class="boards__list auto-grid" style="--min-column: 15rem">
 				{#each boards.current as board (board.id)}
 					<li>
-						<a class="boards__card" href="{prefix}/boards/{board.id}">
+						<a
+							class="boards__card"
+							href={resolve('/[[lang=locale]]/boards/[board]', { lang, board: board.id })}
+						>
 							<span class="boards__title truncate">{board.title}</span>
 							<span class="boards__meta">
 								{board.workspaceName} · {t.board.lastEdited(ago(data.locale, board.updatedAt))}

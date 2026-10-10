@@ -5,6 +5,7 @@
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { LayoutData } from './$types';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		data: LayoutData;
@@ -14,6 +15,25 @@
 	let { data, children }: Props = $props();
 
 	const t = $derived(messages(data.locale));
+
+	/**
+	 * The language segment of every link in the chrome, or nothing.
+	 *
+	 * English is the unprefixed default — `/boards`, not `/en/boards` — and the
+	 * route is `[[lang=locale]]`, an *optional* segment. `resolve()` drops an
+	 * optional segment whose parameter is `undefined`, so one expression yields
+	 * `/boards` for English and `/fr/boards` for French, and the "is this
+	 * English?" question is asked here once rather than at every link.
+	 *
+	 * Why `resolve()` at all, rather than the string the browser will get? The
+	 * route id is checked against the generated `RouteId` union, so renaming a
+	 * route breaks these links in `svelte-check` instead of in production as a
+	 * 404 — and SvelteKit 3's `$app/paths` exports only `asset` and `resolve`,
+	 * which is the framework saying this is how links are meant to be built.
+	 * `eslint-plugin-svelte` agrees: `no-navigation-without-resolve` flags a
+	 * hand-assembled internal `href` now that the plugin recognises SvelteKit 3.
+	 */
+	const lang = $derived(data.locale === 'en' ? undefined : data.locale);
 
 	/**
 	 * The same page in another language.
@@ -33,15 +53,15 @@
 <a class="skip-link" href="#main">{t.a11y.skip}</a>
 
 <header class="chrome">
-	<a class="chrome__home" href={data.locale === 'en' ? '/' : `/${data.locale}`}>
+	<a class="chrome__home" href={resolve('/[[lang=locale]]', { lang })}>
 		<Logo size={22} wordmark />
 	</a>
 
 	<nav class="chrome__nav" aria-label="Main">
 		{#if data.user}
-			<a href={data.locale === 'en' ? '/boards' : `/${data.locale}/boards`}>{t.nav.boards}</a>
+			<a href={resolve('/[[lang=locale]]/boards', { lang })}>{t.nav.boards}</a>
 		{:else}
-			<a href={data.locale === 'en' ? '/sign-in' : `/${data.locale}/sign-in`}>{t.nav.signIn}</a>
+			<a href={resolve('/[[lang=locale]]/sign-in', { lang })}>{t.nav.signIn}</a>
 		{/if}
 	</nav>
 

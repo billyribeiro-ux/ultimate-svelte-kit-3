@@ -12,7 +12,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { BoardDocument, emptySnapshot, parseSnapshot } from '#lib/board/index.ts';
 import { newActorId } from '#lib/crdt/index.ts';
@@ -94,5 +94,14 @@ export const GET: RequestHandler = async ({ params, locals, setHeaders }) => {
 	 */
 	setHeaders({ 'cache-control': 'private, max-age=10' });
 
-	return json(snapshot);
+	/*
+	 * `Response.json`, not SvelteKit's `json()`.
+	 *
+	 * SvelteKit 3 deprecated its `json(...)` and `text(...)` helpers because the
+	 * platform caught up: `Response.json` serialises and sets the content type
+	 * exactly as the wrapper did, so the wrapper was one more import to learn
+	 * for nothing. `setHeaders` above still applies — SvelteKit merges those
+	 * onto whatever the handler returns.
+	 */
+	return Response.json(snapshot);
 };

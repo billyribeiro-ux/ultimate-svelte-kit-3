@@ -25,11 +25,15 @@ declare global {
 			 * alongside the stack. It is the whole of what an error page needs to be
 			 * useful without leaking anything.
 			 *
-			 * **Optional, and it has to be.** A required property here removes the
-			 * `error(404, 'Not found')` shorthand from the entire codebase — the
-			 * string overload only exists while `App.Error` is `{ message }` — and
-			 * every `error()` call becomes an object literal repeating a field that
-			 * only `handleError` can meaningfully fill in.
+			 * **Optional, and it has to be.** SvelteKit 3's `error(status, message,
+			 * extras)` always takes the message as a string and any other
+			 * `App.Error` properties as a third argument — and a *required*
+			 * property here makes that third argument mandatory, so every
+			 * `error(404, 'Not found')` in the codebase grows an object literal
+			 * repeating a field that only `handleError` can meaningfully fill in.
+			 *
+			 * `status` is not declared here because SvelteKit 3 adds it to every
+			 * `App.Error` itself.
 			 */
 			id?: string;
 		}

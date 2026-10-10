@@ -7,8 +7,8 @@ signal. When the train comes out of the tunnel, both boards agree — without a
 merge dialogue, without a "your changes could not be saved", and without either
 person having thought about it.
 
-Requires **Node 24.20.0** (the current LTS, pinned in `.nvmrc` and `engines`)
-and **pnpm 11+**.
+Requires **Node 24.21.0** (the current LTS, pinned in `.nvmrc` and `engines`)
+and **pnpm 12** (pinned in `packageManager`, so Corepack picks it for you).
 
 ## Quick start
 

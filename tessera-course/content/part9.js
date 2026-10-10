@@ -394,7 +394,7 @@ export default defineConfig({
 					'**`lint`** — `prettier --check .` and `eslint .`. Formatting is checked rather than applied, so a badly formatted commit fails rather than silently rewriting somebody’s working tree.',
 					'**`test:unit`** — 115 tests in about a second and a half, of which the interesting four are a few hundred thousand delivery schedules.',
 					'**`build`** — the real one, including the service worker’s separate Vite environment and the adapter.',
-					'**`test:e2e`** — 28 tests across two device profiles, against that build.'
+					'**`test:e2e`** — 30 tests across two device profiles, against that build.'
 				]
 			},
 			{
@@ -402,17 +402,17 @@ export default defineConfig({
 				code: `
 $ pnpm run verify
 
-  svelte-check   1530 files, 0 errors, 0 warnings
+  svelte-check   1512 files, 0 errors, 0 warnings
   prettier       all matched files use Prettier code style
   eslint         clean
-  vitest         Test Files 9 passed (9) · Tests 115 passed (115)   1.36s
+  vitest         Test Files 9 passed (9) · Tests 115 passed (115)   1.10s
   vite build     ✓ built in 889ms   (+ service worker, 42ms)
-  playwright     28 passed (42.6s)`
+  playwright     30 passed (33.7s)`
 			},
 			{
 				type: 'why',
 				title: 'Why the service worker gets its own tsconfig',
-				text: 'It runs in a `WebWorker` global scope: no `document`, no `window`, a different `self`, and `caches` in the global namespace. Checked against the application’s config, every service-worker global is an error and every DOM API is wrongly available. `tsconfig.service-worker.json` is eight lines and it turns that file from unchecked into checked, which for a file that can serve a stale application to everybody is worth having.'
+				text: 'It runs in a `WebWorker` global scope: no `document`, no `window`, a different `self`, and `caches` in the global namespace. Checked against the application’s config, every service-worker global is an error and every DOM API is wrongly available. `src/service-worker/tsconfig.json` sits beside the worker, extends `$app/tsconfig/service-worker`, and turns that file from unchecked into checked, which for a file that can serve a stale application to everybody is worth having.'
 			},
 
 			{ type: 'h3', id: 'what-it-misses', text: 'What the gate does not check' },

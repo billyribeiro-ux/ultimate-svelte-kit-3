@@ -127,7 +127,7 @@ export const part0 = [
 				items: [
 					'**SvelteKit 3** with **Svelte 5** — runes, remote functions, universal hooks, `defineParams`, and no `svelte.config.js`.',
 					'**TypeScript**, strict, with `noUncheckedIndexedAccess` on. In a codebase full of array indexing into shared state, that flag earns its keep on the first day.',
-					'**Vite 8** and **Vitest 4** — unit tests in Node, component tests in a real Chromium.',
+					'**Vite 8** and **Vitest 5** — unit tests in Node, component tests in a real Chromium.',
 					'**valibot** for every schema: environment variables, route parameters, form fields, and the sync wire format.',
 					'**Drizzle** over **libSQL**, and **Better Auth** for sessions.',
 					'**Playwright** for the end-to-end suite, which runs two browser contexts against one board because that is the only way to test the thing this application is *for*.',
@@ -270,17 +270,17 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Check your Node. This project needs 24.20 or newer, which is the current LTS at the time of writing.'
+				text: 'Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm is pinned to 12.10.1 in `packageManager`, so `corepack enable` is enough to get the right one.'
 			},
 			{
 				type: 'terminal',
 				code: `
 node --version
-# v24.20.0
+# v24.21.0
 
-npm install -g pnpm
+corepack enable
 pnpm --version
-# 11.24.0`
+# 12.10.1`
 			},
 			{
 				type: 'note',
@@ -549,15 +549,21 @@ prerender: {
 		"*.config.js"
 	],
 	/*
-	 * The service worker is excluded here and checked by \`tsconfig.service-worker.json\`.
+	 * The service worker is excluded here and checked by its own
+	 * \`src/service-worker/tsconfig.json\`.
 	 *
 	 * It runs in a \`ServiceWorkerGlobalScope\`, not a window: \`self\` is a different
 	 * type, \`document\` does not exist, and the DOM lib actively lies about both.
 	 * SvelteKit says so on every \`sync\` — "src/service-worker should be added to
 	 * the exclude array" — and the cost of ignoring it is a file that type-checks
 	 * against an environment it will never run in.
+	 *
+	 * The whole directory, not one file. SvelteKit 3 documents the worker as
+	 * \`src/service-worker/index.ts\` with its config beside it, so excluding the
+	 * directory is what keeps both the worker and its \`tsconfig.json\` out of the
+	 * DOM-typed project — and it is the spelling \`svelte-kit sync\` asks for.
 	 */
-	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker.ts"]
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker"]
 }`
 			},
 			{
@@ -720,12 +726,12 @@ BETTER_AUTH_SECRET: {`
 				type: 'code',
 				lang: 'ts',
 				code: `
-import { DATABASE_URL } from '$env/private';
-import { PUBLIC_ORIGIN } from '$env/public';`
+import { DATABASE_URL } from '$app/env/private';
+import { PUBLIC_ORIGIN } from '$app/env/public';`
 			},
 			{
 				type: 'p',
-				text: 'Two modules, typed from your declarations. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
+				text: 'Two modules, typed from your declarations. They live under `$app/env` beside `building`, `dev` and `version` — SvelteKit 3 deprecated the old `$env/private` and `$env/public` spellings in their favour. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
 			},
 			{
 				type: 'terminal',
@@ -782,7 +788,8 @@ src/
   hooks.client.ts
   params.ts      route parameter matchers.
   env.ts         environment variables.
-  service-worker.ts`
+  service-worker/
+    index.ts     the offline shell. its own tsconfig.json sits beside it.`
 			},
 
 			{ type: 'h3', id: 'the-layers', text: 'Four layers, and the rule' },

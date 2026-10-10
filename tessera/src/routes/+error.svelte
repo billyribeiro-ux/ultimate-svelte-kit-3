@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 </script>
 
 <div class="error container">
@@ -17,7 +18,8 @@
 		<p class="error__id">Reference <code>{page.error.id}</code></p>
 	{/if}
 
-	<p><a href="/">Back to the start</a></p>
+	<!-- `resolve()` even for `/`: the one way to build an internal link in SvelteKit 3. -->
+	<p><a href={resolve('/')}>Back to the start</a></p>
 </div>
 
 <style>

@@ -1002,7 +1002,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { BoardDocument, emptySnapshot, parseSnapshot } from '#lib/board/index.ts';
 import { newActorId } from '#lib/crdt/index.ts';
@@ -1027,6 +1027,26 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 			{
 				type: 'note',
 				text: 'Compaction happens *here* rather than in a scheduled job, because this is the only place that already pays for the replay — and a board nobody reads does not need compacting. That is a nice example of putting maintenance work where the cost has already been incurred.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/api/boards/[board]/snapshot/+server.ts',
+				lang: 'ts',
+				code: `
+	/*
+	 * \`Response.json\`, not SvelteKit's \`json()\`.
+	 *
+	 * SvelteKit 3 deprecated its \`json(...)\` and \`text(...)\` helpers because the
+	 * platform caught up: \`Response.json\` serialises and sets the content type
+	 * exactly as the wrapper did, so the wrapper was one more import to learn
+	 * for nothing. \`setHeaders\` above still applies — SvelteKit merges those
+	 * onto whatever the handler returns.
+	 */
+	return Response.json(snapshot);`
+			},
+			{
+				type: 'p',
+				text: 'Notice what is *not* imported from `@sveltejs/kit`: only `error`. SvelteKit 3 deprecated the `json()` and `text()` response helpers because `Response.json(...)` and `new Response(text)` are the platform doing the same job, and a wrapper that only ever called through to them was one more thing to learn. `setHeaders` still applies — SvelteKit merges those headers onto whatever the handler returns.'
 			},
 
 			{ type: 'h3', id: 'ssr', text: 'The host page, and one dynamic import' },
@@ -1102,7 +1122,7 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 		blocks: [
 			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 /**
@@ -1138,7 +1158,28 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
  * id is \`version\` from \`$app/env\`, and \`$app/service-worker\` now exports only a
  * correctly-typed \`self\`. Bringing the SvelteKit 2 import forward gives four
  * "has no exported member" errors at once, which at least says so plainly.
- */`
+ *
+ * WHY THIS IS A DIRECTORY
+ * -----------------------
+ * \`src/service-worker/index.ts\`, not \`src/service-worker.ts\`. SvelteKit 3
+ * accepts both; the directory is the one that lets the worker's own
+ * \`tsconfig.json\` sit next to the only file it governs. That config extends
+ * \`$app/tsconfig/service-worker\`, which swaps the DOM lib for \`WebWorker\` and
+ * is what makes \`self\` below a \`ServiceWorkerGlobalScope\` rather than a
+ * \`Window\` — and the root \`tsconfig.json\` excludes this directory so the file
+ * is never checked against an environment it will not run in. SvelteKit
+ * bundles the result and registers it with \`{ type: 'module' }\`, which is why
+ * plain \`import\` statements are fine here.
+ */
+
+import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';`
+			},
+			{
+				type: 'p',
+				text: 'A directory, not a file. `src/service-worker.ts` still works in SvelteKit 3, but `src/service-worker/index.ts` is the layout the framework documents, because it gives the worker somewhere to keep its own `tsconfig.json` — the one that extends `$app/tsconfig/service-worker` and swaps the DOM lib for `WebWorker`. The root `tsconfig.json` excludes the directory, and the `check` script runs `tsc` against the worker’s config explicitly, since `svelte-check` only ever reads the root one. The worker is bundled and registered as `{ type: \'module\' }`, which is why plain `import` statements are fine inside it.'
 			},
 			{
 				type: 'p',
@@ -1155,7 +1196,7 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 			},
 			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 /*
@@ -1171,9 +1212,26 @@ const CACHE = \`tessera-\${version}\`;
  *
  * \`immutable\` is Vite's hashed output; \`assets\` is whatever is in \`static/\`,
  * which for this application is the two font files. Both arrive as
- * \`{ path }\` objects rather than bare strings.
+ * \`{ path }\` objects rather than bare strings — and the path is relative to
+ * the base path, with no leading slash: \`_app/immutable/…\`, \`fonts/…\`.
+ *
+ * \`resolve()\` turns each into the absolute pathname the browser will actually
+ * request, which is what \`url.pathname\` is compared with in the fetch handler.
+ * Skip it and that comparison never matches. Nothing fails loudly:
+ * \`cache.addAll\` resolves the relative paths against the worker's own URL, so
+ * the shell is still cached and the application still starts offline — but
+ * the "cache-first, forever" rule has silently become network-first for every
+ * hashed asset, which is the kind of regression no test notices and everybody
+ * on a slow connection pays for.
+ *
+ * Typed as \`string[]\` on purpose. \`resolve()\` returns SvelteKit's branded
+ * \`Path\` type — good for catching a typo in a route id, and exactly wrong for
+ * a list whose only job is to be compared with \`url.pathname\`, which is a
+ * plain string. \`Array.prototype.includes\` is typed with the element type, so
+ * a \`Path[]\` refuses the comparison below at compile time. Widening here says
+ * once what these are: the pathnames the browser will actually request.
  */
-const PRECACHE = [...immutable, ...assets].map((entry) => entry.path);
+const PRECACHE: string[] = [...immutable, ...assets].map((entry) => resolve(entry.path));
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -1203,8 +1261,12 @@ self.addEventListener('activate', (event) => {
 				text: 'The cache is named after `version`, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.'
 			},
 			{
+				type: 'warn',
+				text: 'The paths in `$app/manifest` are relative to the base path — `_app/immutable/…`, no leading slash — and `url.pathname` in the fetch handler is absolute. `resolve()` from `$app/paths` is what makes the two comparable, and it is easy to leave out because nothing fails when you do: `cache.addAll` resolves relative paths against the worker’s own URL, so the shell still caches and the app still starts offline. What silently goes wrong is the first rule — hashed assets become network-first — and no test notices.'
+			},
+			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 async function respond(request: Request, url: URL): Promise<Response> {

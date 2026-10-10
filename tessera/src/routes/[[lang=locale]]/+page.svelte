@@ -4,6 +4,7 @@
 	import Logo from '#lib/components/Logo.svelte';
 	import Button from '#lib/components/Button.svelte';
 	import type { PageData } from './$types';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		data: PageData;
@@ -11,7 +12,9 @@
 
 	let { data }: Props = $props();
 	const t = $derived(messages(data.locale));
-	const prefix = $derived(data.locale === 'en' ? '' : `/${data.locale}`);
+	// `undefined` for English, so `resolve()` leaves the optional `[[lang]]`
+	// segment out — see the layout for why links are built this way.
+	const lang = $derived(data.locale === 'en' ? undefined : data.locale);
 </script>
 
 <svelte:head>
@@ -27,11 +30,11 @@
 		cannot lose a change to a race between two people typing.
 	</p>
 	<div class="hero__actions">
-		<Button variant="primary" href="{prefix}/boards">
+		<Button variant="primary" href={resolve('/[[lang=locale]]/boards', { lang })}>
 			{data.user ? t.nav.boards : t.board.create}
 		</Button>
 		{#if !data.user}
-			<Button href="{prefix}/sign-in">{t.nav.signIn}</Button>
+			<Button href={resolve('/[[lang=locale]]/sign-in', { lang })}>{t.nav.signIn}</Button>
 		{/if}
 	</div>
 </section>

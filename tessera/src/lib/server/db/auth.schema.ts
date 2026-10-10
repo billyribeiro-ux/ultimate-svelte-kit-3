@@ -1,5 +1,24 @@
+/**
+ * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
+ *
+ * `pnpm run auth:schema` writes this file from `auth.ts`, and the result is
+ * kept formatted the project's way rather than the generator's — the only
+ * difference between the two is tabs and quote style, which is what a diff
+ * against a fresh `auth generate` should show and nothing else.
+ *
+ * One thing changed *under* the application and deserves a note. Better Auth
+ * 1.7.0 added a required `issuer` column to `account` — who vouches for the
+ * account: an OAuth provider's URL, or `local:credential` for a password —
+ * with a unique index on `(issuer, account_id)`, and the first version of this
+ * file carried both. 1.7.3 withdrew the idea: accounts are identified by
+ * `(provider_id, account_id)` again, as in 1.6, and 1.7.7 never writes the
+ * column. It also checks the Drizzle schema at startup and refuses to run with
+ * a `NOT NULL` column it will never fill, because every sign-up would fail on
+ * the insert. The 1.7 upgrade guide's SQLite recipe — drop the index, then the
+ * column — is migration `0001`, which is why `account` below looks like 1.6's.
+ */
 import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
@@ -41,7 +60,6 @@ export const account = sqliteTable(
 	'account',
 	{
 		id: text('id').primaryKey(),
-		issuer: text('issuer').notNull(),
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
 		userId: text('user_id')
@@ -65,10 +83,7 @@ export const account = sqliteTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull()
 	},
-	(table) => [
-		uniqueIndex('account_issuer_accountId_uidx').on(table.issuer, table.accountId),
-		index('account_userId_idx').on(table.userId)
-	]
+	(table) => [index('account_userId_idx').on(table.userId)]
 );
 
 export const verification = sqliteTable(

@@ -178,7 +178,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { BoardDocument, emptySnapshot, parseSnapshot } from '#lib/board/index.ts';
 import { newActorId } from '#lib/crdt/index.ts';
@@ -198,6 +198,24 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 </figure>
 <p>This endpoint is the one place on the server that holds an opinion about a document’s contents, and it is confined to a read. It writes nothing back except a compacted snapshot — which is a cache of what the log already says.</p>
 <aside class="callout callout--note"><p>Compaction happens *here* rather than in a scheduled job, because this is the only place that already pays for the replay — and a board nobody reads does not need compacting. That is a nice example of putting maintenance work where the cost has already been incurred.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/snapshot/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * `Response.json`, not SvelteKit's `json()`.
+	 *
+	 * SvelteKit 3 deprecated its `json(...)` and `text(...)` helpers because the
+	 * platform caught up: `Response.json` serialises and sets the content type
+	 * exactly as the wrapper did, so the wrapper was one more import to learn
+	 * for nothing. `setHeaders` above still applies — SvelteKit merges those
+	 * onto whatever the handler returns.
+	 */
+	return Response.json(snapshot);</code></pre>
+</figure>
+<p>Notice what is *not* imported from <code>@sveltejs/kit</code>: only <code>error</code>. SvelteKit 3 deprecated the <code>json()</code> and <code>text()</code> response helpers because <code>Response.json(...)</code> and <code>new Response(text)</code> are the platform doing the same job, and a wrapper that only ever called through to them was one more thing to learn. <code>setHeaders</code> still applies — SvelteKit merges those headers onto whatever the handler returns.</p>
 <h3 id="ssr">The host page, and one dynamic import</h3>
 
 <figure class="code">

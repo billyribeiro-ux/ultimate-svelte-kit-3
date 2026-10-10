@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -74,8 +74,26 @@
  * id is `version` from `$app/env`, and `$app/service-worker` now exports only a
  * correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four
  * &quot;has no exported member&quot; errors at once, which at least says so plainly.
- */</code></pre>
+ *
+ * WHY THIS IS A DIRECTORY
+ * -----------------------
+ * `src/service-worker/index.ts`, not `src/service-worker.ts`. SvelteKit 3
+ * accepts both; the directory is the one that lets the worker's own
+ * `tsconfig.json` sit next to the only file it governs. That config extends
+ * `$app/tsconfig/service-worker`, which swaps the DOM lib for `WebWorker` and
+ * is what makes `self` below a `ServiceWorkerGlobalScope` rather than a
+ * `Window` — and the root `tsconfig.json` excludes this directory so the file
+ * is never checked against an environment it will not run in. SvelteKit
+ * bundles the result and registers it with `{ type: 'module' }`, which is why
+ * plain `import` statements are fine here.
+ */
+
+import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';</code></pre>
 </figure>
+<p>A directory, not a file. <code>src/service-worker.ts</code> still works in SvelteKit 3, but <code>src/service-worker/index.ts</code> is the layout the framework documents, because it gives the worker somewhere to keep its own <code>tsconfig.json</code> — the one that extends <code>$app/tsconfig/service-worker</code> and swaps the DOM lib for <code>WebWorker</code>. The root <code>tsconfig.json</code> excludes the directory, and the <code>check</code> script runs <code>tsc</code> against the worker’s config explicitly, since <code>svelte-check</code> only ever reads the root one. The worker is bundled and registered as <code>{ type: 'module' }</code>, which is why plain <code>import</code> statements are fine inside it.</p>
 <p>Tessera already works offline — the document is in IndexedDB and edits queue in an outbox. What it cannot do without this file is <strong>start</strong> while offline: the browser has no HTML, no JavaScript and no CSS to run any of that with.</p>
 
 <aside class="callout callout--why">
@@ -86,7 +104,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -102,9 +120,26 @@ const CACHE = `tessera-${version}`;
  *
  * `immutable` is Vite's hashed output; `assets` is whatever is in `static/`,
  * which for this application is the two font files. Both arrive as
- * `{ path }` objects rather than bare strings.
+ * `{ path }` objects rather than bare strings — and the path is relative to
+ * the base path, with no leading slash: `_app/immutable/…`, `fonts/…`.
+ *
+ * `resolve()` turns each into the absolute pathname the browser will actually
+ * request, which is what `url.pathname` is compared with in the fetch handler.
+ * Skip it and that comparison never matches. Nothing fails loudly:
+ * `cache.addAll` resolves the relative paths against the worker's own URL, so
+ * the shell is still cached and the application still starts offline — but
+ * the &quot;cache-first, forever&quot; rule has silently become network-first for every
+ * hashed asset, which is the kind of regression no test notices and everybody
+ * on a slow connection pays for.
+ *
+ * Typed as `string[]` on purpose. `resolve()` returns SvelteKit's branded
+ * `Path` type — good for catching a typo in a route id, and exactly wrong for
+ * a list whose only job is to be compared with `url.pathname`, which is a
+ * plain string. `Array.prototype.includes` is typed with the element type, so
+ * a `Path[]` refuses the comparison below at compile time. Widening here says
+ * once what these are: the pathnames the browser will actually request.
  */
-const PRECACHE = [...immutable, ...assets].map((entry) =&gt; entry.path);
+const PRECACHE: string[] = [...immutable, ...assets].map((entry) =&gt; resolve(entry.path));
 
 self.addEventListener('install', (event) =&gt; {
 	event.waitUntil(
@@ -130,10 +165,11 @@ self.addEventListener('activate', (event) =&gt; {
 });</code></pre>
 </figure>
 <p>The cache is named after <code>version</code>, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.</p>
+<aside class="callout callout--warn"><p>The paths in <code>$app/manifest</code> are relative to the base path — <code>_app/immutable/…</code>, no leading slash — and <code>url.pathname</code> in the fetch handler is absolute. <code>resolve()</code> from <code>$app/paths</code> is what makes the two comparable, and it is easy to leave out because nothing fails when you do: <code>cache.addAll</code> resolves relative paths against the worker’s own URL, so the shell still caches and the app still starts offline. What silently goes wrong is the first rule — hashed assets become network-first — and no test notices.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">async function respond(request: Request, url: URL): Promise&lt;Response&gt; {

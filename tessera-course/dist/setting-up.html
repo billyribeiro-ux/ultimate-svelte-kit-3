@@ -35,7 +35,7 @@
 			<h1>Setting up: a SvelteKit 3 project</h1>
 			<p class="lede">Node, pnpm, the folder, and the single biggest change in SvelteKit 3 — there is no svelte.config.js any more.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Have an empty application that runs, with every framework option in one place and each one understood.</p></aside>
-			<p>Check your Node. This project needs 24.20 or newer, which is the current LTS at the time of writing.</p>
+			<p>Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm is pinned to 12.10.1 in <code>packageManager</code>, so <code>corepack enable</code> is enough to get the right one.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -43,11 +43,11 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>node --version
-# v24.20.0
+# v24.21.0
 
-npm install -g pnpm
+corepack enable
 pnpm --version
-# 11.24.0</code></pre>
+# 12.10.1</code></pre>
 </figure>
 <aside class="callout callout--note"><p>pnpm rather than npm for one concrete reason: it refuses to let a package import something it did not declare. That sounds pedantic until a dependency of a dependency disappears in a minor release and your application stops building on a machine that is not yours.</p></aside>
 <h3 id="creating-it">Creating the project</h3>
@@ -295,15 +295,21 @@ prerender: {
 		&quot;*.config.js&quot;
 	],
 	/*
-	 * The service worker is excluded here and checked by `tsconfig.service-worker.json`.
+	 * The service worker is excluded here and checked by its own
+	 * `src/service-worker/tsconfig.json`.
 	 *
 	 * It runs in a `ServiceWorkerGlobalScope`, not a window: `self` is a different
 	 * type, `document` does not exist, and the DOM lib actively lies about both.
 	 * SvelteKit says so on every `sync` — &quot;src/service-worker should be added to
 	 * the exclude array&quot; — and the cost of ignoring it is a file that type-checks
 	 * against an environment it will never run in.
+	 *
+	 * The whole directory, not one file. SvelteKit 3 documents the worker as
+	 * `src/service-worker/index.ts` with its config beside it, so excluding the
+	 * directory is what keeps both the worker and its `tsconfig.json` out of the
+	 * DOM-typed project — and it is the spelling `svelte-kit sync` asks for.
 	 */
-	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;drizzle&quot;, &quot;src/service-worker.ts&quot;]
+	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;drizzle&quot;, &quot;src/service-worker&quot;]
 }</code></pre>
 </figure>
 <p>Two of those flags do most of the work. <code>noUncheckedIndexedAccess</code> makes <code>array[i]</code> have type <code>T | undefined</code>, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.</p>

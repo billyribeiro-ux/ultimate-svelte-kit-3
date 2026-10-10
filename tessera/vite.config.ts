@@ -183,8 +183,14 @@ export default defineConfig(({ mode }) => {
 					 * `getBoundingClientRect()` returns zeroes; a canvas whose entire job is
 					 * turning pointer coordinates into document coordinates cannot be
 					 * tested against a DOM that thinks every element is 0×0.
+					 *
+					 * No `extends`. Vitest 5 makes an inline project inherit the root
+					 * config — the `sveltekit()` plugin, `ssr.external`, the `expect`
+					 * rule — by default; the `extends: './vite.config.ts'` that Vitest 4
+					 * needed would now load this file a second time to arrive at the same
+					 * place. `extends: false` is the way to opt out, and nothing here
+					 * wants to.
 					 */
-					extends: './vite.config.ts',
 					test: {
 						name: 'client',
 						browser: {
@@ -199,7 +205,6 @@ export default defineConfig(({ mode }) => {
 				{
 					// Pure logic — plain Node, no browser, fast. The CRDT lives here, and
 					// these are the tests that matter most.
-					extends: './vite.config.ts',
 					test: {
 						name: 'server',
 						environment: 'node',
