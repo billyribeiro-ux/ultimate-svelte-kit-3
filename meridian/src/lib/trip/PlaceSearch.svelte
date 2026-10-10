@@ -2,6 +2,7 @@
 	import { Combobox } from 'bits-ui';
 	import { MagnifyingGlassIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { places, type Place } from '#lib/remote/geo.remote.ts';
 
 	/**
@@ -20,9 +21,11 @@
 	 */
 	interface Props {
 		onpick: (place: Place) => void;
+		/** The input's id, so a visible `<label for>` outside can name it. */
+		id?: string;
 	}
 
-	let { onpick }: Props = $props();
+	let { onpick, id }: Props = $props();
 
 	// What has been typed, read from the input itself: the root's `inputValue`
 	// is a prop to set, not one to bind.
@@ -42,12 +45,17 @@
 		const place = all.find((p) => p.id === id);
 		if (place) onpick(place);
 	}
+
+	/* `PT` → "Portugal" in the person's language, from the browser's own data; the explore page does the same. */
+	const regions = new Intl.DisplayNames(getLocale(), { type: 'region' });
+	const countryName = (code: string) => regions.of(code) ?? code;
 </script>
 
 <Combobox.Root type="single" bind:value onValueChange={pick}>
 	<div class="search">
 		<MagnifyingGlassIcon size={16} aria-hidden="true" class="search__icon" />
 		<Combobox.Input
+			{id}
 			class="input search__input"
 			placeholder={m.stop_search()}
 			aria-label={m.stop_search()}
@@ -55,18 +63,18 @@
 		/>
 	</div>
 	<Combobox.Portal>
-		<Combobox.Content class="search__list" sideOffset={4}>
+		<Combobox.Content class="search__list pop-in" sideOffset={4}>
 			<Combobox.Viewport>
 				{#each matches as place (place.id)}
 					<Combobox.Item value={place.id} label={place.name} class="search__item">
 						{#snippet children({ selected })}
 							<span>{place.name}</span>
-							<span class="muted">{place.country}</span>
+							<span class="search__country">{countryName(place.country)}</span>
 							{#if selected}<span class="visually-hidden">✓</span>{/if}
 						{/snippet}
 					</Combobox.Item>
 				{:else}
-					<p class="search__empty muted">{m.stop_search_empty()}</p>
+					<p class="search__empty">{m.stop_search_empty()}</p>
 				{/each}
 			</Combobox.Viewport>
 		</Combobox.Content>
@@ -91,22 +99,29 @@
 		padding-inline-start: 2.25rem;
 	}
 
+	/*
+	 * The list is a tier-3 surface over the dialog, one layer up, and it
+	 * drops in with the shared `.pop-in` (4px, 240ms). Highlight is paper,
+	 * not the sea: hovering is not choosing.
+	 */
 	:global(.search__list) {
-		z-index: 60;
+		z-index: var(--z-popover);
 		width: var(--bits-combobox-anchor-width);
 		max-height: 16rem;
 		overflow: auto;
 		padding: var(--space-1);
 		border: 1px solid var(--line);
-		border-radius: var(--radius);
-		background: var(--paper-2);
-		box-shadow: var(--shadow-3);
+		border-radius: var(--radius-lg);
+		background: var(--paper-4);
+		box-shadow: var(--shadow-3), var(--ring-hairline);
 	}
 
 	:global(.search__item) {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-3);
+		min-height: 2.5rem;
 		padding: 0.45rem 0.6rem;
 		border-radius: var(--radius-sm);
 		font-size: var(--text-sm);
@@ -114,12 +129,18 @@
 	}
 
 	:global(.search__item[data-highlighted]) {
-		background: var(--sea-soft);
-		color: var(--sea);
+		background: var(--paper-3);
+		color: var(--ink);
+	}
+
+	:global(.search__country) {
+		color: var(--ink-3);
+		font-size: var(--text-xs);
 	}
 
 	.search__empty {
 		padding: 0.45rem 0.6rem;
+		color: var(--ink-3);
 		font-size: var(--text-sm);
 	}
 </style>

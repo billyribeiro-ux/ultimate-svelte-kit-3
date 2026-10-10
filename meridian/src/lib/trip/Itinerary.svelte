@@ -1,14 +1,17 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { flip } from 'svelte/animate';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { dndzone, TRIGGERS, type DndEvent } from 'svelte-dnd-action';
 	import { toast } from 'svelte-sonner';
-	import { PlusIcon } from 'phosphor-svelte';
+	import { LightbulbIcon, PlusIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import { formatDate } from '#lib/domain/dates.ts';
+	import { fromIso } from '#lib/domain/dates.ts';
 	import type { DayGroup } from '#lib/domain/itinerary.ts';
 	import { moveStop, removeStop } from '#lib/remote/stops.remote.ts';
 	import type { Stop } from '#lib/server/db/schema.ts';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import StopCard from './StopCard.svelte';
 	import type { TripState } from './state.svelte.ts';
 
@@ -42,6 +45,19 @@
 	let { view, editable, viewerId, onadd, onedit }: Props = $props();
 
 	const locale = getLocale();
+	/*
+	 * The rail shows the day of the month and a short weekday; the heading
+	 * shows the whole date — "Sunday, May 10", "Sonntag, 10. Mai" — without
+	 * the year, which is the same for every day of the trip. Both format in
+	 * UTC, like `formatDate`, so the calendar date is the one that comes out.
+	 */
+	const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+	const heading = new Intl.DateTimeFormat(locale, {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+		timeZone: 'UTC'
+	});
 
 	interface Override {
 		readonly version: number;
@@ -66,6 +82,42 @@
 			out.set(person.stopId, [...(out.get(person.stopId) ?? []), person.name]);
 		}
 		return out;
+	});
+
+	/*
+	 * MOTION, FROM ONE SOURCE OF TRUTH
+	 * --------------------------------
+	 * `animate:flip` slides the other cards out of the way of a drag, and
+	 * the library's own FLIP does the same for the dragged one; both take
+	 * their duration from here, and here reads `reducedMotion` — so the
+	 * itinerary's JavaScript-driven motion honours the operating system
+	 * setting that the CSS `--dur-*` tokens cannot reach.
+	 *
+	 * No `in:`/`out:` transitions on the items: svelte-dnd-action says
+	 * plainly that it does not play well with them. A card that has just
+	 * arrived is marked instead — the effect below compares the stop ids
+	 * with the last render's and puts a new one in `fresh` for 1.2 seconds,
+	 * and the stop card turns that into a highlight that fades over 700ms.
+	 * The first render marks nothing: forty stops do not all light up.
+	 */
+	const duration = $derived(reducedMotion.current ? 0 : 240);
+
+	const fresh = new SvelteSet<string>();
+	let known: ReadonlySet<string> | null = null;
+
+	$effect(() => {
+		// A snapshot to compare against, never read reactively — so a plain Set, not a SvelteSet.
+		const ids = new Set(groups.flatMap((group) => group.stops.map((stop) => stop.id)));
+		untrack(() => {
+			if (known && !reducedMotion.current) {
+				for (const id of ids) {
+					if (known.has(id)) continue;
+					fresh.add(id);
+					setTimeout(() => fresh.delete(id), 1200);
+				}
+			}
+			known = ids;
+		});
 	});
 
 	function withZone(date: string | null, items: Stop[]): DayGroup<Stop>[] {
@@ -101,23 +153,44 @@
 	async function remove(stop: Stop) {
 		try {
 			await removeStop({ tripId: view.trip.id, id: stop.id });
-			toast(m.stop_removed());
+			toast.success(m.stop_removed());
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : String(error));
 		}
+	}
+
+	/* The dragged card: lifted, tilted a degree, a little larger. Applied by the library to its own clone. */
+	function lift(element?: HTMLElement) {
+		if (!element) return;
+		element.style.boxShadow = 'var(--shadow-3)';
+		element.style.rotate = '1deg';
+		element.style.scale = '1.02';
+		element.style.borderRadius = 'var(--radius)';
 	}
 </script>
 
 <div class="days">
 	{#each groups as group (group.date ?? 'ideas')}
+		<!--
+			Each day is a rail and a column. The rail carries the day of the month
+			in the display face with a hairline running down to the next day — the
+			route as a line down the page — and the Ideas section carries a bulb
+			instead of a number.
+		-->
 		<section class="day" data-date={group.date ?? 'ideas'}>
+			<div class="day__rail" aria-hidden="true">
+				{#if group.date}
+					<span class="day__number tabular">{fromIso(group.date).day}</span>
+					<span class="day__weekday">{weekday.format(fromIso(group.date).toDate('UTC'))}</span>
+				{:else}
+					<span class="day__bulb"><LightbulbIcon size={20} /></span>
+				{/if}
+			</div>
+
 			<header class="day__header">
 				<h3 class="day__title">
-					{group.date ? formatDate(group.date, locale, 'day') : m.day_ideas()}
+					{group.date ? heading.format(fromIso(group.date).toDate('UTC')) : m.day_ideas()}
 				</h3>
-				{#if group.date}
-					<span class="muted">{formatDate(group.date, locale, 'short')}</span>
-				{/if}
 				{#if editable}
 					<button
 						class="btn btn--sm btn--ghost day__add"
@@ -136,20 +209,22 @@
 				use:dndzone={{
 					items: group.stops,
 					type: 'stops',
-					flipDurationMs: 200,
+					flipDurationMs: duration,
 					dragDisabled: !editable,
 					dropTargetStyle: {},
-					dropTargetClasses: ['day__list--target']
+					dropTargetClasses: ['day__list--target'],
+					transformDraggedElement: lift
 				}}
 				onconsider={(e) => consider(group.date, e)}
 				onfinalize={(e) => finalize(group.date, e)}
 			>
 				{#each group.stops as stop (stop.id)}
-					<li class="day__item" animate:flip={{ duration: 200 }}>
+					<li class="day__item" animate:flip={{ duration }}>
 						<StopCard
 							{stop}
 							number={numbers.get(stop.id) ?? null}
 							selected={view.selectedStopId === stop.id}
+							fresh={fresh.has(stop.id)}
 							{editable}
 							lookers={lookers.get(stop.id) ?? []}
 							onselect={() => view.select(view.selectedStopId === stop.id ? null : stop.id)}
@@ -159,14 +234,11 @@
 					</li>
 				{/each}
 				{#if group.stops.length === 0}
-					<li class="day__empty muted">{m.day_empty()}</li>
+					<li class="day__empty">{editable ? m.day_empty_editable() : m.day_empty()}</li>
 				{/if}
 			</ul>
 		</section>
 	{/each}
-	{#if editable}
-		<p class="hint">{m.stop_drag_hint()}</p>
-	{/if}
 </div>
 
 <style>
@@ -175,38 +247,93 @@
 		gap: var(--space-5);
 	}
 
+	.day {
+		display: grid;
+		grid-template-columns: 2.75rem minmax(0, 1fr);
+		grid-template-rows: auto auto;
+		column-gap: var(--space-3);
+		row-gap: var(--space-2);
+	}
+
+	/* The rail spans both rows; its hairline runs from under the number to the bottom of the day. */
+	.day__rail {
+		position: relative;
+		grid-row: 1 / 3;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding-block-start: var(--space-1);
+	}
+
+	.day__rail::after {
+		content: '';
+		flex: 1;
+		width: 1px;
+		margin-block-start: var(--space-2);
+		background: var(--line);
+	}
+
+	.day__number {
+		font-family: var(--font-display);
+		font-size: var(--text-xl);
+		font-weight: 500;
+		line-height: 1;
+		letter-spacing: var(--tracking-xl);
+		color: var(--ink);
+	}
+
+	.day__weekday {
+		margin-block-start: var(--space-0);
+		font-size: var(--text-xs);
+		font-weight: 600;
+		letter-spacing: var(--tracking-caps);
+		text-transform: uppercase;
+		color: var(--ink-3);
+	}
+
+	.day__bulb {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		background: var(--paper-3);
+		color: var(--ink-3);
+	}
+
 	.day__header {
 		display: flex;
-		align-items: baseline;
+		align-items: center;
+		justify-content: space-between;
 		gap: var(--space-2);
-		margin-block-end: var(--space-2);
+		min-height: var(--control-sm);
 	}
 
 	.day__title {
-		font-size: var(--text-md);
-		font-family: var(--font-body);
-		font-weight: 600;
-	}
-
-	.day__add {
-		margin-inline-start: auto;
+		font-size: var(--text-lg);
 	}
 
 	.day__list {
 		display: grid;
 		gap: var(--space-2);
-		min-height: 3rem;
+		min-height: 3.5rem;
 		padding: var(--space-1);
+		margin: calc(-1 * var(--space-1));
 		border-radius: var(--radius);
-		transition: background-color var(--dur-fast) var(--ease-out);
+		transition: background-color var(--dur-2) var(--ease-out);
 	}
 
+	/* Where the card would land: the soft sea, fading in and out with the drag. */
 	:global(.day__list--target) {
 		background: var(--sea-soft);
 	}
 
 	.day__empty {
-		padding: var(--space-2) var(--space-3);
+		display: flex;
+		align-items: center;
+		min-height: 3rem;
+		padding-inline: var(--space-3);
+		color: var(--ink-3);
 		font-size: var(--text-sm);
 	}
 </style>

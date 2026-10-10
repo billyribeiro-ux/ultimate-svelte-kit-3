@@ -21,7 +21,11 @@
 		border-top: 1px solid var(--line);
 	}
 
+	/* Footer links are 44px rows on a phone: the smallest text on the page gets the biggest target. */
 	.footer a {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--control);
 		text-decoration: none;
 	}
 

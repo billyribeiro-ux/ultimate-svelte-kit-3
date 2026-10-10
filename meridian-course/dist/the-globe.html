@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:221-254</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:363-400</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{:else if tab === 'globe'}
@@ -51,17 +51,21 @@
 		demand; the boundary shows the pending snippet until the chunk is
 		here, and the failed snippet if the network is not. `browser`
 		guards it because a WebGL scene has no server-rendered form.
+
+		The frame is painted night before the chunk arrives, so the tab
+		never flashes cream and then space.
 	--&gt;
-	&lt;div class=&quot;full-map&quot;&gt;
+	&lt;div class=&quot;full-map full-map--night&quot;&gt;
 		{#if browser}
 			&lt;svelte:boundary&gt;
 				{#snippet pending()}
-					&lt;p class=&quot;muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+					&lt;p class=&quot;night__status&quot;&gt;{m.globe_loading()}&lt;/p&gt;
 				{/snippet}
 				{#snippet failed(error, reset)}
-					&lt;p class=&quot;issue&quot;&gt;
+					&lt;p class=&quot;night__status issue&quot;&gt;
 						{error instanceof Error ? error.message : m.error_title()}
-						&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button
+						&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}
+							&gt;{m.live_reconnect()}&lt;/button
 						&gt;
 					&lt;/p&gt;
 				{/snippet}
@@ -73,7 +77,7 @@
 				/&gt;
 			&lt;/svelte:boundary&gt;
 		{:else}
-			&lt;p class=&quot;muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+			&lt;p class=&quot;night__status&quot;&gt;{m.globe_loading()}&lt;/p&gt;
 		{/if}
 	&lt;/div&gt;</code></pre>
 </figure>
@@ -81,15 +85,15 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-45</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-47</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { Canvas } from '@threlte/core';
-	import { MediaQuery } from 'svelte/reactivity';
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import Scene, { type GlobeStop } from './Scene.svelte';
 
 	/**
@@ -114,13 +118,15 @@
 	let { stops, selected, onselect }: Props = $props();
 
 	/*
-	 * `MediaQuery` from `svelte/reactivity`: a media query as a reactive
-	 * value. When the operating system setting changes, `current` changes,
-	 * and the scene stops animating without a reload.
+	 * `reducedMotion` is the app's one `MediaQuery` for the setting (see
+	 * `src/lib/motion/prefers.svelte.ts`): a reactive value, so when the
+	 * operating system setting changes, `current` changes, and the scene
+	 * stops animating without a reload.
 	 */
-	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
-
 	let flying = $state(false);
+
+	/* The canvas fades in over 700ms once the scene has drawn its first frame; before that the frame is already night. */
+	let ready = $state(false);
 
 	/* The coastlines: the same prerendered file the map reads. */
 	async function loadWorld(): Promise&lt;FeatureCollection&lt;Geometry&gt;&gt; {
@@ -133,13 +139,13 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:47-99</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:49-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;globe&quot;&gt;
 	&lt;svelte:boundary&gt;
 		{#snippet pending()}
-			&lt;p class=&quot;globe__status muted&quot;&gt;{m.globe_loading()}&lt;/p&gt;
+			&lt;p class=&quot;globe__status&quot;&gt;{m.globe_loading()}&lt;/p&gt;
 		{/snippet}
 		{#snippet failed(error, reset)}
 			&lt;p class=&quot;globe__status issue&quot;&gt;
@@ -150,7 +156,7 @@
 
 		{const world = await loadWorld()}
 
-		&lt;div class=&quot;globe__canvas&quot;&gt;
+		&lt;div class=&quot;globe__canvas&quot; data-ready={ready ? '' : undefined}&gt;
 			&lt;Canvas&gt;
 				&lt;Scene
 					{stops}
@@ -160,6 +166,7 @@
 					reduced={reducedMotion.current}
 					{onselect}
 					onlanded={() =&gt; (flying = false)}
+					onfirstframe={() =&gt; (ready = true)}
 				/&gt;
 			&lt;/Canvas&gt;
 		&lt;/div&gt;
@@ -190,12 +197,12 @@
 	&lt;/div&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the two bits of state the scene does not own: whether the camera is flying, and whether this person prefers reduced motion. <code>MediaQuery</code> makes the second one live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded.</p>
+<p>The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from the app’s one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>, and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded.</p>
 <h3 id="the-scene">The scene</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:32-67</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:32-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">export interface GlobeStop {
@@ -213,9 +220,15 @@ interface Props {
 	reduced: boolean;
 	onselect: (id: string) =&gt; void;
 	onlanded: () =&gt; void;
+	/** The first rendered frame: the frame around the canvas fades it in on this. */
+	onfirstframe?: () =&gt; void;
 }
 
-let { stops, selected, world, flying, reduced, onselect, onlanded }: Props = $props();
+let { stops, selected, world, flying, reduced, onselect, onlanded, onfirstframe }: Props =
+	$props();
+
+/* Once. `useTask` runs every frame; the first one is the only one that matters here. */
+let drawn = false;
 
 interactivity();
 
@@ -238,7 +251,7 @@ const asLngLat = ([lng = 0, lat = 0]: readonly number[]): LngLat =&gt; ({ lng, l
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:69-92</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:75-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* Coastlines: every ring of every polygon becomes pairs of points. */
@@ -270,7 +283,7 @@ const outlines = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:94-129</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:100-135</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Leg {
@@ -314,10 +327,48 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:131-184</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:137-232</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	let camera = $state&lt;PerspectiveCamera&gt;();
+
+	/*
+	 * WHERE THE CAMERA STARTS
+	 * -----------------------
+	 * Above the route, far enough back that the sphere fills about 80% of
+	 * the frame's shorter side. `FOV` is vertical; the horizontal one comes
+	 * from the canvas's aspect, so a portrait phone, where the width is the
+	 * short side, backs the camera off instead of cutting the globe at both
+	 * edges. A sphere of radius R fills an angle of 2·asin(R / d) from a
+	 * distance d, so d = R / sin(0.4 · fov).
+	 *
+	 * The aim is the route's centre: the mean of the stops as unit vectors,
+	 * which is the right &quot;middle&quot; on a sphere — an average of longitudes is
+	 * not, across the antimeridian. Until the person turns the globe
+	 * (`touched`), a resize re-frames it; after that it is theirs.
+	 */
+	const FOV = 42;
+	const { size } = useThrelte();
+	let touched = false;
+
+	const home = $derived.by(() =&gt; {
+		const { width, height } = $size;
+		const vertical = (FOV * Math.PI) / 180;
+		const aspect = width &gt; 0 &amp;&amp; height &gt; 0 ? width / height : 1;
+		const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
+		const distanceAway = RADIUS / Math.sin(0.4 * Math.min(vertical, horizontal));
+		const centre = stops.reduce((sum, stop) =&gt; sum.add(toVector(stop)), new Vector3());
+		const aim = centre.lengthSq() &gt; 1e-6 ? centre.normalize() : toVector({ lng: 0, lat: 20 });
+		return aim.multiplyScalar(distanceAway);
+	});
+
+	$effect(() =&gt; {
+		// A selection or a flight moves the camera too, and it should not snap back afterwards.
+		if (flying || selected) touched = true;
+		if (!camera || touched) return;
+		camera.position.copy(home);
+		camera.lookAt(0, 0, 0);
+	});
 
 	/* Flight state: plain variables, advanced by the task and never rendered. */
 	let leg = 0;
@@ -341,6 +392,10 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 	});
 
 	useTask((delta) =&gt; {
+		if (!drawn) {
+			drawn = true;
+			onfirstframe?.();
+		}
 		if (!camera) return;
 
 		if (flying) {
@@ -376,23 +431,27 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:186-242</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:234-300</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;T.PerspectiveCamera
 	makeDefault
-	fov={42}
-	position={[0, 0.7, 2.7]}
+	fov={FOV}
 	bind:ref={camera}
-	oncreate={(ref) =&gt; ref.lookAt(0, 0, 0)}
+	oncreate={(ref) =&gt; {
+		ref.position.copy(home);
+		ref.lookAt(0, 0, 0);
+	}}
 &gt;
+	&lt;!-- Never closer than 1.4, and never so far that the home view could not be reached again. --&gt;
 	&lt;OrbitControls
 		enabled={!flying}
 		enablePan={false}
 		enableDamping={false}
 		minDistance={1.4}
-		maxDistance={4}
+		maxDistance={Math.max(4, home.length() * 1.2)}
 		rotateSpeed={0.5}
+		onstart={() =&gt; (touched = true)}
 	/&gt;
 &lt;/T.PerspectiveCamera&gt;
 
@@ -418,10 +477,16 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 	&lt;T.LineBasicMaterial color=&quot;#9cc4dc&quot; transparent opacity={0.55} /&gt;
 &lt;/T.LineSegments&gt;
 
+&lt;!--
+	The route and the stops wear the dark theme's state colours — `--sun` for
+	the arc, `--coral` for a stop — by hand, because a WebGL material cannot
+	read a token and the globe is a night scene whatever the page's theme.
+	The selected stop is white: the one thing lit.
+--&gt;
 &lt;!-- The route --&gt;
 {#each arcs as geometry, index (index)}
 	&lt;T.Line {geometry}&gt;
-		&lt;T.LineBasicMaterial color=&quot;#f2a65a&quot; linewidth={2} /&gt;
+		&lt;T.LineBasicMaterial color=&quot;#f59e0b&quot; linewidth={2} /&gt;
 	&lt;/T.Line&gt;
 {/each}
 
@@ -433,11 +498,11 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 		onclick={() =&gt; onselect(stop.id)}
 	&gt;
 		&lt;T.SphereGeometry args={[0.011, 16, 16]} /&gt;
-		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#ff6b57'} /&gt;
+		&lt;T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#fb7185'} /&gt;
 	&lt;/T.Mesh&gt;
 {/each}</code></pre>
 </figure>
-<p>The markup. A camera with <code>OrbitControls</code> from extras, disabled while flying so the two do not fight; two lights; <code>Stars</code> for a restrained bit of cinema, with <code>speed={0}</code> under reduced motion; the sphere; a slightly larger back-facing shell for an atmosphere; the coastlines; the arcs; and one small mesh per stop, scaled up when selected and clickable. <code>bind:ref={camera}</code> hands the three.js camera to the task. Every colour here is a literal, like the map’s, because WebGL does not read the cascade.</p>
+<p>The markup. A camera with <code>OrbitControls</code> from extras, disabled while flying so the two do not fight; two lights; <code>Stars</code> for a restrained bit of cinema, with <code>speed={0}</code> under reduced motion; the sphere; a slightly larger back-facing shell for an atmosphere; the coastlines; the arcs; and one small mesh per stop, scaled up when selected and clickable. <code>bind:ref={camera}</code> hands the three.js camera to the task. Every colour here is a literal, like the map’s, because WebGL does not read the cascade. The camera starts over the route — the mean of the stops as unit vectors, which is the right middle on a sphere where an average of longitudes is not — at the distance where the sphere fills about 80% of the frame’s shorter side: a sphere of radius R fills an angle of 2·asin(R/d) from a distance d, and the horizontal field of view comes from the canvas’s aspect, so a portrait phone backs the camera off instead of cutting the globe at both edges. Until the person turns the globe, a resize re-frames it; <code>OrbitControls</code>’ <code>onstart</code> is how the scene knows they have.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Threlte and not three.js in an attachment</h4>

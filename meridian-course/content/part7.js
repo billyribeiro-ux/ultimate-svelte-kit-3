@@ -23,7 +23,7 @@ export const part7 = [
 				type: 'p',
 				text: 'Chapter 01 gave the four questions: does it work with Svelte 5 and SvelteKit 3 *today*; is it the right shape; does it earn its bytes; could we remove it later. This chapter is the answers, one library at a time, and — more usefully — the ones that failed. A survey that only lists winners is an advertisement.'
 			},
-			code('package.json', 67, 98, { partial: true }),
+			code('package.json', 67, 99, { partial: true }),
 
 			{ type: 'h3', id: 'how', text: 'How each one was checked' },
 			{
@@ -130,12 +130,12 @@ mdsvex                 0.12.8
 			},
 
 			{ type: 'h3', id: 'parts', text: 'Idiom one: a root and its parts' },
-			code('src/lib/trip/StopDialog.svelte', 99, 111, { partial: true }),
+			code('src/lib/trip/StopDialog.svelte', 139, 160, { partial: true }),
 			{
 				type: 'p',
-				text: 'Bits UI components are trees of *parts*: `Dialog.Root` holds the state, `Dialog.Portal` moves the content to the end of the body, `Dialog.Overlay` and `Dialog.Content` are the elements, `Dialog.Title` and `Dialog.Description` wire the ARIA relationships. Each part accepts `class`, which is how the tokens get in. The state is on the root, controlled two ways: `open={mode !== null}` plus `onOpenChange` for the dialog whose openness is derived from something else, `bind:open` for the palette whose openness is its own.'
+				text: 'Bits UI components are trees of *parts*: `Dialog.Root` holds the state, `Dialog.Portal` moves the content to the end of the body, `Dialog.Overlay` and `Dialog.Content` are the elements, `Dialog.Title` and `Dialog.Description` wire the ARIA relationships. Each part accepts `class`, which is how the tokens get in. The state is on the root, controlled two ways: `open={mode !== null}` plus `onOpenChange` for the dialog whose openness is derived from something else, `bind:open` for the palette whose openness is its own. A part’s events are props as well: `onOpenAutoFocus` on `Dialog.Content` is where the stop dialog decides what takes focus when it opens — the place search from 40em, nothing new on a phone — by preventing the default and focusing the field itself.'
 			},
-			code('src/lib/trip/CommandPalette.svelte', 72, 87, { partial: true }),
+			code('src/lib/trip/CommandPalette.svelte', 125, 143, { partial: true }),
 			{
 				type: 'p',
 				text: 'The same idiom nests: the palette is a `Dialog` around a `Command`, and the `Command` has its own root and parts. Nothing about the composition is special — they are components — which is what makes a headless library composable in the first place.'
@@ -143,28 +143,28 @@ mdsvex                 0.12.8
 
 			{ type: 'h3', id: 'snippets', text: 'Idiom two: snippets that receive library state' },
 			code('src/lib/ui/DateRangeField.svelte', 65, 82, { partial: true }),
-			code('src/lib/trip/PlaceSearch.svelte', 56, 73),
+			code('src/lib/trip/PlaceSearch.svelte', 64, 81),
 			{
 				type: 'p',
 				text: 'When a part has to render something the library computes — the segments of a date input, the months and weekdays of a calendar, whether an item is selected — it exposes it through a `children` snippet with parameters. `{#snippet children({ segments })}` receives the segments and renders one `Segment` part per entry; `{#snippet children({ selected })}` receives the item’s state. This is Svelte 5’s replacement for slot props, and it is typed: the parameter’s shape comes from the library’s declarations.'
 			},
 
 			{ type: 'h3', id: 'state', text: 'Idiom three: your state, their behaviour' },
-			code('src/lib/trip/PlaceSearch.svelte', 25, 44),
+			code('src/lib/trip/PlaceSearch.svelte', 28, 47),
 			{
 				type: 'p',
 				text: 'The combobox filters nothing. It opens a list, moves a highlight, and reports a value; which items are in the list is yours, and here it is a `$derived` over a `$state` string that an `oninput` handler updates. No effect copies library state into Svelte state or back — the root’s `bind:value` and `onValueChange` are the whole contract, and a `$derived` reads whatever it needs. The moment you find yourself writing an effect to “sync” a headless component, look for the prop or the callback you missed.'
 			},
-			code('src/lib/trip/Expenses.svelte', 118, 131),
+			code('src/lib/trip/Expenses.svelte', 133, 146),
 			{
 				type: 'p',
 				text: 'TanStack Table is headless in the same sense with one more idiom: the table is an *object* with methods, created once, and its options are read through getters so the object sees the latest state without being re-created. `get data() { return rows }` is a reactive getter — the adapter reads it inside `$effect.pre` — so the live document’s rows reach the table as they change. The rendering is a plain `<table>` that asks the object what to draw.'
 			},
-			code('src/lib/trip/Expenses.svelte', 243, 268, { partial: true }),
+			code('src/lib/trip/Expenses.svelte', 390, 417, { partial: true }),
 			{
 				type: 'why',
 				title: 'Why headless is the right default for an application',
-				text: 'A styled component library brings a look, and the look is somebody else’s. A design system that is “Material with the colours changed” is recognisable from across the room. Headless libraries let a small team have the behaviour of a mature library and a design that is their own — every visible thing in this project is in `tokens.css` and a component’s `<style>`, and swapping Bits UI for another headless library would change imports and not a single class. The cost is that you write the styles, and for a dialog, a combobox and a palette that is an afternoon.'
+				text: 'A styled component library brings a look, and the look is somebody else’s. A design system that is “Material with the colours changed” is recognisable from across the room. Headless libraries let a small team have the behaviour of a mature library and a design that is their own — every visible thing in this project is in `src/lib/styles` and a component’s `<style>`, and swapping Bits UI for another headless library would change imports and not a single class. The cost is that you write the styles, and for a dialog, a combobox and a palette that is an afternoon.'
 			},
 			{
 				type: 'checkpoint',
@@ -198,17 +198,17 @@ mdsvex                 0.12.8
 					'**The library exposes a value that changes over time** — a position watch, a media query, a resize observer — neither: use `createSubscriber`, which chapter 40 covers.'
 				]
 			},
-			code('src/lib/map/MapView.svelte', 101, 129, { partial: true }),
-			code('src/lib/globe/Scene.svelte', 226, 242),
+			code('src/lib/map/MapView.svelte', 151, 192, { partial: true }),
+			code('src/lib/globe/Scene.svelte', 284, 300),
 			{
 				type: 'p',
 				text: 'Two wrappers, one idea: an `{#each}` over the domain produces library objects, keyed so a change to one stop touches one object. Both wrappers hand back the underlying instance when you need it — `bind:map` on the map, `bind:ref` on the camera — for the one or two imperative calls a page genuinely needs. If you find yourself reaching for the instance on every line, the wrapper is the wrong shape for that part.'
 			},
-			code('src/lib/trip/Notes.svelte', 48, 69),
-			code('src/lib/motion/reveal.ts', 34, 67),
+			code('src/lib/trip/Notes.svelte', 50, 72),
+			code('src/lib/motion/hero.ts', 30, 51),
 			{
 				type: 'p',
-				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP tweens its children — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README.'
+				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README.'
 			},
 
 			{ type: 'h3', id: 'costs', text: 'What each shape costs' },
@@ -223,11 +223,11 @@ mdsvex                 0.12.8
 			},
 
 			{ type: 'h3', id: 'cannot-hide', text: 'Two things no wrapper can hide' },
-			code('src/lib/map/style.ts', 23, 48, { partial: true }),
+			code('src/lib/map/style.ts', 60, 82, { partial: true }),
 			code('src/lib/map/MapView.svelte', 1, 13),
 			{
 				type: 'p',
-				text: 'Colours, and workers. A canvas does not read the CSS cascade, so both the map style and the globe’s materials take literal colours and rebuild when the theme flips — the one place the tokens rule is broken, with the reason beside it. And a library that uses a Web Worker needs Vite to emit the worker as a file and the CSP to allow it: `?worker&url`, `setWorkerUrl` in a module script, `worker-src "self" blob:`. A wrapper can document these; it cannot do them for you.'
+				text: 'Colours, and workers. A canvas does not read the CSS cascade, so both the map style and the globe’s materials take literal colours — the map rebuilds its style when the theme flips, and the globe is a night scene in both themes. They are two of the four places a token is copied by hand; the header of `tokens.css` names all four, and each copy has its reason beside it. And a library that uses a Web Worker needs Vite to emit the worker as a file and the CSP to allow it: `?worker&url`, `setWorkerUrl` in a module script, `worker-src "self" blob:`. A wrapper can document these; it cannot do them for you.'
 			},
 			{
 				type: 'checkpoint',
@@ -254,10 +254,11 @@ mdsvex                 0.12.8
 
 			{ type: 'h3', id: 'shipped', text: 'What the framework ships' },
 			code('src/lib/ui/theme.svelte.ts', 23, 30, { partial: true }),
-			code('src/lib/ui/Header.svelte', 17, 23),
+			code('src/lib/ui/Header.svelte', 20, 26),
+			code('src/lib/motion/prefers.svelte.ts', 1, 19),
 			{
 				type: 'p',
-				text: '`MediaQuery` is a media query as a reactive value: construct it once, read `.current` anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme and the globe for reduced motion. `svelte/reactivity/window` exports `scrollY`, `innerWidth`, `online` and the rest as reactive values that are `undefined` on the server, which is why `scrollY.current ?? 0`. Both replace an `onMount` with `addEventListener` and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.'
+				text: '`MediaQuery` is a media query as a reactive value: construct it once, read `.current` anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme; `src/lib/motion/prefers.svelte.ts` constructs one for reduced motion that the globe, the itinerary’s FLIP, the map’s `fitBounds`, the hero timeline and the root layout’s view transitions all read. Four components construct one for a width — the trip page’s side map, the toaster’s corner, the header sheet that closes itself when the window widens past it, and the stop dialog’s first focus — each a query the markup or a `$derived` reads, never a resize listener. `svelte/reactivity/window` exports `scrollY`, `innerWidth`, `online` and the rest as reactive values that are `undefined` on the server, which is why `scrollY.current ?? 0`. Both replace an `onMount` with `addEventListener` and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.'
 			},
 			code('src/lib/map/geolocation.svelte.ts', 28, 73),
 			{
@@ -266,17 +267,17 @@ mdsvex                 0.12.8
 			},
 
 			{ type: 'h3', id: 'runed', text: 'Where runed comes in' },
-			code('src/routes/(site)/explore/+page.svelte', 32, 50),
+			code('src/routes/(site)/explore/+page.svelte', 47, 65),
 			{
 				type: 'p',
 				text: 'runed is a collection of the utilities the framework does not ship, written against runes by the Bits UI maintainers. The project uses one, `Debounced`, and the reason is the one from chapter 35: a debounce is fifteen lines that get a subtle bug, and one import that does not. The others most apps reach for are `useEventListener` (an event with automatic cleanup), `ElementSize` and `useResizeObserver` (an element’s box as state), `PersistedState` (a `$state` mirrored to storage — the theme class in this project is a hand-written one, because it also has to set a data attribute), `IsIdle`, `Previous`, and `FiniteStateMachine`. The line: if the framework ships it, use the framework’s; if runed has it and you would write more than ten lines, use runed’s; otherwise write it.'
 			},
 
 			{ type: 'h3', id: 'plain-map', text: 'When a plain `Map` is right' },
-			code('src/lib/trip/Itinerary.svelte', 60, 69),
+			code('src/lib/trip/Itinerary.svelte', 76, 85),
 			{
 				type: 'p',
-				text: '`svelte/reactivity` also exports `SvelteMap`, `SvelteSet`, `SvelteDate` and `SvelteURL` — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a `new Map()`, and three times in this project the suggestion is declined with a comment. The `Map` here is built whole inside a `$derived.by` and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: `SvelteMap` for a map that lives across renders and changes; a plain `Map` for one that is computed and returned.'
+				text: '`svelte/reactivity` also exports `SvelteMap`, `SvelteSet`, `SvelteDate` and `SvelteURL` — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a `new Map()`, and four times in this project the suggestion is declined with a comment. The `Map` here is built whole inside a `$derived.by` and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: `SvelteMap` for a map that lives across renders and changes; a plain `Map` for one that is computed and returned. The same file has the other case, a few lines down: the stops that have just arrived are a `SvelteSet`, because the set is added to and deleted from over time and the template reads it to light up a card.'
 			},
 			{
 				type: 'why',

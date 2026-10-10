@@ -183,7 +183,7 @@ export async function openTab(page: Page, name: string): Promise&lt;void&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/helpers.ts<span class="code__lines">:61-78</span></span>
+		<span class="code__file">e2e/helpers.ts<span class="code__lines">:61-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -196,16 +196,28 @@ export async function typeDate(
 	which: 'start' | 'end',
 	date: { year: number; month: number; day: number }
 ): Promise&lt;void&gt; {
-	const input = page.locator('.range__input').nth(which === 'start' ? 0 : 1);
+	await typeDateInto(page.locator('.range__input').nth(which === 'start' ? 0 : 1), date);
+}
+
+/**
+ * Type a date into any Bits UI date input — the range's two, or the single
+ * date of an expense — segment by segment, whatever order the locale puts
+ * them in.
+ */
+export async function typeDateInto(
+	input: Locator,
+	date: { year: number; month: number; day: number }
+): Promise&lt;void&gt; {
+	const keyboard = input.page().keyboard;
 	await input.locator('[data-segment=&quot;month&quot;]').click();
-	await page.keyboard.type(String(date.month).padStart(2, '0'));
+	await keyboard.type(String(date.month).padStart(2, '0'));
 	await input.locator('[data-segment=&quot;day&quot;]').click();
-	await page.keyboard.type(String(date.day).padStart(2, '0'));
+	await keyboard.type(String(date.day).padStart(2, '0'));
 	await input.locator('[data-segment=&quot;year&quot;]').click();
-	await page.keyboard.type(String(date.year));
+	await keyboard.type(String(date.year));
 }</code></pre>
 </figure>
-<p><code>typeDate</code> exists because Bits UI’s date picker is not an <code>&lt;input type=&quot;date&quot;&gt;</code>; it is three editable segments per date, in the locale’s order, and Playwright’s <code>fill()</code> has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.</p>
+<p><code>typeDate</code> exists because Bits UI’s date picker is not an <code>&lt;input type=&quot;date&quot;&gt;</code>; it is three editable segments per date, in the locale’s order, and Playwright’s <code>fill()</code> has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does — and the work is in <code>typeDateInto</code>, which takes any date input as a locator, because the expense form’s date is the same picker now: the trip’s two dates find their input by position in the range, the expense finds its by role, <code>getByRole(&quot;group&quot;, { name: &quot;Date&quot;, exact: true })</code>. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.</p>
 <h3 id="suites">Five suites</h3>
 
 <figure class="code">
@@ -326,7 +338,7 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/trip.e2e.ts<span class="code__lines">:60-78</span></span>
+		<span class="code__file">e2e/trip.e2e.ts<span class="code__lines">:60-83</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('an expense is added and the settle-up follows', async ({ page }) =&gt; {
@@ -335,7 +347,12 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 
 	await page.getByLabel('What for').fill('Pastéis de nata');
 	await page.getByLabel(/Amount/).fill('12.60');
-	await page.getByLabel('Date').fill('2026-05-10');
+	// The expense date is the same segmented picker as the trip's dates (in the page's language, not the browser's).
+	await typeDateInto(page.getByRole('group', { name: 'Date', exact: true }), {
+		year: 2026,
+		month: 5,
+		day: 10
+	});
 	await page.getByRole('button', { name: 'Add an expense' }).click();
 
 	await expect(page.getByRole('cell', { name: 'Pastéis de nata' })).toBeVisible();
@@ -349,7 +366,7 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 	await expect(page.getByRole('cell', { name: 'Pastéis de nata' })).toHaveCount(0);
 });</code></pre>
 </figure>
-<p>The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.</p>
+<p>The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. Its date used to be <code>fill(&quot;2026-05-10&quot;)</code> on a native date input; the field became the segmented picker, in the page’s language rather than the browser’s, so the test types the date segment by segment like a person — the same assertion, through the control that ships. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.</p>
 
 <figure class="code">
 	<figcaption>

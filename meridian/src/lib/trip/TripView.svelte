@@ -1,9 +1,21 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { MediaQuery } from 'svelte/reactivity';
+	import { Tween } from 'svelte/motion';
+	import { cubicOut } from 'svelte/easing';
 	import { browser } from '$app/env';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
-	import { GearSixIcon } from 'phosphor-svelte';
+	import {
+		GearSixIcon,
+		GlobeHemisphereWestIcon,
+		ListNumbersIcon,
+		MapTrifoldIcon,
+		NotePencilIcon,
+		ReceiptIcon,
+		UsersThreeIcon
+	} from 'phosphor-svelte';
 	import { formatDistance } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
@@ -67,6 +79,90 @@
 		companions: m.tab_companions
 	};
 
+	const tabIcons: Record<Tab, typeof MapTrifoldIcon> = {
+		itinerary: ListNumbersIcon,
+		map: MapTrifoldIcon,
+		globe: GlobeHemisphereWestIcon,
+		expenses: ReceiptIcon,
+		notes: NotePencilIcon,
+		companions: UsersThreeIcon
+	};
+
+	/*
+	 * THE TAB INDICATOR
+	 * -----------------
+	 * One 2px bar under the current tab, positioned from the current link's
+	 * `offsetLeft` and `offsetWidth`. Its position is a `Tween` from
+	 * `svelte/motion`: a value that, when set, moves to the new one over a
+	 * duration — 160ms with the `--ease-out` curve, or 0 under reduced
+	 * motion — and the markup reads `.current` every frame. The first
+	 * position is set with `{ duration: 0 }`, so the bar starts under the
+	 * tab instead of sliding in from the left edge.
+	 *
+	 * The effect reads `tab`, so it re-runs on every switch, and nothing
+	 * else reactive, so it does not run when the document changes. The
+	 * strip scrolls sideways on a phone, so the current link is also
+	 * scrolled into view — `inline: 'nearest'`, not `smooth`: the reset
+	 * stylesheet says why programmatic scrolls do not glide here.
+	 */
+	let strip = $state<HTMLElement>();
+	const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
+	let settled = false;
+	let overflowing = $state(false);
+
+	$effect(() => {
+		void tab;
+		const current = strip?.querySelector<HTMLElement>('[aria-current="page"]');
+		if (!current || !strip) return;
+		const target = { x: current.offsetLeft, w: current.offsetWidth };
+		const instant = !settled || untrack(() => reducedMotion.current);
+		void indicator.set(target, instant ? { duration: 0 } : undefined);
+		settled = true;
+		current.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+	});
+
+	/* The strip fades at its edges while there is more of it to scroll to. */
+	$effect(() => {
+		if (!strip) return;
+		const element = strip;
+		const observer = new ResizeObserver(() => {
+			overflowing = element.scrollWidth > element.clientWidth + 1;
+		});
+		observer.observe(element);
+		return () => observer.disconnect();
+	});
+
+	/*
+	 * THE FRAME FITS THE SCREEN
+	 * -------------------------
+	 * The map and the globe are as tall as what is left of the viewport
+	 * below the trip's header and the tabs, so their bottom edge — the map's
+	 * status pill, the globe's "Fly the route" — is on screen without a
+	 * scroll, on a phone and at 1440×900 alike. That height depends on how
+	 * tall the header is, which depends on the trip's name, the width and
+	 * the language, so it is measured: the panel's top, in page coordinates,
+	 * written to `--frame-top` whenever the header changes size. CSS does
+	 * the rest, with a floor and a ceiling.
+	 */
+	let header = $state<HTMLElement>();
+	let panel = $state<HTMLElement>();
+	let frameTop = $state<number>();
+
+	$effect(() => {
+		if (!header || !panel) return;
+		const element = panel;
+		const measure = () => {
+			frameTop = Math.round(element.getBoundingClientRect().top + window.scrollY);
+		};
+		const observer = new ResizeObserver(measure);
+		observer.observe(header);
+		window.addEventListener('resize', measure);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', measure);
+		};
+	});
+
 	/*
 	 * PRESENCE
 	 * --------
@@ -112,13 +208,21 @@
 		untrack(() => fireAndForget(heartbeat({ tripId, stopId }), 'presence heartbeat'));
 	});
 
+	/*
+	 * The side-by-side map exists from 64em up, and not as `display: none`
+	 * below: a hidden MapLibre is still a WebGL context, and a phone would
+	 * run two of them for one trip. `MediaQuery` is `false` on the server,
+	 * so the map is never server-rendered — it is a canvas, it never was.
+	 */
+	const wide = new MediaQuery('(min-width: 64em)');
+
 	/** The stop dialog: closed, adding at a day (and maybe a point), or editing a stop. */
 	let dialog: Mode | null = $state(null);
 
 	async function moveTo(id: string, point: { lng: number; lat: number }) {
 		try {
 			await updateStop({ id, lng: point.lng, lat: point.lat });
-			toast(m.stop_moved());
+			toast.success(m.stop_moved());
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : String(error));
 		}
@@ -129,14 +233,16 @@
 	<title>{view.trip.name} — {m.app_name()}</title>
 </svelte:head>
 
-<article class="trip container">
-	<header class="trip__header">
-		<div class="stack stack--sm">
+<article
+	class="trip container"
+	style:--frame-top={frameTop === undefined ? undefined : `${frameTop}px`}
+>
+	<header class="trip__header" bind:this={header}>
+		<div class="trip__titles">
 			<h1 class="trip__name">{view.trip.name}</h1>
-			<p class="cluster muted">
+			<p class="trip__meta dotted tabular">
 				<span>{formatRange(view.trip.startDate, view.trip.endDate, locale)}</span>
 				{#if view.total > 0}
-					<span>·</span>
 					<span>{m.route_total({ distance: formatDistance(view.total, locale) })}</span>
 				{/if}
 			</p>
@@ -154,14 +260,23 @@
 					{m.live_connected()}
 				</span>
 			{:else if live.current}
-				<button class="btn btn--sm" type="button" onclick={() => live.reconnect()}>
+				<button
+					class="btn btn--sm btn--ghost btn--danger"
+					type="button"
+					onclick={() => live.reconnect()}
+				>
 					{m.live_reconnect()}
 				</button>
 			{/if}
 			{#if owner}
-				<a class="btn btn--sm btn--ghost" href={href('/(site)/t/[slug=slug]/settings', { slug })}>
+				<!-- Icon-only on a phone; the word is still the link's name, visually hidden there. -->
+				<a
+					class="btn btn--sm btn--ghost trip__settings"
+					href={href('/(site)/t/[slug=slug]/settings', { slug })}
+					title={m.trip_settings()}
+				>
 					<GearSixIcon size={16} aria-hidden="true" />
-					{m.trip_settings()}
+					<span class="trip__settings-label">{m.trip_settings()}</span>
 				</a>
 			{/if}
 		</div>
@@ -173,30 +288,69 @@
 		as a tablist keeps it — survive the navigation. SvelteKit 3 folded the
 		old `noscroll` and `keepfocus` attributes into this one `reset`, and
 		only warns about the old names in development: it no longer reads them.
+
+		The strip is sticky under the header, so on a long itinerary the tabs
+		stay in reach; `data-overflow` turns the edge fade on while there is
+		more strip to scroll to.
 	-->
-	<nav class="tabs no-print" aria-label={m.app_name()}>
+	<nav
+		class="tabs no-print"
+		aria-label={m.app_name()}
+		bind:this={strip}
+		data-overflow={overflowing ? '' : undefined}
+	>
 		{#each TABS as name (name)}
+			{@const Icon = tabIcons[name]}
 			<a
 				class="tabs__link"
 				href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
 				aria-current={tab === name ? 'page' : undefined}
 				data-sveltekit-reset="false"
 			>
+				<Icon size={16} aria-hidden="true" />
 				{tabLabels[name]()}
 			</a>
 		{/each}
+		<span
+			class="tabs__indicator"
+			aria-hidden="true"
+			style:--x="{indicator.current.x}px"
+			style:--w="{indicator.current.w}px"
+		></span>
 	</nav>
 
-	{#if tab === 'itinerary'}
-		<div class="split">
-			<Itinerary
-				{view}
-				{editable}
-				viewerId={initial.viewerId}
-				onadd={(date) => (dialog = { kind: 'add', date })}
-				onedit={(stop) => (dialog = { kind: 'edit', stop })}
-			/>
-			<div class="split__map">
+	<!-- The panel has its own transition name: the tabs and the header hold still while it changes. -->
+	<div class="trip__panel" style:view-transition-name="trip-panel" bind:this={panel}>
+		{#if tab === 'itinerary'}
+			<!--
+				On a phone the itinerary is the list and the Map tab is the map.
+				The side-by-side map only exists from 64em, so a phone never
+				runs two WebGL contexts for one trip and never scrolls past every
+				day to find a map it has one tab over.
+			-->
+			<div class="split">
+				<Itinerary
+					{view}
+					{editable}
+					viewerId={initial.viewerId}
+					onadd={(date) => (dialog = { kind: 'add', date })}
+					onedit={(stop) => (dialog = { kind: 'edit', stop })}
+				/>
+				{#if wide.current}
+					<div class="split__map">
+						<MapView
+							stops={view.scheduled}
+							selected={view.selectedStopId}
+							{editable}
+							onselect={(id) => view.select(id)}
+							onadd={(point) => (dialog = { kind: 'add', date: null, point })}
+							onmove={moveTo}
+						/>
+					</div>
+				{/if}
+			</div>
+		{:else if tab === 'map'}
+			<div class="full-map">
 				<MapView
 					stops={view.scheduled}
 					selected={view.selectedStopId}
@@ -206,59 +360,52 @@
 					onmove={moveTo}
 				/>
 			</div>
-		</div>
-	{:else if tab === 'map'}
-		<div class="full-map">
-			<MapView
-				stops={view.scheduled}
-				selected={view.selectedStopId}
-				{editable}
-				onselect={(id) => view.select(id)}
-				onadd={(point) => (dialog = { kind: 'add', date: null, point })}
-				onmove={moveTo}
-			/>
-		</div>
-	{:else if tab === 'globe'}
-		<!--
-			THE GLOBE, WHEN ASKED FOR
-			-------------------------
-			three.js and Threlte are the largest dependency in the project, and
-			most visits never open this tab. `import()` in markup loads them on
-			demand; the boundary shows the pending snippet until the chunk is
-			here, and the failed snippet if the network is not. `browser`
-			guards it because a WebGL scene has no server-rendered form.
-		-->
-		<div class="full-map">
-			{#if browser}
-				<svelte:boundary>
-					{#snippet pending()}
-						<p class="muted">{m.globe_loading()}</p>
-					{/snippet}
-					{#snippet failed(error, reset)}
-						<p class="issue">
-							{error instanceof Error ? error.message : m.error_title()}
-							<button class="btn btn--sm" type="button" onclick={reset}>{m.live_reconnect()}</button
-							>
-						</p>
-					{/snippet}
-					{const { default: Globe } = await import('#lib/globe/Globe.svelte')}
-					<Globe
-						stops={view.scheduled}
-						selected={view.selectedStopId}
-						onselect={(id) => view.select(id)}
-					/>
-				</svelte:boundary>
-			{:else}
-				<p class="muted">{m.globe_loading()}</p>
-			{/if}
-		</div>
-	{:else if tab === 'expenses'}
-		<Expenses {view} {editable} viewerId={initial.viewerId} />
-	{:else if tab === 'notes'}
-		<Notes {view} {editable} />
-	{:else if tab === 'companions'}
-		<Companions {view} role={initial.role} viewerId={initial.viewerId} />
-	{/if}
+		{:else if tab === 'globe'}
+			<!--
+				THE GLOBE, WHEN ASKED FOR
+				-------------------------
+				three.js and Threlte are the largest dependency in the project, and
+				most visits never open this tab. `import()` in markup loads them on
+				demand; the boundary shows the pending snippet until the chunk is
+				here, and the failed snippet if the network is not. `browser`
+				guards it because a WebGL scene has no server-rendered form.
+
+				The frame is painted night before the chunk arrives, so the tab
+				never flashes cream and then space.
+			-->
+			<div class="full-map full-map--night">
+				{#if browser}
+					<svelte:boundary>
+						{#snippet pending()}
+							<p class="night__status">{m.globe_loading()}</p>
+						{/snippet}
+						{#snippet failed(error, reset)}
+							<p class="night__status issue">
+								{error instanceof Error ? error.message : m.error_title()}
+								<button class="btn btn--sm" type="button" onclick={reset}
+									>{m.live_reconnect()}</button
+								>
+							</p>
+						{/snippet}
+						{const { default: Globe } = await import('#lib/globe/Globe.svelte')}
+						<Globe
+							stops={view.scheduled}
+							selected={view.selectedStopId}
+							onselect={(id) => view.select(id)}
+						/>
+					</svelte:boundary>
+				{:else}
+					<p class="night__status">{m.globe_loading()}</p>
+				{/if}
+			</div>
+		{:else if tab === 'expenses'}
+			<Expenses {view} {editable} viewerId={initial.viewerId} />
+		{:else if tab === 'notes'}
+			<Notes {view} {editable} />
+		{:else if tab === 'companions'}
+			<Companions {view} role={initial.role} viewerId={initial.viewerId} />
+		{/if}
+	</div>
 </article>
 
 {#if editable}
@@ -286,28 +433,93 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-5);
-		padding-block: var(--space-5) var(--space-8);
+		padding-block: var(--space-5) var(--section);
 	}
 
+	/*
+	 * The status tools — palette, live chip, settings — share the name's
+	 * row, top right, on every width: on a phone a row of their own cost
+	 * 60px that the map below needed. The titles block is `display:
+	 * contents`, so its three children sit on the header's grid directly
+	 * and the meta line and the lede run the full width under both.
+	 */
 	.trip__header {
 		display: grid;
-		gap: var(--space-4);
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-areas:
+			'name status'
+			'meta meta'
+			'lede lede';
+		align-items: start;
+		gap: var(--space-2) var(--space-3);
 	}
 
+	.trip__titles {
+		display: contents;
+	}
+
+	/* The trip's name is 2xl, one step under a page title: the page is the trip, the name is the thing on it. */
 	.trip__name {
+		grid-area: name;
 		font-size: var(--text-2xl);
+		max-inline-size: 20ch;
 		view-transition-name: trip-title;
 	}
 
-	.trip__lede {
+	.trip__meta {
+		grid-area: meta;
 		color: var(--ink-2);
-		max-width: var(--measure);
+		font-size: var(--text-sm);
+	}
+
+	.trip__lede {
+		grid-area: lede;
+		color: var(--ink-2);
+		max-inline-size: var(--measure);
+	}
+
+	.trip__status {
+		grid-area: status;
+		justify-content: flex-end;
+		gap: var(--space-2);
+	}
+
+	/* A ghost button's padding is not part of its look: the icon, not the box, lines up with the gutter. */
+	.trip__settings {
+		margin-inline-end: calc(-1 * var(--space-2));
+	}
+
+	.trip__settings-label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+	}
+
+	@media (max-width: 47.99em) {
+		.trip__settings {
+			width: var(--control-sm);
+			padding: 0;
+		}
+	}
+
+	@media (min-width: 48em) {
+		.trip__settings-label {
+			position: static;
+			width: auto;
+			height: auto;
+			overflow: visible;
+			clip: auto;
+		}
 	}
 
 	.live {
 		gap: var(--space-2);
 	}
 
+	/* The one ambient animation in the product. It is information: the stream is up. */
 	.live__dot {
 		width: 0.5rem;
 		height: 0.5rem;
@@ -328,27 +540,91 @@
 		}
 	}
 
+	/*
+	 * The tab strip scrolls sideways on a phone, snapping to a tab, with a
+	 * fade at each edge while there is more to see (`data-overflow`). It
+	 * sticks under the header. Scrollbars are hidden because the fade and
+	 * the snap are the affordance; the indicator moves between tabs.
+	 *
+	 * `overflow-y: hidden`, and the hairline is an inset shadow rather than
+	 * a border: a scroll container clips at its padding box, so a bar that
+	 * sat on the border was cut to 1px and made the strip scroll a pixel
+	 * up and down. Now the 2px bar sits inside, over the hairline.
+	 */
 	.tabs {
+		position: sticky;
+		top: var(--header-h);
+		z-index: var(--z-sticky);
 		display: flex;
 		gap: var(--space-1);
 		overflow-x: auto;
-		border-bottom: 1px solid var(--line);
+		overflow-y: hidden;
+		scroll-snap-type: x proximity;
+		/* Wider than the 24px edge fade, so the tab scrolled into view never sits in the fade. */
+		scroll-padding-inline: var(--space-6);
 		scrollbar-width: none;
+		box-shadow: inset 0 -1px var(--line);
+		background: var(--paper);
+	}
+
+	.tabs::-webkit-scrollbar {
+		display: none;
+	}
+
+	.tabs[data-overflow] {
+		mask-image: linear-gradient(
+			to right,
+			transparent,
+			#000 var(--space-4),
+			#000 calc(100% - var(--space-5)),
+			transparent
+		);
 	}
 
 	.tabs__link {
 		flex: 0 0 auto;
-		padding: var(--space-2) var(--space-3);
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+		min-height: var(--control);
+		padding-inline: var(--space-3);
+		scroll-snap-align: start;
 		text-decoration: none;
 		color: var(--ink-2);
+		font-size: var(--text-sm);
 		font-weight: 500;
-		border-bottom: 2px solid transparent;
-		margin-bottom: -1px;
 	}
 
+	/* The current tab is ink, instantly; the bar below does the moving. */
 	.tabs__link[aria-current='page'] {
-		color: var(--sea);
-		border-bottom-color: var(--sea);
+		color: var(--ink);
+	}
+
+	/*
+	 * Inside the link, not around it: the strip scrolls sideways, and a
+	 * scroll container clips what overflows it on both axes, so a ring
+	 * drawn outside a tab lost its top and bottom and kept only its sides.
+	 */
+	.tabs__link:focus-visible {
+		outline-offset: -2px;
+		border-radius: var(--radius-sm);
+		box-shadow: none;
+	}
+
+	/* Positioned by the tween in the script; no CSS transition, so the two never fight. */
+	.tabs__indicator {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		height: 2px;
+		width: var(--w);
+		translate: var(--x) 0;
+		background: var(--sea);
+	}
+
+	.trip__panel {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	.split {
@@ -356,29 +632,54 @@
 		gap: var(--space-5);
 	}
 
-	.split__map {
-		height: 22rem;
+	/* What is left of the screen under the panel's top (the script measures it), between 20rem and 46rem. */
+	.full-map {
+		height: clamp(20rem, calc(100dvh - var(--frame-top, 18rem) - var(--space-4)), 46rem);
+		border-radius: var(--radius-xl);
+		overflow: hidden;
 	}
 
-	.full-map {
-		height: min(70dvh, 44rem);
+	/*
+	 * Night, before the globe arrives: `--night` is the globe's own frame,
+	 * so the tab never flashes cream and then space, and the pending text
+	 * is already in the pale blue the globe will use. The frame carries the
+	 * hairline, because it is here before the globe is; the globe stretches
+	 * to fill it (a grid item would otherwise shrink to its content and sit
+	 * in the middle as a second, narrower frame), and only the pending text
+	 * is centred.
+	 */
+	.full-map--night {
+		display: grid;
+		background: var(--night);
+		border: 1px solid var(--line);
+	}
+
+	.night__status {
+		place-self: center;
+		padding: var(--space-6);
+		color: var(--night-ink);
+		font-size: var(--text-sm);
+		text-align: center;
 	}
 
 	@media (min-width: 64em) {
-		.trip__header {
-			grid-template-columns: 1fr auto;
-			align-items: start;
-		}
-
+		/*
+		 * The split: seven parts list to five parts map. The map column is
+		 * sticky below the header and the sticky tab strip, and exactly as
+		 * tall as what is left of the viewport.
+		 */
 		.split {
-			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+			grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
 			align-items: start;
 		}
 
 		.split__map {
 			position: sticky;
-			top: calc(var(--header-h) + var(--space-4));
-			height: calc(100dvh - var(--header-h) - var(--space-8));
+			top: calc(var(--header-h) + var(--control) + var(--space-4));
+			height: calc(100dvh - var(--header-h) - var(--control) - var(--space-8));
+			border-radius: var(--radius-xl);
+			overflow: hidden;
+			box-shadow: var(--shadow-1);
 		}
 	}
 </style>

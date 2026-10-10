@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { CheckIcon, CopyIcon } from 'phosphor-svelte';
+	import { toast } from 'svelte-sonner';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Visibility } from '#lib/domain/schemas.ts';
+	import { pop } from '#lib/motion/transitions.ts';
 
 	/**
 	 * PUTTING A TRIP ON ANOTHER PAGE
@@ -40,7 +43,43 @@
 	const elementSnippet = $derived(
 		`<script src="${origin}/embed/meridian-route.js">${closeScript}\n<meridian-route slug="${slug}" origin="${origin}"></meridian-route>`
 	);
+
+	/* Which snippet was copied a moment ago; its button shows a check for 1.6s. */
+	let copied = $state<'frame' | 'element' | null>(null);
+
+	async function copy(which: 'frame' | 'element', text: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			toast.success(m.companions_copied());
+			copied = which;
+			setTimeout(() => (copied = null), 1600);
+		} catch {
+			// The snippet is on screen; a person can still select it.
+		}
+	}
 </script>
+
+<!--
+	Each button says what it copies — "Copy the frame code", "Copy the
+	element code" — to a screen reader, and "Copy" on screen, under the
+	heading that already says which. The toast announces "Copied"; the
+	button does not repeat it.
+-->
+{#snippet copyButton(which: 'frame' | 'element', text: string)}
+	<button
+		class="btn btn--sm snippet__copy"
+		type="button"
+		aria-label={which === 'frame' ? m.embed_copy_frame() : m.embed_copy_element()}
+		onclick={() => copy(which, text)}
+	>
+		{#if copied === which}
+			<span class="copy__icon" in:pop><CheckIcon size={14} aria-hidden="true" /></span>
+		{:else}
+			<span class="copy__icon"><CopyIcon size={14} aria-hidden="true" /></span>
+		{/if}
+		{m.embed_copy()}
+	</button>
+{/snippet}
 
 <section class="card card--pad stack">
 	<h2>{m.embed_heading()}</h2>
@@ -48,25 +87,50 @@
 		<p class="muted">{m.embed_only_link()}</p>
 	{:else}
 		<div class="stack stack--sm">
-			<h3 class="label">{m.embed_iframe()}</h3>
-			<pre class="snippet"><code>{frameSnippet}</code></pre>
+			<div class="snippet__head">
+				<h3 class="overline">{m.embed_iframe()}</h3>
+				{@render copyButton('frame', frameSnippet)}
+			</div>
+			<pre class="snippet well"><code>{frameSnippet}</code></pre>
 		</div>
 		<div class="stack stack--sm">
-			<h3 class="label">{m.embed_element()}</h3>
-			<pre class="snippet"><code>{elementSnippet}</code></pre>
+			<div class="snippet__head">
+				<h3 class="overline">{m.embed_element()}</h3>
+				{@render copyButton('element', elementSnippet)}
+			</div>
+			<pre class="snippet well"><code>{elementSnippet}</code></pre>
 		</div>
-		<meridian-route {slug} {origin}></meridian-route>
+		<!-- The real element, in a tier-2 well, so what a host page would show is shown here first. -->
+		<div class="stack stack--sm">
+			<h3 class="overline">{m.embed_preview()}</h3>
+			<div class="preview well">
+				<meridian-route {slug} {origin}></meridian-route>
+			</div>
+		</div>
 	{/if}
 </section>
 
 <style>
+	.snippet__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+
 	.snippet {
-		padding: var(--space-3);
-		border-radius: var(--radius-sm);
-		background: var(--paper-3);
 		font-size: var(--text-xs);
 		overflow-x: auto;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+
+	.preview {
+		padding: var(--space-4);
+	}
+
+	.copy__icon {
+		display: inline-grid;
+		place-items: center;
 	}
 </style>

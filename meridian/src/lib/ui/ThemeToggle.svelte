@@ -35,6 +35,7 @@
 </fieldset>
 
 <style>
+	/* A tier-2 track; the chosen option is a tier-3 pill with a shadow. No thumb slides: the colours change, 160ms, and that is all. */
 	.theme {
 		display: inline-flex;
 		padding: 2px;
@@ -48,20 +49,31 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
+		width: 2rem;
+		height: 2rem;
 		border-radius: 50%;
 		color: var(--ink-3);
 		cursor: pointer;
 		transition:
-			background-color var(--dur-fast) var(--ease-out),
-			color var(--dur-fast) var(--ease-out);
+			background-color var(--dur-2) var(--ease-out),
+			color var(--dur-2) var(--ease-out);
 	}
 
+	/* A finger needs more than a pointer does. */
+	@media (pointer: coarse) {
+		.theme__option {
+			width: 2.25rem;
+			height: 2.25rem;
+		}
+	}
+
+	/* The chosen option: a tier-3 pill with a 3:1 edge — the tier step alone (1.1:1 in dark) is a choice nobody can see. */
 	.theme__option:has(input:checked) {
-		background: var(--paper-2);
+		background: var(--paper-4);
 		color: var(--ink);
-		box-shadow: var(--shadow-1);
+		box-shadow:
+			var(--shadow-1),
+			inset 0 0 0 1px var(--segment-edge);
 	}
 
 	.theme__option:has(input:focus-visible) {

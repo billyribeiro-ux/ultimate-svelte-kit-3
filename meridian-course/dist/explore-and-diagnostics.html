@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:10-50</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:11-65</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -63,6 +63,20 @@ const locale = getLocale();
 const regions = new Intl.DisplayNames(locale, { type: 'region' });
 const countryName = (code: string) =&gt; regions.of(code) ?? code;
 
+/*
+ * `38.72° N, 9.14° W` reads as a place; `38.72°, -9.14°` reads as a
+ * spreadsheet. The compass letters are messages, because they are words:
+ * east is O in German (Ost) and L in Portuguese (leste), and west is O
+ * in Portuguese (oeste).
+ */
+const degrees = new Intl.NumberFormat(locale, {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2
+});
+const coords = (place: Place) =&gt;
+	`${degrees.format(Math.abs(place.lat))}° ${place.lat &lt; 0 ? m.coord_south() : m.coord_north()}, ` +
+	`${degrees.format(Math.abs(place.lng))}° ${place.lng &lt; 0 ? m.coord_west() : m.coord_east()}`;
+
 let query = $state('');
 /*
  * runed's `Debounced` follows a reactive value with a delay: `current`
@@ -83,17 +97,38 @@ const filtered = $derived.by(() =&gt; {
 	);
 });</code></pre>
 </figure>
-<p>Three things in forty lines. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>.</p>
+<p>Three things in forty lines. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>. The coordinates under each place read as a place — <code>38.72° N, 9.14° W</code> — and the compass letters are messages, because they are words: east is O in German and L in Portuguese, and west is O in Portuguese.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:52-69</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:67-105</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Country {
 	readonly code: string;
 	readonly name: string;
 	readonly places: Place[];
+}
+
+/*
+ * When the search row is stuck under the header it draws a hairline, so
+ * the cards sliding under it have an edge to slide under. A zero-height
+ * sentinel sits just above the row; once it has scrolled up behind the
+ * header, the row is stuck.
+ */
+let stuck = $state(false);
+
+function sentinel(element: HTMLElement) {
+	const header = document.querySelector&lt;HTMLElement&gt;('.header');
+	const top = header?.getBoundingClientRect().height ?? 56;
+	const observer = new IntersectionObserver(
+		([entry]) =&gt; {
+			stuck = !!entry &amp;&amp; !entry.isIntersecting &amp;&amp; entry.boundingClientRect.top &lt; top + 1;
+		},
+		{ rootMargin: `-${Math.ceil(top) + 1}px 0px 0px 0px` }
+	);
+	observer.observe(element);
+	return () =&gt; observer.disconnect();
 }
 
 const countries: Country[] = $derived.by(() =&gt; {
@@ -112,45 +147,55 @@ const countries: Country[] = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:100-133</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:169-212</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#each countries as country (country.code)}
-	&lt;section class=&quot;stack stack--sm&quot;&gt;
-		&lt;h2 class=&quot;country&quot;&gt;
-			{country.name}
-			&lt;span class=&quot;muted tabular&quot;&gt;{country.places.length}&lt;/span&gt;
-		&lt;/h2&gt;
-		&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
-			{#each country.places as place (place.id)}
-				{@const guide = guideForPlace(place.id)}
-				&lt;li class=&quot;card place&quot;&gt;
-					&lt;div class=&quot;stack stack--sm&quot;&gt;
-						&lt;strong&gt;{place.name}&lt;/strong&gt;
-						&lt;span class=&quot;muted tabular coords&quot;&gt;
-							{place.lat.toFixed(2)}°, {place.lng.toFixed(2)}°
-						&lt;/span&gt;
-					&lt;/div&gt;
-					&lt;div class=&quot;cluster&quot;&gt;
-						{#if guide}
-							&lt;a
-								class=&quot;btn btn--sm btn--ghost&quot;
-								href={href('/guides/[guide]', { guide: guide.slug })}
-							&gt;
-								{m.explore_guide()}
+	<pre><code class="lang-svelte">&lt;!--
+	The countries flow in columns — one on a phone, two from 48em, three
+	from 64em — each country unbroken, its places one under another. A
+	country has one or two places, so a grid of places left each country
+	a row of one or two cards and the rest of the width empty.
+
+	A place is a card, not a link — its two buttons are the links — so it
+	does not lift on hover: a lift says &quot;this is a link&quot;.
+--&gt;
+&lt;div class=&quot;countries&quot;&gt;
+	{#each countries as country (country.code)}
+		&lt;section class=&quot;country&quot;&gt;
+			&lt;h2 class=&quot;country__name&quot;&gt;
+				{country.name}
+				&lt;span class=&quot;country__count tabular&quot;&gt;{country.places.length}&lt;/span&gt;
+			&lt;/h2&gt;
+			&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
+				{#each country.places as place (place.id)}
+					{@const guide = guideForPlace(place.id)}
+					&lt;li class=&quot;card place&quot;&gt;
+						&lt;div class=&quot;place__body&quot;&gt;
+							&lt;strong class=&quot;place__name&quot;&gt;{place.name}&lt;/strong&gt;
+							&lt;span class=&quot;place__coords tabular&quot;&gt;{coords(place)}&lt;/span&gt;
+						&lt;/div&gt;
+						&lt;div class=&quot;place__actions&quot;&gt;
+							{#if guide}
+								&lt;a
+									class=&quot;btn btn--sm btn--ghost&quot;
+									href={href('/guides/[guide]', { guide: guide.slug })}
+								&gt;
+									{m.explore_guide()}
+								&lt;/a&gt;
+							{/if}
+							&lt;a class=&quot;btn btn--sm&quot; href={href(`/(site)/(app)/trips/new?place=${place.id}`)}&gt;
+								{m.explore_start()}
+								&lt;ArrowRightIcon size={14} aria-hidden=&quot;true&quot; /&gt;
 							&lt;/a&gt;
-						{/if}
-						&lt;a class=&quot;btn btn--sm&quot; href={href(`/(site)/(app)/trips/new?place=${place.id}`)}&gt;
-							{m.explore_start()}
-						&lt;/a&gt;
-					&lt;/div&gt;
-				&lt;/li&gt;
-			{/each}
-		&lt;/ul&gt;
-	&lt;/section&gt;
-{/each}</code></pre>
+						&lt;/div&gt;
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+		&lt;/section&gt;
+	{/each}
+&lt;/div&gt;</code></pre>
 </figure>
-<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.26 they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34.</p>
+<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.54, so in every 3.x, they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34. The countries flow in CSS columns — <code>columns: 3 18rem</code>, one on a phone, two from 48em, three from 64em — each country <code>break-inside: avoid</code> with its places one under another: a country has one or two places, and a grid of places had left each country a row of one or two cards and the rest of the width empty. A place is a card and not a link — its two buttons are the links — so it does not lift on hover, because a lift says “this is a link”. The search row sticks under the header and draws its hairline once it is stuck, which a zero-height sentinel and an <code>IntersectionObserver</code> attached to it decide; the browser’s blue clear button is replaced by a ghost one of ours, and on a phone the count is the places alone, so the row stays one row.</p>
 
 <aside class="callout callout--why">
 	<h4>Why runed, for one debounce</h4>
@@ -357,15 +402,15 @@ export const diagnostics = query(async () =&gt; {
 
 	&lt;dl class=&quot;facts card card--pad&quot;&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_version()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_version()}&lt;/dt&gt;
 			&lt;dd&gt;&lt;code&gt;{report.version}&lt;/code&gt;&lt;/dd&gt;
 		&lt;/div&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_node()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_node()}&lt;/dt&gt;
 			&lt;dd&gt;&lt;code&gt;{report.node}&lt;/code&gt;&lt;/dd&gt;
 		&lt;/div&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_uptime()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_uptime()}&lt;/dt&gt;
 			&lt;dd&gt;{uptime(report.startedAt, report.now)}&lt;/dd&gt;
 		&lt;/div&gt;
 	&lt;/dl&gt;
@@ -373,7 +418,7 @@ export const diagnostics = query(async () =&gt; {
 	&lt;section class=&quot;stack stack--sm&quot;&gt;
 		&lt;h2&gt;{m.diagnostics_rooms()}&lt;/h2&gt;
 		{#if report.rooms.length === 0}
-			&lt;p class=&quot;muted&quot;&gt;{m.diagnostics_no_rooms()}&lt;/p&gt;
+			&lt;p class=&quot;hint&quot;&gt;{m.diagnostics_no_rooms()}&lt;/p&gt;
 		{:else}
 			&lt;ul class=&quot;cluster&quot; role=&quot;list&quot;&gt;
 				{#each report.rooms as room (room.tripId)}

@@ -40,7 +40,7 @@
 <section class="container diagnostics stack stack--lg">
 	<header class="cluster cluster--between">
 		<div class="stack stack--sm">
-			<h1>{m.diagnostics_title()}</h1>
+			<h1 class="title-page">{m.diagnostics_title()}</h1>
 			<p class="lede">{m.diagnostics_lede()}</p>
 		</div>
 		<button class="btn btn--sm" type="button" onclick={() => diagnostics().refresh()}>
@@ -58,15 +58,15 @@
 
 		<dl class="facts card card--pad">
 			<div>
-				<dt class="label">{m.diagnostics_version()}</dt>
+				<dt class="overline">{m.diagnostics_version()}</dt>
 				<dd><code>{report.version}</code></dd>
 			</div>
 			<div>
-				<dt class="label">{m.diagnostics_node()}</dt>
+				<dt class="overline">{m.diagnostics_node()}</dt>
 				<dd><code>{report.node}</code></dd>
 			</div>
 			<div>
-				<dt class="label">{m.diagnostics_uptime()}</dt>
+				<dt class="overline">{m.diagnostics_uptime()}</dt>
 				<dd>{uptime(report.startedAt, report.now)}</dd>
 			</div>
 		</dl>
@@ -74,7 +74,7 @@
 		<section class="stack stack--sm">
 			<h2>{m.diagnostics_rooms()}</h2>
 			{#if report.rooms.length === 0}
-				<p class="muted">{m.diagnostics_no_rooms()}</p>
+				<p class="hint">{m.diagnostics_no_rooms()}</p>
 			{:else}
 				<ul class="cluster" role="list">
 					{#each report.rooms as room (room.tripId)}
@@ -122,7 +122,7 @@
 
 <style>
 	.diagnostics {
-		padding-block: var(--space-6) var(--space-8);
+		padding-block: var(--space-6) var(--section);
 	}
 
 	.lede {
@@ -137,6 +137,7 @@
 
 	.facts dd {
 		margin: 0;
+		margin-block-start: var(--space-1);
 	}
 
 	.span--child .span__name {

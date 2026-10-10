@@ -97,7 +97,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:235-257</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:240-262</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -207,7 +207,7 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:1-32</span></span>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:1-41</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -217,6 +217,7 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 	import { getLocale, localizeHref, locales, type Locale } from '#lib/paraglide/runtime.js';
 
 	const names: Record&lt;Locale, string&gt; = { en: 'English', de: 'Deutsch', 'pt-br': 'Português' };
+	const codes: Record&lt;Locale, string&gt; = { en: 'EN', de: 'DE', 'pt-br': 'PT' };
 
 	/*
 	 * A prerendered page has no query string — it is one file, served for
@@ -224,12 +225,20 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 	 * while prerendering is an error, not an empty string. The guides layout
 	 * passes `keepSearch={false}`; the site header, which is never
 	 * prerendered, keeps `?tab=map` across a language switch.
+	 *
+	 * `compact` is for a header that has to fit a nav beside it: below 64em
+	 * the links show two-letter codes — EN · DE · PT — and the full names
+	 * come back from 64em, where there is room. A phone needs it most: with
+	 * full names the guides header wrapped to three rows. The full name
+	 * stays in the DOM, visually hidden, so the link is still called
+	 * &quot;Deutsch&quot; to a screen reader and to the end-to-end suite.
 	 */
 	interface Props {
 		keepSearch?: boolean;
+		compact?: boolean;
 	}
 
-	let { keepSearch = true }: Props = $props();
+	let { keepSearch = true, compact = false }: Props = $props();
 
 	/*
 	 * Links, not a `&lt;select&gt;` with an `onchange`. A link to `/de/trips` is a
@@ -246,10 +255,10 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:34-54</span></span>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:43-65</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;nav class=&quot;locales&quot; aria-label={m.locale_label()}&gt;
+	<pre><code class="lang-svelte">&lt;nav class=&quot;locales&quot; class:locales--compact={compact} aria-label={m.locale_label()}&gt;
 	&lt;TranslateIcon size={16} aria-hidden=&quot;true&quot; /&gt;
 	&lt;!--
 		The one link in the app that bypasses `#lib/href.ts`: `here` is whatever
@@ -262,17 +271,19 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 			href={localizeHref(here, { locale })}
 			hreflang={locale}
 			lang={locale}
+			title={compact ? names[locale] : undefined}
 			aria-current={locale === current ? 'true' : undefined}
 			data-sveltekit-reload
 		&gt;
-			{names[locale]}
+			&lt;span class=&quot;locales__code&quot; aria-hidden=&quot;true&quot;&gt;{codes[locale]}&lt;/span&gt;
+			&lt;span class=&quot;locales__name&quot;&gt;{names[locale]}&lt;/span&gt;
 		&lt;/a&gt;
 	{/each}
 	&lt;!-- eslint-enable svelte/no-navigation-without-resolve --&gt;
 &lt;/nav&gt;</code></pre>
 </figure>
 <p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through <code>href()</code> from chapter 23: <code>here</code> is a pathname, not a route id, and there is nothing for <code>resolve()</code> to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.</p>
-<p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch.</p>
+<p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch. <code>compact</code> is for a header that has a nav beside it: below 64em — a phone, a tablet — the links show EN, DE and PT, and from 64em the full names, where there is room. The name stays in each link, visually hidden rather than <code>display: none</code>, so the link is still called “Deutsch” to a screen reader and to the end-to-end suite; with the full names on a phone, the guides header had wrapped to three rows.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Paraglide and not svelte-i18n, or paraglide-sveltekit</h4>

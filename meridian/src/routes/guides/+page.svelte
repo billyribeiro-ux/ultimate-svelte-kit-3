@@ -15,28 +15,27 @@
 
 <section class="container guides stack stack--lg">
 	<header class="stack stack--sm">
-		<h1>{m.guides_title()}</h1>
+		<h1 class="title-page">{m.guides_title()}</h1>
 		<p class="lede">{m.guides_lede()}</p>
 	</header>
 
 	<ul class="list" role="list">
 		{#each guides as guide (guide.slug)}
-			<li class="card card--pad stack stack--sm">
+			<li class="card card--pad card--link stack stack--sm">
 				<!--
 					`resolve` from `$app/paths` takes a route id and its parameters and
 					gives back a pathname — type-checked against the routes that exist,
 					so renaming the folder is a compile error here rather than a 404.
 				-->
+				{#if guide.placeName}<p><span class="chip">{guide.placeName}</span></p>{/if}
 				<h2 class="title">
 					<a href={href('/guides/[guide]', { guide: guide.slug })}>
 						{guide.title}
 					</a>
 				</h2>
-				<p class="muted">{guide.summary}</p>
-				<p class="cluster meta">
-					{#if guide.placeName}<span class="chip">{guide.placeName}</span>{/if}
+				<p class="summary">{guide.summary}</p>
+				<p class="meta dotted">
 					<span>{m.guides_read_minutes({ minutes: guide.minutes })}</span>
-					<span>·</span>
 					<time datetime={guide.published}>{formatDate(guide.published, locale, 'long')}</time>
 				</p>
 			</li>
@@ -48,13 +47,14 @@
 
 <style>
 	.guides {
-		max-width: 44rem;
-		padding-block: var(--space-6) var(--space-8);
+		max-width: var(--measure);
+		padding-block: var(--space-6) var(--section);
 	}
 
 	.lede {
 		color: var(--ink-2);
-		max-width: var(--measure);
+		font-size: var(--text-lg);
+		max-inline-size: var(--measure);
 	}
 
 	.list {
@@ -62,20 +62,32 @@
 		gap: var(--space-3);
 	}
 
+	/* The title is the link, and the whole card lifts for it; `::after` makes the card the target. */
+	.list > li {
+		position: relative;
+	}
+
 	.title {
-		font-size: var(--text-lg);
+		font-size: var(--text-xl);
 	}
 
 	.title a {
 		text-decoration: none;
 	}
 
-	.title a:hover {
-		text-decoration: underline;
+	.title a::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+
+	.summary {
+		color: var(--ink-2);
 	}
 
 	.meta {
-		font-size: var(--text-sm);
+		font-size: var(--text-xs);
 		color: var(--ink-3);
 	}
 </style>

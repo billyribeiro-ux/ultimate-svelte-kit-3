@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:23-58</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:33-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -82,7 +82,7 @@ const categoryLabels: Record&lt;ExpenseCategory, () =&gt; string&gt; = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:60-80</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:70-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Row {
@@ -111,7 +111,7 @@ const rows: Row[] = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:82-131</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:92-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* ------------------------------------------------------------------ */
@@ -128,12 +128,22 @@ const features = tableFeatures({
 
 const helper = createColumnHelper&lt;typeof features, Row&gt;();
 
+/*
+ * The amount comes third, beside what it was for: on a phone the table
+ * scrolls sideways and the first three columns are what fits, and the
+ * amount is the reason the table exists.
+ */
 const columns = helper.columns([
 	helper.accessor('date', {
 		header: () =&gt; m.expenses_date(),
 		cell: ({ getValue }) =&gt; formatDate(getValue(), locale, 'short')
 	}),
 	helper.accessor('title', { header: () =&gt; m.expenses_what() }),
+	helper.accessor('amountMinor', {
+		header: () =&gt; m.expenses_amount(),
+		cell: ({ getValue }) =&gt; formatMoney(getValue(), currency, locale),
+		meta: { align: 'end' }
+	}),
 	helper.accessor('category', {
 		header: () =&gt; m.expenses_category(),
 		cell: ({ getValue }) =&gt; categoryLabels[getValue()]()
@@ -141,11 +151,6 @@ const columns = helper.columns([
 	helper.accessor('payer', { header: () =&gt; m.expenses_paid_by() }),
 	helper.accessor('sharedWith', {
 		header: () =&gt; m.expenses_shared_by(),
-		meta: { align: 'end' }
-	}),
-	helper.accessor('amountMinor', {
-		header: () =&gt; m.expenses_amount(),
-		cell: ({ getValue }) =&gt; formatMoney(getValue(), currency, locale),
 		meta: { align: 'end' }
 	})
 ]);
@@ -169,7 +174,7 @@ const table = createTable({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:137-151</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:166-180</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -191,10 +196,10 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:240-300</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:387-463</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;table-wrap&quot;&gt;
+	<pre><code class="lang-svelte">&lt;div class=&quot;table-wrap&quot; bind:this={wrap} data-overflow={overflowing ? '' : undefined}&gt;
 	&lt;table class=&quot;table&quot;&gt;
 		&lt;thead&gt;
 			{#each table.getHeaderGroups() as group (group.id)}
@@ -209,6 +214,7 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 									? 'descending'
 									: 'none'}
 						&gt;
+							&lt;!-- The caret shows only when sorted; otherwise the two-way arrow waits for a hover. --&gt;
 							&lt;button
 								class=&quot;sort&quot;
 								type=&quot;button&quot;
@@ -216,7 +222,8 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 							&gt;
 								{render(header.column.columnDef.header, header.getContext(), header.column.id)}
 								{#if sorted === 'asc'}&lt;CaretUpIcon size={12} aria-hidden=&quot;true&quot; /&gt;
-								{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;{/if}
+								{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;
+								{:else}&lt;ArrowsDownUpIcon size={12} aria-hidden=&quot;true&quot; class=&quot;sort__idle&quot; /&gt;{/if}
 							&lt;/button&gt;
 						&lt;/th&gt;
 					{/each}
@@ -228,12 +235,27 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 			{#each table.getRowModel().rows as row (row.id)}
 				&lt;tr&gt;
 					{#each row.getAllCells() as cell (cell.id)}
-						&lt;td class:num={cell.column.columnDef.meta?.align === 'end'}&gt;
-							{render(
-								cell.column.columnDef.cell,
-								cell.getContext(),
-								String(cell.getValue() ?? '')
-							)}
+						&lt;td
+							class:num={cell.column.columnDef.meta?.align === 'end'}
+							class:what={cell.column.id === 'title'}
+							class:amount={cell.column.id === 'amountMinor'}
+						&gt;
+							{#if cell.column.id === 'category'}
+								&lt;span class=&quot;category&quot; data-kind={row.original.category}&gt;
+									&lt;span class=&quot;kind-dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+									{render(
+										cell.column.columnDef.cell,
+										cell.getContext(),
+										String(cell.getValue())
+									)}
+								&lt;/span&gt;
+							{:else}
+								{render(
+									cell.column.columnDef.cell,
+									cell.getContext(),
+									String(cell.getValue() ?? '')
+								)}
+							{/if}
 						&lt;/td&gt;
 					{/each}
 					{#if editable}
@@ -253,15 +275,14 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 			{/each}
 		&lt;/tbody&gt;
 	&lt;/table&gt;
-&lt;/div&gt;
-&lt;p class=&quot;hint&quot;&gt;{m.expenses_sort_hint()}&lt;/p&gt;</code></pre>
+&lt;/div&gt;</code></pre>
 </figure>
-<p>The markup is a plain <code>&lt;table&gt;</code> in our own CSS. Header and cell templates in TanStack are functions that return strings, or strings; the library’s own <code>FlexRender</code> also renders components, and this table only needs text, so a ten-line <code>render</code> helper calls the template with the context the library provides. <code>aria-sort</code> goes on the <code>&lt;th&gt;</code>, not the button inside it — the attribute belongs to the column header — and <code>getToggleSortingHandler()</code> is the whole of the sorting interaction.</p>
+<p>The markup is a plain <code>&lt;table&gt;</code> in our own CSS. Header and cell templates in TanStack are functions that return strings, or strings; the library’s own <code>FlexRender</code> also renders components, and this table only needs text, so a ten-line <code>render</code> helper calls the template with the context the library provides. <code>aria-sort</code> goes on the <code>&lt;th&gt;</code>, not the button inside it — the attribute belongs to the column header — and <code>getToggleSortingHandler()</code> is the whole of the sorting interaction. The amount is the third column, beside what it was for: on a phone the table scrolls sideways and the first three columns are what fits, and the amount is the reason the table exists.</p>
 <h3 id="charts">Two charts</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:153-186</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:194-294</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const byDay = $derived.by(() =&gt; {
@@ -272,8 +293,9 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 		.sort(([a], [b]) =&gt; (a &lt; b ? -1 : 1))
 		.map(([date, minor]) =&gt; ({
 			date,
-			label: formatDate(date, locale, 'day'),
-			total: minor / 100
+			label: formatDate(date, locale, 'short'),
+			day: String(Number(date.slice(8))),
+			total: fromMinor(minor, currency)
 		}));
 });
 
@@ -284,9 +306,75 @@ const byCategory = $derived.by(() =&gt; {
 	return [...map].map(([category, minor]) =&gt; ({
 		category,
 		label: categoryLabels[category](),
-		total: minor / 100
+		total: fromMinor(minor, currency)
 	}));
 });
+
+/*
+ * THE BAR CHART'S AXES
+ * --------------------
+ * Under each bar, &quot;May 10&quot; while there is room for it and the day of the
+ * month alone when there is not: the box's width is measured, and below
+ * 56px a band, six &quot;May 10&quot;s run together into one string. The tooltip
+ * keeps the full date either way.
+ *
+ * Up the side, round amounts in the trip's currency with no decimals,
+ * and a top tick at or above the tallest bar. LayerChart rounds the
+ * domain and picks its ticks separately, so a 264 bar could rise past a
+ * top line at 250; here both come from one step — 1, 2, 2.5 or 5 times a
+ * power of ten — chosen for about four intervals.
+ */
+let barWidth = $state(0);
+const compact = $derived(barWidth &gt; 0 &amp;&amp; (barWidth - 48) / Math.max(byDay.length, 1) &lt; 56);
+const dayOf = $derived(new Map(byDay.map((d) =&gt; [d.label, d.day])));
+
+const yTicks = $derived.by(() =&gt; {
+	const max = Math.max(0, ...byDay.map((d) =&gt; d.total));
+	if (max === 0) return [0, 1];
+	const raw = max / 4;
+	const magnitude = 10 ** Math.floor(Math.log10(raw));
+	const step = [1, 2, 2.5, 5, 10].map((f) =&gt; f * magnitude).find((s) =&gt; s &gt;= raw) ?? raw;
+	const top = Math.ceil(max / step) * step;
+	return Array.from({ length: Math.round(top / step) + 1 }, (_, i) =&gt; i * step);
+});
+
+const whole = $derived(
+	new Intl.NumberFormat(locale, {
+		style: 'currency',
+		currency,
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0
+	})
+);
+
+/*
+ * CHART COLOURS FROM THE TOKENS
+ * -----------------------------
+ * LayerChart paints SVG from a list of colour strings, and a token is
+ * `light-dark(#…, #…)` until a browser resolves it for an element. So a
+ * probe does the resolving: an element off screen is given each kind as
+ * its `color`, and `getComputedStyle` hands back the plain `rgb(…)` the
+ * theme currently means. It runs again when `theme.resolved` changes,
+ * which is the one time those answers change.
+ */
+let colours = $state&lt;Partial&lt;Record&lt;ExpenseCategory, string&gt;&gt;&gt;({});
+
+$effect(() =&gt; {
+	void theme.resolved;
+	const probe = document.createElement('span');
+	probe.style.position = 'absolute';
+	probe.style.visibility = 'hidden';
+	document.body.append(probe);
+	const next: Partial&lt;Record&lt;ExpenseCategory, string&gt;&gt; = {};
+	for (const category of EXPENSE_CATEGORIES) {
+		probe.style.color = `var(--kind-${category}, var(--ink-3))`;
+		next[category] = getComputedStyle(probe).color;
+	}
+	probe.remove();
+	colours = next;
+});
+
+const cRange = $derived(byCategory.map((slice) =&gt; colours[slice.category] ?? 'currentColor'));
 
 const ledger = $derived(
 	balances(
@@ -299,12 +387,75 @@ const ledger = $derived(
 );
 const transfers = $derived(settle(ledger));</code></pre>
 </figure>
-<p>LayerChart is components over d3 scales: <code>&lt;BarChart data x y&gt;</code> and <code>&lt;PieChart data key value&gt;</code> draw with sensible defaults and take the same tokens for colour through a class. The data for both is derived from the rows into small arrays of <code>{ label, total }</code>, and the <code>Map</code> inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a <code>SvelteMap</code> that signals on every insert for nobody. The settle-up is the domain’s <code>balances()</code> and <code>settle()</code> on the raw minor units: the cents on screen are the cents the server would compute.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:330-385</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;charts&quot;&gt;
+	&lt;figure class=&quot;card card--pad chart&quot;&gt;
+		&lt;figcaption class=&quot;overline&quot;&gt;{m.expenses_by_day()}&lt;/figcaption&gt;
+		&lt;div class=&quot;chart__box&quot; bind:clientWidth={barWidth}&gt;
+			&lt;BarChart
+				data={byDay}
+				x=&quot;label&quot;
+				y=&quot;total&quot;
+				yDomain={[0, yTicks.at(-1) ?? 1]}
+				yNice={false}
+				props={{
+					bars: { rounded: 'top', radius: 4, class: 'chart__bar' },
+					xAxis: {
+						tickMarks: false,
+						format: (label: string) =&gt; (compact ? (dayOf.get(label) ?? label) : label)
+					},
+					yAxis: {
+						tickMarks: false,
+						ticks: yTicks,
+						format: (value: number) =&gt; whole.format(value)
+					}
+				}}
+			/&gt;
+		&lt;/div&gt;
+	&lt;/figure&gt;
+	&lt;!--
+		A donut with the total in the hole and a legend under it: five
+		slices with labels around a 14rem circle are unreadable; five chips
+		with dots are not.
+	--&gt;
+	&lt;figure class=&quot;card card--pad chart&quot;&gt;
+		&lt;figcaption class=&quot;overline&quot;&gt;{m.expenses_by_category()}&lt;/figcaption&gt;
+		&lt;div class=&quot;chart__box chart__box--donut&quot;&gt;
+			&lt;PieChart
+				data={byCategory}
+				key=&quot;category&quot;
+				label=&quot;label&quot;
+				value=&quot;total&quot;
+				innerRadius={-28}
+				{cRange}
+				legend={false}
+			/&gt;
+			&lt;p class=&quot;chart__centre tabular&quot; aria-hidden=&quot;true&quot;&gt;
+				{formatMoney(total, currency, locale)}
+			&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;ul class=&quot;legend&quot; role=&quot;list&quot;&gt;
+			{#each byCategory as slice (slice.category)}
+				&lt;li class=&quot;chip&quot; data-kind={slice.category}&gt;
+					&lt;span class=&quot;kind-dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+					{slice.label}
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
+	&lt;/figure&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>LayerChart is components over d3 scales: <code>&lt;BarChart data x y&gt;</code> and <code>&lt;PieChart data key value&gt;</code> draw with sensible defaults. The bars take <code>--sea</code> through a class, and the axes are told what a person needs from them: under each bar the date while there is room and the day of the month alone when there is not — the box’s width is bound, and below 56px a band six “May 10”s run into one string — and up the side round amounts in the trip’s currency, with the ticks and the top of the domain computed from one step, so the top line is at or above the tallest bar (LayerChart rounds the domain and picks its ticks separately, and a 264 bar rose past a top line at 250). The amounts are <code>fromMinor()</code>, which asks <code>Intl</code> how many decimals the currency has, so yen are yen. The donut’s slices need one colour per category, as strings, and a token is <code>light-dark(#…, #…)</code> until a browser resolves it for an element — so a hidden probe element is given each <code>--kind-*</code> as its <code>color</code> and <code>getComputedStyle</code> hands back the plain <code>rgb(…)</code> the current theme means, again whenever <code>theme.resolved</code> changes. The pie is a donut with the total in the hole and a legend of chips under it, because five labels around a 14rem circle are unreadable. The data for both is derived from the rows into small arrays of <code>{ label, total }</code>, and the <code>Map</code> inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a <code>SvelteMap</code> that signals on every insert for nobody. The settle-up is the domain’s <code>balances()</code> and <code>settle()</code> on the raw minor units: the cents on screen are the cents the server would compute. Balances and transfers sit side by side from 64em, each list no wider than 28rem, so an amount is never a screen’s width from its name, and a negative balance is written with U+2212, the minus sign, rather than the hyphen <code>Intl</code> produces. Above it all, the total is shown only when there is something to total, and the empty state says “add the first one below” only to somebody with a form below.</p>
 <h3 id="the-form">A form that submits numbers and arrays</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:329-417</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:511-601</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}
@@ -327,15 +478,19 @@ const transfers = $derived(settle(ledger));</code></pre>
 				{/each}
 			&lt;/label&gt;
 			&lt;label class=&quot;field&quot;&gt;
-				&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()} ({currency})&lt;/span&gt;
-				&lt;input
-					class=&quot;input&quot;
-					{...addExpense.fields.amount.as('number')}
-					step=&quot;0.01&quot;
-					min=&quot;0.01&quot;
-					inputmode=&quot;decimal&quot;
-					required
-				/&gt;
+				&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()}&lt;/span&gt;
+				&lt;!-- The currency sits inside the field, trailing, so the number is typed and the unit is read. --&gt;
+				&lt;span class=&quot;input-group&quot;&gt;
+					&lt;input
+						class=&quot;input tabular&quot;
+						{...addExpense.fields.amount.as('number')}
+						step=&quot;0.01&quot;
+						min=&quot;0.01&quot;
+						inputmode=&quot;decimal&quot;
+						required
+					/&gt;
+					&lt;span class=&quot;input-group__adornment&quot; aria-hidden=&quot;true&quot;&gt;{currency}&lt;/span&gt;
+				&lt;/span&gt;
 				{#each addExpense.fields.amount.issues() ?? [] as issue (issue.message)}
 					&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
 				{/each}
@@ -351,16 +506,14 @@ const transfers = $derived(settle(ledger));</code></pre>
 					{/each}
 				&lt;/select&gt;
 			&lt;/label&gt;
-			&lt;label class=&quot;field&quot;&gt;
-				&lt;span class=&quot;label&quot;&gt;{m.expenses_date()}&lt;/span&gt;
-				&lt;input
-					class=&quot;input&quot;
-					{...addExpense.fields.date.as('date')}
-					min={view.trip.startDate}
-					max={view.trip.endDate}
-					required
-				/&gt;
-			&lt;/label&gt;
+			&lt;!-- The trip's own date field, in the page's language; its hidden input carries the name the form expects. --&gt;
+			&lt;DateField
+				label={m.expenses_date()}
+				name={addExpense.fields.date.as('hidden', '').name}
+				min={view.trip.startDate}
+				max={view.trip.endDate}
+				issues={addExpense.fields.date.issues() ?? []}
+			/&gt;
 		&lt;/div&gt;
 
 		&lt;label class=&quot;field&quot;&gt;
@@ -389,7 +542,7 @@ const transfers = $derived(settle(ledger));</code></pre>
 			{/each}
 		&lt;/fieldset&gt;
 
-		&lt;div&gt;
+		&lt;div class=&quot;submit&quot;&gt;
 			&lt;button class=&quot;btn btn--primary&quot; type=&quot;submit&quot; disabled={addExpense.pending &gt; 0}&gt;
 				{m.expenses_add()}
 			&lt;/button&gt;
@@ -397,7 +550,59 @@ const transfers = $derived(settle(ledger));</code></pre>
 	&lt;/form&gt;
 {/if}</code></pre>
 </figure>
-<p>Every field is rendered through <code>fields.x.as(...)</code>, which encodes the field’s type into its name so the server can coerce it: <code>as(&quot;number&quot;)</code> gives the schema a number, <code>as(&quot;checkbox&quot;, member.userId)</code> for each companion gives it a <code>string[]</code>, <code>as(&quot;select&quot;)</code> a string, <code>as(&quot;hidden&quot;, value)</code> a fixed value. Chapter 17 showed the schema these arrive at; the compile-time check runs both ways, so a checkbox for a field the schema calls a number does not build. <code>issues()</code> under each field are the messages the schema or <code>invalid()</code> produced, and <code>pending</code> disables the button while a submission is in flight. With JavaScript off, the same form posts and the page re-renders with the same issues.</p>
+<p>Every field is rendered through <code>fields.x.as(...)</code>, which encodes the field’s type into its name so the server can coerce it: <code>as(&quot;number&quot;)</code> gives the schema a number, <code>as(&quot;checkbox&quot;, member.userId)</code> for each companion gives it a <code>string[]</code>, <code>as(&quot;select&quot;)</code> a string, <code>as(&quot;hidden&quot;, value)</code> a fixed value. Chapter 17 showed the schema these arrive at; the compile-time check runs both ways, so a checkbox for a field the schema calls a number does not build. <code>issues()</code> under each field are the messages the schema or <code>invalid()</code> produced, and <code>pending</code> disables the button while a submission is in flight. With JavaScript off, the same form posts and the page re-renders with the same issues. The date is not an <code>&lt;input type=&quot;date&quot;&gt;</code>, which formats the date in the *browser’s* language — a German page in an American browser asks for mm/dd/yyyy — and looks like nothing else in the product; it is <code>DateField.svelte</code>, the single-date sibling of chapter 21’s range picker, sharing its stylesheet, and its hidden input carries the name <code>as(&quot;hidden&quot;, &quot;&quot;)</code> returns.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateField.svelte<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { DatePicker } from 'bits-ui';
+	import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from 'phosphor-svelte';
+	import { CalendarDate, type DateValue } from '@internationalized/date';
+	import { getLocale } from '#lib/paraglide/runtime.js';
+
+	/**
+	 * ONE DATE, THE SAME WAY AS TWO
+	 * =============================
+	 *
+	 * The single-date sibling of `DateRangeField.svelte`: Bits UI's
+	 * `DatePicker`, segments in the page's language and a calendar in a
+	 * popover, dressed by `src/lib/styles/dates.css`. A native
+	 * `&lt;input type=&quot;date&quot;&gt;` would have been less code and the wrong field:
+	 * it formats the date in the *browser's* language, not the page's — a
+	 * German page in an American browser asks for mm/dd/yyyy — and it looks
+	 * like nothing else in the product.
+	 *
+	 * `name` renders a hidden `&lt;input&gt;` with the ISO date, which is how the
+	 * value reaches a remote `form`, with JavaScript off as well as on.
+	 */
+	interface Props {
+		label: string;
+		name: string;
+		/** The earliest and latest dates that can be picked, as ISO dates. */
+		min?: string;
+		max?: string;
+		/** The month the calendar opens on when nothing is picked yet. */
+		near?: string;
+		issues?: readonly { message: string }[];
+	}
+
+	let { label, name, min, max, near, issues = [] }: Props = $props();
+
+	const locale = getLocale();
+
+	const parse = (iso: string | undefined): DateValue | undefined =&gt; {
+		if (!iso) return undefined;
+		const [y, m, d] = iso.split('-').map(Number);
+		return new CalendarDate(y!, m!, d!);
+	};
+
+	let value = $state&lt;DateValue | undefined&gt;();
+	const placeholder = $derived(parse(near) ?? parse(min));
+&lt;/script&gt;</code></pre>
+</figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

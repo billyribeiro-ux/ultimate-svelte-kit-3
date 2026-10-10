@@ -55,7 +55,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:17-23</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:20-26</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -66,7 +66,33 @@
  */
 const scrolled = $derived((scrollY.current ?? 0) &gt; 8);</code></pre>
 </figure>
-<p><code>MediaQuery</code> is a media query as a reactive value: construct it once, read <code>.current</code> anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme and the globe for reduced motion. <code>svelte/reactivity/window</code> exports <code>scrollY</code>, <code>innerWidth</code>, <code>online</code> and the rest as reactive values that are <code>undefined</code> on the server, which is why <code>scrollY.current ?? 0</code>. Both replace an <code>onMount</code> with <code>addEventListener</code> and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/prefers.svelte.ts<span class="code__lines">:1-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE ANSWER TO &quot;DOES THIS PERSON WANT MOTION?&quot;
+ * =============================================
+ *
+ * CSS reads `prefers-reduced-motion` itself and zeroes every `--dur-*` in
+ * `tokens.css`. JavaScript cannot read a token, so everything that moves
+ * from a script — the itinerary's FLIP, the map's `fitBounds`, the globe's
+ * camera, the hero timeline — reads this instead. `MediaQuery` from
+ * `svelte/reactivity` is the query as a reactive value: `current` flips
+ * when the operating system setting does, with no listener to manage and
+ * `false` on the server, where there is no window to ask.
+ *
+ * One instance for the whole app, so there is one source of truth, and a
+ * component never ends up with a second query that disagrees.
+ */
+
+import { MediaQuery } from 'svelte/reactivity';
+
+export const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');</code></pre>
+</figure>
+<p><code>MediaQuery</code> is a media query as a reactive value: construct it once, read <code>.current</code> anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme; <code>src/lib/motion/prefers.svelte.ts</code> constructs one for reduced motion that the globe, the itinerary’s FLIP, the map’s <code>fitBounds</code>, the hero timeline and the root layout’s view transitions all read. Four components construct one for a width — the trip page’s side map, the toaster’s corner, the header sheet that closes itself when the window widens past it, and the stop dialog’s first focus — each a query the markup or a <code>$derived</code> reads, never a resize listener. <code>svelte/reactivity/window</code> exports <code>scrollY</code>, <code>innerWidth</code>, <code>online</code> and the rest as reactive values that are <code>undefined</code> on the server, which is why <code>scrollY.current ?? 0</code>. Both replace an <code>onMount</code> with <code>addEventListener</code> and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.</p>
 
 <figure class="code">
 	<figcaption>
@@ -125,7 +151,7 @@ const scrolled = $derived((scrollY.current ?? 0) &gt; 8);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:32-50</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:47-65</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">let query = $state('');
@@ -153,7 +179,7 @@ const filtered = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:60-69</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:76-85</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** Who is looking at which stop, by stop id. */
@@ -167,7 +193,7 @@ const lookers = $derived.by(() =&gt; {
 	return out;
 });</code></pre>
 </figure>
-<p><code>svelte/reactivity</code> also exports <code>SvelteMap</code>, <code>SvelteSet</code>, <code>SvelteDate</code> and <code>SvelteURL</code> — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a <code>new Map()</code>, and three times in this project the suggestion is declined with a comment. The <code>Map</code> here is built whole inside a <code>$derived.by</code> and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: <code>SvelteMap</code> for a map that lives across renders and changes; a plain <code>Map</code> for one that is computed and returned.</p>
+<p><code>svelte/reactivity</code> also exports <code>SvelteMap</code>, <code>SvelteSet</code>, <code>SvelteDate</code> and <code>SvelteURL</code> — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a <code>new Map()</code>, and four times in this project the suggestion is declined with a comment. The <code>Map</code> here is built whole inside a <code>$derived.by</code> and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: <code>SvelteMap</code> for a map that lives across renders and changes; a plain <code>Map</code> for one that is computed and returned. The same file has the other case, a few lines down: the stops that have just arrived are a <code>SvelteSet</code>, because the set is added to and deleted from over time and the template reads it to light up a card.</p>
 
 <aside class="callout callout--why">
 	<h4>Why not a store</h4>

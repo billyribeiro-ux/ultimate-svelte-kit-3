@@ -92,22 +92,18 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:64-76</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:105-113</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;p class=&quot;muted&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
-&lt;p class=&quot;cluster muted trip__facts&quot;&gt;
+	<pre><code class="lang-svelte">&lt;p class=&quot;trip__dates&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
+&lt;p class=&quot;trip__facts dotted tabular&quot;&gt;
 	&lt;span&gt;{m.trips_days({ count: dayCount(trip.startDate, trip.endDate) })}&lt;/span&gt;
-	&lt;span&gt;·&lt;/span&gt;
 	&lt;span&gt;{m.trips_stops({ count: stops })}&lt;/span&gt;
-	&lt;span&gt;·&lt;/span&gt;
 	&lt;span&gt;{m.trips_companions({ count: members })}&lt;/span&gt;
 	{#if preview.total &gt; 0}
-		&lt;span&gt;·&lt;/span&gt;
 		&lt;span&gt;{formatDistance(preview.total, locale)}&lt;/span&gt;
 	{/if}
-&lt;/p&gt;
-&lt;span class=&quot;chip&quot; class:chip--sea={role === 'owner'}&gt;{roleLabel[role]()}&lt;/span&gt;</code></pre>
+&lt;/p&gt;</code></pre>
 </figure>
 <p>The trips page puts them together with the plural messages from the last chapter: a date range from <code>Intl</code>, three counts through Paraglide’s plural rules, and a distance through the library’s <code>formatDistance</code>. Four sources of locale-awareness in one paragraph, and the component knows about none of them.</p>
 <h3 id="the-picker">A date range picker that speaks the domain’s type</h3>
@@ -171,7 +167,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:51-86</span></span>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:51-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	const locale = getLocale();
@@ -202,16 +198,18 @@ export function formatRange(start: string, end: string, locale: string): string 
 &gt;
 	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
 
-	&lt;div class=&quot;range__row&quot; class:range__row--invalid={issues.length &gt; 0}&gt;
+	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
 		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input&quot;&gt;
+			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
 				{#snippet children({ segments })}
 					{#each segments as { part, value: text }, i (part + i)}
-						&lt;DateRangePicker.Segment {part} class=&quot;range__segment&quot;&gt;{text}&lt;/DateRangePicker.Segment&gt;
+						&lt;DateRangePicker.Segment {part} class=&quot;datefield__segment&quot;
+							&gt;{text}&lt;/DateRangePicker.Segment
+						&gt;
 					{/each}
 				{/snippet}</code></pre>
 </figure>
-<p>The <code>locale</code> prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. <code>untrack</code> around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no.</p>
+<p>The <code>locale</code> prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. <code>untrack</code> around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in <code>src/lib/styles/dates.css</code> rather than the component’s <code>&lt;style&gt;</code>, because an expense’s single date (chapter 29) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.</p>
 <h3 id="transport">A <code>CalendarDate</code> across the wire</h3>
 
 <figure class="code">
@@ -274,25 +272,29 @@ export function parseAmount(text: string, locale: string): number | null {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:348-361</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:530-547</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;label class=&quot;field&quot;&gt;
-	&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()} ({currency})&lt;/span&gt;
-	&lt;input
-		class=&quot;input&quot;
-		{...addExpense.fields.amount.as('number')}
-		step=&quot;0.01&quot;
-		min=&quot;0.01&quot;
-		inputmode=&quot;decimal&quot;
-		required
-	/&gt;
+	&lt;span class=&quot;label&quot;&gt;{m.expenses_amount()}&lt;/span&gt;
+	&lt;!-- The currency sits inside the field, trailing, so the number is typed and the unit is read. --&gt;
+	&lt;span class=&quot;input-group&quot;&gt;
+		&lt;input
+			class=&quot;input tabular&quot;
+			{...addExpense.fields.amount.as('number')}
+			step=&quot;0.01&quot;
+			min=&quot;0.01&quot;
+			inputmode=&quot;decimal&quot;
+			required
+		/&gt;
+		&lt;span class=&quot;input-group__adornment&quot; aria-hidden=&quot;true&quot;&gt;{currency}&lt;/span&gt;
+	&lt;/span&gt;
 	{#each addExpense.fields.amount.issues() ?? [] as issue (issue.message)}
 		&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
 	{/each}
 &lt;/label&gt;</code></pre>
 </figure>
-<p>The amount field is <code>type=&quot;number&quot;</code> with <code>inputmode=&quot;decimal&quot;</code>, so a phone shows a numeric keyboard with the locale’s decimal separator, and the browser hands the form a plain number — which is why the remote form’s schema takes <code>v.number()</code> and the server converts to minor units with the trip’s currency. <code>formatMoney</code> on the way out uses <code>Intl.NumberFormat</code> with <code>style: &quot;currency&quot;</code>: “€12.60”, “12,60 €”, “R$ 12,60”. <code>parseAmount</code> exists for the one place a free-text amount is typed, and it discovers the separators from <code>Intl</code> rather than knowing them.</p>
+<p>The amount field is <code>type=&quot;number&quot;</code> with <code>inputmode=&quot;decimal&quot;</code>, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes <code>v.number()</code> and the server converts to minor units with the trip’s currency. <code>formatMoney</code> on the way out uses <code>Intl.NumberFormat</code> with <code>style: &quot;currency&quot;</code>: “€12.60”, “12,60 €”, “R$ 12,60”. <code>parseAmount</code> exists for the one place a free-text amount is typed, and it discovers the separators from <code>Intl</code> rather than knowing them.</p>
 <h3 id="distances-and-countries">Distances, and a hundred country names for free</h3>
 
 <figure class="code">
@@ -340,7 +342,7 @@ export function parseAmount(text: string, locale: string): number | null {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:28-30</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:29-31</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const locale = getLocale();

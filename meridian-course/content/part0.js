@@ -142,7 +142,7 @@ export const part0 = [
 			code('pnpm-workspace.yaml', 1, 39),
 			{
 				type: 'p',
-				text: 'Three settings, each a decision. `packages` names the folders. `allowBuilds` is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s `postinstall` does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. `minimumReleaseAgeExclude` is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through.'
+				text: 'Four settings, each a decision. `packages` names the folders. `allowBuilds` is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s `postinstall` does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. `minimumReleaseAgeExclude` is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through. `peerDependencyRules` is the one setting that exists because of the move to SvelteKit 3. Better Auth 1.7.7 and runed 0.37.1 both declare `@sveltejs/kit` as an *optional* peer and have not widened the range past 2 yet; both use only what did not change in Kit 3 — `svelteKitHandler` takes `resolve` and `building` as arguments, runed reads `$app/state` — and both are proved against 3.0.1 by the end-to-end suite, so `allowedVersions` tells pnpm that a 3 satisfies those two peers and `pnpm peers check` stays clean. Each line is deleted the day its library’s release notes say “SvelteKit 3”, and the check is what says when. A rule like this is never written to make a warning go away; it is written when the warning has been investigated and found to be noise, and the comment above it has to say so.'
 			},
 			{
 				type: 'note',
@@ -161,7 +161,7 @@ export const part0 = [
 			},
 
 			{ type: 'h3', id: 'dependencies', text: 'What is in the box' },
-			code('package.json', 67, 102, { partial: true }),
+			code('package.json', 67, 103, { partial: true }),
 			{
 				type: 'p',
 				text: 'Forty-odd dependencies is more than any earlier project, and every one is here because a chapter needed it. The one to look at now is `"@meridian/waypoint": "workspace:*"` — the protocol tells pnpm to link the folder rather than fetch a tarball, and to replace the specifier with the real version if this package were ever published. The `imports` map at the bottom is Node’s subpath-imports feature: `#lib/...` resolves to `src/lib/...` in Node, in Vite and in TypeScript alike, which is why this project has no `$lib` alias and no `paths` in its tsconfig. (SvelteKit 3 no longer generates `$lib` at all; `#lib` is the standard it points you to, extensions and all.)'
@@ -216,37 +216,37 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 			},
 
 			{ type: 'h3', id: 'markdown-and-elements', text: 'Markdown components and a folder of custom elements' },
-			code('vite.config.ts', 64, 98, { partial: true }),
+			code('vite.config.ts', 64, 103, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two per-file behaviours. `preprocess` and `extensions` are what make a `.svx` file a component: mdsvex runs first, turns Markdown into markup and frontmatter into a `metadata` export, and the compiler takes it from there; `extensions` tells SvelteKit that `.svx` files under `src/routes` and in imports are components too. Chapter 34 writes the guides that use it.'
 			},
 			{
 				type: 'p',
-				text: '`dynamicCompileOptions` is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in `src/lib/embed` has to be compiled with `customElement: true` — a different output altogether, with `customElements.define` and a shadow root — and nothing else in the project may be. The `environment.name === "client"` guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.'
+				text: '`dynamicCompileOptions` is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in `src/lib/embed` has to be compiled with `customElement: true` — a different output altogether, with `customElements.define` and a shadow root — and nothing else in the project may be, which is why the test is the path `src/lib/embed` and not any folder called `embed`: the frame page lives in `src/routes/embed`, and the looser test once compiled it as a custom element too, so its styles went into a shadow root that never existed. The `environment.name === "client"` guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.'
 			},
 
 			{ type: 'h3', id: 'compiler', text: 'The compiler options' },
-			code('vite.config.ts', 100, 116, { partial: true }),
+			code('vite.config.ts', 105, 121, { partial: true }),
 			{
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship `.svelte` files, and the compiler decides per file. `experimental.async` is the one that changes how you write components: `await` at the top level of a `<script>`, inside `$derived`, and directly in markup, with `<svelte:boundary>` and its `pending` snippet to catch the wait. This project has more of it than any before: the globe is an `await import()` in markup, the place search is an `await` per keystroke inside a `$derived`, and opening a trip is `{const initial = await tripBySlug(slug)}` on the page.'
 			},
 
 			{ type: 'h3', id: 'adapter-and-experiments', text: 'The adapter, remote functions, and one experiment left off' },
-			code('vite.config.ts', 118, 145),
+			code('vite.config.ts', 123, 150),
 			{
 				type: 'p',
 				text: '`precompress` matters more here than in any earlier project: MapLibre and three.js are the two largest chunks any of the eight has shipped, and writing `.br` and `.gz` beside them at build time means the server never compresses them per request. `remoteFunctions` is the switch for everything in chapters 16–19. `forkPreloads` stays off on the evidence of three projects; the comment says what would turn it on, which is how a decision that might change should be recorded.'
 			},
-			code('vite.config.ts', 147, 166),
+			code('vite.config.ts', 152, 171),
 			{
 				type: 'p',
 				text: '`tracing.server` was experimental in SvelteKit 2 and is not in 3; it makes every `handle`, `load`, form action and remote function an OpenTelemetry span, and `src/instrumentation.server.ts` — loaded before any application code, with nothing to switch on — is where the exporter lives. Chapter 35 reads the spans back on the diagnostics page. The two `prerender` options turn a broken link on a prerendered page into a failed build, which is the only time you want to find out.'
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 168, 214),
+			code('vite.config.ts', 173, 219),
 			{
 				type: 'p',
 				text: 'The comment above the directives is the chapter. Two things to add. `mode: "auto"` means hashes on prerendered pages and nonces on dynamic ones — and a nonce is filled in per request, which is why the theme boot script in `app.html` is allowed by its **hash** and carries no nonce attribute: SvelteKit refuses to prerender a template that still contains `%sveltekit.nonce%`, and the guides are prerendered. `themeBootHash()` at the bottom of the file reads the script out of `app.html` and hashes it, so the two cannot drift.'
@@ -257,27 +257,27 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 			},
 
 			{ type: 'h3', id: 'versioning', text: 'Versioning, so a deploy does not strand open tabs' },
-			code('vite.config.ts', 216, 232),
+			code('vite.config.ts', 221, 237),
 			{
 				type: 'p',
 				text: '`version.name` is the commit hash, computed by `commitHash()` below with a fallback to the package version, because a Docker build context has no `.git`. `pollInterval` makes the client check for a new version once a minute; `updated.current` in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. `bundleStrategy: "split"` is the default and is named here because chapter 36 builds the one thing that must *not* be split.'
 			},
 
 			{ type: 'h3', id: 'paraglide-and-icons', text: 'Two plugins that are not SvelteKit' },
-			code('vite.config.ts', 235, 269),
+			code('vite.config.ts', 240, 274),
 			{
 				type: 'p',
 				text: 'Paraglide is a Vite plugin in its own right: it watches `messages/*.json`, compiles them into `src/lib/paraglide`, and does so with a `strategy` list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites `import { PlusIcon } from "phosphor-svelte"` into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first `<h1>`.'
 			},
 
 			{ type: 'h3', id: 'the-rest', text: 'The native addon, and the two test projects' },
-			code('vite.config.ts', 272, 279),
-			code('vite.config.ts', 281, 352, { partial: true }),
+			code('vite.config.ts', 277, 284),
+			code('vite.config.ts', 286, 357, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two Vitest projects in one config — and no `extends` line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and `#lib` included, unless it says `extends: false`: `client` runs `*.svelte.test.ts` in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; `server` runs everything else in Node, one file at a time because SQLite has one writer. The `optimizeDeps.include` list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.'
 			},
-			code('vite.config.ts', 356, 391),
+			code('vite.config.ts', 361, 396),
 			{
 				type: 'checkpoint',
 				items: [
@@ -311,7 +311,7 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 					'**`$state.raw`, `$state.snapshot`** — the Tiptap editor instance (ch. 30); the library’s `toJSON` (ch. 06).',
 					'**`await` in markup, in `$derived` and at the top of `<script>`; `<svelte:boundary>` with `pending` and `failed`** — the trip page, the place search, the globe, the explore page (ch. 24, 25, 28, 35).',
 					'**`{const}` declaration tags** — the header’s link list, the trip page’s initial data (ch. 23, 24).',
-					'**Attachments — `{@attach}`** — Tiptap (ch. 30), the GSAP reveal (ch. 22), and the argument for when a wrapper library is *not* worth it (ch. 39).',
+					'**Attachments — `{@attach}`** — Tiptap (ch. 30), the GSAP hero timeline (ch. 22), and the argument for when a wrapper library is *not* worth it (ch. 39).',
 					'**`animate:flip`** with svelte-dnd-action (ch. 25).',
 					'**`svelte/reactivity`: `MediaQuery`, `createSubscriber`; `svelte/reactivity/window`: `scrollY`** — the theme, the globe’s motion preference, geolocation, the header (ch. 22, 27, 28, 40).',
 					'**Custom elements — `<svelte:options customElement>`** with a shadow root and attribute-mapped props (ch. 36).',
@@ -368,11 +368,11 @@ $ pnpm run dev               # builds the element, then vite dev on :5173`
 					'**@internationalized/date** — calendar dates without time zones, and the transport hook that carries them (ch. 21).',
 					'**world-atlas + topojson-client** — the coastlines, at build time. (ch. 16, 27)',
 					'**@opentelemetry/sdk-trace-node** — the tracing exporter. (ch. 35)',
-					'**GSAP** — one reveal, respecting reduced motion. (ch. 22)',
+					'**GSAP** — one hero timeline, respecting reduced motion. (ch. 22)',
 					'**fontsource** — two variable fonts, preloaded by source filename. (ch. 22)'
 				]
 			},
-			code('package.json', 67, 98, { partial: true }),
+			code('package.json', 67, 99, { partial: true }),
 
 			{ type: 'h3', id: 'domain', text: 'The domain, with no framework in it' },
 			{

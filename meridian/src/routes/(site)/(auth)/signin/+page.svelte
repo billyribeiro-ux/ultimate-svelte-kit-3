@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { WarningCircleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { keepTyped } from '#lib/forms/keep-typed.ts';
@@ -26,9 +27,15 @@
 	off and progressively enhances with it on. `fields.x.as('email')` writes
 	the name, the type and the current value; `issues()` are the validation
 	messages for that field, from the schema or from `invalid()` on the server.
+
+	`novalidate`: the schema on the server is the one validator, and its
+	messages come back as the coral line under the field, the same with
+	JavaScript on or off — not the browser's own bubble, which looks like
+	nothing else in the product and says something slightly different.
 -->
-<form class="card card--pad stack" {...signIn}>
+<form class="stack" novalidate {...signIn}>
 	<h1>{m.auth_sign_in()}</h1>
+	<p class="auth__lede">{m.auth_sign_in_lede()}</p>
 
 	<input {...signIn.fields.redirectTo.as('hidden', redirectTo)} />
 
@@ -36,7 +43,7 @@
 		<span class="label">{m.auth_email()}</span>
 		<input class="input" {...signIn.fields.email.as('email')} autocomplete="email" required />
 		{#each signIn.fields.email.issues() ?? [] as issue (issue.message)}
-			<span class="issue">{issue.message}</span>
+			<span class="issue"><WarningCircleIcon size={14} aria-hidden="true" />{issue.message}</span>
 		{/each}
 	</label>
 
@@ -49,7 +56,7 @@
 			required
 		/>
 		{#each signIn.fields.password.issues() ?? [] as issue (issue.message)}
-			<span class="issue">{issue.message}</span>
+			<span class="issue"><WarningCircleIcon size={14} aria-hidden="true" />{issue.message}</span>
 		{/each}
 	</label>
 
@@ -57,7 +64,7 @@
 		{m.auth_sign_in()}
 	</button>
 
-	<p class="muted">
+	<p class="muted auth__foot">
 		{m.auth_no_account()}
 		<a href={href(`/(site)/(auth)/signup?redirectTo=${encodeURIComponent(redirectTo)}`)}>
 			{m.auth_sign_up()}

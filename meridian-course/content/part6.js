@@ -25,16 +25,16 @@ export const part6 = [
 				type: 'p',
 				text: 'The identity pages are the plainest pages in the app and the ones with the most to get right. Every one is a remote `form` spread onto a real `<form>`: it submits with JavaScript off and enhances with it on.'
 			},
-			code(`${ROUTES}/(site)/(auth)/signin/+page.svelte`, 1, 18),
-			code(`${ROUTES}/(site)/(auth)/signin/+page.svelte`, 20, 66),
+			code(`${ROUTES}/(site)/(auth)/signin/+page.svelte`, 1, 19),
+			code(`${ROUTES}/(site)/(auth)/signin/+page.svelte`, 21, 73),
 			{
 				type: 'p',
-				text: '`fields.email.as("email")` writes the name, the type and the current value; `issues()` are the validation messages for that field — from the schema, or from `invalid()` on the server, which chapter 17 showed putting “That email and password do not match” on the password field. Where to go afterwards rides in a hidden field; the server sanitises it, so a crafted link cannot send somebody who has just typed a password to another site. `pending` disables the button while a submission is in flight.'
+				text: '`fields.email.as("email")` writes the name, the type and the current value; `issues()` are the validation messages for that field — from the schema, or from `invalid()` on the server, which chapter 17 showed putting “That email and password do not match” on the password field. Where to go afterwards rides in a hidden field; the server sanitises it, so a crafted link cannot send somebody who has just typed a password to another site. `pending` disables the button while a submission is in flight. The form is `novalidate`: the schema on the server is the one validator, so a bad email comes back as the coral line under the field, with its warning icon on the first line of the message, the same with JavaScript on or off — not as the browser’s own bubble, which looks like nothing else in the product.'
 			},
-			code(`${ROUTES}/(site)/(auth)/signup/+page.svelte`, 17, 63),
+			code(`${ROUTES}/(site)/(auth)/signup/+page.svelte`, 18, 71),
 			{
 				type: 'p',
-				text: 'Sign-up is the same shape with a name and a `minlength` on the password that matches the schema’s twelve — the browser refuses first, the schema refuses second, Better Auth refuses third, and the message under the field is the same in all three languages. `autocomplete="new-password"` lets a password manager offer to generate one.'
+				text: 'Sign-up is the same shape with a name and a `minlength` on the password that matches the schema’s twelve — a hint to a password manager now that the form does not let the browser refuse: the schema refuses first, Better Auth second, and both answers arrive as the line under the field. `autocomplete="new-password"` lets a password manager offer to generate one.'
 			},
 			{ type: 'h3', id: 'typed-early', text: 'What was typed before the page woke up' },
 			code('src/lib/forms/keep-typed.ts', 29, 42),
@@ -51,16 +51,16 @@ export const part6 = [
 				type: 'p',
 				text: 'The test that pins it holds the client bundle back with `page.route`, types into the server-rendered page, checks that the root element has no `data-hydrated` attribute yet, lets the bundle through, waits for the attribute the root layout sets in `onMount` (chapter 23), and only then asserts that the text is still there and that the sign-in goes through. Without the attribute the test would have nothing honest to wait for, and a `waitForTimeout` would be a guess.'
 			},
-			code(`${ROUTES}/(site)/(auth)/+layout.svelte`, 1, 21),
+			code(`${ROUTES}/(site)/(auth)/+layout.svelte`, 1, 75),
 			code(`${ROUTES}/(site)/(app)/+layout.server.ts`, 1, 27),
 			{
 				type: 'p',
-				text: 'The `(auth)` group is a centred card; the `(app)` group is a guard. Every route under `(app)` needs a person, and checking once in a layout `load` means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with `redirectTo` carrying the page they wanted. The remote functions check too, with `requireUser()`, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.'
+				text: 'The `(auth)` group is the brand mark over the form — straight on the paper on a phone, where a card inside a page inside a screen was a box in a box, and one card from 40em; the `(app)` group is a guard. Every route under `(app)` needs a person, and checking once in a layout `load` means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with `redirectTo` carrying the page they wanted. The remote functions check too, with `requireUser()`, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.'
 			},
-			code('src/lib/ui/Header.svelte', 69, 84, { partial: true }),
+			code('src/lib/ui/Header.svelte', 139, 156),
 			{
 				type: 'p',
-				text: 'Signing out is a `<form>` spread from `signOut`, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s `load` runs again and the header renders the signed-out state.'
+				text: 'Signing out is a `<form>` spread from `signOut`, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s `load` runs again and the header renders the signed-out state. The header offers nothing the page already is: “New trip” is left out on the trips list, which has its own a hundred pixels below, and on the new-trip form; “Sign in” is left out on the sign-in and sign-up pages. Both checks read `page.route.id`, which is the same in every language.'
 			},
 			{
 				type: 'checkpoint',
@@ -80,17 +80,17 @@ export const part6 = [
 			'A list awaited in markup with a `failed` snippet and no `pending` one; a preview per card through `query.batch` — two requests for twenty trips; a thumbnail component; and a creation form whose date picker writes hidden inputs named by the form itself, prefilled from the explore page.',
 		goal: 'Compose a page from two remote reads and one remote form, and let a headless picker participate in a form it knows nothing about.',
 		blocks: [
-			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 1, 20),
-			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 35, 82, { partial: true }),
+			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 1, 32),
+			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 47, 119, { partial: true }),
 			{
 				type: 'p',
-				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses `href()` from chapter 23 — `resolve()` with the route id, then the language prefix — so a renamed folder is a type error and not a 404.'
+				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses `href()` from chapter 23 — `resolve()` with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an `::after` on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes `view-transition-name: trip-title` — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s `<h1>` carries the same name, so the title morphs into the header during the navigation.'
 			},
 			code('src/lib/ui/RouteThumb.svelte', 1, 43),
-			code('src/lib/ui/RouteThumb.svelte', 45, 53),
+			code('src/lib/ui/RouteThumb.svelte', 45, 64),
 			{
 				type: 'p',
-				text: 'The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip. `role="img"` with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path.'
+				text: 'The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip. `role="img"` with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at `width` × `height` — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, `style:aspect-ratio`, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry `vector-effect: non-scaling-stroke` — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.'
 			},
 
 			{ type: 'h3', id: 'new-trip', text: 'A new trip' },
@@ -146,16 +146,16 @@ export const part6 = [
 				type: 'p',
 				text: 'Two page options do the work. `prerender = true` renders the page once at build time to a file. `csr = false` ships no client JavaScript for it — not deferred, none. A dynamic route can only be prerendered if SvelteKit knows its parameter values; the crawler finds most by following links, and `entries` says them out loud so a guide nothing links to is still built. The `load` is universal and runs at build time; the 404 for an unknown slug is what a request for a page that was not built gets from the server, because prerendered routes are not in the runtime manifest at all.'
 			},
-			code(`${ROUTES}/guides/+page.svelte`, 1, 47),
-			code(`${ROUTES}/guides/[guide]/+page.svelte`, 1, 41),
+			code(`${ROUTES}/guides/+page.svelte`, 1, 46),
+			code(`${ROUTES}/guides/[guide]/+page.svelte`, 1, 48),
 			{
 				type: 'p',
 				text: 'The guide is a component — mdsvex compiled the Markdown into one — and `load` handed it over; rendering a component held in a variable is `<Guide />`, the same as any other. The dates are formatted in the page’s locale, which is decided per prerendered file: the crawler follows the language links, `reroute` maps `/de/guides` to the same route, the middleware sets German, and the output has a `de/guides.html` beside `guides.html`.'
 			},
-			code(`${ROUTES}/guides/+layout.svelte`, 1, 43),
+			code(`${ROUTES}/guides/+layout.svelte`, 1, 50),
 			{
 				type: 'p',
-				text: 'A chrome that does not know you. These pages cannot depend on who is looking, so there is no “signed in as”, no theme button — the boot script still applies the stored theme — and the language links are plain links with `keepSearch={false}`. It is a small, honest header for a small, static site.'
+				text: 'A chrome that does not know you. These pages cannot depend on who is looking, so there is no “signed in as”, no theme button — the boot script still applies the stored theme — and the language links are plain links with `keepSearch={false}`. On a phone it is two rows by design — the brand and EN · DE · PT on the first, the three links under them — and one row from 48em. It is a small, honest header for a small, static site.'
 			},
 
 			{ type: 'h3', id: 'what-prerendering-forbids', text: 'Two errors that shaped the app' },
@@ -199,16 +199,16 @@ Error: Cannot access url.search on a page with prerendering enabled
 			'A dynamic page reading prerendered data, debounced with runed, grouped with `Intl.DisplayNames`, linking with typed `resolve()`; and a page that reads the server’s own OpenTelemetry spans out of a ring buffer through `src/instrumentation.server.ts`.',
 		goal: 'Mix prerendered data into a per-request page, use a utility library where it earns its place, and turn SvelteKit 3’s built-in tracing into a page you can read.',
 		blocks: [
-			code(`${ROUTES}/(site)/explore/+page.svelte`, 10, 50, { partial: true }),
+			code(`${ROUTES}/(site)/explore/+page.svelte`, 11, 65, { partial: true }),
 			{
 				type: 'p',
-				text: 'Three things in forty lines. `await places()` at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what `prerender` remote functions are for. `Intl.DisplayNames` turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s `Debounced` follows `query` with a delay: `settled.current` changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so `query` stays a plain `$state`.'
+				text: 'Three things in forty lines. `await places()` at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what `prerender` remote functions are for. `Intl.DisplayNames` turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s `Debounced` follows `query` with a delay: `settled.current` changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so `query` stays a plain `$state`. The coordinates under each place read as a place — `38.72° N, 9.14° W` — and the compass letters are messages, because they are words: east is O in German and L in Portuguese, and west is O in Portuguese.'
 			},
-			code(`${ROUTES}/(site)/explore/+page.svelte`, 52, 69),
-			code(`${ROUTES}/(site)/explore/+page.svelte`, 100, 133),
+			code(`${ROUTES}/(site)/explore/+page.svelte`, 67, 105),
+			code(`${ROUTES}/(site)/explore/+page.svelte`, 169, 212),
 			{
 				type: 'p',
-				text: 'Two `href()` calls, one with a parameter and one without, and `resolve()` with the route id underneath each. The route id for the new-trip page is `/(site)/(app)/trips/new?place=…` — route ids include their groups, which surprises people the first time, and since SvelteKit 2.26 they may carry their search string — and `resolve` gives back `/trips/new?place=lisbon`, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through `guideForPlace` from chapter 34.'
+				text: 'Two `href()` calls, one with a parameter and one without, and `resolve()` with the route id underneath each. The route id for the new-trip page is `/(site)/(app)/trips/new?place=…` — route ids include their groups, which surprises people the first time, and since SvelteKit 2.54, so in every 3.x, they may carry their search string — and `resolve` gives back `/trips/new?place=lisbon`, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through `guideForPlace` from chapter 34. The countries flow in CSS columns — `columns: 3 18rem`, one on a phone, two from 48em, three from 64em — each country `break-inside: avoid` with its places one under another: a country has one or two places, and a grid of places had left each country a row of one or two cards and the rest of the width empty. A place is a card and not a link — its two buttons are the links — so it does not lift on hover, because a lift says “this is a link”. The search row sticks under the header and draws its hairline once it is stuck, which a zero-height sentinel and an `IntersectionObserver` attached to it decide; the browser’s blue clear button is replaced by a ghost one of ours, and on a phone the count is the places alone, so the row stays one row.'
 			},
 			{
 				type: 'why',
@@ -269,7 +269,7 @@ Error: Cannot access url.search on a page with prerendering enabled
 			code('src/hooks.server.ts', 119, 136),
 			{
 				type: 'p',
-				text: 'The frame page is outside the `(site)` group — no header — and has `csr = false`, so it is a few kilobytes of HTML and CSS. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which `hooks.server.ts` replaces `frame-ancestors "none"` with `*` after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.'
+				text: 'The frame page is outside the `(site)` group — no header — and has `csr = false`, so it is a few kilobytes of HTML and CSS. For a while it was a few kilobytes of HTML and no CSS of its own: the compiler option below that turns `src/lib/embed` into custom elements tested for any folder called `embed`, so the client build compiled this page as a custom element too, put its styles into a shadow root that never exists, and emitted no stylesheet for the server to link. The test is now the path `src/lib/embed`, and a probe of the frame checks the box is 22rem wide. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which `hooks.server.ts` replaces `frame-ancestors "none"` with `*` after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.'
 			},
 
 			{ type: 'h3', id: 'the-element', text: 'The custom element' },
@@ -282,17 +282,17 @@ Error: Cannot access url.search on a page with prerendering enabled
 			code('src/lib/embed/MeridianRoute.svelte', 85, 122),
 			{
 				type: 'p',
-				text: 'Inside, a boundary with `pending` and `failed` around an `await` in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going.'
+				text: 'Inside, a boundary with `pending` and `failed` around an `await` in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same five pairs `tokens.css` holds, written as `light-dark()`. Inside a shadow root `light-dark()` resolves against the `color-scheme` the element inherits from the host page, so the host decides: a page that declares `color-scheme: light dark` gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A `prefers-color-scheme` query would have asked the visitor instead, and put a dark card on a light page.'
 			},
-			code('vite.config.ts', 80, 98),
+			code('vite.config.ts', 80, 103),
 			code('vite.element.config.ts', 1, 42),
 			{
 				type: 'p',
-				text: 'Two compilers see this file. Inside the app, `dynamicCompileOptions` compiles anything under `embed` with `customElement: true` for the client build only — the server build compiles it as a plain component it never renders. Outside the app, a second Vite config with no SvelteKit builds `src/lib/embed/element.ts` into one IIFE file in `static/embed`, which SvelteKit then serves like any static asset at `/embed/meridian-route.js`. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The `build` and `dev` scripts run it first.'
+				text: 'Two compilers see this file. Inside the app, `dynamicCompileOptions` compiles anything under `src/lib/embed` with `customElement: true` for the client build only — the server build compiles it as a plain component it never renders. The path is matched as a path, three folders long; matching any folder named `embed` caught the frame page above as well. Outside the app, a second Vite config with no SvelteKit builds `src/lib/embed/element.ts` into one IIFE file in `static/embed`, which SvelteKit then serves like any static asset at `/embed/meridian-route.js`. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The `build` and `dev` scripts run it first.'
 			},
 			code('src/lib/embed/element.ts', 1, 13),
-			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 1, 43),
-			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 45, 60),
+			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 1, 60),
+			code(`${ROUTES}/(site)/t/[slug=slug]/settings/EmbedSection.svelte`, 84, 111),
 			{
 				type: 'p',
 				text: 'The settings page shows both snippets and a live preview: it imports the element module on mount — importing is what defines the element — and writes `<meridian-route>` into its own markup. The snippet strings are assembled in two halves because a literal closing script tag inside a script block would end the block as far as the Svelte parser is concerned; that sentence is in the source too, because the next person to touch it would otherwise “fix” it.'

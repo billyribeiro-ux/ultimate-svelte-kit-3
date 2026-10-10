@@ -38,11 +38,11 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:1-20</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { PlusIcon } from 'phosphor-svelte';
+	import { MapTrifoldIcon, PlusIcon } from 'phosphor-svelte';
 	import { formatDistance } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
@@ -51,6 +51,7 @@
 	import type { Role } from '#lib/domain/schemas.ts';
 	import { tripPreview } from '#lib/remote/geo.remote.ts';
 	import { myTrips } from '#lib/remote/trips.remote.ts';
+	import Empty from '#lib/ui/Empty.svelte';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
 
 	const locale = getLocale();
@@ -60,12 +61,23 @@
 		editor: m.role_editor,
 		viewer: m.role_viewer
 	};
+
+	/*
+	 * THE CARD BECOMES THE HEADER
+	 * ---------------------------
+	 * A `view-transition-name` must be unique on the page, so it cannot sit
+	 * on every card's title at once. It is given to the one card the person
+	 * is about to open — on pointer down, or on Enter when the link has
+	 * focus — and the trip page's `&lt;h1&gt;` carries the same name, so the
+	 * browser morphs this title into that one during the navigation.
+	 */
+	let leaving: string | null = $state(null);
 &lt;/script&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:35-82</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:47-119</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;!--
@@ -87,29 +99,54 @@
 		{const trips = await myTrips()}
 
 		{#if trips.length === 0}
-			&lt;p class=&quot;card card--pad muted&quot;&gt;{m.trips_empty()}&lt;/p&gt;
+			&lt;Empty icon={MapTrifoldIcon} title={m.trips_empty_title()} body={m.trips_empty()}&gt;
+				{#snippet action()}
+					&lt;a class=&quot;btn btn--primary&quot; href={href('/(site)/(app)/trips/new')}&gt;
+						&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+						{m.nav_new_trip()}
+					&lt;/a&gt;
+				{/snippet}
+			&lt;/Empty&gt;
 		{:else}
 			&lt;ul class=&quot;grid&quot; role=&quot;list&quot; style:--grid-min=&quot;18rem&quot;&gt;
 				{#each trips as { trip, role, members, stops } (trip.id)}
 					{const preview = await tripPreview(trip.id)}
-					&lt;li class=&quot;card trip&quot;&gt;
-						&lt;a class=&quot;trip__link&quot; href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}&gt;
+					&lt;li class=&quot;card card--link trip&quot;&gt;
+						&lt;div class=&quot;trip__thumb&quot;&gt;
 							&lt;RouteThumb points={preview.points} label={trip.name} /&gt;
-							&lt;h2 class=&quot;trip__name&quot;&gt;{trip.name}&lt;/h2&gt;
+							&lt;span class=&quot;chip trip__role&quot; class:chip--sea={role === 'owner'}&gt;
+								{roleLabel[role]()}
+							&lt;/span&gt;
+						&lt;/div&gt;
+						&lt;!--
+							One link per card, named by the trip. The `::after` on it covers
+							the whole card, so the card is the click target while the
+							accessible name stays the name — no &quot;click here&quot;, no nested links.
+						--&gt;
+						&lt;a
+							class=&quot;trip__link&quot;
+							href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}
+							onpointerdown={() =&gt; (leaving = trip.id)}
+							onkeydown={(event) =&gt; {
+								if (event.key === 'Enter') leaving = trip.id;
+							}}
+						&gt;
+							&lt;h2
+								class=&quot;trip__name&quot;
+								style:view-transition-name={leaving === trip.id ? 'trip-title' : undefined}
+							&gt;
+								{trip.name}
+							&lt;/h2&gt;
 						&lt;/a&gt;
-						&lt;p class=&quot;muted&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
-						&lt;p class=&quot;cluster muted trip__facts&quot;&gt;
+						&lt;p class=&quot;trip__dates&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
+						&lt;p class=&quot;trip__facts dotted tabular&quot;&gt;
 							&lt;span&gt;{m.trips_days({ count: dayCount(trip.startDate, trip.endDate) })}&lt;/span&gt;
-							&lt;span&gt;·&lt;/span&gt;
 							&lt;span&gt;{m.trips_stops({ count: stops })}&lt;/span&gt;
-							&lt;span&gt;·&lt;/span&gt;
 							&lt;span&gt;{m.trips_companions({ count: members })}&lt;/span&gt;
 							{#if preview.total &gt; 0}
-								&lt;span&gt;·&lt;/span&gt;
 								&lt;span&gt;{formatDistance(preview.total, locale)}&lt;/span&gt;
 							{/if}
 						&lt;/p&gt;
-						&lt;span class=&quot;chip&quot; class:chip--sea={role === 'owner'}&gt;{roleLabel[role]()}&lt;/span&gt;
 					&lt;/li&gt;
 				{/each}
 			&lt;/ul&gt;
@@ -117,7 +154,7 @@
 	&lt;/svelte:boundary&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404.</p>
+<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an <code>::after</code> on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes <code>view-transition-name: trip-title</code> — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s <code>&lt;h1&gt;</code> carries the same name, so the title morphs into the header during the navigation.</p>
 
 <figure class="code">
 	<figcaption>
@@ -171,11 +208,22 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:45-53</span></span>
+		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:45-64</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svg class=&quot;thumb&quot; viewBox=&quot;0 0 {width} {height}&quot; role=&quot;img&quot; aria-label={label}&gt;
-	&lt;rect {width} {height} rx=&quot;8&quot; class=&quot;thumb__paper&quot; /&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	The box's shape is the viewBox's: 160×90 on the trips list, 320×160 in
+	the embed. A fixed 16:9 in the CSS letterboxed the embed's 2:1 drawing
+	with an empty band above and below.
+--&gt;
+&lt;svg
+	class=&quot;thumb&quot;
+	viewBox=&quot;0 0 {width} {height}&quot;
+	style:aspect-ratio=&quot;{width} / {height}&quot;
+	role=&quot;img&quot;
+	aria-label={label}
+&gt;
+	&lt;rect {width} {height} rx=&quot;6&quot; class=&quot;thumb__paper&quot; /&gt;
 	{#if projected.length &gt; 1}
 		&lt;path d={path} class=&quot;thumb__route&quot; /&gt;
 	{/if}
@@ -184,7 +232,7 @@
 	{/each}
 &lt;/svg&gt;</code></pre>
 </figure>
-<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path.</p>
+<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at <code>width</code> × <code>height</code> — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, <code>style:aspect-ratio</code>, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry <code>vector-effect: non-scaling-stroke</code> — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.</p>
 <h3 id="new-trip">A new trip</h3>
 
 <figure class="code">

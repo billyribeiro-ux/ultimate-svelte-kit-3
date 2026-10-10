@@ -76,12 +76,14 @@
 >
 	<DateRangePicker.Label class="label">{label}</DateRangePicker.Label>
 
-	<div class="range__row" class:range__row--invalid={issues.length > 0}>
+	<div class="datefield" class:datefield--invalid={issues.length > 0}>
 		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			<DateRangePicker.Input {type} {name} class="range__input">
+			<DateRangePicker.Input {type} {name} class="range__input datefield__input">
 				{#snippet children({ segments })}
 					{#each segments as { part, value: text }, i (part + i)}
-						<DateRangePicker.Segment {part} class="range__segment">{text}</DateRangePicker.Segment>
+						<DateRangePicker.Segment {part} class="datefield__segment"
+							>{text}</DateRangePicker.Segment
+						>
 					{/each}
 				{/snippet}
 			</DateRangePicker.Input>
@@ -90,7 +92,10 @@
 			{/if}
 		{/each}
 
-		<DateRangePicker.Trigger class="btn btn--icon btn--ghost btn--sm" aria-label={label}>
+		<DateRangePicker.Trigger
+			class="btn btn--icon btn--ghost btn--sm datefield__trigger"
+			aria-label={label}
+		>
 			<CalendarBlankIcon size={18} aria-hidden="true" />
 		</DateRangePicker.Trigger>
 	</div>
@@ -99,7 +104,7 @@
 		<span class="issue">{issue.message}</span>
 	{/each}
 
-	<DateRangePicker.Content class="range__popover" sideOffset={6}>
+	<DateRangePicker.Content class="datefield__popover pop-in" sideOffset={6}>
 		<DateRangePicker.Calendar class="cal">
 			{#snippet children({ months, weekdays })}
 				<DateRangePicker.Header class="cal__header">
@@ -140,139 +145,13 @@
 </DateRangePicker.Root>
 
 <style>
+	/* The field, the segments, the popover and the calendar are `src/lib/styles/dates.css`, shared with the single-date field. */
 	:global(.range) {
 		display: grid;
 		gap: var(--space-1);
 	}
 
-	.range__row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		min-height: 2.5rem;
-		padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-		border: 1px solid var(--line-2);
-		border-radius: var(--radius);
-		background: var(--paper-2);
-	}
-
-	.range__row:focus-within {
-		border-color: var(--focus);
-		box-shadow: 0 0 0 3px light-dark(rgb(37 99 235 / 0.18), rgb(147 197 253 / 0.25));
-	}
-
-	.range__row--invalid {
-		border-color: var(--coral);
-	}
-
-	:global(.range__input) {
-		display: inline-flex;
-		align-items: center;
-		font-variant-numeric: tabular-nums;
-	}
-
-	:global(.range__segment) {
-		padding: 0 0.1em;
-		border-radius: 3px;
-		outline: none;
-	}
-
-	:global(.range__segment[data-segment='literal']) {
-		color: var(--ink-3);
-	}
-
-	:global(.range__segment:focus) {
-		background: var(--sea-soft);
-		color: var(--sea);
-	}
-
 	.range__dash {
 		color: var(--ink-3);
-	}
-
-	:global(.range__popover) {
-		z-index: 50;
-		padding: var(--space-3);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-lg);
-		background: var(--paper-2);
-		box-shadow: var(--shadow-3);
-	}
-
-	:global(.cal) {
-		display: grid;
-		gap: var(--space-2);
-	}
-
-	:global(.cal__header) {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	:global(.cal__heading) {
-		font-weight: 600;
-		font-size: var(--text-sm);
-	}
-
-	:global(.cal__grid) {
-		border-collapse: collapse;
-	}
-
-	:global(.cal__weekday) {
-		width: 2.25rem;
-		font-size: var(--text-xs);
-		font-weight: 500;
-		color: var(--ink-3);
-		text-align: center;
-	}
-
-	:global(.cal__cell) {
-		padding: 1px;
-		text-align: center;
-	}
-
-	:global(.cal__day) {
-		display: grid;
-		place-items: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: var(--radius-sm);
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		cursor: pointer;
-	}
-
-	:global(.cal__day:hover) {
-		background: var(--paper-3);
-	}
-
-	:global(.cal__day[data-outside-month]) {
-		color: var(--ink-3);
-		opacity: 0.5;
-	}
-
-	:global(.cal__day[data-disabled]) {
-		color: var(--ink-3);
-		opacity: 0.35;
-		cursor: not-allowed;
-	}
-
-	:global(.cal__day[data-today]) {
-		box-shadow: inset 0 0 0 1px var(--line-2);
-	}
-
-	:global(.cal__day[data-selected]),
-	:global(.cal__day[data-highlighted]) {
-		background: var(--sea-soft);
-		color: var(--sea);
-		border-radius: 0;
-	}
-
-	:global(.cal__day[data-selection-start]),
-	:global(.cal__day[data-selection-end]) {
-		background: var(--sea);
-		color: light-dark(#fff, #052926);
-		border-radius: var(--radius-sm);
 	}
 </style>

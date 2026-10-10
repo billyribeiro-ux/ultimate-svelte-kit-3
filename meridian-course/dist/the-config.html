@@ -74,7 +74,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:64-98</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:64-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -106,20 +106,25 @@ extensions: ['.svelte', '.svx'],
  * server-rendered form: it registers itself with the browser and is
  * imported on mount. The server build compiles the same file as a
  * plain component it never renders.
+ *
+ * The test is the folder `src/lib/embed`, not any folder called
+ * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
+ * page, and compiled as a custom element its styles went into a
+ * shadow root that never exists — the frame rendered unstyled.
  */
 dynamicCompileOptions({ filename, environment }) {
 	if (environment.name !== 'client') return {};
-	if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+	if (/[/\\]src[/\\]lib[/\\]embed[/\\]/.test(filename)) return { customElement: true };
 	return {};
 },</code></pre>
 </figure>
 <p>Two per-file behaviours. <code>preprocess</code> and <code>extensions</code> are what make a <code>.svx</code> file a component: mdsvex runs first, turns Markdown into markup and frontmatter into a <code>metadata</code> export, and the compiler takes it from there; <code>extensions</code> tells SvelteKit that <code>.svx</code> files under <code>src/routes</code> and in imports are components too. Chapter 34 writes the guides that use it.</p>
-<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, with <code>customElements.define</code> and a shadow root — and nothing else in the project may be. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.</p>
+<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, with <code>customElements.define</code> and a shadow root — and nothing else in the project may be, which is why the test is the path <code>src/lib/embed</code> and not any folder called <code>embed</code>: the frame page lives in <code>src/routes/embed</code>, and the looser test once compiled it as a custom element too, so its styles went into a shadow root that never existed. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:100-116</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:105-121</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -145,7 +150,7 @@ dynamicCompileOptions({ filename, environment }) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:118-145</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:123-150</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -181,7 +186,7 @@ experimental: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:147-166</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:152-171</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -210,7 +215,7 @@ prerender: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:168-214</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:173-219</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -267,7 +272,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:216-232</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:221-237</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -293,7 +298,7 @@ output: { bundleStrategy: 'split' }</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:235-269</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:240-274</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -337,7 +342,7 @@ sveltePhosphorOptimize()</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:272-279</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:277-284</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -352,7 +357,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:281-352</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:286-357</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -432,7 +437,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:356-391</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:361-396</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

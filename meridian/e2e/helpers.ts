@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * SHARED STEPS
@@ -68,11 +68,23 @@ export async function typeDate(
 	which: 'start' | 'end',
 	date: { year: number; month: number; day: number }
 ): Promise<void> {
-	const input = page.locator('.range__input').nth(which === 'start' ? 0 : 1);
+	await typeDateInto(page.locator('.range__input').nth(which === 'start' ? 0 : 1), date);
+}
+
+/**
+ * Type a date into any Bits UI date input — the range's two, or the single
+ * date of an expense — segment by segment, whatever order the locale puts
+ * them in.
+ */
+export async function typeDateInto(
+	input: Locator,
+	date: { year: number; month: number; day: number }
+): Promise<void> {
+	const keyboard = input.page().keyboard;
 	await input.locator('[data-segment="month"]').click();
-	await page.keyboard.type(String(date.month).padStart(2, '0'));
+	await keyboard.type(String(date.month).padStart(2, '0'));
 	await input.locator('[data-segment="day"]').click();
-	await page.keyboard.type(String(date.day).padStart(2, '0'));
+	await keyboard.type(String(date.day).padStart(2, '0'));
 	await input.locator('[data-segment="year"]').click();
-	await page.keyboard.type(String(date.year));
+	await keyboard.type(String(date.year));
 }

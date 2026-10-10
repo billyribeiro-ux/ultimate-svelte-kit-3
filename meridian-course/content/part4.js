@@ -35,7 +35,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'compiling', text: 'Compiling, twice' },
-			code('vite.config.ts', 235, 257),
+			code('vite.config.ts', 240, 262),
 			{
 				type: 'terminal',
 				code: `
@@ -61,15 +61,15 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 			code('src/app.html', 1, 8),
 
 			{ type: 'h3', id: 'switching', text: 'Switching: three links' },
-			code('src/lib/ui/LocaleSwitcher.svelte', 1, 32),
-			code('src/lib/ui/LocaleSwitcher.svelte', 34, 54),
+			code('src/lib/ui/LocaleSwitcher.svelte', 1, 41),
+			code('src/lib/ui/LocaleSwitcher.svelte', 43, 65),
 			{
 				type: 'p',
 				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through `href()` from chapter 23: `here` is a pathname, not a route id, and there is nothing for `resolve()` to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.'
 			},
 			{
 				type: 'p',
-				text: 'The `keepSearch` prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading `url.search` while prerendering throws. The guides layout passes `keepSearch={false}`; the site header keeps `?tab=map` across a switch.'
+				text: 'The `keepSearch` prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading `url.search` while prerendering throws. The guides layout passes `keepSearch={false}`; the site header keeps `?tab=map` across a switch. `compact` is for a header that has a nav beside it: below 64em — a phone, a tablet — the links show EN, DE and PT, and from 64em the full names, where there is room. The name stays in each link, visually hidden rather than `display: none`, so the link is still called “Deutsch” to a screen reader and to the end-to-end suite; with the full names on a phone, the guides header had wrapped to three rows.'
 			},
 			{
 				type: 'why',
@@ -105,7 +105,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 				type: 'p',
 				text: 'Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
 			},
-			code('src/routes/(site)/(app)/trips/+page.svelte', 64, 76),
+			code('src/routes/(site)/(app)/trips/+page.svelte', 105, 113),
 			{
 				type: 'p',
 				text: 'The trips page puts them together with the plural messages from the last chapter: a date range from `Intl`, three counts through Paraglide’s plural rules, and a distance through the library’s `formatDistance`. Four sources of locale-awareness in one paragraph, and the component knows about none of them.'
@@ -117,10 +117,10 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 				type: 'p',
 				text: 'Bits UI is headless: it renders the markup, the ARIA and the keyboard model of a date range picker — segmented inputs you can type into, arrow keys between segments, a calendar grid — and nothing visible. Its value is a pair of `CalendarDate`s from `@internationalized/date`, the type chapter 09 chose for the domain, so there is no conversion to get wrong. The `name` on each input renders a hidden `<input>` with the ISO date, which is how the value reaches a remote `form` and how it would reach a plain HTML form with JavaScript off.'
 			},
-			code('src/lib/ui/DateRangeField.svelte', 51, 86, { partial: true }),
+			code('src/lib/ui/DateRangeField.svelte', 51, 88, { partial: true }),
 			{
 				type: 'p',
-				text: 'The `locale` prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. `untrack` around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no.'
+				text: 'The `locale` prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. `untrack` around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in `src/lib/styles/dates.css` rather than the component’s `<style>`, because an expense’s single date (chapter 29) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.'
 			},
 
 			{ type: 'h3', id: 'transport', text: 'A `CalendarDate` across the wire' },
@@ -132,15 +132,15 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 
 			{ type: 'h3', id: 'money', text: 'Money in and out' },
 			code('src/lib/domain/money.ts', 39, 73),
-			code('src/lib/trip/Expenses.svelte', 348, 361, { partial: true }),
+			code('src/lib/trip/Expenses.svelte', 530, 547),
 			{
 				type: 'p',
-				text: 'The amount field is `type="number"` with `inputmode="decimal"`, so a phone shows a numeric keyboard with the locale’s decimal separator, and the browser hands the form a plain number — which is why the remote form’s schema takes `v.number()` and the server converts to minor units with the trip’s currency. `formatMoney` on the way out uses `Intl.NumberFormat` with `style: "currency"`: “€12.60”, “12,60 €”, “R$ 12,60”. `parseAmount` exists for the one place a free-text amount is typed, and it discovers the separators from `Intl` rather than knowing them.'
+				text: 'The amount field is `type="number"` with `inputmode="decimal"`, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes `v.number()` and the server converts to minor units with the trip’s currency. `formatMoney` on the way out uses `Intl.NumberFormat` with `style: "currency"`: “€12.60”, “12,60 €”, “R$ 12,60”. `parseAmount` exists for the one place a free-text amount is typed, and it discovers the separators from `Intl` rather than knowing them.'
 			},
 
 			{ type: 'h3', id: 'distances-and-countries', text: 'Distances, and a hundred country names for free' },
 			code('packages/waypoint/src/lib/geo/index.ts', 291, 326),
-			code('src/routes/(site)/explore/+page.svelte', 28, 30),
+			code('src/routes/(site)/explore/+page.svelte', 29, 31),
 			{
 				type: 'p',
 				text: 'Two more `Intl` APIs. `style: "unit"` formats a kilometre or a mile with the right abbreviation and spacing for the locale; a unit the code has never seen still comes out right. `Intl.DisplayNames` with `type: "region"` turns `PT` into “Portugal” and `JP` into “Japan”, “Japan” or “Japão” — a hundred country names in three languages that nobody translated, from the browser’s own locale data. The gazetteer stores a two-letter code and nothing else.'

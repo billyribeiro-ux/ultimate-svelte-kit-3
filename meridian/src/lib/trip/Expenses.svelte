@@ -10,14 +10,24 @@
 	} from '@tanstack/svelte-table';
 	import { BarChart, PieChart } from 'layerchart';
 	import { toast } from 'svelte-sonner';
-	import { CaretDownIcon, CaretUpIcon, TrashIcon } from 'phosphor-svelte';
+	import {
+		ArrowRightIcon,
+		ArrowsDownUpIcon,
+		CaretDownIcon,
+		CaretUpIcon,
+		ReceiptIcon,
+		TrashIcon
+	} from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
-	import { formatMoney } from '#lib/domain/money.ts';
+	import { formatMoney, fromMinor } from '#lib/domain/money.ts';
 	import { EXPENSE_CATEGORIES, type ExpenseCategory } from '#lib/domain/schemas.ts';
 	import { balances, settle } from '#lib/domain/split.ts';
 	import { addExpense, removeExpense } from '#lib/remote/expenses.remote.ts';
+	import { theme } from '#lib/ui/theme.svelte.ts';
+	import DateField from '#lib/ui/DateField.svelte';
+	import Empty from '#lib/ui/Empty.svelte';
 	import type { TripState } from './state.svelte.ts';
 
 	/**
@@ -93,12 +103,22 @@
 
 	const helper = createColumnHelper<typeof features, Row>();
 
+	/*
+	 * The amount comes third, beside what it was for: on a phone the table
+	 * scrolls sideways and the first three columns are what fits, and the
+	 * amount is the reason the table exists.
+	 */
 	const columns = helper.columns([
 		helper.accessor('date', {
 			header: () => m.expenses_date(),
 			cell: ({ getValue }) => formatDate(getValue(), locale, 'short')
 		}),
 		helper.accessor('title', { header: () => m.expenses_what() }),
+		helper.accessor('amountMinor', {
+			header: () => m.expenses_amount(),
+			cell: ({ getValue }) => formatMoney(getValue(), currency, locale),
+			meta: { align: 'end' }
+		}),
 		helper.accessor('category', {
 			header: () => m.expenses_category(),
 			cell: ({ getValue }) => categoryLabels[getValue()]()
@@ -106,11 +126,6 @@
 		helper.accessor('payer', { header: () => m.expenses_paid_by() }),
 		helper.accessor('sharedWith', {
 			header: () => m.expenses_shared_by(),
-			meta: { align: 'end' }
-		}),
-		helper.accessor('amountMinor', {
-			header: () => m.expenses_amount(),
-			cell: ({ getValue }) => formatMoney(getValue(), currency, locale),
 			meta: { align: 'end' }
 		})
 	]);
@@ -128,6 +143,20 @@
 		},
 		getRowId: (row) => row.id,
 		initialState: { sorting: [{ id: 'date', desc: false }] }
+	});
+
+	/* The wrapper fades at its right edge while there is more table than screen. */
+	let wrap = $state<HTMLElement>();
+	let overflowing = $state(false);
+
+	$effect(() => {
+		if (!wrap) return;
+		const element = wrap;
+		const observer = new ResizeObserver(() => {
+			overflowing = element.scrollWidth > element.clientWidth + 1;
+		});
+		observer.observe(element);
+		return () => observer.disconnect();
 	});
 
 	/* ------------------------------------------------------------------ */
@@ -150,6 +179,18 @@
 
 	const total = $derived(rows.reduce((sum, r) => sum + r.amountMinor, 0));
 
+	/*
+	 * A balance can be negative, and `Intl` writes the sign as a hyphen,
+	 * which sets "-€108.33" with a gap a minus sign does not have. U+2212 is
+	 * the minus sign, as wide as a plus.
+	 */
+	const money = (minor: number) => formatMoney(minor, currency, locale).replace('-', '\u2212');
+
+	/*
+	 * The charts plot amounts in major units — euros, not cents; yen, which
+	 * have no cents, as they are — so the axis reads like the table.
+	 * `fromMinor` asks `Intl` how many decimals the currency has.
+	 */
 	const byDay = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built whole inside the derivation, never mutated after
 		const map = new Map<string, number>();
@@ -158,8 +199,9 @@
 			.sort(([a], [b]) => (a < b ? -1 : 1))
 			.map(([date, minor]) => ({
 				date,
-				label: formatDate(date, locale, 'day'),
-				total: minor / 100
+				label: formatDate(date, locale, 'short'),
+				day: String(Number(date.slice(8))),
+				total: fromMinor(minor, currency)
 			}));
 	});
 
@@ -170,9 +212,75 @@
 		return [...map].map(([category, minor]) => ({
 			category,
 			label: categoryLabels[category](),
-			total: minor / 100
+			total: fromMinor(minor, currency)
 		}));
 	});
+
+	/*
+	 * THE BAR CHART'S AXES
+	 * --------------------
+	 * Under each bar, "May 10" while there is room for it and the day of the
+	 * month alone when there is not: the box's width is measured, and below
+	 * 56px a band, six "May 10"s run together into one string. The tooltip
+	 * keeps the full date either way.
+	 *
+	 * Up the side, round amounts in the trip's currency with no decimals,
+	 * and a top tick at or above the tallest bar. LayerChart rounds the
+	 * domain and picks its ticks separately, so a 264 bar could rise past a
+	 * top line at 250; here both come from one step — 1, 2, 2.5 or 5 times a
+	 * power of ten — chosen for about four intervals.
+	 */
+	let barWidth = $state(0);
+	const compact = $derived(barWidth > 0 && (barWidth - 48) / Math.max(byDay.length, 1) < 56);
+	const dayOf = $derived(new Map(byDay.map((d) => [d.label, d.day])));
+
+	const yTicks = $derived.by(() => {
+		const max = Math.max(0, ...byDay.map((d) => d.total));
+		if (max === 0) return [0, 1];
+		const raw = max / 4;
+		const magnitude = 10 ** Math.floor(Math.log10(raw));
+		const step = [1, 2, 2.5, 5, 10].map((f) => f * magnitude).find((s) => s >= raw) ?? raw;
+		const top = Math.ceil(max / step) * step;
+		return Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step);
+	});
+
+	const whole = $derived(
+		new Intl.NumberFormat(locale, {
+			style: 'currency',
+			currency,
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 0
+		})
+	);
+
+	/*
+	 * CHART COLOURS FROM THE TOKENS
+	 * -----------------------------
+	 * LayerChart paints SVG from a list of colour strings, and a token is
+	 * `light-dark(#…, #…)` until a browser resolves it for an element. So a
+	 * probe does the resolving: an element off screen is given each kind as
+	 * its `color`, and `getComputedStyle` hands back the plain `rgb(…)` the
+	 * theme currently means. It runs again when `theme.resolved` changes,
+	 * which is the one time those answers change.
+	 */
+	let colours = $state<Partial<Record<ExpenseCategory, string>>>({});
+
+	$effect(() => {
+		void theme.resolved;
+		const probe = document.createElement('span');
+		probe.style.position = 'absolute';
+		probe.style.visibility = 'hidden';
+		document.body.append(probe);
+		const next: Partial<Record<ExpenseCategory, string>> = {};
+		for (const category of EXPENSE_CATEGORIES) {
+			probe.style.color = `var(--kind-${category}, var(--ink-3))`;
+			next[category] = getComputedStyle(probe).color;
+		}
+		probe.remove();
+		colours = next;
+	});
+
+	const cRange = $derived(byCategory.map((slice) => colours[slice.category] ?? 'currentColor'));
 
 	const ledger = $derived(
 		balances(
@@ -195,49 +303,88 @@
 </script>
 
 <section class="expenses stack stack--lg">
-	<header class="cluster cluster--between">
-		<h2>{m.expenses_title()}</h2>
-		<p class="expenses__total tabular">
-			<strong>{formatMoney(total, currency, locale)}</strong>
-			{#if view.document.members.length > 0}
-				<span class="muted">
-					· {formatMoney(Math.round(total / view.document.members.length), currency, locale)}
-					{m.expenses_per_person()}
-				</span>
-			{/if}
-		</p>
+	<header class="expenses__header">
+		<h2 class="expenses__title">{m.expenses_title()}</h2>
+		<!-- No total over nothing: "€0 / €0 per person" above an empty state says the same thing twice. -->
+		{#if rows.length > 0}
+			<p class="expenses__total">
+				<strong class="expenses__amount tabular">{formatMoney(total, currency, locale)}</strong>
+				{#if view.document.members.length > 0}
+					<span class="expenses__each tabular">
+						{formatMoney(Math.round(total / view.document.members.length), currency, locale)}
+						{m.expenses_per_person()}
+					</span>
+				{/if}
+			</p>
+		{/if}
 	</header>
 
 	{#if rows.length === 0}
-		<p class="card card--pad muted">{m.expenses_empty()}</p>
+		<!-- "Add the first one below" only when there is a form below: a viewer gets a sentence that is true for them. -->
+		<Empty
+			icon={ReceiptIcon}
+			title={m.expenses_empty()}
+			body={editable ? m.expenses_empty_lede() : m.expenses_empty_readonly()}
+		/>
 	{:else}
 		<div class="charts">
 			<figure class="card card--pad chart">
-				<figcaption class="label">{m.expenses_by_day()}</figcaption>
-				<div class="chart__box">
+				<figcaption class="overline">{m.expenses_by_day()}</figcaption>
+				<div class="chart__box" bind:clientWidth={barWidth}>
 					<BarChart
 						data={byDay}
 						x="label"
 						y="total"
-						props={{ bars: { rounded: 'top', class: 'chart__bar' } }}
+						yDomain={[0, yTicks.at(-1) ?? 1]}
+						yNice={false}
+						props={{
+							bars: { rounded: 'top', radius: 4, class: 'chart__bar' },
+							xAxis: {
+								tickMarks: false,
+								format: (label: string) => (compact ? (dayOf.get(label) ?? label) : label)
+							},
+							yAxis: {
+								tickMarks: false,
+								ticks: yTicks,
+								format: (value: number) => whole.format(value)
+							}
+						}}
 					/>
 				</div>
 			</figure>
+			<!--
+				A donut with the total in the hole and a legend under it: five
+				slices with labels around a 14rem circle are unreadable; five chips
+				with dots are not.
+			-->
 			<figure class="card card--pad chart">
-				<figcaption class="label">{m.expenses_by_category()}</figcaption>
-				<div class="chart__box">
+				<figcaption class="overline">{m.expenses_by_category()}</figcaption>
+				<div class="chart__box chart__box--donut">
 					<PieChart
 						data={byCategory}
 						key="category"
 						label="label"
 						value="total"
-						innerRadius={-20}
+						innerRadius={-28}
+						{cRange}
+						legend={false}
 					/>
+					<p class="chart__centre tabular" aria-hidden="true">
+						{formatMoney(total, currency, locale)}
+					</p>
 				</div>
+				<ul class="legend" role="list">
+					{#each byCategory as slice (slice.category)}
+						<li class="chip" data-kind={slice.category}>
+							<span class="kind-dot" aria-hidden="true"></span>
+							{slice.label}
+						</li>
+					{/each}
+				</ul>
 			</figure>
 		</div>
 
-		<div class="table-wrap">
+		<div class="table-wrap" bind:this={wrap} data-overflow={overflowing ? '' : undefined}>
 			<table class="table">
 				<thead>
 					{#each table.getHeaderGroups() as group (group.id)}
@@ -252,6 +399,7 @@
 											? 'descending'
 											: 'none'}
 								>
+									<!-- The caret shows only when sorted; otherwise the two-way arrow waits for a hover. -->
 									<button
 										class="sort"
 										type="button"
@@ -259,7 +407,8 @@
 									>
 										{render(header.column.columnDef.header, header.getContext(), header.column.id)}
 										{#if sorted === 'asc'}<CaretUpIcon size={12} aria-hidden="true" />
-										{:else if sorted === 'desc'}<CaretDownIcon size={12} aria-hidden="true" />{/if}
+										{:else if sorted === 'desc'}<CaretDownIcon size={12} aria-hidden="true" />
+										{:else}<ArrowsDownUpIcon size={12} aria-hidden="true" class="sort__idle" />{/if}
 									</button>
 								</th>
 							{/each}
@@ -271,12 +420,27 @@
 					{#each table.getRowModel().rows as row (row.id)}
 						<tr>
 							{#each row.getAllCells() as cell (cell.id)}
-								<td class:num={cell.column.columnDef.meta?.align === 'end'}>
-									{render(
-										cell.column.columnDef.cell,
-										cell.getContext(),
-										String(cell.getValue() ?? '')
-									)}
+								<td
+									class:num={cell.column.columnDef.meta?.align === 'end'}
+									class:what={cell.column.id === 'title'}
+									class:amount={cell.column.id === 'amountMinor'}
+								>
+									{#if cell.column.id === 'category'}
+										<span class="category" data-kind={row.original.category}>
+											<span class="kind-dot" aria-hidden="true"></span>
+											{render(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+												String(cell.getValue())
+											)}
+										</span>
+									{:else}
+										{render(
+											cell.column.columnDef.cell,
+											cell.getContext(),
+											String(cell.getValue() ?? '')
+										)}
+									{/if}
 								</td>
 							{/each}
 							{#if editable}
@@ -297,32 +461,50 @@
 				</tbody>
 			</table>
 		</div>
-		<p class="hint">{m.expenses_sort_hint()}</p>
 
-		<div class="card card--pad stack stack--sm">
+		<!--
+			Two short lists, side by side from 64em and each no wider than 28rem:
+			a balance 1,100px from its name is a balance the eye has to go and
+			find.
+		-->
+		<div class="card card--pad stack">
 			<h3>{m.expenses_settle()}</h3>
-			<ul class="balances" role="list">
-				{#each [...ledger] as [userId, amount] (userId)}
-					<li class="cluster cluster--between">
-						<span>{nameOf(userId)}{userId === viewerId ? ` (${m.companions_you()})` : ''}</span>
-						<span class="tabular" class:owed={amount > 0} class:owes={amount < 0}>
-							{formatMoney(amount, currency, locale)}
-						</span>
-					</li>
-				{/each}
-			</ul>
-			{#if transfers.length === 0}
-				<p class="muted">{m.expenses_square()}</p>
-			{:else}
-				<ol class="transfers">
-					{#each transfers as t (t.from + t.to)}
-						<li>
-							{m.expenses_owes({ from: nameOf(t.from), to: nameOf(t.to) })}
-							<strong class="tabular">{formatMoney(t.amountMinor, currency, locale)}</strong>
+			<div class="settle">
+				<ul class="balances" role="list">
+					{#each [...ledger] as [userId, amount] (userId)}
+						<li class="balance">
+							<span>{nameOf(userId)}{userId === viewerId ? ` (${m.companions_you()})` : ''}</span>
+							<span class="balance__amount tabular" class:owed={amount > 0} class:owes={amount < 0}>
+								{money(amount)}
+							</span>
 						</li>
 					{/each}
-				</ol>
-			{/if}
+				</ul>
+				{#if transfers.length === 0}
+					<p class="muted">{m.expenses_square()}</p>
+				{:else}
+					<!--
+					Each transfer is drawn as `from → to  amount`; the sentence the
+					message file holds ("Ben pays Ana") is still in the row for a
+					screen reader, visually hidden.
+				-->
+					<ol class="transfers" role="list">
+						{#each transfers as t (t.from + t.to)}
+							<li class="transfer">
+								<span class="visually-hidden"
+									>{m.expenses_owes({ from: nameOf(t.from), to: nameOf(t.to) })}</span
+								>
+								<span class="transfer__who" aria-hidden="true">
+									<span>{nameOf(t.from)}</span>
+									<ArrowRightIcon size={14} class="transfer__arrow" />
+									<span>{nameOf(t.to)}</span>
+								</span>
+								<strong class="tabular">{formatMoney(t.amountMinor, currency, locale)}</strong>
+							</li>
+						{/each}
+					</ol>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
@@ -346,15 +528,19 @@
 					{/each}
 				</label>
 				<label class="field">
-					<span class="label">{m.expenses_amount()} ({currency})</span>
-					<input
-						class="input"
-						{...addExpense.fields.amount.as('number')}
-						step="0.01"
-						min="0.01"
-						inputmode="decimal"
-						required
-					/>
+					<span class="label">{m.expenses_amount()}</span>
+					<!-- The currency sits inside the field, trailing, so the number is typed and the unit is read. -->
+					<span class="input-group">
+						<input
+							class="input tabular"
+							{...addExpense.fields.amount.as('number')}
+							step="0.01"
+							min="0.01"
+							inputmode="decimal"
+							required
+						/>
+						<span class="input-group__adornment" aria-hidden="true">{currency}</span>
+					</span>
 					{#each addExpense.fields.amount.issues() ?? [] as issue (issue.message)}
 						<span class="issue">{issue.message}</span>
 					{/each}
@@ -370,16 +556,14 @@
 						{/each}
 					</select>
 				</label>
-				<label class="field">
-					<span class="label">{m.expenses_date()}</span>
-					<input
-						class="input"
-						{...addExpense.fields.date.as('date')}
-						min={view.trip.startDate}
-						max={view.trip.endDate}
-						required
-					/>
-				</label>
+				<!-- The trip's own date field, in the page's language; its hidden input carries the name the form expects. -->
+				<DateField
+					label={m.expenses_date()}
+					name={addExpense.fields.date.as('hidden', '').name}
+					min={view.trip.startDate}
+					max={view.trip.endDate}
+					issues={addExpense.fields.date.issues() ?? []}
+				/>
 			</div>
 
 			<label class="field">
@@ -408,7 +592,7 @@
 				{/each}
 			</fieldset>
 
-			<div>
+			<div class="submit">
 				<button class="btn btn--primary" type="submit" disabled={addExpense.pending > 0}>
 					{m.expenses_add()}
 				</button>
@@ -418,8 +602,36 @@
 </section>
 
 <style>
+	.expenses__header {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: var(--space-4);
+	}
+
+	.expenses__title {
+		font-size: var(--text-2xl);
+		letter-spacing: var(--tracking-2xl);
+	}
+
+	/* The total in the display face, the per-person share quietly beneath it. */
 	.expenses__total {
-		font-size: var(--text-lg);
+		display: grid;
+		justify-items: end;
+		text-align: end;
+	}
+
+	.expenses__amount {
+		font-family: var(--font-display);
+		font-size: var(--text-2xl);
+		font-weight: 500;
+		line-height: var(--leading-tight);
+		letter-spacing: var(--tracking-2xl);
+	}
+
+	.expenses__each {
+		color: var(--ink-2);
+		font-size: var(--text-sm);
 	}
 
 	.charts {
@@ -427,28 +639,127 @@
 		gap: var(--space-4);
 	}
 
+	/* Sized before the data arrives, so nothing shifts when the chart draws. */
 	.chart__box {
+		position: relative;
 		height: 14rem;
-		margin-block-start: var(--space-2);
+		margin-block-start: var(--space-3);
 	}
 
+	/* No stroke: LayerChart outlines a bar by default, and a dark rim on a teal bar is a border nobody asked for. */
 	.chart :global(.chart__bar) {
 		fill: var(--sea);
+		stroke: none;
+	}
+
+	.chart :global(.chart__bar:hover) {
+		fill: var(--sea-strong);
+	}
+
+	/* Axis text and grid lines in the quiet greys. */
+	.chart :global(text) {
+		fill: var(--ink-3);
+		font-size: var(--text-xs);
+	}
+
+	.chart :global(.tick line),
+	.chart :global(.rule line),
+	.chart :global(.grid line) {
+		stroke: var(--line);
+	}
+
+	.chart__centre {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+		font-family: var(--font-display);
+		font-size: var(--text-lg);
+		font-weight: 500;
+		pointer-events: none;
+	}
+
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: var(--space-1);
+		margin-block-start: var(--space-3);
 	}
 
 	.sort {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
+		border-radius: var(--radius-sm);
 		font: inherit;
 		color: inherit;
 		text-transform: inherit;
 		letter-spacing: inherit;
 	}
 
+	/*
+	 * A numeric column is right-aligned, so its sort icon goes on the left
+	 * of the label: the label's right edge then meets the right edge of the
+	 * numbers under it instead of stopping an icon's width short.
+	 */
+	.table th.num .sort {
+		flex-direction: row-reverse;
+	}
+
+	/* The idle sort icon shows on hover of its heading only. */
+	.sort :global(.sort__idle) {
+		color: var(--ink-4);
+		opacity: 0;
+		transition: opacity var(--dur-2) var(--ease-out);
+	}
+
+	.sort:hover :global(.sort__idle),
+	.sort:focus-visible :global(.sort__idle) {
+		opacity: 1;
+	}
+
+	/* The title column may wrap; the others stay on one line. */
+	.table td.what {
+		white-space: normal;
+		min-width: 12rem;
+	}
+
+	.table td.amount {
+		font-weight: 600;
+	}
+
+	.category {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.settle {
+		display: grid;
+		gap: var(--space-3);
+	}
+
+	.balances,
+	.transfers,
+	.settle > .muted {
+		max-inline-size: 28rem;
+	}
+
 	.balances {
 		display: grid;
 		gap: var(--space-1);
+	}
+
+	.balance {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+		font-size: var(--text-sm);
+	}
+
+	.balance__amount {
+		font-weight: 600;
 	}
 
 	.owed {
@@ -460,9 +771,27 @@
 	}
 
 	.transfers {
-		padding-inline-start: 1.2em;
 		display: grid;
-		gap: var(--space-1);
+		gap: var(--space-2);
+		padding-block-start: var(--space-2);
+		border-top: 1px solid var(--line);
+	}
+
+	.transfer {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+		font-size: var(--text-sm);
+	}
+
+	.transfer__who {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.transfer__who :global(.transfer__arrow) {
+		color: var(--ink-4);
 	}
 
 	.two {
@@ -470,11 +799,8 @@
 		gap: var(--space-3);
 	}
 
-	.check {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--space-1);
-		font-size: var(--text-sm);
+	.submit {
+		display: grid;
 	}
 
 	@media (min-width: 40em) {
@@ -483,6 +809,21 @@
 		}
 		.charts {
 			grid-template-columns: 3fr 2fr;
+		}
+		.submit {
+			justify-content: end;
+		}
+	}
+
+	@media (min-width: 64em) {
+		.settle {
+			grid-template-columns: repeat(2, minmax(0, 28rem));
+			align-items: start;
+			column-gap: var(--space-7);
+		}
+		.transfers {
+			padding-block-start: 0;
+			border-top: 0;
 		}
 	}
 </style>

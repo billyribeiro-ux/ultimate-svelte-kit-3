@@ -51,6 +51,6 @@
 <style>
 	.join {
 		max-width: 30rem;
-		padding-block: var(--space-7);
+		padding-block: var(--section);
 	}
 </style>

@@ -122,20 +122,34 @@
 </svelte:boundary>
 
 <style>
+	/*
+	 * Five colours, hand-copied from `tokens.css` because a shadow root cannot
+	 * read the host page's custom properties and this element must not bring
+	 * the tokens with it: paper, raised paper, ink, secondary ink, the sea for
+	 * the route — each as the same `light-dark()` pair the token holds.
+	 *
+	 * `light-dark()` resolves against the element's `color-scheme`, which it
+	 * inherits from the host page through the shadow boundary. So the host
+	 * decides: a page that declares `color-scheme: light dark` gets the dark
+	 * card on a dark system, and a page that declares nothing — light-only,
+	 * whatever the visitor's system says — gets the light card. A
+	 * `prefers-color-scheme` query would have asked the visitor's system
+	 * instead, and put a dark card on a light page.
+	 */
 	:host {
 		display: block;
 		max-width: 22rem;
 		font:
 			14px/1.45 system-ui,
 			sans-serif;
-		color: #1c2733;
+		color: light-dark(#171a1f, #eef1f5);
 	}
 
 	.card {
-		border: 1px solid #d8dee6;
-		border-radius: 12px;
+		border: 1px solid light-dark(#e2dccf, #2b323d);
+		border-radius: 14px;
 		padding: 14px 16px;
-		background: #ffffff;
+		background: light-dark(#ffffff, #171b22);
 	}
 
 	.title {
@@ -146,7 +160,7 @@
 
 	.muted {
 		margin: 2px 0 8px;
-		color: #667385;
+		color: light-dark(#4b5160, #aeb6c2);
 		font-size: 13px;
 	}
 
@@ -154,22 +168,23 @@
 		display: block;
 		width: 100%;
 		height: auto;
-		border-radius: 8px;
-		background: #eef4f8;
+		border-radius: 6px;
+		background: light-dark(#f8f5ee, #101318);
 	}
 
 	polyline {
 		fill: none;
-		stroke: #1f6f8b;
+		stroke: light-dark(#0f766e, #2dd4bf);
 		stroke-width: 2;
 		stroke-linejoin: round;
 		stroke-linecap: round;
+		stroke-dasharray: 5 4;
 	}
 
 	circle {
-		fill: #ff6b57;
-		stroke: #ffffff;
-		stroke-width: 1.5;
+		fill: light-dark(#ffffff, #171b22);
+		stroke: light-dark(#0f766e, #2dd4bf);
+		stroke-width: 2;
 	}
 
 	ol {
@@ -182,6 +197,6 @@
 		display: inline-block;
 		margin-top: 10px;
 		font-size: 12px;
-		color: #1f6f8b;
+		color: light-dark(#0f766e, #2dd4bf);
 	}
 </style>

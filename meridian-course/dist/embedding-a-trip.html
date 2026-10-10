@@ -207,7 +207,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 	}
 }</code></pre>
 </figure>
-<p>The frame page is outside the <code>(site)</code> group — no header — and has <code>csr = false</code>, so it is a few kilobytes of HTML and CSS. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which <code>hooks.server.ts</code> replaces <code>frame-ancestors &quot;none&quot;</code> with <code>*</code> after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.</p>
+<p>The frame page is outside the <code>(site)</code> group — no header — and has <code>csr = false</code>, so it is a few kilobytes of HTML and CSS. For a while it was a few kilobytes of HTML and no CSS of its own: the compiler option below that turns <code>src/lib/embed</code> into custom elements tested for any folder called <code>embed</code>, so the client build compiled this page as a custom element too, put its styles into a shadow root that never exists, and emitted no stylesheet for the server to link. The test is now the path <code>src/lib/embed</code>, and a probe of the frame checks the box is 22rem wide. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which <code>hooks.server.ts</code> replaces <code>frame-ancestors &quot;none&quot;</code> with <code>*</code> after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.</p>
 <h3 id="the-element">The custom element</h3>
 
 <figure class="code">
@@ -351,11 +351,11 @@ if (event.url.pathname.startsWith('/embed/')) {
 	&lt;/div&gt;
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going.</p>
+<p>Inside, a boundary with <code>pending</code> and <code>failed</code> around an <code>await</code> in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going — the same five pairs <code>tokens.css</code> holds, written as <code>light-dark()</code>. Inside a shadow root <code>light-dark()</code> resolves against the <code>color-scheme</code> the element inherits from the host page, so the host decides: a page that declares <code>color-scheme: light dark</code> gets the dark card on a dark system, and a light-only page gets the light card whatever the visitor’s system says. A <code>prefers-color-scheme</code> query would have asked the visitor instead, and put a dark card on a light page.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:80-98</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:80-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -371,10 +371,15 @@ if (event.url.pathname.startsWith('/embed/')) {
  * server-rendered form: it registers itself with the browser and is
  * imported on mount. The server build compiles the same file as a
  * plain component it never renders.
+ *
+ * The test is the folder `src/lib/embed`, not any folder called
+ * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
+ * page, and compiled as a custom element its styles went into a
+ * shadow root that never exists — the frame rendered unstyled.
  */
 dynamicCompileOptions({ filename, environment }) {
 	if (environment.name !== 'client') return {};
-	if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+	if (/[/\\]src[/\\]lib[/\\]embed[/\\]/.test(filename)) return { customElement: true };
 	return {};
 },</code></pre>
 </figure>
@@ -427,7 +432,7 @@ export default defineConfig({
 	}
 });</code></pre>
 </figure>
-<p>Two compilers see this file. Inside the app, <code>dynamicCompileOptions</code> compiles anything under <code>embed</code> with <code>customElement: true</code> for the client build only — the server build compiles it as a plain component it never renders. Outside the app, a second Vite config with no SvelteKit builds <code>src/lib/embed/element.ts</code> into one IIFE file in <code>static/embed</code>, which SvelteKit then serves like any static asset at <code>/embed/meridian-route.js</code>. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The <code>build</code> and <code>dev</code> scripts run it first.</p>
+<p>Two compilers see this file. Inside the app, <code>dynamicCompileOptions</code> compiles anything under <code>src/lib/embed</code> with <code>customElement: true</code> for the client build only — the server build compiles it as a plain component it never renders. The path is matched as a path, three folders long; matching any folder named <code>embed</code> caught the frame page above as well. Outside the app, a second Vite config with no SvelteKit builds <code>src/lib/embed/element.ts</code> into one IIFE file in <code>static/embed</code>, which SvelteKit then serves like any static asset at <code>/embed/meridian-route.js</code>. One file, no chunks, the Svelte runtime bundled in: the opposite of the app’s split bundle, because a host page cannot resolve our chunk names. The <code>build</code> and <code>dev</code> scripts run it first.</p>
 
 <figure class="code">
 	<figcaption>
@@ -451,14 +456,17 @@ export { MeridianRoute };</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:1-60</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { CheckIcon, CopyIcon } from 'phosphor-svelte';
+	import { toast } from 'svelte-sonner';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Visibility } from '#lib/domain/schemas.ts';
+	import { pop } from '#lib/motion/transitions.ts';
 
 	/**
 	 * PUTTING A TRIP ON ANOTHER PAGE
@@ -496,12 +504,26 @@ export { MeridianRoute };</code></pre>
 	const elementSnippet = $derived(
 		`&lt;script src=&quot;${origin}/embed/meridian-route.js&quot;&gt;${closeScript}\n&lt;meridian-route slug=&quot;${slug}&quot; origin=&quot;${origin}&quot;&gt;&lt;/meridian-route&gt;`
 	);
+
+	/* Which snippet was copied a moment ago; its button shows a check for 1.6s. */
+	let copied = $state&lt;'frame' | 'element' | null&gt;(null);
+
+	async function copy(which: 'frame' | 'element', text: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			toast.success(m.companions_copied());
+			copied = which;
+			setTimeout(() =&gt; (copied = null), 1600);
+		} catch {
+			// The snippet is on screen; a person can still select it.
+		}
+	}
 &lt;/script&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:45-60</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:84-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;card card--pad stack&quot;&gt;
@@ -510,14 +532,26 @@ export { MeridianRoute };</code></pre>
 		&lt;p class=&quot;muted&quot;&gt;{m.embed_only_link()}&lt;/p&gt;
 	{:else}
 		&lt;div class=&quot;stack stack--sm&quot;&gt;
-			&lt;h3 class=&quot;label&quot;&gt;{m.embed_iframe()}&lt;/h3&gt;
-			&lt;pre class=&quot;snippet&quot;&gt;&lt;code&gt;{frameSnippet}&lt;/code&gt;&lt;/pre&gt;
+			&lt;div class=&quot;snippet__head&quot;&gt;
+				&lt;h3 class=&quot;overline&quot;&gt;{m.embed_iframe()}&lt;/h3&gt;
+				{@render copyButton('frame', frameSnippet)}
+			&lt;/div&gt;
+			&lt;pre class=&quot;snippet well&quot;&gt;&lt;code&gt;{frameSnippet}&lt;/code&gt;&lt;/pre&gt;
 		&lt;/div&gt;
 		&lt;div class=&quot;stack stack--sm&quot;&gt;
-			&lt;h3 class=&quot;label&quot;&gt;{m.embed_element()}&lt;/h3&gt;
-			&lt;pre class=&quot;snippet&quot;&gt;&lt;code&gt;{elementSnippet}&lt;/code&gt;&lt;/pre&gt;
+			&lt;div class=&quot;snippet__head&quot;&gt;
+				&lt;h3 class=&quot;overline&quot;&gt;{m.embed_element()}&lt;/h3&gt;
+				{@render copyButton('element', elementSnippet)}
+			&lt;/div&gt;
+			&lt;pre class=&quot;snippet well&quot;&gt;&lt;code&gt;{elementSnippet}&lt;/code&gt;&lt;/pre&gt;
 		&lt;/div&gt;
-		&lt;meridian-route {slug} {origin}&gt;&lt;/meridian-route&gt;
+		&lt;!-- The real element, in a tier-2 well, so what a host page would show is shown here first. --&gt;
+		&lt;div class=&quot;stack stack--sm&quot;&gt;
+			&lt;h3 class=&quot;overline&quot;&gt;{m.embed_preview()}&lt;/h3&gt;
+			&lt;div class=&quot;preview well&quot;&gt;
+				&lt;meridian-route {slug} {origin}&gt;&lt;/meridian-route&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
 	{/if}
 &lt;/section&gt;</code></pre>
 </figure>

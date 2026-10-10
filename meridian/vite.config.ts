@@ -90,10 +90,15 @@ export default defineConfig(({ mode }) => {
 				 * server-rendered form: it registers itself with the browser and is
 				 * imported on mount. The server build compiles the same file as a
 				 * plain component it never renders.
+				 *
+				 * The test is the folder `src/lib/embed`, not any folder called
+				 * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
+				 * page, and compiled as a custom element its styles went into a
+				 * shadow root that never exists — the frame rendered unstyled.
 				 */
 				dynamicCompileOptions({ filename, environment }) {
 					if (environment.name !== 'client') return {};
-					if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+					if (/[/\\]src[/\\]lib[/\\]embed[/\\]/.test(filename)) return { customElement: true };
 					return {};
 				},
 

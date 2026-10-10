@@ -1,11 +1,13 @@
 <script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
 	import { Editor, type JSONContent } from '@tiptap/core';
+	import Placeholder from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
 	import * as v from 'valibot';
 	import { toast } from 'svelte-sonner';
 	import {
 		ListBulletsIcon,
+		LockSimpleIcon,
 		QuotesIcon,
 		TextBIcon,
 		TextHOneIcon,
@@ -49,7 +51,8 @@
 		return (element) => {
 			const instance = new Editor({
 				element,
-				extensions: [StarterKit],
+				// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
+				extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
 				// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
 				content: (view.document.note ?? EMPTY) as JSONContent,
 				editable,
@@ -147,55 +150,144 @@
 </script>
 
 <section class="notes stack">
-	<header class="cluster cluster--between">
-		<h2>{m.notes_title()}</h2>
-		<p class="muted" role="status">
+	<header class="notes__header">
+		<h2 class="notes__title">{m.notes_title()}</h2>
+		<!-- The status is the exact word — "Saving…", "Saved" — with a dot before it: sun while saving, sea once saved. -->
+		<p class="notes__status" role="status" data-status={status}>
 			{#if status === 'saving'}{m.notes_saving()}{:else if status === 'saved'}{m.notes_saved()}{/if}
 		</p>
 	</header>
 
 	{#if editable}
+		<!-- A tier-2 track; the pressed tool lifts onto a tier-3 pill. Not the primary button: formatting is a state, not an action. -->
 		<div class="toolbar no-print" role="toolbar" aria-label={m.notes_title()}>
-			{#each tools as tool (tool.key)}
+			{#each tools as tool, i (tool.key)}
 				{@const Icon = tool.icon}
+				{#if i === 2}<span class="toolbar__sep" aria-hidden="true"></span>{/if}
 				<button
-					class="btn btn--icon btn--sm"
-					class:btn--primary={active[tool.key]}
+					class="btn btn--icon btn--sm btn--ghost toolbar__tool"
 					type="button"
 					aria-pressed={active[tool.key]}
 					title={tool.label()}
 					aria-label={tool.label()}
 					onclick={tool.run}
 				>
-					<Icon size={16} aria-hidden="true" />
+					<Icon size={16} weight={active[tool.key] ? 'bold' : 'regular'} aria-hidden="true" />
 				</button>
 			{/each}
 		</div>
 	{:else}
-		<p class="hint">{m.notes_readonly()}</p>
+		<p class="hint notes__readonly">
+			<LockSimpleIcon size={14} aria-hidden="true" />
+			{m.notes_readonly()}
+		</p>
 	{/if}
 
 	<div class="card notes__editor" {@attach tiptap()}></div>
 </section>
 
 <style>
-	.toolbar {
+	.notes__header {
 		display: flex;
-		gap: var(--space-1);
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-3);
 	}
 
+	.notes__title {
+		font-size: var(--text-2xl);
+		letter-spacing: var(--tracking-2xl);
+	}
+
+	.notes__status {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+		color: var(--ink-2);
+		font-size: var(--text-sm);
+	}
+
+	.notes__status[data-status='saving']::before,
+	.notes__status[data-status='saved']::before {
+		content: '';
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--sun);
+	}
+
+	.notes__status[data-status='saved']::before {
+		background: var(--sea);
+	}
+
+	.toolbar {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-0);
+		padding: 2px;
+		border-radius: var(--radius);
+		background: var(--paper-3);
+		align-self: start;
+	}
+
+	.toolbar__sep {
+		width: 1px;
+		height: 1rem;
+		margin-inline: var(--space-1);
+		background: var(--line-2);
+	}
+
+	/*
+	 * Pressed: a tier-3 pill with a 3:1 edge, and the icon in ink at a
+	 * heavier weight. The tier step alone is 1.1:1 in dark — Bold looked
+	 * the same on and off — so the state is drawn three ways, none of them
+	 * colour alone.
+	 */
+	.toolbar__tool[aria-pressed='true'] {
+		background: var(--paper-4);
+		color: var(--ink);
+		box-shadow:
+			var(--shadow-1),
+			inset 0 0 0 1px var(--segment-edge);
+	}
+
+	.notes__readonly {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		font-size: var(--text-sm);
+	}
+
+	/* The page: a reading measure, prose leading, and the sea for the caret and the selection. */
 	.notes__editor {
 		min-height: 18rem;
-		padding: var(--space-4) var(--space-5);
+		padding: var(--space-5);
+		transition: border-color var(--dur-2) var(--ease-out);
 	}
 
+	.notes__editor:focus-within {
+		border-color: var(--focus);
+		box-shadow: 0 0 0 3px var(--focus-halo);
+	}
+
+	/* The card shows focus (above), so the editable itself wears neither the ring nor the reset's halo. */
 	.notes__editor :global(.notes__page) {
 		min-height: 16rem;
+		max-inline-size: var(--measure);
 		outline: none;
+		box-shadow: none;
+		caret-color: var(--sea);
+	}
+
+	.notes__editor :global(.notes__page ::selection) {
+		background: var(--sea-soft);
 	}
 
 	.notes__editor :global(.notes__page p.is-editor-empty:first-child::before) {
 		content: attr(data-placeholder);
+		float: left;
+		height: 0;
 		color: var(--ink-3);
+		pointer-events: none;
 	}
 </style>

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:19-46</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:21-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -74,14 +74,15 @@ let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:48-69</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:50-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function tiptap(): Attachment&lt;HTMLElement&gt; {
 	return (element) =&gt; {
 		const instance = new Editor({
 			element,
-			extensions: [StarterKit],
+			// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
+			extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
 			// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
 			content: (view.document.note ?? EMPTY) as JSONContent,
 			editable,
@@ -100,11 +101,11 @@ let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;</code></pre>
 	};
 }</code></pre>
 </figure>
-<p>The attachment creates the editor with the document from the live snapshot, the <code>editable</code> flag from the viewer’s role, and two callbacks: <code>onUpdate</code> schedules a save, <code>onTransaction</code> bumps a counter. The cleanup destroys the instance. <code>editor</code> is <code>$state.raw</code> because a Tiptap editor is a large object with its own internal state and must not be proxied — <code>raw</code> stores the reference and signals only on reassignment.</p>
+<p>The attachment creates the editor with the document from the live snapshot, the <code>editable</code> flag from the viewer’s role, and two callbacks: <code>onUpdate</code> schedules a save, <code>onTransaction</code> bumps a counter. The extensions are StarterKit and Placeholder, which writes the empty-note sentence from the message file onto the first empty paragraph as <code>data-placeholder</code> for the CSS to draw. The cleanup destroys the instance. <code>editor</code> is <code>$state.raw</code> because a Tiptap editor is a large object with its own internal state and must not be proxied — <code>raw</code> stores the reference and signals only on reassignment.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:71-101</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:74-104</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -143,7 +144,7 @@ async function save() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:103-146</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:106-149</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** `transactions` is read so the derivation re-runs after every edit. */
@@ -191,40 +192,45 @@ const tools = [
 	}
 ] as const;</code></pre>
 </figure>
-<p><code>editor.isActive(&quot;bold&quot;)</code> is not reactive; it is a method on an object Svelte knows nothing about. The counter is the bridge: every Tiptap transaction increments <code>transactions</code>, the <code>$derived.by</code> reads it — <code>void transactions</code> is the read — and so recomputes after every edit, and the toolbar buttons follow the cursor. The tools array is data: a key, a message function for the label, an icon, and a command chain, rendered by one <code>{#each}</code>.</p>
+<p><code>editor.isActive(&quot;bold&quot;)</code> is not reactive; it is a method on an object Svelte knows nothing about. The counter is the bridge: every Tiptap transaction increments <code>transactions</code>, the <code>$derived.by</code> reads it — <code>void transactions</code> is the read — and so recomputes after every edit, and the toolbar buttons follow the cursor. The tools array is data: a key, a message function for the label, an icon, and a command chain, rendered by one <code>{#each}</code>. A pressed tool is drawn three ways — a tier-3 pill, the 1px <code>--segment-edge</code>, and the icon at bold weight — because in the dark theme the tier step alone is 1.1:1, and Bold looked the same on and off.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:149-179</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:152-187</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;notes stack&quot;&gt;
-	&lt;header class=&quot;cluster cluster--between&quot;&gt;
-		&lt;h2&gt;{m.notes_title()}&lt;/h2&gt;
-		&lt;p class=&quot;muted&quot; role=&quot;status&quot;&gt;
+	&lt;header class=&quot;notes__header&quot;&gt;
+		&lt;h2 class=&quot;notes__title&quot;&gt;{m.notes_title()}&lt;/h2&gt;
+		&lt;!-- The status is the exact word — &quot;Saving…&quot;, &quot;Saved&quot; — with a dot before it: sun while saving, sea once saved. --&gt;
+		&lt;p class=&quot;notes__status&quot; role=&quot;status&quot; data-status={status}&gt;
 			{#if status === 'saving'}{m.notes_saving()}{:else if status === 'saved'}{m.notes_saved()}{/if}
 		&lt;/p&gt;
 	&lt;/header&gt;
 
 	{#if editable}
+		&lt;!-- A tier-2 track; the pressed tool lifts onto a tier-3 pill. Not the primary button: formatting is a state, not an action. --&gt;
 		&lt;div class=&quot;toolbar no-print&quot; role=&quot;toolbar&quot; aria-label={m.notes_title()}&gt;
-			{#each tools as tool (tool.key)}
+			{#each tools as tool, i (tool.key)}
 				{@const Icon = tool.icon}
+				{#if i === 2}&lt;span class=&quot;toolbar__sep&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;{/if}
 				&lt;button
-					class=&quot;btn btn--icon btn--sm&quot;
-					class:btn--primary={active[tool.key]}
+					class=&quot;btn btn--icon btn--sm btn--ghost toolbar__tool&quot;
 					type=&quot;button&quot;
 					aria-pressed={active[tool.key]}
 					title={tool.label()}
 					aria-label={tool.label()}
 					onclick={tool.run}
 				&gt;
-					&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
+					&lt;Icon size={16} weight={active[tool.key] ? 'bold' : 'regular'} aria-hidden=&quot;true&quot; /&gt;
 				&lt;/button&gt;
 			{/each}
 		&lt;/div&gt;
 	{:else}
-		&lt;p class=&quot;hint&quot;&gt;{m.notes_readonly()}&lt;/p&gt;
+		&lt;p class=&quot;hint notes__readonly&quot;&gt;
+			&lt;LockSimpleIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+			{m.notes_readonly()}
+		&lt;/p&gt;
 	{/if}
 
 	&lt;div class=&quot;card notes__editor&quot; {@attach tiptap()}&gt;&lt;/div&gt;

@@ -2,6 +2,7 @@
 	import { error } from '@sveltejs/kit';
 	import { page } from '$app/state';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import DeleteTrip from './DeleteTrip.svelte';
 	import EmbedSection from './EmbedSection.svelte';
 	import SettingsForm from './SettingsForm.svelte';
 
@@ -38,9 +39,18 @@
 	<EmbedSection {slug} {visibility} />
 </section>
 
+<!-- Last, after everything that can be undone. -->
+<section class="container danger-zone">
+	<DeleteTrip tripId={initial.document.trip.id} />
+</section>
+
 <style>
-	.embed {
+	.embed,
+	.danger-zone {
 		max-width: 40rem;
-		padding-block-end: var(--space-8);
+	}
+
+	.danger-zone {
+		padding-block: var(--space-6) var(--section);
 	}
 </style>

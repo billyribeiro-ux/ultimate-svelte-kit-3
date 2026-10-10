@@ -23,8 +23,11 @@
 </main>
 
 <style>
+	/* The same brand mark as the site header, on a bare page: the name, in the display face, and the sea compass. */
 	.bare {
-		padding-block: var(--space-4);
+		display: flex;
+		align-items: center;
+		min-height: var(--header-h);
 	}
 
 	.bare__brand {
@@ -32,8 +35,15 @@
 		align-items: center;
 		gap: var(--space-2);
 		font-family: var(--font-display);
+		font-size: var(--text-lg);
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		text-decoration: none;
+		color: var(--ink);
+	}
+
+	.bare__brand :global(svg) {
+		color: var(--sea);
 	}
 
 	.main {

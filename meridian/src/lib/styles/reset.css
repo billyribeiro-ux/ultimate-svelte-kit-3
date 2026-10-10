@@ -27,11 +27,13 @@ html {
 	-webkit-text-size-adjust: 100%;
 	text-size-adjust: 100%;
 	hanging-punctuation: first last;
+	/* Native checkboxes, radios and progress bars take the brand colour; nothing is re-drawn. */
+	accent-color: var(--sea);
 }
 
 body {
 	min-height: 100dvh;
-	line-height: 1.5;
+	line-height: var(--leading-body);
 	-webkit-font-smoothing: antialiased;
 	text-rendering: optimizeLegibility;
 }
@@ -85,13 +87,31 @@ ol[role='list'] {
 	padding: 0;
 }
 
+/* A fieldset is a group, not a box: no border, no inset, and the legend sits like a label. */
+fieldset {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	min-inline-size: 0;
+}
+
+legend {
+	padding: 0;
+}
+
 a {
 	color: inherit;
 }
 
+/*
+ * A 2px ring and a 3px halo. The halo is what keeps focus visible on a
+ * hovered button, where the ring alone sat next to a border of nearly the
+ * same lightness and vanished.
+ */
 :focus-visible {
 	outline: 2px solid var(--focus);
 	outline-offset: 2px;
+	box-shadow: 0 0 0 5px var(--focus-halo);
 }
 
 ::selection {

@@ -82,7 +82,7 @@ peerDependencyRules:
     'better-auth&gt;@sveltejs/kit': '3'
     'runed&gt;@sveltejs/kit': '3'</code></pre>
 </figure>
-<p>Three settings, each a decision. <code>packages</code> names the folders. <code>allowBuilds</code> is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s <code>postinstall</code> does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. <code>minimumReleaseAgeExclude</code> is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through.</p>
+<p>Four settings, each a decision. <code>packages</code> names the folders. <code>allowBuilds</code> is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s <code>postinstall</code> does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. <code>minimumReleaseAgeExclude</code> is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through. <code>peerDependencyRules</code> is the one setting that exists because of the move to SvelteKit 3. Better Auth 1.7.7 and runed 0.37.1 both declare <code>@sveltejs/kit</code> as an *optional* peer and have not widened the range past 2 yet; both use only what did not change in Kit 3 — <code>svelteKitHandler</code> takes <code>resolve</code> and <code>building</code> as arguments, runed reads <code>$app/state</code> — and both are proved against 3.0.1 by the end-to-end suite, so <code>allowedVersions</code> tells pnpm that a 3 satisfies those two peers and <code>pnpm peers check</code> stays clean. Each line is deleted the day its library’s release notes say “SvelteKit 3”, and the check is what says when. A rule like this is never written to make a warning go away; it is written when the warning has been investigated and found to be noise, and the comment above it has to say so.</p>
 <aside class="callout callout--note"><p>If you have never seen <code>allowBuilds</code> fail: run <code>pnpm install</code> on a fresh clone with it removed and watch pnpm list the packages that *wanted* to run scripts and were not allowed to. That list is worth reading once. Most of it is telemetry.</p></aside>
 <h3 id="the-scripts">The scripts</h3>
 
@@ -122,7 +122,7 @@ peerDependencyRules:
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">package.json<span class="code__lines">:67-102</span></span>
+		<span class="code__file">package.json<span class="code__lines">:67-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;dependencies&quot;: {
@@ -139,6 +139,7 @@ peerDependencyRules:
 	&quot;@threlte/core&quot;: &quot;^8.6.1&quot;,
 	&quot;@threlte/extras&quot;: &quot;^9.22.0&quot;,
 	&quot;@tiptap/core&quot;: &quot;^3.31.4&quot;,
+	&quot;@tiptap/extension-placeholder&quot;: &quot;^3.31.4&quot;,
 	&quot;@tiptap/pm&quot;: &quot;^3.31.4&quot;,
 	&quot;@tiptap/starter-kit&quot;: &quot;^3.31.4&quot;,
 	&quot;better-auth&quot;: &quot;^1.7.7&quot;,

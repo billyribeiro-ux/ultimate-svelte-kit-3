@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/style.ts<span class="code__lines">:1-48</span></span>
+		<span class="code__file">src/lib/map/style.ts<span class="code__lines">:1-82</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -64,14 +64,48 @@
 
 import type { StyleSpecification } from 'maplibre-gl';
 
+export interface MapPalette {
+	readonly water: string;
+	readonly land: string;
+	readonly border: string;
+	/** The route line: `--sea` from `tokens.css`, by hand. */
+	readonly route: string;
+	/** A wider line under the route in the land colour's family, so the dashes read over borders. */
+	readonly routeHalo: string;
+}
+
+/**
+ * The five colours the canvas needs, per scheme. `route` is `--sea` and
+ * `routeHalo` is the paper, copied from `tokens.css` because a canvas
+ * cannot read the cascade. It is one of four such copies, each where a
+ * custom property cannot reach and each saying so: this canvas, the
+ * globe's WebGL materials (`Scene.svelte`), the custom element's shadow
+ * root (`MeridianRoute.svelte`) and the `theme-color` meta tags in
+ * `app.html`. The header of `tokens.css` lists them.
+ */
+export function mapPalette(scheme: 'light' | 'dark'): MapPalette {
+	return scheme === 'dark'
+		? {
+				water: '#0c1117',
+				land: '#1c232d',
+				border: '#33404f',
+				route: '#2dd4bf',
+				routeHalo: 'rgba(16, 19, 24, 0.9)'
+			}
+		: {
+				water: '#dbe7ee',
+				land: '#f6f1e6',
+				border: '#c4baa6',
+				route: '#0f766e',
+				routeHalo: 'rgba(255, 255, 255, 0.9)'
+			};
+}
+
 export function worldStyle(
 	scheme: 'light' | 'dark',
 	worldUrl = '/api/world.json'
 ): StyleSpecification {
-	const colours =
-		scheme === 'dark'
-			? { water: '#0c1117', land: '#1c232d', border: '#33404f' }
-			: { water: '#dbe7ee', land: '#f6f1e6', border: '#c4baa6' };
+	const colours = mapPalette(scheme);
 
 	return {
 		version: 8,
@@ -91,7 +125,7 @@ export function worldStyle(
 	};
 }</code></pre>
 </figure>
-<p>A MapLibre style is JSON: sources and layers. One GeoJSON source, the prerendered <code>/api/world.json</code> from chapter 16, and three layers — sea, land, borders. No sprite, no glyphs, because no layer draws text. The colours are literals rather than tokens, and the comment says why: MapLibre paints a canvas and does not read the cascade, so the function takes the resolved scheme and the component rebuilds the style when the theme flips. The comment also says exactly what to change to put OpenFreeMap tiles under it — one source and one CSP line.</p>
+<p>A MapLibre style is JSON: sources and layers. One GeoJSON source, the prerendered <code>/api/world.json</code> from chapter 16, and three layers — sea, land, borders. No sprite, no glyphs, because no layer draws text. The colours are literals rather than tokens, and the comment says why: MapLibre paints a canvas and does not read the cascade, so <code>mapPalette()</code> holds the five colours each scheme needs — the route is <code>--sea</code> copied by hand, one of the four hand copies the header of <code>tokens.css</code> lists, each where a custom property cannot reach — <code>worldStyle()</code> builds the style from them, and the component reads the same palette for the route and rebuilds the style when the theme flips. The comment also says exactly what to change to put OpenFreeMap tiles under it — one source and one CSP line.</p>
 <h3 id="the-component">The component</h3>
 
 <figure class="code">
@@ -117,20 +151,22 @@ export function worldStyle(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-83</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import type { FeatureCollection, LineString } from 'geojson';
 	import type { LngLatBoundsLike, Map as MapLibreMap } from 'maplibre-gl';
+	import { fade } from 'svelte/transition';
 	import { GeoJSON, LineLayer, MapLibre, Marker } from 'svelte-maplibre';
 	import { CrosshairIcon, FrameCornersIcon } from 'phosphor-svelte';
 	import { arc, bounds, pad } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { StopKind } from '#lib/domain/schemas.ts';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import { theme } from '#lib/ui/theme.svelte.ts';
 	import { Geolocation } from './geolocation.svelte.ts';
-	import { worldStyle } from './style.ts';
+	import { mapPalette, worldStyle } from './style.ts';
 
 	export interface MapStop {
 		readonly id: string;
@@ -157,9 +193,12 @@ export function worldStyle(
 	/*
 	 * The style follows the theme. `diffStyleUpdates` makes MapLibre patch
 	 * the running style — three paint properties — rather than tear the map
-	 * down and rebuild it when somebody flips to dark.
+	 * down and rebuild it when somebody flips to dark. The route's two
+	 * colours come from the same palette as the style, so the canvas and the
+	 * tokens agree about what the sea is.
 	 */
 	const style = $derived(worldStyle(theme.resolved));
+	const palette = $derived(mapPalette(theme.resolved));
 
 	/** One great-circle line per leg, as GeoJSON for a line layer. */
 	const route: FeatureCollection&lt;LineString&gt; = $derived.by(() =&gt; ({
@@ -185,19 +224,62 @@ export function worldStyle(
 	let showMe = $state(false);
 	const geo = new Geolocation();
 
+	/*
+	 * The canvas is invisible until MapLibre says `load`, then fades in over
+	 * 240ms — the tiles-popping-in look is gone, and under reduced motion the
+	 * fade is 0ms. `ready` is set once and never unset: a style swap does
+	 * not fire `load` again, and the map should not blink when it happens.
+	 */
+	let ready = $state(false);
+
+	/*
+	 * FIT WHAT CAN BE SEEN
+	 * --------------------
+	 * The side-by-side map is as tall as the viewport under the sticky tabs,
+	 * so at the top of the page its lower part is below the fold, and a
+	 * route fitted to the whole canvas lands half off screen. The padding
+	 * counts the hidden strip as padding, so the route is fitted into the
+	 * part that is on screen — and when the map is all on screen, it is the
+	 * plain 40px on every side.
+	 */
+	let frame = $state&lt;HTMLElement&gt;();
+
+	function padding() {
+		const box = frame?.getBoundingClientRect();
+		const hidden = box
+			? Math.max(0, Math.min(box.bottom - window.innerHeight, box.height - 240))
+			: 0;
+		return { top: 40, right: 40, left: 40, bottom: 40 + hidden };
+	}
+
+	/* 600ms of camera, or a cut. */
 	function fitRoute() {
-		if (map &amp;&amp; fit) map.fitBounds(fit, { padding: 40, maxZoom: 11, duration: 600 });
+		if (map &amp;&amp; fit) {
+			map.fitBounds(fit, {
+				padding: padding(),
+				maxZoom: 11,
+				duration: reducedMotion.current ? 0 : 600
+			});
+		}
+	}
+
+	/* The first fit, once the map is up, uses the same padding — a cut, since it is the first frame anyone sees. */
+	function onload() {
+		ready = true;
+		if (map &amp;&amp; fit &amp;&amp; padding().bottom &gt; 40) {
+			map.fitBounds(fit, { padding: padding(), maxZoom: 11, duration: 0 });
+		}
 	}
 &lt;/script&gt;</code></pre>
 </figure>
-<p>The route is one great-circle line per leg — <code>arc()</code> from the library, forty-eight segments, unwrapped across the date line — as a GeoJSON <code>FeatureCollection</code> the <code>LineLayer</code> draws. <code>fit</code> is the padded bounds from the same library. <code>diffStyleUpdates</code> makes MapLibre patch three paint properties when the theme flips rather than tear the map down. <code>bind:map</code> hands the underlying <code>Map</code> instance back for the one imperative call, <code>fitBounds</code> on a button.</p>
+<p>The route is one great-circle line per leg — <code>arc()</code> from the library, forty-eight segments, unwrapped across the date line — as a GeoJSON <code>FeatureCollection</code> the <code>LineLayer</code> draws. <code>fit</code> is the padded bounds from the same library. <code>diffStyleUpdates</code> makes MapLibre patch three paint properties when the theme flips rather than tear the map down. <code>bind:map</code> hands the underlying <code>Map</code> instance back for the one imperative call, <code>fitBounds</code> on a button — which fits the route into the part of the canvas that is on screen: the side-by-side map is as tall as the viewport under the sticky tabs, so at the top of the page its bottom is below the fold, and the hidden strip is counted as padding. The first fit, once the map has loaded, does the same.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:85-137</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:133-200</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;map&quot;&gt;
+	<pre><code class="lang-svelte">&lt;div class=&quot;map&quot; data-ready={ready ? '' : undefined} bind:this={frame}&gt;
 	&lt;MapLibre
 		bind:map
 		{style}
@@ -209,14 +291,20 @@ export function worldStyle(
 		attributionControl={false}
 		cooperativeGestures
 		class=&quot;map__canvas&quot;
+		{onload}
 		onclick={(e) =&gt; {
 			if (editable) onadd?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
 		}}
 	&gt;
+		&lt;!-- Two layers for one line: a wide halo in the paper colour, then the dashed route on top, so the dashes read where they cross a border. --&gt;
 		&lt;GeoJSON id=&quot;route&quot; data={route}&gt;
 			&lt;LineLayer
+				paint={{ 'line-color': palette.routeHalo, 'line-width': 5 }}
+				layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+			/&gt;
+			&lt;LineLayer
 				paint={{
-					'line-color': theme.resolved === 'dark' ? '#5eead4' : '#0f766e',
+					'line-color': palette.route,
 					'line-width': 2.5,
 					'line-dasharray': [2, 1.5]
 				}}
@@ -224,9 +312,17 @@ export function worldStyle(
 			/&gt;
 		&lt;/GeoJSON&gt;
 
+		&lt;!--
+			The selected pin is drawn above its neighbours. Each marker is its
+			own positioned element with a transform, so a z-index on the pin
+			inside it cannot climb out; the marker itself carries it. Without
+			this, pins that share a city paint in list order, and the ring
+			around &quot;1&quot; showed a &quot;5&quot;.
+		--&gt;
 		{#each stops as stop, i (stop.id)}
 			&lt;Marker
 				lngLat={[stop.lng, stop.lat]}
+				zIndex={stop.id === selected ? 10 : 1}
 				draggable={editable}
 				asButton
 				onclick={() =&gt; onselect?.(stop.id)}
@@ -235,6 +331,7 @@ export function worldStyle(
 				&lt;span
 					class=&quot;pin&quot;
 					class:pin--selected={stop.id === selected}
+					class:pin--draggable={editable}
 					data-kind={stop.kind}
 					title={stop.name}
 				&gt;
@@ -251,7 +348,7 @@ export function worldStyle(
 		{/if}
 	&lt;/MapLibre&gt;</code></pre>
 </figure>
-<p>svelte-maplibre’s components are thin and declarative: <code>&lt;GeoJSON&gt;</code> is a source, <code>&lt;LineLayer&gt;</code> a layer inside it, <code>&lt;Marker&gt;</code> a DOM element positioned by the map. Markers are <code>asButton</code> so they are focusable, draggable when the viewer may edit, and the pin inside is ours — numbered, coloured by kind through the same <code>--kind</code> property the card uses, scaled when selected. A click on empty map calls <code>onadd</code> with a point; the dialog in the last chapter opens with it.</p>
+<p>svelte-maplibre’s components are thin and declarative: <code>&lt;GeoJSON&gt;</code> is a source, <code>&lt;LineLayer&gt;</code> a layer inside it, <code>&lt;Marker&gt;</code> a DOM element positioned by the map. The route is two layers over one source — a wide halo in the paper colour, then the dashed line on top — so the dashes read where they cross a border. <code>onload</code> sets <code>data-ready</code>, which the CSS turns into a fade-in, so the canvas never flashes an empty frame. Markers are <code>asButton</code> so they are focusable, draggable when the viewer may edit, and the pin inside is ours — numbered, coloured by kind through the same <code>--kind</code> property the card uses, scaled when selected. The selected marker carries <code>zIndex={10}</code>: pins that share a city paint in list order, and a z-index on the pin inside cannot climb out of the marker’s own stacking context, so the ring around “1” used to show a “5”. A click on empty map calls <code>onadd</code> with a point; the dialog in the last chapter opens with it.</p>
 <h3 id="geolocation">Where am I, as a reactive value</h3>
 
 <figure class="code">
@@ -336,7 +433,7 @@ export class Geolocation {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:139-175</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:202-243</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;div class=&quot;map__tools no-print&quot;&gt;
@@ -362,11 +459,16 @@ export class Geolocation {
 		&lt;/button&gt;
 	&lt;/div&gt;
 
-	{#if showMe}
-		&lt;p class=&quot;map__status&quot; role=&quot;status&quot;&gt;
+	&lt;!-- The status pill fades in and out: the one Svelte transition on the map, and it is observable. --&gt;
+	{#if showMe &amp;&amp; (geo.error || !geo.fix)}
+		&lt;p
+			class=&quot;map__status&quot;
+			role=&quot;status&quot;
+			transition:fade={{ duration: reducedMotion.current ? 0 : 160 }}
+		&gt;
 			{#if geo.error}
 				{m.map_no_location()}
-			{:else if !geo.fix}
+			{:else}
 				{m.map_locating()}
 			{/if}
 		&lt;/p&gt;

@@ -23,7 +23,7 @@ export const part8 = [
 			},
 
 			{ type: 'h3', id: 'two-projects', text: 'Two projects in one config' },
-			code('vite.config.ts', 281, 352),
+			code('vite.config.ts', 286, 357),
 			{
 				type: 'p',
 				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Neither names an `extends`: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
@@ -153,10 +153,10 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: '`signIn` goes through the real form, not through an API call and a hand-made cookie: the test then exercises the sign-in remote form, the redirect guard and the session cookie’s attributes for free. `openMenu` is the phone-versus-desktop seam made explicit — the header’s links are behind a menu button under 48em — so a test written once runs unchanged in both projects. It waits for the root layout’s `data-hydrated` attribute first, because the menu button needs JavaScript and a click before hydration is a click nobody is listening to; the language-switch test found that one, about one run in twenty. `openTab` finds the tab strip by its accessible name and asserts the URL afterwards, because the tab *is* a URL (`?tab=expenses`) and a test that clicked a tab and moved on would not notice if the click had been swallowed.'
 			},
-			code('e2e/helpers.ts', 61, 78),
+			code('e2e/helpers.ts', 61, 90),
 			{
 				type: 'p',
-				text: '`typeDate` exists because Bits UI’s date picker is not an `<input type="date">`; it is three editable segments per date, in the locale’s order, and Playwright’s `fill()` has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.'
+				text: '`typeDate` exists because Bits UI’s date picker is not an `<input type="date">`; it is three editable segments per date, in the locale’s order, and Playwright’s `fill()` has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does — and the work is in `typeDateInto`, which takes any date input as a locator, because the expense form’s date is the same picker now: the trip’s two dates find their input by position in the range, the expense finds its by role, `getByRole("group", { name: "Date", exact: true })`. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.'
 			},
 
 			{ type: 'h3', id: 'suites', text: 'Five suites' },
@@ -180,10 +180,10 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: '`beforeEach` signs Ana in straight to her trip, and the first test presses `ControlOrMeta+k` — Playwright’s name for “Control on Linux and Windows, Command on a Mac” — to open the command palette and jump to a tab by typing part of its name. A keyboard shortcut is a feature people rely on and never think to report when it breaks.'
 			},
-			code('e2e/trip.e2e.ts', 60, 78),
+			code('e2e/trip.e2e.ts', 60, 83),
 			{
 				type: 'p',
-				text: 'The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.'
+				text: 'The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. Its date used to be `fill("2026-05-10")` on a native date input; the field became the segmented picker, in the page’s language rather than the browser’s, so the test types the date segment by segment like a person — the same assertion, through the control that ships. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.'
 			},
 			code('e2e/collab.e2e.ts', 14, 60),
 			{
@@ -259,7 +259,7 @@ Running 36 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 168, 214),
+			code('vite.config.ts', 173, 219),
 			{
 				type: 'p',
 				text: 'A Content Security Policy is a header that tells the browser which sources of script, style, image, font, connection and frame the page is allowed to use; anything else is blocked and reported to the console. Its purpose is to make cross-site scripting *not work*: an attacker who manages to inject `<script>` into a page gains nothing if inline scripts are refused. `default-src \'self\'` is the floor — nothing from anywhere but this origin — and every other directive is a narrow, commented exception.'
@@ -268,8 +268,8 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter 34) are the reason the project needs both.'
 			},
-			code('src/app.html', 20, 25),
-			code('vite.config.ts', 369, 374),
+			code('src/app.html', 28, 33),
+			code('vite.config.ts', 374, 379),
 			{
 				type: 'p',
 				text: 'The theme boot script — the one that sets the dark class before first paint so a dark theme never flashes light — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'

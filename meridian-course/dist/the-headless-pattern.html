@@ -40,28 +40,37 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:99-111</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:139-160</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
 	&lt;Dialog.Portal&gt;
 		&lt;Dialog.Overlay class=&quot;overlay&quot; /&gt;
-		&lt;Dialog.Content class=&quot;dialog&quot;&gt;
+		&lt;Dialog.Content
+			class=&quot;dialog&quot;
+			onOpenAutoFocus={(event) =&gt; {
+				if (!wide.current) return;
+				event.preventDefault();
+				if (mode?.kind === 'edit') nameInput?.focus();
+				else document.getElementById(searchId)?.focus();
+			}}
+		&gt;
+			&lt;span class=&quot;sheet-grabber&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
 			&lt;header class=&quot;dialog__header&quot;&gt;
 				&lt;Dialog.Title class=&quot;dialog__title&quot;&gt;
 					{mode?.kind === 'edit' ? m.stop_edit() : m.stop_new()}
 				&lt;/Dialog.Title&gt;
-				&lt;Dialog.Close class=&quot;btn btn--icon btn--ghost btn--sm&quot; aria-label={m.nav_menu()}&gt;
+				&lt;Dialog.Close class=&quot;btn btn--icon btn--ghost btn--sm&quot; aria-label={m.dialog_close()}&gt;
 					&lt;XIcon size={18} aria-hidden=&quot;true&quot; /&gt;
 				&lt;/Dialog.Close&gt;
 			&lt;/header&gt;
 			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.stop_search()}&lt;/Dialog.Description&gt;</code></pre>
 </figure>
-<p>Bits UI components are trees of *parts*: <code>Dialog.Root</code> holds the state, <code>Dialog.Portal</code> moves the content to the end of the body, <code>Dialog.Overlay</code> and <code>Dialog.Content</code> are the elements, <code>Dialog.Title</code> and <code>Dialog.Description</code> wire the ARIA relationships. Each part accepts <code>class</code>, which is how the tokens get in. The state is on the root, controlled two ways: <code>open={mode !== null}</code> plus <code>onOpenChange</code> for the dialog whose openness is derived from something else, <code>bind:open</code> for the palette whose openness is its own.</p>
+<p>Bits UI components are trees of *parts*: <code>Dialog.Root</code> holds the state, <code>Dialog.Portal</code> moves the content to the end of the body, <code>Dialog.Overlay</code> and <code>Dialog.Content</code> are the elements, <code>Dialog.Title</code> and <code>Dialog.Description</code> wire the ARIA relationships. Each part accepts <code>class</code>, which is how the tokens get in. The state is on the root, controlled two ways: <code>open={mode !== null}</code> plus <code>onOpenChange</code> for the dialog whose openness is derived from something else, <code>bind:open</code> for the palette whose openness is its own. A part’s events are props as well: <code>onOpenAutoFocus</code> on <code>Dialog.Content</code> is where the stop dialog decides what takes focus when it opens — the place search from 40em, nothing new on a phone — by preventing the default and focusing the field itself.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:72-87</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:125-143</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root bind:open&gt;
@@ -72,7 +81,10 @@
 			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.palette_hint()}&lt;/Dialog.Description&gt;
 
 			&lt;Command.Root class=&quot;cmd&quot; label={m.palette_open()} loop&gt;
-				&lt;Command.Input class=&quot;cmd__input&quot; placeholder={m.palette_placeholder()} /&gt;
+				&lt;div class=&quot;cmd__field&quot;&gt;
+					&lt;MagnifyingGlassIcon size={18} aria-hidden=&quot;true&quot; class=&quot;cmd__glass&quot; /&gt;
+					&lt;Command.Input class=&quot;cmd__input&quot; placeholder={m.palette_placeholder()} /&gt;
+				&lt;/div&gt;
 				&lt;Command.List class=&quot;cmd__list&quot;&gt;
 					&lt;Command.Viewport&gt;
 						&lt;Command.Empty class=&quot;cmd__empty&quot;&gt;{m.palette_empty()}&lt;/Command.Empty&gt;
@@ -103,31 +115,31 @@
 &gt;
 	&lt;DateRangePicker.Label class=&quot;label&quot;&gt;{label}&lt;/DateRangePicker.Label&gt;
 
-	&lt;div class=&quot;range__row&quot; class:range__row--invalid={issues.length &gt; 0}&gt;
+	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
 		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input&quot;&gt;
+			&lt;DateRangePicker.Input {type} {name} class=&quot;range__input datefield__input&quot;&gt;
 				{#snippet children({ segments })}</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:56-73</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:64-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;/div&gt;
 &lt;Combobox.Portal&gt;
-	&lt;Combobox.Content class=&quot;search__list&quot; sideOffset={4}&gt;
+	&lt;Combobox.Content class=&quot;search__list pop-in&quot; sideOffset={4}&gt;
 		&lt;Combobox.Viewport&gt;
 			{#each matches as place (place.id)}
 				&lt;Combobox.Item value={place.id} label={place.name} class=&quot;search__item&quot;&gt;
 					{#snippet children({ selected })}
 						&lt;span&gt;{place.name}&lt;/span&gt;
-						&lt;span class=&quot;muted&quot;&gt;{place.country}&lt;/span&gt;
+						&lt;span class=&quot;search__country&quot;&gt;{countryName(place.country)}&lt;/span&gt;
 						{#if selected}&lt;span class=&quot;visually-hidden&quot;&gt;✓&lt;/span&gt;{/if}
 					{/snippet}
 				&lt;/Combobox.Item&gt;
 			{:else}
-				&lt;p class=&quot;search__empty muted&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
+				&lt;p class=&quot;search__empty&quot;&gt;{m.stop_search_empty()}&lt;/p&gt;
 			{/each}
 		&lt;/Combobox.Viewport&gt;
 	&lt;/Combobox.Content&gt;
@@ -138,10 +150,10 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:25-44</span></span>
+		<span class="code__file">src/lib/trip/PlaceSearch.svelte<span class="code__lines">:28-47</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">let { onpick }: Props = $props();
+	<pre><code class="lang-svelte">let { onpick, id }: Props = $props();
 
 // What has been typed, read from the input itself: the root's `inputValue`
 // is a prop to set, not one to bind.
@@ -166,7 +178,7 @@ function pick(id: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:118-131</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:133-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -188,7 +200,7 @@ const table = createTable({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:243-268</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:390-417</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each table.getHeaderGroups() as group (group.id)}
@@ -203,6 +215,7 @@ const table = createTable({
 						? 'descending'
 						: 'none'}
 			&gt;
+				&lt;!-- The caret shows only when sorted; otherwise the two-way arrow waits for a hover. --&gt;
 				&lt;button
 					class=&quot;sort&quot;
 					type=&quot;button&quot;
@@ -210,7 +223,8 @@ const table = createTable({
 				&gt;
 					{render(header.column.columnDef.header, header.getContext(), header.column.id)}
 					{#if sorted === 'asc'}&lt;CaretUpIcon size={12} aria-hidden=&quot;true&quot; /&gt;
-					{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;{/if}
+					{:else if sorted === 'desc'}&lt;CaretDownIcon size={12} aria-hidden=&quot;true&quot; /&gt;
+					{:else}&lt;ArrowsDownUpIcon size={12} aria-hidden=&quot;true&quot; class=&quot;sort__idle&quot; /&gt;{/if}
 				&lt;/button&gt;
 			&lt;/th&gt;
 		{/each}
@@ -221,7 +235,7 @@ const table = createTable({
 
 <aside class="callout callout--why">
 	<h4>Why headless is the right default for an application</h4>
-	<p>A styled component library brings a look, and the look is somebody else’s. A design system that is “Material with the colours changed” is recognisable from across the room. Headless libraries let a small team have the behaviour of a mature library and a design that is their own — every visible thing in this project is in <code>tokens.css</code> and a component’s <code>&lt;style&gt;</code>, and swapping Bits UI for another headless library would change imports and not a single class. The cost is that you write the styles, and for a dialog, a combobox and a palette that is an afternoon.</p>
+	<p>A styled component library brings a look, and the look is somebody else’s. A design system that is “Material with the colours changed” is recognisable from across the room. Headless libraries let a small team have the behaviour of a mature library and a design that is their own — every visible thing in this project is in <code>src/lib/styles</code> and a component’s <code>&lt;style&gt;</code>, and swapping Bits UI for another headless library would change imports and not a single class. The cost is that you write the styles, and for a dialog, a combobox and a palette that is an afternoon.</p>
 </aside>
 
 <aside class="callout callout--check">
