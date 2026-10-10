@@ -35,7 +35,8 @@
 
 import { untrack } from 'svelte';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
-import { replaceState } from '$app/navigation';
+import { goto } from '$app/navigation';
+import type { ResolvedPathname } from '$app/types';
 import { DEFAULT_RANGE } from '#lib/time/range.ts';
 
 /** The parts of a workspace that live in the URL. Everything else is component state. */
@@ -96,7 +97,19 @@ export class Workspace {
 	#written = '';
 	#timer = 0;
 
-	constructor(init: WorkspaceInit) {
+	/**
+	 * The page's own URL for a given search string, supplied by the page.
+	 *
+	 * This class knows the three keys and nothing about routes — that is what
+	 * lets it be tested without a router. The page knows its route id and calls
+	 * `resolve('/[tenant]/explore?…')` for it, which is also what keeps the
+	 * `goto` below typed: a `ResolvedPathname` is the proof that the URL points
+	 * at a route this app has.
+	 */
+	readonly #href: (search: string) => ResolvedPathname;
+
+	constructor(init: WorkspaceInit, href: (search: string) => ResolvedPathname) {
+		this.#href = href;
 		this.params = new SvelteURLSearchParams();
 		this.params.set('q', init.q);
 		this.params.set('range', init.range);
@@ -176,16 +189,18 @@ export class Workspace {
 	/**
 	 * Write to the address bar once the edits settle.
 	 *
-	 * `replaceState` and not `goto`. `goto` runs the route's `load` functions,
-	 * which for this page would mean a round trip per keystroke; `replaceState`
-	 * changes the URL and nothing else, which is right because the data is fetched
-	 * by a remote function that this page calls itself.
+	 * A *shallow* `goto`, not a full one. A full `goto` runs the route's `load`
+	 * functions, which for this page would mean a round trip per keystroke;
+	 * `goto(url, { shallow: true })` — SvelteKit 3's replacement for the old
+	 * `replaceState`/`pushState` pair — changes the URL and `page.state` and
+	 * nothing else, which is right because the data is fetched by a remote
+	 * function that this page calls itself.
 	 *
-	 * The other half of the decision is *replace* rather than *push*: pushing
-	 * would put one history entry per pause in typing, so leaving the page would
-	 * take fifteen presses of the back button. Pushing is correct for a
-	 * deliberate act — opening a trace — which is why the drawer uses `pushState`
-	 * and this does not.
+	 * The other half of the decision is `replace: true` rather than a push:
+	 * pushing would put one history entry per pause in typing, so leaving the
+	 * page would take fifteen presses of the back button. Pushing is correct for
+	 * a deliberate act — opening a trace — which is why the drawer pushes and
+	 * this does not.
 	 *
 	 * A consequence worth naming: arriving on `?q=from+logs` with no `range` or
 	 * `view` rewrites the URL to include them, once, shortly after load. That is
@@ -218,6 +233,10 @@ export class Workspace {
 		this.#written = search;
 		this.#urlSeen = search;
 
-		replaceState(`?${search}`, {});
+		// No `state`: the write means "the URL changed", and `page.state` goes back
+		// to empty exactly as it did before. Not awaited — the URL is the page's
+		// own, resolved through `resolve()`, so the one rejection `goto` has for a
+		// shallow call (a URL that is no route) cannot happen here.
+		void goto(this.#href(search), { shallow: true, replace: true });
 	}
 }

@@ -1,4 +1,6 @@
 <script lang="ts">
+	// Aliased: `resolve` in this file is the time-range resolver from `#lib/time/range.ts`.
+	import { resolve as resolvePath } from '$app/paths';
 	import { runQuery } from '#lib/remote/query.remote.ts';
 	import RangePicker from '#lib/components/RangePicker.svelte';
 	import { formatDuration, formatTimestamp, resolve } from '#lib/time/range.ts';
@@ -80,7 +82,10 @@
 					<li>
 						<a
 							class="trace"
-							href="/{data.tenant}/traces/{encodeURIComponent(String(row.trace_id))}"
+							href={resolvePath('/[tenant]/traces/[traceId]', {
+								tenant: data.tenant,
+								traceId: encodeURIComponent(String(row.trace_id))
+							})}
 						>
 							<span class="trace__name truncate">
 								<span class="trace__service">{row.service}</span>

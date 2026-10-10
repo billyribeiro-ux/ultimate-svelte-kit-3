@@ -60,15 +60,15 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:208-211</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:230-233</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
- * A read, and cacheable in principle — but never by a shared cache.
- *
- * The response depends entirely on which key asked, and the key is in a</code></pre>
+	<pre><code class="lang-ts">export const QUERY: RequestHandler = ({ request }) =&gt; handle(request, 'QUERY');
+
+/** The compatibility alias. See the note at the top of the file. */
+export const POST: RequestHandler = ({ request }) =&gt; handle(request, 'POST');</code></pre>
 </figure>
-<p><code>QUERY</code> — which SvelteKit 3 added to <code>+server</code> handlers in <code>3.0.0-next.24</code> — is the method that means &quot;a read, with a body&quot;. Safe and idempotent like <code>GET</code>, a body like <code>POST</code>. Exporting it is the same one-line shape as exporting <code>GET</code>, because it is just another method handler; what is new is that the router recognises the name.</p>
+<p><code>QUERY</code> — which SvelteKit 3 added to <code>+server</code> handlers — is the method that means &quot;a read, with a body&quot;. Safe and idempotent like <code>GET</code>, a body like <code>POST</code>. Exporting it is the same one-line shape as exporting <code>GET</code>, because it is just another method handler; what is new is that the router recognises the name.</p>
 
 <aside class="callout callout--why">
 	<h4>Why <code>POST</code> is accepted as well</h4>
@@ -78,7 +78,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:57-77</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:56-92</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -101,85 +101,121 @@
  * What it is reached *by* is the new part. `+server.test.ts` sitting beside this
  * file used to be a build error: every `+`-prefixed file in `src/routes` was a
  * route, so a test named after the thing it tests became a route that exported
- * `describe`. SvelteKit 3.0.0-next.19 excludes `+` files containing `.test.`,</code></pre>
+ * `describe`. SvelteKit 3 excludes `+` files containing `.test.`,
+ * `.spec.` or `.stories.` from routing, which is what lets the test live where
+ * the reader is already looking.
+ */
+export const _RequestSchema = v.object({
+	q: v.pipe(v.string(), v.minLength(1, 'Send a query in `q`.'), v.maxLength(4_000)),
+	range: v.optional(v.pipe(v.string(), v.maxLength(64)), DEFAULT_RANGE),
+	/**
+	 * How many rows to read.
+	 *
+	 * Lower than the interface's ceiling by default, because a machine asking for
+	 * twenty thousand rows on a schedule is nearly always a query that wanted a
+	 * `summarize` — and the honest way to find that out is a truncation flag in
+	 * the first response rather than a slow endpoint nobody looks at.
+	 */
+	maxRows: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(20_000)), 1_000)
+});</code></pre>
 </figure>
+<p>The <code>_</code> in <code>_RequestSchema</code> is a SvelteKit convention rather than a style choice — it is what lets a <code>+server.ts</code> export something that is not a route handler. The chapter on verifying it explains the escape hatch where the test that reaches through it lives; here the schema itself is the point.</p>
 <p><code>range</code> takes the same expressions the address bar does — <code>-6h</code>, or <code>from..to</code> in epoch milliseconds — so a link somebody copied out of the interface pastes straight into a script. Sharing the vocabulary is most of what makes an API feel like the same product rather than a second one bolted on.</p>
 <p>The default <code>maxRows</code> is lower than the interface’s ceiling on purpose. A machine asking for twenty thousand rows on a schedule is nearly always a query that wanted a <code>summarize</code>, and the honest way to find that out is a truncation flag in the first response rather than a slow endpoint nobody looks at.</p>
 <h3 id="the-scope">The scope, finally load-bearing</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:93-103</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:94-125</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">});
-
-/** One implementation; two methods point at it. See the note above. */
+	<pre><code class="lang-ts">/** One implementation; two methods point at it. See the note above. */
 async function handle(request: Request, method: 'QUERY' | 'POST'): Promise&lt;Response&gt; {
 	const access = await authenticateKey(request.headers.get('authorization'));
 
 	if (!access) {
-		return json(
+		/*
+		 * `Response.json`, the platform's own, rather than `json` from
+		 * `@sveltejs/kit`. SvelteKit 3 deprecates its helper because the standard
+		 * one does the same job — serialise, set `content-type: application/json` —
+		 * and a handler written against `Request` and `Response` alone is one a
+		 * reader can follow with the MDN page open and nothing else.
+		 */
+		return Response.json(
 			{ message: 'Provide a valid API key in the Authorization header.' },
 			{
-				status: 401,</code></pre>
+				status: 401,
+				headers: { 'www-authenticate': 'Bearer realm=&quot;sextant&quot;, charset=&quot;UTF-8&quot;' }
+			}
+		);
+	}
+
+	/*
+	 * `read`, not `ingest`.
+	 *
+	 * The two scopes exist because they belong to different machines: a collector
+	 * writes and must never be able to read another team's logs, and a reporting
+	 * job is the reverse. A key that could do both would make a compromised
+	 * collector a data breach rather than a nuisance.
+	 */
+	if (!hasScope(access, 'read')) {
+		return Response.json({ message: 'This key may write but not read.' }, { status: 403 });
+	}</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>Response.json(...)</code>, the platform's own, rather than <code>json(...)</code> from <code>@sveltejs/kit</code>. SvelteKit 3 deprecates its helper because the standard one does the same job — serialise, set <code>content-type: application/json</code> — and a handler written against <code>Request</code> and <code>Response</code> alone is one a reader can follow with the MDN page open and nothing else. The ingest route made the same change.</p></aside>
 <p>The two scopes exist because they belong to different machines. A collector writes and must never be able to read another team’s logs; a reporting job is the exact reverse. A key that could do both would make a compromised collector a data breach rather than a nuisance — and a collector’s key lives in a config file on every host, which is the worst place a read credential could be.</p>
 <p>The refusal is a <strong>403, not a 401</strong>. The credential is real; the scope is not. Answering 401 would tell the caller to go and fetch a better token, which it cannot do.</p>
 <h3 id="one-language">The same parser and the same checker</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:126-146</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:148-181</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">}
-
-const parsed = v.safeParse(_RequestSchema, body);
-if (!parsed.success) {
-	return json(
+	<pre><code class="lang-ts">/*
+ * The same parser and the same checker the editor uses.
+ *
+ * Not a second, laxer path for machines. A query that the interface refuses
+ * must be refused here too, or the two disagree about what the language is —
+ * and the API becomes the place people go to run the thing the product said
+ * was wrong.
+ */
+const query = parse(parsed.output.q);
+if (!query.query || query.errors.length &gt; 0) {
+	const first = query.errors[0];
+	return Response.json(
 		{
-			message: 'The request body is not valid.',
-			issues: parsed.issues.map((issue) =&gt; ({
-				path: issue.path?.map((segment) =&gt; String(segment.key)).join('.') ?? '',
-				message: issue.message
-			}))
+			message: first?.message ?? 'Could not parse the query.',
+			hint: first?.hint,
+			// The span, so a client can underline it exactly as the editor does.
+			span: first ? { start: first.span.start, end: first.span.end } : undefined
 		},
 		{ status: 400 }
 	);
 }
 
-/*
- * The same parser and the same checker the editor uses.
- *
- * Not a second, laxer path for machines. A query that the interface refuses
- * must be refused here too, or the two disagree about what the language is —</code></pre>
+const checked = check(query.query);
+if (checked.errors.length &gt; 0) {
+	const first = checked.errors[0]!;
+	return Response.json(
+		{
+			message: first.message,
+			hint: first.hint,
+			span: { start: first.span.start, end: first.span.end }
+		},
+		{ status: 400 }
+	);
+}</code></pre>
 </figure>
 <p>Not a second, laxer path for machines. A query the interface refuses must be refused here too, or the two disagree about what the language *is* — and the API becomes the place people go to run the thing the product told them was wrong. The span comes back with the message so a client can underline exactly what the editor would.</p>
 <h3 id="the-response">What the response has to say out loud</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:173-205</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:195-227</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">		{ status: 400 }
-	);
-}
-
-const window = resolve(parsed.output.range);
-
-const result = await run(query.query, {
-	tenantId: access.tenantId,
-	from: window.from,
-	to: window.to,
-	maxRows: parsed.output.maxRows,
-	// adapter-node aborts this when the caller disconnects, so a query whose
-	// client has gone away stops before it finishes for nobody.
-	signal: request.signal
-});
-
-return json(
+	<pre><code class="lang-ts">return Response.json(
 	{
 		columns: result.columns,
 		rows: result.rows,
@@ -195,7 +231,23 @@ return json(
 		pushed: result.pushed,
 		range: { from: window.from, to: window.to, expression: window.expression },
 		method
-	},</code></pre>
+	},
+	{
+		headers: {
+			/*
+			 * A read, and cacheable in principle — but never by a shared cache.
+			 *
+			 * The response depends entirely on which key asked, and the key is in a
+			 * header rather than the URL, so a cache keyed on the URL alone would
+			 * serve one tenant's rows to another. `private` says only the client's
+			 * own cache may keep it; `Vary: Authorization` says even that must key
+			 * on the credential.
+			 */
+			'cache-control': 'private, no-store',
+			vary: 'Authorization'
+		}
+	}
+);</code></pre>
 </figure>
 <p><code>truncated</code> is in the payload rather than implied by the row count, because a machine cannot look at a banner. A script that pages by asking for a thousand rows and receiving a thousand has no way to distinguish &quot;that is all of them&quot; from &quot;that is the first page&quot; unless the response says so. <code>pushed</code> is the same courtesy about speed: it names which stages reached SQL, so a caller can tell a fast query from a slow one without timing it.</p>
 <aside class="callout callout--warn"><p><code>Cache-Control: private, no-store</code> <strong>and</strong> <code>Vary: Authorization</code>. The response depends entirely on which key asked, and the key is in a header rather than the URL — so a shared cache keyed on the URL alone would serve one tenant’s rows to another. In a product whose whole content is other people’s logs, that is the worst caching bug available.</p></aside>

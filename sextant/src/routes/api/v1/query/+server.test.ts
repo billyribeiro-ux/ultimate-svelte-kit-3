@@ -7,7 +7,7 @@ import { _RequestSchema } from './+server.ts';
  * ===================================================
  *
  * This file is `+server.test.ts` and it sits beside `+server.ts`, which until
- * SvelteKit 3.0.0-next.19 was not possible: every `+`-prefixed file under
+ * SvelteKit 3 was not possible: every `+`-prefixed file under
  * `src/routes` was a route, so this one would have been treated as an endpoint
  * exporting `describe` and `it`, and `svelte-kit sync` would have failed. Files
  * whose names contain `.test.`, `.spec.` or `.stories.` are now skipped when the

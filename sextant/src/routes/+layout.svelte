@@ -1,6 +1,15 @@
 <script lang="ts">
 	import '../app.css';
 	import { onNavigate } from '$app/navigation';
+	/*
+	 * `resolve` turns a route id and its parameters into a path, and the route
+	 * id is *typed*: `'/[tenant]/explore'` is a member of a union SvelteKit
+	 * generates from `src/routes`, so a link to a page that was renamed is a
+	 * type error rather than a 404 somebody finds a week later. It is also what
+	 * `eslint-plugin-svelte`'s `no-navigation-without-resolve` asks every
+	 * internal `href` and `goto` to go through, for the same reason.
+	 */
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { LayoutProps } from './$types.js';
 
@@ -36,6 +45,14 @@
 	 * produces.
 	 */
 	onNavigate((navigation) => {
+		/*
+		 * Shallow navigations are left out. SvelteKit 3 runs the navigation hooks
+		 * for `goto(url, { shallow: true })` as well, and both shallow callers in
+		 * this app are the wrong shape for a cross-fade: the explore page rewrites
+		 * its query string every time typing settles, and the trace drawer slides
+		 * over a page that must stay exactly where it was.
+		 */
+		if (navigation.shallow) return;
 		if (!document.startViewTransition) return;
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -72,22 +89,28 @@
 
 {#if signedIn}
 	<header class="topbar">
-		<a class="brand" href="/">
+		<a class="brand" href={resolve('/')}>
 			<span class="brand__mark" aria-hidden="true">◈</span>
 			<span class="brand__name">Sextant</span>
 		</a>
 
 		{#if page.params.tenant}
+			{@const tenant = page.params.tenant}
+			{@const links = [
+				{ href: resolve('/[tenant]/explore', { tenant }), label: 'Explore' },
+				{ href: resolve('/[tenant]/traces', { tenant }), label: 'Traces' },
+				{ href: resolve('/[tenant]/alerts', { tenant }), label: 'Alerts' },
+				{ href: resolve('/[tenant]/settings', { tenant }), label: 'Settings' }
+			]}
 			<nav aria-label="Workspace">
 				<ul class="nav">
-					{#each [{ href: 'explore', label: 'Explore' }, { href: 'traces', label: 'Traces' }, { href: 'alerts', label: 'Alerts' }, { href: 'settings', label: 'Settings' }] as item (item.href)}
-						{@const href = `/${page.params.tenant}/${item.href}`}
+					{#each links as item (item.href)}
 						<li>
 							<a
-								{href}
+								href={item.href}
 								class="nav__link"
-								class:nav__link--current={page.url.pathname.startsWith(href)}
-								aria-current={page.url.pathname.startsWith(href) ? 'page' : undefined}
+								class:nav__link--current={page.url.pathname.startsWith(item.href)}
+								aria-current={page.url.pathname.startsWith(item.href) ? 'page' : undefined}
 							>
 								{item.label}
 							</a>
@@ -110,7 +133,7 @@
 				<nav aria-label="Workspaces" class="tenants">
 					{#each data.tenants as tenant (tenant.tenantId)}
 						<a
-							href="/{tenant.slug}/explore"
+							href={resolve('/[tenant]/explore', { tenant: tenant.slug })}
 							class="chip"
 							aria-current={page.params.tenant === tenant.slug ? 'true' : undefined}
 						>

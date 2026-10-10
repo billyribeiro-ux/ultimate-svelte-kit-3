@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { createKey, deleteView, keys, revokeKey, views } from '#lib/remote/settings.remote.ts';
 	import { clock, relative } from '#lib/reactivity/clock.svelte.ts';
 	import type { PageProps } from './$types.js';
@@ -34,9 +35,10 @@
 							<li>
 								<a
 									class="list__main"
-									href="/{data.tenant}/explore?q={encodeURIComponent(
-										saved.query
-									)}&range={encodeURIComponent(saved.range)}"
+									href={resolve(
+										`/[tenant]/explore?q=${encodeURIComponent(saved.query)}&range=${encodeURIComponent(saved.range)}`,
+										{ tenant: data.tenant }
+									)}
 								>
 									<strong>{saved.name}</strong>
 									<span class="mono truncate">{saved.query}</span>

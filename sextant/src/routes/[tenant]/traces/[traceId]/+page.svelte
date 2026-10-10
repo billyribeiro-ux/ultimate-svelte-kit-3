@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import FlameGraph from '#lib/components/FlameGraph.svelte';
 	import Waterfall from '#lib/components/Waterfall.svelte';
 	import { trace as traceQuery } from '#lib/remote/query.remote.ts';
@@ -39,7 +40,9 @@
 	<header class="page__head">
 		<h1>Trace</h1>
 		<p class="mono page__id">{data.traceId}</p>
-		<a class="btn btn--sm" href="/{data.tenant}/explore">Back to explore</a>
+		<a class="btn btn--sm" href={resolve('/[tenant]/explore', { tenant: data.tenant })}>
+			Back to explore
+		</a>
 	</header>
 
 	<svelte:boundary>

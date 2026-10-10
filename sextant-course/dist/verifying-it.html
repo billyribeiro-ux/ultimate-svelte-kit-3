@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verifying it, and the six bugs the tests found — Building Sextant</title>
-<meta name="description" content="337 unit tests, 83 end-to-end across two viewports, and the specific things each layer caught that the other could not.">
+<meta name="description" content="337 unit tests, 85 end-to-end across two viewports, and the specific things each layer caught that the other could not.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 46</p>
 			<h1>Verifying it, and the six bugs the tests found</h1>
-			<p class="lede">337 unit tests, 83 end-to-end across two viewports, and the specific things each layer caught that the other could not.</p>
+			<p class="lede">337 unit tests, 85 end-to-end across two viewports, and the specific things each layer caught that the other could not.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Get to green, and understand what each kind of test is actually for.</p></aside>
 			<p>One command runs everything, in the order that fails fastest.</p>
 
@@ -137,7 +137,7 @@ test('the sign-in form works without JavaScript', async ({ browser }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/trace.e2e.ts<span class="code__lines">:102-129</span></span>
+		<span class="code__file">e2e/trace.e2e.ts<span class="code__lines">:119-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -172,7 +172,7 @@ test('a trace with no root still renders as one tree, and says so', async ({ pag
 <p>The first version of that test opened traces one by one until it found an incomplete one — a coin toss it could not see. The seed now plants one at a fixed id, and the case becomes something a test can name. A flaky test is worse than no test, because it teaches people to re-run the suite.</p>
 <h3 id="co-located">A test that lives next to what it tests</h3>
 <p>The read API’s body schema is a contract with people writing scripts against a documented endpoint, and its *defaults* are the part nobody reads and everybody depends on — <code>maxRows</code> quietly becoming twenty thousand would turn one scheduled report into an outage. That belongs in a fast unit test, beside the thing it describes.</p>
-<p>It could not live there before. Every <code>+</code>-prefixed file under <code>src/routes</code> was a route, so <code>+server.test.ts</code> would have been an endpoint exporting <code>describe</code> and <code>it</code>, and <code>svelte-kit sync</code> would have refused it. SvelteKit 3.0.0-next.19 skips <code>+</code> files whose names contain <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> when the route table is built.</p>
+<p>It could not live there before. Every <code>+</code>-prefixed file under <code>src/routes</code> was a route, so <code>+server.test.ts</code> would have been an endpoint exporting <code>describe</code> and <code>it</code>, and <code>svelte-kit sync</code> would have refused it. SvelteKit 3 skips <code>+</code> files whose names contain <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> when the route table is built.</p>
 
 <figure class="code">
 	<figcaption>
@@ -225,7 +225,7 @@ $ npx vitest run src/routes/api/v1/query
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>$ node sextant-course/verify.js
-46 chapters · 228 blocks quoted from sextant/ by line range · 0 illustrative
+46 chapters · 232 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
@@ -233,7 +233,7 @@ $ pnpm verify
 ✓ eslint           clean
 ✓ vitest           337 passed
 ✓ vite build       done
-✓ playwright       83 passed, 4 skipped, 2 viewports</code></pre>
+✓ playwright       85 passed, 4 skipped, 2 viewports</code></pre>
 </figure>
 
 <aside class="callout callout--check">

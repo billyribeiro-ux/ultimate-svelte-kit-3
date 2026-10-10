@@ -129,24 +129,24 @@ export const load: PageServerLoad = async ({ params, locals, url }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:302-316</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:275-289</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
-	Saving a view is a form, and the hidden fields carry the *current* query
-	rather than the submitted one.
+	The catalogue is streamed, so completion is behind an `#await`.
 
-	Somebody who has edited the box and not pressed Run still means the thing
-	they can see. A form that saved `submitted` would silently store the
-	previous query, which is the kind of quiet wrongness people discover
-	weeks later when the view opens something they never wrote.
+	`then` with no `pending` branch: there is nothing to show while it is in
+	flight, because the editor is fully usable without completion. A spinner
+	over a working editor would be a worse experience than no spinner.
 --&gt;
-&lt;form {...saveView} class=&quot;explore__save&quot;&gt;
-	&lt;input {...saveView.fields.tenant.as('hidden', data.tenant)} /&gt;
-	&lt;input {...saveView.fields.query.as('hidden', workspace.q)} /&gt;
-	&lt;input {...saveView.fields.range.as('hidden', workspace.range)} /&gt;
-	&lt;input
-		class=&quot;input btn--sm&quot;</code></pre>
+{#await data.services then services}
+	&lt;QueryEditor
+		bind:value={workspace.q}
+		catalogue={{ source, services }}
+		onrun={run}
+		serverError={null}
+	/&gt;
+{/await}</code></pre>
 </figure>
 <p><code>{#await … then}</code> with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.</p>
 <h3 id="the-rule">The rule, stated once</h3>

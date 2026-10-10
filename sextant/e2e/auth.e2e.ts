@@ -68,9 +68,9 @@ test('a failed sign-in keeps the email and clears the password', async ({ page }
 	/*
 	 * Still on the sign-in page, with no `?/signIn` in the address bar.
 	 *
-	 * SvelteKit 3.0.0-next.17 made an enhanced submission navigate to wherever the
-	 * action lands, on failure as well as success, the way a native form does. For
-	 * a form posting to its own page that is a no-op — and this is the assertion
+	 * SvelteKit 3 made an enhanced submission navigate to wherever the action
+	 * lands, on failure as well as success, the way a native form does. For a
+	 * form posting to its own page that is a no-op — and this is the assertion
 	 * that says so, so a future action moved to its own route fails here rather
 	 * than surprising somebody in production.
 	 */

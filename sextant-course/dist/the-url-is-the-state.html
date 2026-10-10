@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The URL is the state — Building Sextant</title>
-<meta name="description" content="`SvelteURLSearchParams`, one debounced `replaceState`, and the two markers that a single field could not be.">
+<meta name="description" content="`SvelteURLSearchParams`, one debounced shallow `goto`, and the two markers that a single field could not be.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 35</p>
 			<h1>The URL is the state</h1>
-			<p class="lede"><code>SvelteURLSearchParams</code>, one debounced <code>replaceState</code>, and the two markers that a single field could not be.</p>
+			<p class="lede"><code>SvelteURLSearchParams</code>, one debounced shallow <code>goto</code>, and the two markers that a single field could not be.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Put the query, the range and the view in the address bar without a navigation per keystroke.</p></aside>
 			
 <figure class="code">
@@ -83,7 +83,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:44-68</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:45-69</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	readonly range: string;
@@ -134,7 +134,7 @@ cause:  `adopt()` ended with `#synced = params.toString()`.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:75-97</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:76-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -171,7 +171,7 @@ cause:  `adopt()` ended with `#synced = params.toString()`.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:132-174</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:145-187</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">get search(): string {
@@ -219,6 +219,62 @@ adopt(search: string): void {
 }</code></pre>
 </figure>
 <p>Arriving on <code>?q=from+logs</code> with no <code>range</code> rewrites the URL to include it, once, shortly after load. That is deliberate: the address bar is the state, so it should say all of it — and a link copied a moment later then carries the whole view rather than the half somebody happened to type.</p>
+<h3 id="the-write">The write itself: a shallow <code>goto</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:221-241</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Flush immediately. Used when running a query, so the URL is right to copy. */
+flush(): void {
+	clearTimeout(this.#timer);
+	this.#write(this.search);
+}
+
+#write(search: string): void {
+	if (search === this.#written) return;
+
+	// Both markers move together: the URL now says this, and we are the ones who
+	// said it — so the adopt effect that fires next is a no-op rather than a
+	// round trip back through the params.
+	this.#written = search;
+	this.#urlSeen = search;
+
+	// No `state`: the write means &quot;the URL changed&quot;, and `page.state` goes back
+	// to empty exactly as it did before. Not awaited — the URL is the page's
+	// own, resolved through `resolve()`, so the one rejection `goto` has for a
+	// shallow call (a URL that is no route) cannot happen here.
+	void goto(this.#href(search), { shallow: true, replace: true });
+}</code></pre>
+</figure>
+<p>SvelteKit 3 folded <code>pushState</code> and <code>replaceState</code> into <code>goto</code>. <code>shallow: true</code> means &quot;change the URL and <code>page.state</code>, run no <code>load</code>&quot;, and <code>replace: true</code> is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because <code>goto</code> only accepts a URL that resolves to a route, which is where the next block comes in.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:100-117</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The page's own URL for a given search string, supplied by the page.
+ *
+ * This class knows the three keys and nothing about routes — that is what
+ * lets it be tested without a router. The page knows its route id and calls
+ * `resolve('/[tenant]/explore?…')` for it, which is also what keeps the
+ * `goto` below typed: a `ResolvedPathname` is the proof that the URL points
+ * at a route this app has.
+ */
+readonly #href: (search: string) =&gt; ResolvedPathname;
+
+constructor(init: WorkspaceInit, href: (search: string) =&gt; ResolvedPathname) {
+	this.#href = href;
+	this.params = new SvelteURLSearchParams();
+	this.params.set('q', init.q);
+	this.params.set('range', init.range);
+	this.params.set('view', init.view);
+}</code></pre>
+</figure>
+<p>The class does not know its own route. The page hands it a function that turns a search string into a URL through <code>resolve()</code> from <code>$app/paths</code>, and the return type — <code>ResolvedPathname</code> — is the proof that the URL points at a route this app has. That is what keeps the <code>goto</code> typed, and what lets the class be tested with no router at all.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

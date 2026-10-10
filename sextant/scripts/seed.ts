@@ -31,7 +31,16 @@
  * (duplicated, three lines) and *configuration* (shared, one function).
  */
 
-process.loadEnvFile('.env');
+/*
+ * `.env` is for a developer's machine; CI and `prepare-e2e-db.js` put the
+ * variables straight into the environment and have no file to load. Only its
+ * absence is tolerated — a malformed `.env` is still an error worth seeing.
+ */
+try {
+	process.loadEnvFile('.env');
+} catch (cause) {
+	if ((cause as NodeJS.ErrnoException).code !== 'ENOENT') throw cause;
+}
 
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';

@@ -45,12 +45,12 @@ export const runQuery = query(RequestSchema, async ({ tenant, q, range }) => {
 
 	const parsed = parse(q);
 	if (!parsed.query || parsed.errors.length > 0) {
-		error(400, { message: parsed.errors[0]?.message ?? 'Could not parse the query.' });
+		error(400, parsed.errors[0]?.message ?? 'Could not parse the query.');
 	}
 
 	const checked = check(parsed.query);
 	if (checked.errors.length > 0) {
-		error(400, { message: checked.errors[0]!.message });
+		error(400, checked.errors[0]!.message);
 	}
 
 	const window = resolve(range);

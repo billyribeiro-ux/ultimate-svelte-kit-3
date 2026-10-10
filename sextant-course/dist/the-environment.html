@@ -179,6 +179,7 @@ INGEST_RATE_PER_MINUTE: {
 # fill in BETTER_AUTH_SECRET with: openssl rand -base64 32
 pnpm db:push</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>db:push</code> writes the *current* schema, so a fresh database never sees the one column this project has lost: Better Auth 1.7.0 added a required <code>issuer</code> to <code>account</code>, 1.7.3 withdrew it, and 1.7.7 never writes it — a <code>NOT NULL</code> nothing fills, which fails every sign-up on its insert. <code>src/lib/server/db/auth.schema.ts</code> explains it, and <code>drizzle/0001_drop_account_issuer.sql</code> is the migration for a database that was pushed before the change; <code>pnpm db:migrate</code> walks the journal.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

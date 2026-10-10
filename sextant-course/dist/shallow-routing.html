@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shallow routing, and a drawer the back button closes — Building Sextant</title>
-<meta name="description" content="`pushState` with `page.state`, a URL that is also a real page, and why the drawer reads history rather than a variable.">
+<meta name="description" content="A shallow `goto` with `page.state`, a URL that is also a real page, and why the drawer reads history rather than a variable.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,76 +33,83 @@
 		<article>
 			<p class="eyebrow">Chapter 36</p>
 			<h1>Shallow routing, and a drawer the back button closes</h1>
-			<p class="lede"><code>pushState</code> with <code>page.state</code>, a URL that is also a real page, and why the drawer reads history rather than a variable.</p>
+			<p class="lede">A shallow <code>goto</code> with <code>page.state</code>, a URL that is also a real page, and why the drawer reads history rather than a variable.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Open a trace without losing the query that found it, and share the link anyway.</p></aside>
 			<p>Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:189-226</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:174-218</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	// query text and the documentation all say the same word.
-	const traceId = row?.trace_id;
-
-	// A row with a trace opens the trace; one without opens the row detail.
-	if (typeof traceId === 'string' &amp;&amp; traceId !== '') openTrace(traceId);
-	else pushState('', { row: index });
+	<pre><code class="lang-svelte">/**
+ * Opening a trace does not navigate.
+ *
+ * A shallow `goto` with a `state` payload adds a history entry — so the back
+ * button closes the drawer — without running a single `load` function. The
+ * query results stay exactly as they were, which matters because the whole
+ * point of the drawer is to look at a trace *without losing the search that
+ * found it*.
+ *
+ * A real navigation to `/[tenant]/traces/[id]` also exists and is what the URL
+ * in the address bar becomes, so the link is shareable and a reload lands on a
+ * full page. That combination — shallow within a session, real when shared —
+ * is what shallow routing is for, and it is why the drawer is not just a
+ * component with an `open` prop.
+ */
+function openTrace(traceId: string): void {
+	// `shallow: true` is what `pushState` used to mean. SvelteKit 3 made it an
+	// option of `goto`, so one function owns every change to the address bar.
+	void goto(
+		resolvePath('/[tenant]/traces/[traceId]', {
+			tenant: data.tenant,
+			traceId: encodeURIComponent(traceId)
+		}),
+		{ shallow: true, state: { trace: traceId } }
+	);
 }
 
-const rows = $derived(tailing ? tailRows : result.rows);
-const columns = $derived(
-	tailing &amp;&amp; tailRows.length &gt; 0 ? Object.keys(tailRows[0]!) : result.columns
-);
+function openRow(index: number): void {
+	const row = rows[index];
+	// `trace_id`, the name SQF uses — not Drizzle's `traceId`. The storage layer
+	// projects rows into the schema's names precisely so that this file, the
+	// query text and the documentation all say the same word.
+	const traceId = row?.trace_id;
 
-/**
- * `export const snapshot` — what survives leaving the page and coming back.
- *
- * SvelteKit calls `capture` before a navigation away and `restore` when the
- * back button brings this exact history entry back. It is stored in
- * `history.state`, so it survives a reload of the tab but not a new tab.
- *
- * WHAT IS AND IS NOT WORTH CAPTURING
- * ----------------------------------
- * The **draft** is: a half-written query that somebody left to go and look at a
- * trace is work, and losing it is the kind of small betrayal that makes people
- * stop trusting a tool. It is not in the URL precisely because it is
- * half-written — putting every keystroke in the address bar would be a hundred
- * history entries and a link to a broken query.
- *
- * The **results** are not. They could be tens of megabytes, `history.state` has
- * a size limit measured in low megabytes, and exceeding it throws on
- * `pushState` — which would break navigation itself rather than degrade it.
- * They are re-fetched, which takes milliseconds and is always current.
- *
- * The **tail** is not either, and that is a product decision rather than a
- * technical one: coming back to a tail that has been &quot;live&quot; while nobody was
- * watching would show a gap, and a gap in a live view reads as an outage.
- */
-export const snapshot: Snapshot&lt;{ draft: string; tailing: boolean }&gt; = {</code></pre>
+	// A row with a trace opens the trace; one without opens the row detail —
+	// on this page's own URL, with the current params, and only `page.state`
+	// changed.
+	if (typeof traceId === 'string' &amp;&amp; traceId !== '') openTrace(traceId);
+	else {
+		void goto(resolvePath(`/[tenant]/explore?${workspace.search}`, { tenant: data.tenant }), {
+			shallow: true,
+			state: { row: index }
+		});
+	}
+}</code></pre>
 </figure>
-<p><code>pushState</code> with a <code>page.state</code> payload adds a history entry — so the back button closes the drawer — without running a single <code>load</code> function. The results stay exactly as they were.</p>
+<p><code>goto(url, { shallow: true, state })</code> adds a history entry — so the back button closes the drawer — without running a single <code>load</code> function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of <code>pushState(url, state)</code> so that one function owns every change to the address bar, and so that the URL has to be one <code>resolve()</code> can vouch for.</p>
 <p>And the URL it writes is a <strong>real page</strong>. Reloading lands on <code>/[tenant]/traces/[traceId]</code>, which renders the same two views at full size. That combination — shallow within a session, real when shared — is what shallow routing is for, and it is why the drawer is not simply a component with an <code>open</code> prop.</p>
 <h3 id="page-state">The drawer reads history, not a variable</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:448-458</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:426-436</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">.explore__save .input {
-	width: 12rem;
-	min-height: 1.75rem;
-	font-size: var(--fs-xs);
-}
+	<pre><code class="lang-svelte">&lt;!--
+	The drawer is driven entirely by `page.state`.
 
-.explore__views .btn[aria-pressed='true'],
-.explore__controls .btn[aria-pressed='true'] {
-	border-color: var(--accent);
-	color: var(--accent);
-}</code></pre>
+	Not by a local `open` variable that the shallow `goto` also sets — because
+	then the back button would change the history entry and leave the variable
+	true. Reading the state directly means there is exactly one source of truth and
+	the browser's own navigation is it.
+--&gt;
+{#if page.state.trace}
+	&lt;TraceDrawer tenant={data.tenant} traceId={page.state.trace} /&gt;
+{/if}</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>A local <code>open</code> variable that <code>pushState</code> also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading <code>page.state</code> directly means there is exactly one source of truth, and the browser’s own navigation is it.</p></aside>
+<aside class="callout callout--warn"><p>A local <code>open</code> variable that the shallow <code>goto</code> also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading <code>page.state</code> directly means there is exactly one source of truth, and the browser’s own navigation is it.</p></aside>
 <h3 id="closing">Four ways to close, one implementation</h3>
 
 <figure class="code">
@@ -113,9 +120,9 @@ export const snapshot: Snapshot&lt;{ draft: string; tailing: boolean }&gt; = {</
 	<pre><code class="lang-svelte">const assembled = $derived(await traceQuery({ tenant, traceId }));
 
 function close(): void {
-	// `history.back()` and not `pushState('', {})`, because the drawer *was*
-	// opened with a push: going back removes that entry, where a second push
-	// would add another and make the back button reopen it.
+	// `history.back()` and not a shallow `goto` to an empty state, because the
+	// drawer *was* opened with a push: going back removes that entry, where a
+	// second push would add another and make the back button reopen it.
 	history.back();
 }</code></pre>
 </figure>
@@ -124,35 +131,57 @@ function close(): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:106-124</span></span>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:115-136</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">	bind:this={panel}
-&gt;
-	&lt;header class=&quot;drawer__head&quot;&gt;
-		&lt;div&gt;
-			&lt;h2&gt;Trace&lt;/h2&gt;
-			&lt;p class=&quot;drawer__id mono&quot;&gt;{traceId}&lt;/p&gt;
-		&lt;/div&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	A link, and nothing else — no `onclick`.
 
-		&lt;div class=&quot;drawer__actions&quot;&gt;
-			&lt;a
-				class=&quot;btn btn--sm&quot;
-				href=&quot;/{tenant}/traces/{encodeURIComponent(traceId)}&quot;
-				onclick={(event) =&gt; {
-					// A modifier-click or a middle-click must keep its normal meaning:
-					// hijacking every click is how a link stops being a link.
-					if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-					event.preventDefault();
-					pushState(`/${tenant}/traces/${encodeURIComponent(traceId)}`, { trace: traceId });
-				}}</code></pre>
+	The first version hijacked the click: it prevented the default and pushed
+	shallow state for the URL the address bar already showed, a no-op that
+	*looked* like navigation. Migrating `pushState` to SvelteKit 3's
+	`goto(url, { shallow: true })` is what made that visible — `shallow` is
+	now a word in the call, and the word was wrong: leaving the drawer for the
+	full page is the one *real* navigation in this file. The router does that
+	from a plain `href`, and keeps a modifier-click or a middle-click meaning
+	what it always means — &quot;open in a new tab&quot; is exactly what somebody does
+	with a trace they want to keep while they look at the next one.
+--&gt;
+&lt;a
+	class=&quot;btn btn--sm&quot;
+	href={resolve('/[tenant]/traces/[traceId]', {
+		tenant,
+		traceId: encodeURIComponent(traceId)
+	})}
+&gt;
+	Open full page
+&lt;/a&gt;</code></pre>
 </figure>
 <p>A modifier-click or a middle-click must keep its normal meaning. Hijacking every click is how a link stops being a link — and &quot;open in a new tab&quot; is exactly what somebody does with a trace they want to keep while they look at the next one.</p>
+<aside class="callout callout--warn"><p>This link used to have an <code>onclick</code> that guarded the modifier keys by hand and then, for a plain click, pushed shallow state for the URL the address bar already showed — a no-op that *looked* like navigation, and no test said otherwise. Migrating <code>pushState</code> to <code>goto(url, { shallow: true })</code> is what exposed it: once <code>shallow</code> was a word in the call, it was visibly the wrong word, because leaving the drawer for the full page is the one real navigation in the file. The fix was deletion, and <code>e2e/trace.e2e.ts</code> now has the test that was missing.</p></aside>
+<h3 id="typed-links">Every internal link is typed</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:4-12</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `resolve` turns a route id and its parameters into a path, and the route
+ * id is *typed*: `'/[tenant]/explore'` is a member of a union SvelteKit
+ * generates from `src/routes`, so a link to a page that was renamed is a
+ * type error rather than a 404 somebody finds a week later. It is also what
+ * `eslint-plugin-svelte`'s `no-navigation-without-resolve` asks every
+ * internal `href` and `goto` to go through, for the same reason.
+ */
+import { resolve } from '$app/paths';</code></pre>
+</figure>
+<p><code>resolve('/[tenant]/traces/[traceId]', { tenant, traceId })</code> instead of a template string. The route id is a member of a union SvelteKit generates from <code>src/routes</code>, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and <code>eslint-plugin-svelte</code>'s <code>no-navigation-without-resolve</code> asks every <code>href</code> and every <code>goto</code> to go through it, for the same reason. The explore page imports it as <code>resolvePath</code>, because it already has a <code>resolve</code> of its own for time ranges, and two functions with one name are easier to read apart than to tell apart.</p>
 <h3 id="view-transitions">View transitions, in six lines and two guards</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:9-48</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:18-65</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -185,6 +214,14 @@ function close(): void {
  * produces.
  */
 onNavigate((navigation) =&gt; {
+	/*
+	 * Shallow navigations are left out. SvelteKit 3 runs the navigation hooks
+	 * for `goto(url, { shallow: true })` as well, and both shallow callers in
+	 * this app are the wrong shape for a cross-fade: the explore page rewrites
+	 * its query string every time typing settles, and the trace drawer slides
+	 * over a page that must stay exactly where it was.
+	 */
+	if (navigation.shallow) return;
 	if (!document.startViewTransition) return;
 	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -198,6 +235,7 @@ onNavigate((navigation) =&gt; {
 </figure>
 <p>The guards matter as much as the feature. <code>startViewTransition</code> does not exist in every browser, and there the navigation simply happens — which is the correct fallback and needs no polyfill. And somebody who asked their system for reduced motion asked for this too; honouring it *here* rather than only in CSS means the transition is never started, which is cheaper and avoids the flash that killing a running animation produces.</p>
 <p>There is no slide, no scale and no stagger. In a tool somebody uses for eight hours, a transition that is *noticeable* is a transition that is annoying by lunchtime.</p>
+<aside class="callout callout--note"><p>The third guard is new with SvelteKit 3, which runs the navigation hooks for shallow navigations too. Both shallow callers in this app are the wrong shape for a cross-fade — the explore page rewrites its query string every time typing settles, and the drawer slides over a page that must stay exactly where it was — so <code>navigation.shallow</code> returns early before the transition is ever started.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

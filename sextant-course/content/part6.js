@@ -14,7 +14,7 @@ export const part6 = [
 		slug: 'the-url-is-the-state',
 		title: 'The URL is the state',
 		summary:
-			'`SvelteURLSearchParams`, one debounced `replaceState`, and the two markers that a single field could not be.',
+			'`SvelteURLSearchParams`, one debounced shallow `goto`, and the two markers that a single field could not be.',
 		goal: 'Put the query, the range and the view in the address bar without a navigation per keystroke.',
 		blocks: [
 			code('src/lib/state/workspace.svelte.ts', 1, 34),
@@ -32,7 +32,7 @@ export const part6 = [
 				type: 'p',
 				text: 'Because it is a navigation: a hundred history entries for a sentence, and a re-run of every `load` on the route. The shape that works is to edit a local reactive params object and sync it to the address bar when the edits settle — which is exactly what `SvelteURLSearchParams` is for.'
 			},
-			code('src/lib/state/workspace.svelte.ts', 44, 68, { partial: true }),
+			code('src/lib/state/workspace.svelte.ts', 45, 69, { partial: true }),
 			{
 				type: 'note',
 				text: 'A plain `URLSearchParams` in `$state` would need replacing wholesale on every edit to be reactive at all, and `.set()` on it would silently do nothing. This is the case the reactive built-ins exist for, and the mirror image of the virtualizer’s plain `Map` in chapter 28.'
@@ -56,7 +56,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
         \`flush()\` then compared equal and did nothing — and so did
         the debounced write, forever after.`
 			},
-			code('src/lib/state/workspace.svelte.ts', 75, 97, { partial: true }),
+			code('src/lib/state/workspace.svelte.ts', 76, 98, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two fields: what the address bar last *said*, and what we last *wrote*. And the params are read inside `untrack`, so the adopt effect depends only on the URL — without which every keystroke re-runs it and the two would be conflated again by a different route.'
@@ -68,10 +68,22 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'canonicalising', text: 'And a consequence worth naming' },
-			code('src/lib/state/workspace.svelte.ts', 132, 174),
+			code('src/lib/state/workspace.svelte.ts', 145, 187),
 			{
 				type: 'p',
 				text: 'Arriving on `?q=from+logs` with no `range` rewrites the URL to include it, once, shortly after load. That is deliberate: the address bar is the state, so it should say all of it — and a link copied a moment later then carries the whole view rather than the half somebody happened to type.'
+			},
+
+			{ type: 'h3', id: 'the-write', text: 'The write itself: a shallow `goto`' },
+			code('src/lib/state/workspace.svelte.ts', 221, 241),
+			{
+				type: 'p',
+				text: 'SvelteKit 3 folded `pushState` and `replaceState` into `goto`. `shallow: true` means "change the URL and `page.state`, run no `load`", and `replace: true` is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because `goto` only accepts a URL that resolves to a route, which is where the next block comes in.'
+			},
+			code('src/lib/state/workspace.svelte.ts', 100, 117),
+			{
+				type: 'p',
+				text: 'The class does not know its own route. The page hands it a function that turns a search string into a URL through `resolve()` from `$app/paths`, and the return type — `ResolvedPathname` — is the proof that the URL points at a route this app has. That is what keeps the `goto` typed, and what lets the class be tested with no router at all.'
 			},
 
 			{
@@ -89,17 +101,17 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 		slug: 'shallow-routing',
 		title: 'Shallow routing, and a drawer the back button closes',
 		summary:
-			'`pushState` with `page.state`, a URL that is also a real page, and why the drawer reads history rather than a variable.',
+			'A shallow `goto` with `page.state`, a URL that is also a real page, and why the drawer reads history rather than a variable.',
 		goal: 'Open a trace without losing the query that found it, and share the link anyway.',
 		blocks: [
 			{
 				type: 'p',
 				text: 'Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 189, 226, { partial: true }),
+			code('src/routes/[tenant]/explore/+page.svelte', 174, 218),
 			{
 				type: 'p',
-				text: '`pushState` with a `page.state` payload adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were.'
+				text: '`goto(url, { shallow: true, state })` adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of `pushState(url, state)` so that one function owns every change to the address bar, and so that the URL has to be one `resolve()` can vouch for.'
 			},
 			{
 				type: 'p',
@@ -107,10 +119,10 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'page-state', text: 'The drawer reads history, not a variable' },
-			code('src/routes/[tenant]/explore/+page.svelte', 448, 458),
+			code('src/routes/[tenant]/explore/+page.svelte', 426, 436),
 			{
 				type: 'warn',
-				text: 'A local `open` variable that `pushState` also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading `page.state` directly means there is exactly one source of truth, and the browser’s own navigation is it.'
+				text: 'A local `open` variable that the shallow `goto` also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading `page.state` directly means there is exactly one source of truth, and the browser’s own navigation is it.'
 			},
 
 			{ type: 'h3', id: 'closing', text: 'Four ways to close, one implementation' },
@@ -121,14 +133,25 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'modifier-clicks', text: 'And a link that is still a link' },
-			code('src/lib/components/TraceDrawer.svelte', 106, 124),
+			code('src/lib/components/TraceDrawer.svelte', 115, 136),
 			{
 				type: 'p',
 				text: 'A modifier-click or a middle-click must keep its normal meaning. Hijacking every click is how a link stops being a link — and "open in a new tab" is exactly what somebody does with a trace they want to keep while they look at the next one.'
 			},
+			{
+				type: 'warn',
+				text: 'This link used to have an `onclick` that guarded the modifier keys by hand and then, for a plain click, pushed shallow state for the URL the address bar already showed — a no-op that *looked* like navigation, and no test said otherwise. Migrating `pushState` to `goto(url, { shallow: true })` is what exposed it: once `shallow` was a word in the call, it was visibly the wrong word, because leaving the drawer for the full page is the one real navigation in the file. The fix was deletion, and `e2e/trace.e2e.ts` now has the test that was missing.'
+			},
+
+			{ type: 'h3', id: 'typed-links', text: 'Every internal link is typed' },
+			code('src/routes/+layout.svelte', 4, 12),
+			{
+				type: 'p',
+				text: '`resolve(\'/[tenant]/traces/[traceId]\', { tenant, traceId })` instead of a template string. The route id is a member of a union SvelteKit generates from `src/routes`, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and `eslint-plugin-svelte`\'s `no-navigation-without-resolve` asks every `href` and every `goto` to go through it, for the same reason. The explore page imports it as `resolvePath`, because it already has a `resolve` of its own for time ranges, and two functions with one name are easier to read apart than to tell apart.'
+			},
 
 			{ type: 'h3', id: 'view-transitions', text: 'View transitions, in six lines and two guards' },
-			code('src/routes/+layout.svelte', 9, 48),
+			code('src/routes/+layout.svelte', 18, 65),
 			{
 				type: 'p',
 				text: 'The guards matter as much as the feature. `startViewTransition` does not exist in every browser, and there the navigation simply happens — which is the correct fallback and needs no polyfill. And somebody who asked their system for reduced motion asked for this too; honouring it *here* rather than only in CSS means the transition is never started, which is cheaper and avoids the flash that killing a running animation produces.'
@@ -136,6 +159,10 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			{
 				type: 'p',
 				text: 'There is no slide, no scale and no stagger. In a tool somebody uses for eight hours, a transition that is *noticeable* is a transition that is annoying by lunchtime.'
+			},
+			{
+				type: 'note',
+				text: 'The third guard is new with SvelteKit 3, which runs the navigation hooks for shallow navigations too. Both shallow callers in this app are the wrong shape for a cross-fade — the explore page rewrites its query string every time typing settles, and the drawer slides over a page that must stay exactly where it was — so `navigation.shallow` returns early before the transition is ever started.'
 			},
 
 			{
@@ -173,7 +200,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'consuming', text: 'And nothing to show while it lands' },
-			code('src/routes/[tenant]/explore/+page.svelte', 302, 316),
+			code('src/routes/[tenant]/explore/+page.svelte', 275, 289),
 			{
 				type: 'p',
 				text: '`{#await … then}` with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.'
@@ -388,10 +415,10 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 				type: 'p',
 				text: '`POST` fixes all three and then lies about the semantics. It tells every cache and every retry policy that this request *changes something*: nothing may cache it, and a well-behaved client library will refuse to retry it on a timeout — which for a read is the one case where retrying is obviously safe.'
 			},
-			code('src/routes/api/v1/query/+server.ts', 208, 211),
+			code('src/routes/api/v1/query/+server.ts', 230, 233),
 			{
 				type: 'p',
-				text: '`QUERY` — which SvelteKit 3 added to `+server` handlers in `3.0.0-next.24` — is the method that means "a read, with a body". Safe and idempotent like `GET`, a body like `POST`. Exporting it is the same one-line shape as exporting `GET`, because it is just another method handler; what is new is that the router recognises the name.'
+				text: '`QUERY` — which SvelteKit 3 added to `+server` handlers — is the method that means "a read, with a body". Safe and idempotent like `GET`, a body like `POST`. Exporting it is the same one-line shape as exporting `GET`, because it is just another method handler; what is new is that the router recognises the name.'
 			},
 			{
 				type: 'why',
@@ -400,7 +427,11 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'the-body', text: 'The body, in the vocabulary the interface already uses' },
-			code('src/routes/api/v1/query/+server.ts', 57, 77),
+			code('src/routes/api/v1/query/+server.ts', 56, 92),
+			{
+				type: 'p',
+				text: 'The `_` in `_RequestSchema` is a SvelteKit convention rather than a style choice — it is what lets a `+server.ts` export something that is not a route handler. The chapter on verifying it explains the escape hatch where the test that reaches through it lives; here the schema itself is the point.'
+			},
 			{
 				type: 'p',
 				text: '`range` takes the same expressions the address bar does — `-6h`, or `from..to` in epoch milliseconds — so a link somebody copied out of the interface pastes straight into a script. Sharing the vocabulary is most of what makes an API feel like the same product rather than a second one bolted on.'
@@ -411,7 +442,11 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'the-scope', text: 'The scope, finally load-bearing' },
-			code('src/routes/api/v1/query/+server.ts', 93, 103, { partial: true }),
+			code('src/routes/api/v1/query/+server.ts', 94, 125, { partial: true }),
+			{
+				type: 'note',
+				text: '`Response.json(...)`, the platform\'s own, rather than `json(...)` from `@sveltejs/kit`. SvelteKit 3 deprecates its helper because the standard one does the same job — serialise, set `content-type: application/json` — and a handler written against `Request` and `Response` alone is one a reader can follow with the MDN page open and nothing else. The ingest route made the same change.'
+			},
 			{
 				type: 'p',
 				text: 'The two scopes exist because they belong to different machines. A collector writes and must never be able to read another team’s logs; a reporting job is the exact reverse. A key that could do both would make a compromised collector a data breach rather than a nuisance — and a collector’s key lives in a config file on every host, which is the worst place a read credential could be.'
@@ -422,14 +457,14 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'one-language', text: 'The same parser and the same checker' },
-			code('src/routes/api/v1/query/+server.ts', 126, 146, { partial: true }),
+			code('src/routes/api/v1/query/+server.ts', 148, 181),
 			{
 				type: 'p',
 				text: 'Not a second, laxer path for machines. A query the interface refuses must be refused here too, or the two disagree about what the language *is* — and the API becomes the place people go to run the thing the product told them was wrong. The span comes back with the message so a client can underline exactly what the editor would.'
 			},
 
 			{ type: 'h3', id: 'the-response', text: 'What the response has to say out loud' },
-			code('src/routes/api/v1/query/+server.ts', 173, 205, { partial: true }),
+			code('src/routes/api/v1/query/+server.ts', 195, 227),
 			{
 				type: 'p',
 				text: '`truncated` is in the payload rather than implied by the row count, because a machine cannot look at a banner. A script that pages by asking for a thousand rows and receiving a thousand has no way to distinguish "that is all of them" from "that is the first page" unless the response says so. `pushed` is the same courtesy about speed: it names which stages reached SQL, so a caller can tell a fast query from a slow one without timing it.'
@@ -556,7 +591,7 @@ $ grep -rl "/fonts/" .svelte-kit/output/client
 			},
 			{
 				type: 'p',
-				text: 'It could not be fixed before, and that is the point. A bundled font’s URL carries a content hash, so a filter could only match a path nobody can predict. SvelteKit 3.0.0-next.24 gives a `font` input a **`filename`** — the source path relative to the project root, before hashing — and matching on that is exact, survives every rebuild, and lets the fonts stay bundled.'
+				text: 'It could not be fixed before, and that is the point. A bundled font’s URL carries a content hash, so a filter could only match a path nobody can predict. SvelteKit 3 gives a `font` input a **`filename`** — the source path relative to the project root, before hashing — and matching on that is exact, survives every rebuild, and lets the fonts stay bundled.'
 			},
 			code('src/hooks.server.ts', 47, 59),
 			code('src/hooks.server.ts', 61, 103, { partial: true }),

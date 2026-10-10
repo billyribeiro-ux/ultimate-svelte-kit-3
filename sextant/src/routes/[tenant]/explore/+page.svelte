@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { pushState } from '$app/navigation';
+	import { goto } from '$app/navigation';
+	// Aliased: this page already has a `resolve` — the time-range one, from
+	// `#lib/time/range.ts` — and the two are easier to read apart than to tell apart.
+	import { resolve as resolvePath } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageProps, Snapshot } from './$types.js';
 	import LiveTail from '#lib/components/LiveTail.svelte';
@@ -28,11 +31,16 @@
 	 */
 	const workspace = untrack(
 		() =>
-			new Workspace({
-				q: data.q,
-				range: data.range,
-				view: data.view === 'chart' ? 'chart' : 'table'
-			})
+			new Workspace(
+				{
+					q: data.q,
+					range: data.range,
+					view: data.view === 'chart' ? 'chart' : 'table'
+				},
+				// This page's URL for a search string. `resolve` accepts a route id with
+				// a query string, and types the result as a path this app can serve.
+				(search) => resolvePath(`/[tenant]/explore?${search}`, { tenant: data.tenant })
+			)
 	);
 
 	/*
@@ -166,7 +174,7 @@
 	/**
 	 * Opening a trace does not navigate.
 	 *
-	 * `pushState` with a `page.state` payload adds a history entry — so the back
+	 * A shallow `goto` with a `state` payload adds a history entry — so the back
 	 * button closes the drawer — without running a single `load` function. The
 	 * query results stay exactly as they were, which matters because the whole
 	 * point of the drawer is to look at a trace *without losing the search that
@@ -179,7 +187,15 @@
 	 * component with an `open` prop.
 	 */
 	function openTrace(traceId: string): void {
-		pushState(`/${data.tenant}/traces/${encodeURIComponent(traceId)}`, { trace: traceId });
+		// `shallow: true` is what `pushState` used to mean. SvelteKit 3 made it an
+		// option of `goto`, so one function owns every change to the address bar.
+		void goto(
+			resolvePath('/[tenant]/traces/[traceId]', {
+				tenant: data.tenant,
+				traceId: encodeURIComponent(traceId)
+			}),
+			{ shallow: true, state: { trace: traceId } }
+		);
 	}
 
 	function openRow(index: number): void {
@@ -189,9 +205,16 @@
 		// query text and the documentation all say the same word.
 		const traceId = row?.trace_id;
 
-		// A row with a trace opens the trace; one without opens the row detail.
+		// A row with a trace opens the trace; one without opens the row detail —
+		// on this page's own URL, with the current params, and only `page.state`
+		// changed.
 		if (typeof traceId === 'string' && traceId !== '') openTrace(traceId);
-		else pushState('', { row: index });
+		else {
+			void goto(resolvePath(`/[tenant]/explore?${workspace.search}`, { tenant: data.tenant }), {
+				shallow: true,
+				state: { row: index }
+			});
+		}
 	}
 
 	const rows = $derived(tailing ? tailRows : result.rows);
@@ -216,7 +239,8 @@
 	 *
 	 * The **results** are not. They could be tens of megabytes, `history.state` has
 	 * a size limit measured in low megabytes, and exceeding it throws on
-	 * `pushState` — which would break navigation itself rather than degrade it.
+	 * `history.pushState` — which would break navigation itself rather than
+	 * degrade it.
 	 * They are re-fetched, which takes milliseconds and is always current.
 	 *
 	 * The **tail** is not either, and that is a product decision rather than a
@@ -402,7 +426,7 @@
 <!--
 	The drawer is driven entirely by `page.state`.
 
-	Not by a local `open` variable that `pushState` also happens to set — because
+	Not by a local `open` variable that the shallow `goto` also sets — because
 	then the back button would change the history entry and leave the variable
 	true. Reading the state directly means there is exactly one source of truth and
 	the browser's own navigation is it.

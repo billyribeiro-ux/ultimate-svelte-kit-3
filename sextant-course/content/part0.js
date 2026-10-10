@@ -260,9 +260,13 @@ from spans | where duration > 2s         ← also fine`
 			{
 				type: 'terminal',
 				code: `
-pnpm create svelte@next sextant
+pnpm dlx sv create sextant
 cd sextant
 pnpm install`
+			},
+			{
+				type: 'note',
+				text: 'The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. `packageManager` in `package.json` and `.nvmrc` pin the two that are not dependencies, so a machine with a different pnpm or Node says so at `pnpm install` rather than three chapters in.'
 			},
 			{
 				type: 'p',
@@ -312,7 +316,11 @@ pnpm install`
 				type: 'p',
 				text: 'A real Chromium for component tests, not a DOM emulator, and the reason is specific: the virtualizer in chapter 28 measures rows with `getBoundingClientRect()`. jsdom has no layout, so every element is 0×0 — a virtualizer under jsdom renders zero rows and passes every assertion you thought to write.'
 			},
-			code('vite.config.ts', 205, 228, { partial: true }),
+			code('vite.config.ts', 205, 233, { partial: true }),
+			{
+				type: 'note',
+				text: 'No `extends` line on either project. Vitest 5 made an inline project inherit the config that declares it — the plugins, `ssr.external`, the `#lib` imports — so naming this file again, as Vitest 4 required, would load the SvelteKit plugin twice and earn a warning. The only thing left to say is `extends: false`, and it would be wrong here.'
+			},
 			{
 				type: 'p',
 				text: 'And the server project runs one file at a time. SQLite allows exactly one writer; two specs that both seed rows meet `SQLITE_BUSY` in parallel, and the symptom is a dozen unrelated assertions failing at random in whichever file lost the race.'
@@ -392,6 +400,10 @@ pnpm install`
 cp .env.example .env
 # fill in BETTER_AUTH_SECRET with: openssl rand -base64 32
 pnpm db:push`
+			},
+			{
+				type: 'note',
+				text: '`db:push` writes the *current* schema, so a fresh database never sees the one column this project has lost: Better Auth 1.7.0 added a required `issuer` to `account`, 1.7.3 withdrew it, and 1.7.7 never writes it — a `NOT NULL` nothing fills, which fails every sign-up on its insert. `src/lib/server/db/auth.schema.ts` explains it, and `drizzle/0001_drop_account_issuer.sql` is the migration for a database that was pushed before the change; `pnpm db:migrate` walks the journal.'
 			},
 
 			{

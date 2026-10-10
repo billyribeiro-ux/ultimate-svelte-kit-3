@@ -58,6 +58,23 @@ test('Escape closes the drawer, and does so through history', async ({ page }) =
 	await expect(page).toHaveURL(/\/demo\/explore/);
 });
 
+test('"Open full page" leaves the drawer for the real page', async ({ page }) => {
+	await page.goto(WITH_TRACES);
+	await page.getByRole('row').first().click();
+	await expect(page.getByRole('dialog')).toBeVisible();
+
+	await page.getByRole('link', { name: 'Open full page' }).click();
+
+	/*
+	 * A real navigation this time, from a plain link. The version of this link
+	 * that pushed shallow state on click pushed the URL the address bar already
+	 * showed, so the click did nothing — and no test said so until this one.
+	 */
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByRole('tree', { name: 'Spans' })).toBeVisible();
+	await expect(page).toHaveURL(/\/demo\/traces\//);
+});
+
 test('the URL the drawer wrote is a real page on reload', async ({ page }) => {
 	await page.goto(WITH_TRACES);
 	await page.getByRole('row').first().click();
