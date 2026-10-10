@@ -52,11 +52,12 @@ export const prerender = true;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:1-35</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { hydratable } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { cinematic } from '#lib/motion/cinematic.ts';
 	import Section from '#lib/components/Section.svelte';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
@@ -99,7 +100,7 @@ export const prerender = true;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:45-72</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:46-75</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
@@ -127,8 +128,10 @@ export const prerender = true;</code></pre>
 	&lt;/p&gt;
 
 	&lt;div class=&quot;hero__actions cluster&quot; data-rise&gt;
-		&lt;a class=&quot;btn btn--primary btn--lg&quot; href=&quot;/sheet/local&quot;&gt;Open a sheet — no account&lt;/a&gt;
-		&lt;a class=&quot;btn btn--lg&quot; href=&quot;/templates&quot;&gt;Start from a template&lt;/a&gt;
+		&lt;a class=&quot;btn btn--primary btn--lg&quot; href={resolve('/(app)/sheet/local')}
+			&gt;Open a sheet — no account&lt;/a
+		&gt;
+		&lt;a class=&quot;btn btn--lg&quot; href={resolve('/(app)/templates')}&gt;Start from a template&lt;/a&gt;
 	&lt;/div&gt;</code></pre>
 </figure>
 
@@ -226,10 +229,11 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/templates/[slug]/+page.svelte<span class="code__lines">:1-41</span></span>
+		<span class="code__file">src/routes/(app)/templates/[slug]/+page.svelte<span class="code__lines">:1-44</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 	import { create } from '#lib/remote/sheets.remote.ts';
@@ -251,7 +255,9 @@ export const load: PageLoad = ({ params }) =&gt; {
 			&lt;p class=&quot;hint&quot;&gt;{data.template.summary}&lt;/p&gt;
 		&lt;/div&gt;
 		&lt;div class=&quot;cluster&quot;&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href=&quot;/sheet/local?template={data.template.slug}&quot;
+			&lt;a
+				class=&quot;btn btn--primary&quot;
+				href={resolve(`/(app)/sheet/local?template=${data.template.slug}`)}
 				&gt;Open a copy — no account&lt;/a
 			&gt;
 			&lt;svelte:boundary&gt;

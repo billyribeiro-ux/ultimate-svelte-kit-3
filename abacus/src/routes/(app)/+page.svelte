@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hydratable } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { cinematic } from '#lib/motion/cinematic.ts';
 	import Section from '#lib/components/Section.svelte';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
@@ -67,8 +68,10 @@
 	</p>
 
 	<div class="hero__actions cluster" data-rise>
-		<a class="btn btn--primary btn--lg" href="/sheet/local">Open a sheet — no account</a>
-		<a class="btn btn--lg" href="/templates">Start from a template</a>
+		<a class="btn btn--primary btn--lg" href={resolve('/(app)/sheet/local')}
+			>Open a sheet — no account</a
+		>
+		<a class="btn btn--lg" href={resolve('/(app)/templates')}>Start from a template</a>
 	</div>
 
 	<div class="demo" data-rise aria-hidden="true">
@@ -106,7 +109,11 @@
 		<ul class="features">
 			{#each Object.values(TEMPLATES) as template (template.slug)}
 				<li>
-					<h3><a href="/templates/{template.slug}">{template.title}</a></h3>
+					<h3>
+						<a href={resolve('/(app)/templates/[slug]', { slug: template.slug })}
+							>{template.title}</a
+						>
+					</h3>
 					<p>{template.summary}</p>
 				</li>
 			{/each}

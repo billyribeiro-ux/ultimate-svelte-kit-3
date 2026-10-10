@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { CloudArrowUpIcon } from 'phosphor-svelte';
 	import Workbench from '#lib/grid/Workbench.svelte';
@@ -129,7 +130,9 @@
 						</button>
 					</form>
 				{:else}
-					<a class="btn btn--sm" href="/signin?next=/sheet/local">Sign in to save it</a>
+					<a class="btn btn--sm" href={resolve('/(app)/signin?next=/sheet/local')}
+						>Sign in to save it</a
+					>
 				{/if}
 				{#snippet pending()}
 					<span class="chip">…</span>

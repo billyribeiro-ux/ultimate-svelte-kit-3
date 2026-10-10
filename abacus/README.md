@@ -7,6 +7,13 @@ out, and a container that deploys it.
 
 Project 7 of _Ultimate SvelteKit 3_. Its course is in `../abacus-course`.
 
+## Toolchain
+
+Node 24.21 LTS (`.nvmrc`, `engines`), pnpm 12.10.1 (`packageManager`, so
+`corepack` picks it), SvelteKit 3.0.1 on Svelte 5.57, Vite 8.3, Vitest 5,
+TypeScript 6 and Playwright 1.64. Every version is pinned by `pnpm-lock.yaml`;
+`pnpm install --frozen-lockfile` is what the Dockerfile and CI run.
+
 ## Run it
 
 ```bash

@@ -7,12 +7,17 @@
  *
  * `QUERY` is the HTTP method for "a read with a body" — a GET may not carry
  * one, and a POST says "this changes something", which a search does not.
- * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export.
+ * SvelteKit 3 added it to the methods a `+server.ts` may export.
+ *
+ * Responses are built with the platform's `Response.json(…)`. SvelteKit 3
+ * deprecated its own `json(…)` helper because the two had become the same
+ * thing, and a handler that reaches for the standard one reads the same in
+ * any runtime.
  */
 
 import * as v from 'valibot';
 import { desc, sql } from 'drizzle-orm';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { db, schema } from '#lib/server/db/index.ts';
 
@@ -41,7 +46,7 @@ async function list(limit: number) {
 
 export const GET: RequestHandler = async ({ setHeaders }) => {
 	setHeaders({ 'cache-control': 'public, max-age=60' });
-	return json({ sheets: await list(20) });
+	return Response.json({ sheets: await list(20) });
 };
 
 export const QUERY: RequestHandler = async ({ request }) => {
@@ -63,5 +68,5 @@ export const QUERY: RequestHandler = async ({ request }) => {
 				!needle || s.title.toLowerCase().includes(needle) || s.owner.toLowerCase().includes(needle)
 		)
 		.slice(0, limit);
-	return json({ sheets: matched, total: matched.length });
+	return Response.json({ sheets: matched, total: matched.length });
 };

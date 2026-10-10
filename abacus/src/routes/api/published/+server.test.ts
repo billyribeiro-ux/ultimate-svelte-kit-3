@@ -3,8 +3,8 @@ import * as v from 'valibot';
 import { _SearchSchema } from './+server.ts';
 
 /**
- * A test beside a route. Since SvelteKit 3.0.0-next.19 a `+` file with
- * `.test.` in its name is not a route, so a schema's defaults get a fast
+ * A test beside a route. In SvelteKit 3 a `+` file with `.test.` in its
+ * name is not a route, so a schema's defaults get a fast
  * unit test next to the thing they describe.
  */
 const parse = (body: unknown) => v.parse(_SearchSchema, body);

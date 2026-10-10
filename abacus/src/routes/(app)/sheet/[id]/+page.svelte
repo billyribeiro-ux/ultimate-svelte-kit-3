@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { CopyIcon, GlobeIcon, LinkIcon, UsersIcon } from 'phosphor-svelte';
 	import type { PageProps } from './$types.js';
@@ -221,7 +222,9 @@
 							{record.published ? 'Unpublish' : 'Publish'}
 						</button>
 						{#if record.published}
-							<a class="btn btn--sm" href="/s/{initial.sheet.id}">View</a>
+							<a class="btn btn--sm" href={resolve('/(app)/s/[id]', { id: initial.sheet.id })}
+								>View</a
+							>
 							<button
 								type="button"
 								class="btn btn--sm btn--ghost"

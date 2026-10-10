@@ -72,10 +72,13 @@ test('the embed is the one page that may be framed', async ({ page }) => {
 	expect(response?.headers()['content-security-policy']).toContain('frame-ancestors *');
 	await expect(page.getByRole('navigation', { name: 'Primary' })).toHaveCount(0);
 	await expect(page.getByRole('table')).toContainText('Rent');
-	await expect(page.getByRole('link', { name: 'Monthly budget' })).toHaveAttribute(
-		'href',
-		'/s/seedbudget'
-	);
+
+	// Where the link leads, not how it is spelt. `resolve()` renders a *relative*
+	// path on the server — `../s/seedbudget` from `/embed/seedbudget` — so that a
+	// build can be served from under any base path; the browser resolves it
+	// against the embed's own address, which is what this checks.
+	const href = await page.getByRole('link', { name: 'Monthly budget' }).getAttribute('href');
+	expect(new URL(href ?? '', page.url()).pathname).toBe('/s/seedbudget');
 });
 
 test('the health check answers with the running version', async ({ request }) => {

@@ -22,12 +22,16 @@ export const part6 = [
 				type: 'p',
 				text: 'The root layout is deliberately almost empty, so that a page which must have *no* chrome — the embed — can reset to it with `+page@.svelte`. What it does own is the view transition: `onNavigate` returns a promise SvelteKit awaits, `startViewTransition` gives the browser both states to cross-fade, and a fallback timer makes sure a transition can never hold a navigation hostage.'
 			},
-			code('src/routes/(app)/+layout.svelte', 1, 40),
+			code('src/routes/(app)/+layout.svelte', 1, 60),
 			{
 				type: 'p',
 				text: 'The parentheses in `(app)` make it a layout group: a folder that adds a layout without adding a segment to the URL. `beforeNavigate` with `updated.current` is the versioning story from chapter 02 finishing: when a new build has been deployed, the next navigation becomes a full load.'
 			},
-			code('src/routes/(app)/+layout.svelte', 42, 98),
+			code('src/routes/(app)/+layout.svelte', 62, 126),
+			{
+				type: 'p',
+				text: 'Every `href` in the app goes through `resolve()` from `$app/paths`, with a *route id* — `/(app)/sheets`, the folder under `src/routes` with its layout group in it — rather than a string. A route id is checked against the routes that exist, so renaming a folder is a type error in every link to it rather than a 404 a reader finds; a dynamic segment takes its params as a second argument, by name. eslint-plugin-svelte’s `no-navigation-without-resolve` holds every link and `goto()` to it, and the rule stays on, because a link is the one place a typo ships silently. (SvelteKit 3 also accepts a plain pathname, now without its leading slash — `resolve(\'sheets\')` — which is why only route ids appear here.)'
+			},
 			{
 				type: 'why',
 				title: 'Why the header asks whoAmI instead of reading layout data',
@@ -53,7 +57,7 @@ export const part6 = [
 				type: 'p',
 				text: '`toast(\'Saved\')` from anywhere, with no `<Toasts />` host to remember to render. `mount` creates a component at a target and `unmount` removes it, with `{ outro: true }` so its `transition:fly` plays on the way out — the same two functions SvelteKit uses to start the app, used for the one component that belongs to no page.'
 			},
-			code('src/routes/+error.svelte', 1, 31),
+			code('src/routes/+error.svelte', 1, 32),
 			{
 				type: 'checkpoint',
 				items: [
@@ -73,13 +77,13 @@ export const part6 = [
 		goal: 'Prerender pages that have dynamic parameters, animate an entrance without blanking the page, and use `hydratable` for a value the server and client must agree on.',
 		blocks: [
 			code('src/routes/(app)/+page.ts', 1, 7),
-			code('src/routes/(app)/+page.svelte', 1, 35),
+			code('src/routes/(app)/+page.svelte', 1, 36),
 			{
 				type: 'why',
 				title: 'Why the drifting dots use hydratable',
 				text: 'The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen *different* random positions during hydration, and Svelte would find the markup did not match. `hydratable(key, fn)` runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.'
 			},
-			code('src/routes/(app)/+page.svelte', 45, 72),
+			code('src/routes/(app)/+page.svelte', 46, 75),
 			code('src/lib/motion/cinematic.ts', 1, 55),
 			{
 				type: 'p',
@@ -92,7 +96,7 @@ export const part6 = [
 				type: 'p',
 				text: 'A dynamic route cannot be prerendered unless SvelteKit knows its parameters; `entries` lists them, and the list is the same array the templates module exports, so adding a template adds a page. The `load` runs the engine — on the build machine — and the page arrives with the numbers in it.'
 			},
-			code('src/routes/(app)/templates/[slug]/+page.svelte', 1, 41),
+			code('src/routes/(app)/templates/[slug]/+page.svelte', 1, 44),
 			{
 				type: 'p',
 				text: 'Two ways in: a local copy with no account, or — if `whoAmI()` says somebody is signed in — a form that saves the template into the account. The form is `create` from chapter 27 with two hidden fields, and it works with JavaScript off.'
@@ -130,13 +134,13 @@ export const part6 = [
 			},
 
 			{ type: 'h3', id: 'the-page', text: 'The page' },
-			code('src/routes/(app)/sheet/local/+page.svelte', 14, 46),
+			code('src/routes/(app)/sheet/local/+page.svelte', 15, 47),
 			{
 				type: 'p',
 				text: 'Every operation the sheet emits goes to the channel and schedules a save, debounced by four hundred milliseconds. `?template=budget` starts from a template; `?from=<id>` starts from a published sheet — both are “make me a copy of this” without an account.'
 			},
-			code('src/routes/(app)/sheet/local/+page.svelte', 48, 100),
-			code('src/routes/(app)/sheet/local/+page.svelte', 107, 140),
+			code('src/routes/(app)/sheet/local/+page.svelte', 49, 101),
+			code('src/routes/(app)/sheet/local/+page.svelte', 108, 143),
 			{
 				type: 'why',
 				title: 'Why the title is a function binding',
@@ -170,24 +174,24 @@ export const part6 = [
 				type: 'p',
 				text: 'A universal `load`, so the remote queries run on the server for the first visit and in the browser after. Nobody signed in is sent to sign in and brought back afterwards — the `next` parameter — and the sheet and the person’s locale are loaded together.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 14, 33),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 15, 34),
 			{
 				type: 'p',
 				text: 'The first document is read *once*, at creation, with `untrack`. A later `data` change — a refresh, a navigation to the same route — must not throw away the edits in the sheet model, so the model is built from a snapshot rather than from a reactive read.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 55, 67),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 56, 68),
 			{
 				type: 'why',
 				title: 'Why the record comes from the query and not from data',
 				text: 'The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call `getSheet(id).refresh()`. A query awaited in the component updates in place when it is refreshed; `data` is a snapshot of what the load returned. The first version read `data.sheet` and the Unpublish button never appeared, because the load did not re-run. `await` inside `$derived` resolves at once from the cache the load already filled, so there is no second request and no flash.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 86, 106, { partial: true }),
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 113, 156),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 87, 107, { partial: true }),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 114, 157),
 			{
 				type: 'p',
 				text: 'The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, “Could not save” — and a chip for everybody else in the room. `stream.current` being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 158, 236),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 159, 239),
 			{
 				type: 'p',
 				text: 'Sharing and publishing live in a native popover. The access setting is a *form* — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button.'
@@ -210,13 +214,13 @@ export const part6 = [
 			'A list of sheets with a create form (`preflight`, `enhance`), per-card rename and delete (`.for(id)`, `withOverride`), the sign-in page that runs the passkey ceremonies, and settings with a profile form and passkey management.',
 		goal: 'Use every remote-form feature for something: client-side preflight, enhanced submission, per-instance forms, optimistic overrides, and a form that reissues the session cookie.',
 		blocks: [
-			code('src/routes/(app)/sheets/+page.svelte', 9, 38),
+			code('src/routes/(app)/sheets/+page.svelte', 10, 39),
 			{
 				type: 'p',
 				text: '`create.preflight(schema)` validates on the client before anything is sent — the same valibot the server runs, so “give it a title” appears on the keystroke — and `.enhance` wraps the submission so a failure becomes a toast rather than a page.'
 			},
-			code('src/routes/(app)/sheets/+page.svelte', 45, 72),
-			code('src/routes/(app)/sheets/+page.svelte', 74, 139),
+			code('src/routes/(app)/sheets/+page.svelte', 46, 73),
+			code('src/routes/(app)/sheets/+page.svelte', 75, 141),
 			{
 				type: 'why',
 				title: 'Why delete takes the card off the screen before the server answers',
@@ -224,12 +228,12 @@ export const part6 = [
 			},
 
 			{ type: 'h3', id: 'signin', text: 'Sign in' },
-			code('src/routes/(app)/signin/+page.svelte', 14, 58),
+			code('src/routes/(app)/signin/+page.svelte', 16, 76),
 			{
 				type: 'p',
-				text: 'Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. `next` is checked to be a path on this site — a `?next=https://elsewhere` must not become a redirect to elsewhere.'
+				text: 'Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. `next` is checked to be a path on this site — a `?next=https://elsewhere` must not become a redirect to elsewhere — and then asked of the router: SvelteKit 3’s `goto` rejects a URL that is not one of the app’s routes, so `match()` from `$app/paths` decides whether `next` is one, and a stale bookmark lands on the workspace instead of in a rejected promise. A `next` that `match` accepted *is* a `ResolvedPathname`, and the cast says exactly that — it is the type the lint rule accepts in place of a `resolve()` call.'
 			},
-			code('src/routes/(app)/signin/+page.svelte', 65, 114),
+			code('src/routes/(app)/signin/+page.svelte', 83, 132),
 
 			{ type: 'h3', id: 'settings', text: 'Settings' },
 			code('src/routes/(app)/settings/+page.svelte', 15, 58),
@@ -266,23 +270,23 @@ export const part6 = [
 				type: 'p',
 				text: '`csr = false` means the server renders the page and the browser gets HTML and CSS and nothing else: nothing to hydrate, nothing to download, a page that prints. The engine runs on the server — it is plain TypeScript — and the table arrives as text. The end-to-end suite asserts the page has zero `<script>` elements.'
 			},
-			code('src/routes/(app)/s/[id]/+page.svelte', 1, 43),
+			code('src/routes/(app)/s/[id]/+page.svelte', 1, 54),
 			code('src/routes/(app)/embed/[id]/+page.ts', 1, 11),
-			code('src/routes/(app)/embed/[id]/+page@.svelte', 1, 27),
+			code('src/routes/(app)/embed/[id]/+page@.svelte', 1, 30),
 			{
 				type: 'p',
 				text: '`+page@.svelte` resets this page to the root layout: no header, no navigation, just the table and a line saying where it came from. It is the one route the security hook allows inside an iframe, because being framed is its purpose.'
 			},
 
 			{ type: 'h3', id: 'api', text: 'The API' },
-			code('src/routes/api/published/+server.ts', 1, 23),
-			code('src/routes/api/published/+server.ts', 42, 67),
+			code('src/routes/api/published/+server.ts', 1, 28),
+			code('src/routes/api/published/+server.ts', 47, 72),
 			{
 				type: 'p',
-				text: '`QUERY` is the HTTP method for a read with a body — a GET may not carry one, and a POST says “this changes something”. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “not a handler”, so the test beside the route can import it; since 3.0.0-next.19 a `+` file with `.test.` in its name is not a route.'
+				text: '`QUERY` is the HTTP method for a read with a body — a GET may not carry one, and a POST says “this changes something”. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “not a handler”, so the test beside the route can import it; in SvelteKit 3 a `+` file with `.test.` in its name is not a route. The responses are `Response.json(…)`, the platform’s own: SvelteKit 3 deprecated its `json(…)` helper because the two had become the same thing, and a handler written against the standard reads the same in any runtime.'
 			},
 			code('src/routes/api/published/+server.test.ts', 1, 20),
-			code('src/routes/healthz/+server.ts', 1, 25),
+			code('src/routes/healthz/+server.ts', 1, 30),
 			{
 				type: 'p',
 				text: 'The health check touches the database and returns the build version — the commit hash from the config — because “which version is running” is the first question in every incident. The container chapter probes it.'

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 	import { create } from '#lib/remote/sheets.remote.ts';
@@ -20,7 +21,9 @@
 			<p class="hint">{data.template.summary}</p>
 		</div>
 		<div class="cluster">
-			<a class="btn btn--primary" href="/sheet/local?template={data.template.slug}"
+			<a
+				class="btn btn--primary"
+				href={resolve(`/(app)/sheet/local?template=${data.template.slug}`)}
 				>Open a copy — no account</a
 			>
 			<svelte:boundary>

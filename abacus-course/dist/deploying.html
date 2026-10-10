@@ -60,7 +60,7 @@
 #   docker run -e SESSION_SECRET=… -e DATABASE_URL=file:/data/abacus.db \
 #              -v abacus-data:/data -p 3000:3000 abacus
 
-ARG NODE_VERSION=24.20.0
+ARG NODE_VERSION=24.21.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps
@@ -76,6 +76,38 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile</code></pre>
 </figure>
 <p>Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
+<p>adapter-node 6.0 serves <code>build/client</code> from a list it records at build time — each file with a content-hash <code>ETag</code>, no <code>Last-Modified</code>, and only to <code>GET</code> and <code>HEAD</code> (anything else is a 405). A file copied into the directory after the build is not served, and a replaced one keeps its old size and tag. That is the right answer for an image that is built once and started many times, and the reason the Dockerfile copies <code>build</code> as a unit: there is nothing to patch in place, and runtime configuration goes through environment variables.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># Not a workspace — a single package. This file exists for one line.
+#
+# pnpm 12 refuses to run a dependency's install scripts unless you say so by
+# name, which is the correct default: `postinstall` is arbitrary code from a
+# transitive dependency you have never read. esbuild needs it to unpack its
+# platform binary, and Vite needs esbuild, so without this the dev server
+# starts and then dies on the first transform.
+allowBuilds:
+  esbuild: true
+
+# pnpm 12 also waits before it will install a version that was published very
+# recently — a supply-chain delay, so a compromised release has time to be
+# noticed and pulled before it reaches a lockfile. The versions below were
+# younger than that when they were pinned; pnpm appends each one here when it
+# installs it, and the entry is the record that somebody chose to take it early.
+minimumReleaseAgeExclude:
+  - '@libsql/client@0.18.0'
+  - '@libsql/core@0.18.0'
+  - '@simplewebauthn/browser@14.0.0'
+  - '@simplewebauthn/server@14.0.0'
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1</code></pre>
+</figure>
+<p>The one file pnpm reads besides the lockfile. <code>allowBuilds</code> names the single dependency allowed to run an install script, because <code>postinstall</code> is arbitrary code from something you have never read. <code>minimumReleaseAgeExclude</code> is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early — pnpm appends each one as it installs it, and the comment says why the list exists.</p>
 
 <figure class="code">
 	<figcaption>

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:1-33</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:1-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
@@ -51,7 +51,12 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import adapter from '@sveltejs/adapter-node';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+/*
+ * The default import, not `{ version }`: a JSON module has exactly one export
+ * per the specification, and Vite 8 warns that its coming native config
+ * loader — plain Node, no bundling step — will refuse a named one.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -81,7 +86,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:35-53</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:40-58</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -109,7 +114,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:55-89</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:60-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -154,7 +159,7 @@ experimental: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:91-139</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:96-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">prerender: {
@@ -212,7 +217,7 @@ csp: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:140-161</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:145-166</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">csrf: { trustedOrigins: [] },
@@ -232,7 +237,7 @@ csp: {
  * to reload for nothing.
  */
 version: {
-	name: commitHash() ?? packageVersion,
+	name: commitHash() ?? pkg.version,
 	pollInterval: 60_000
 },
 
@@ -243,7 +248,7 @@ output: { bundleStrategy: 'split' },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:163-181</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:168-186</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
@@ -271,7 +276,7 @@ output: { bundleStrategy: 'split' },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:183-211</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:188-216</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
@@ -308,7 +313,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:213-258</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:218-267</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -322,8 +327,13 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			 * The grid virtualises on measured sizes, the clipboard is the
 			 * clipboard, and `ResizeObserver` fires. jsdom has none of those and
 			 * would pass every test you thought to write while doing nothing.
+			 *
+			 * No `extends` line. Since Vitest 5 an inline project inherits the
+			 * config that declares it — the SvelteKit plugin, `#lib`, the `ssr`
+			 * externals — so naming this file again would load the Svelte plugin
+			 * twice and earn a warning. `extends: false` is the only thing left
+			 * to say, and it would be wrong here.
 			 */
-			extends: './vite.config.ts',
 			test: {
 				name: 'client',
 				browser: {
@@ -339,7 +349,6 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			// Pure logic — plain Node, no browser, fast. The formula language,
 			// the engine, the locale layer, the CSV parser and the identity code
 			// live here, and these are the tests that run on every save.
-			extends: './vite.config.ts',
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -358,11 +367,11 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 	]
 }</code></pre>
 </figure>
-<p>Two Vitest projects. <code>client</code> is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. <code>server</code> is plain Node with <code>fileParallelism: false</code>, because SQLite allows exactly one writer and two spec files seeding the same file meet <code>SQLITE_BUSY</code> as a dozen unrelated failures.</p>
+<p>Two Vitest projects. <code>client</code> is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. <code>server</code> is plain Node with <code>fileParallelism: false</code>, because SQLite allows exactly one writer and two spec files seeding the same file meet <code>SQLITE_BUSY</code> as a dozen unrelated failures. Neither has an <code>extends</code> line: since Vitest 5 an inline project inherits the config that declares it — the SvelteKit plugin, <code>#lib</code>, the <code>ssr</code> externals — and naming this file again would load the Svelte plugin twice.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:262-277</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:271-286</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

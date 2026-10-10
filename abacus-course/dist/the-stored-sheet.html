@@ -64,7 +64,7 @@ export const load: PageLoad = async ({ params, url }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:14-33</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:15-34</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -92,7 +92,7 @@ const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);</cod
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:55-67</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:56-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const shareUrl = $derived(`${page.url.origin}/sheet/${initial.sheet.id}`);
@@ -117,7 +117,7 @@ const owner = $derived(record.ownerId === data.me.id);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:86-106</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:87-107</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">		}
@@ -145,7 +145,7 @@ const statusLabel = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:113-156</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:114-157</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- Leaving with unsent changes: the browser asks, because we asked it to. --&gt;
@@ -197,7 +197,7 @@ const statusLabel = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:158-236</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:159-239</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;Workbench
@@ -266,7 +266,9 @@ const statusLabel = $derived(
 							{record.published ? 'Unpublish' : 'Publish'}
 						&lt;/button&gt;
 						{#if record.published}
-							&lt;a class=&quot;btn btn--sm&quot; href=&quot;/s/{initial.sheet.id}&quot;&gt;View&lt;/a&gt;
+							&lt;a class=&quot;btn btn--sm&quot; href={resolve('/(app)/s/[id]', { id: initial.sheet.id })}
+								&gt;View&lt;/a
+							&gt;
 							&lt;button
 								type=&quot;button&quot;
 								class=&quot;btn btn--sm btn--ghost&quot;

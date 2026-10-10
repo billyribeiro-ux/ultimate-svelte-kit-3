@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	/**
@@ -27,7 +28,7 @@
 	{#if page.error?.id}
 		<p class="hint">Reference <code>{page.error.id}</code> if you report this.</p>
 	{/if}
-	<p><a class="btn" href="/">Back to Abacus</a></p>
+	<p><a class="btn" href={resolve('/(app)')}>Back to Abacus</a></p>
 </section>
 
 <style>

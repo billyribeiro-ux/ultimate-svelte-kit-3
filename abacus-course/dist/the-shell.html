@@ -96,11 +96,12 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:1-40</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:1-60</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { beforeNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page, updated } from '$app/state';
 	import { fly } from 'svelte/transition';
 	import Logo from '#lib/components/Logo.svelte';
@@ -116,10 +117,25 @@
 	 */
 	let { children } = $props();
 
+	/**
+	 * EVERY INTERNAL LINK GOES THROUGH `resolve()`
+	 * ============================================
+	 *
+	 * `resolve('/(app)/sheets')` takes a *route id* — the folder under
+	 * `src/routes`, layout group included — and is checked against the routes
+	 * that exist: rename a folder and every link to it is a type error, not a
+	 * 404 found by a reader. It also applies the base path, which this app
+	 * does not have and a reused component should not assume. (A pathname is
+	 * accepted too, and since SvelteKit 3 it has no leading slash —
+	 * `resolve('sheets')` — which is why only route ids appear in this app.)
+	 * eslint-plugin-svelte's `no-navigation-without-resolve` holds every
+	 * `href` and `goto()` to it, and the rule stays on — a link is the one
+	 * place a typo ships silently.
+	 */
 	const links = [
-		{ href: '/sheets', label: 'Sheets' },
-		{ href: '/templates', label: 'Templates' },
-		{ href: '/lesson', label: 'The lesson' }
+		{ href: resolve('/(app)/sheets'), label: 'Sheets' },
+		{ href: resolve('/(app)/templates'), label: 'Templates' },
+		{ href: resolve('/(app)/lesson'), label: 'The lesson' }
 	] as const;
 
 	/**
@@ -134,6 +150,10 @@
 	 * `version.pollInterval` makes SvelteKit check for a new build every
 	 * minute; when there is one, the next navigation becomes a full load so
 	 * it never asks for JavaScript that no longer exists.
+	 *
+	 * SvelteKit 3 runs this hook for shallow navigations too. There are none
+	 * in this app — `page.state` is never written — so there is nothing to
+	 * filter out; a project that adds one checks `navigation.shallow` here.
 	 */
 	beforeNavigate(({ willUnload, to }) =&gt; {
 		if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) location.href = to.url.href;
@@ -144,7 +164,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:42-98</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:62-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
@@ -152,12 +172,20 @@
 {#if updated.current}
 	&lt;div class=&quot;updated no-print&quot; role=&quot;status&quot; transition:fly={{ y: -16, duration: 240 }}&gt;
 		&lt;span&gt;A new version of Abacus is ready.&lt;/span&gt;
-		&lt;a class=&quot;btn btn--sm btn--primary&quot; href={page.url.href} data-sveltekit-reload&gt;Reload&lt;/a&gt;
+		&lt;!--
+			A button, not a link to the current address. The banner only exists
+			once JavaScript has polled for the version, so there is no no-script
+			case to serve; a reload is a reload, and `location.reload()` says so
+			without a `data-sveltekit-reload` link that the linter cannot resolve.
+		--&gt;
+		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--primary&quot; onclick={() =&gt; location.reload()}&gt;
+			Reload
+		&lt;/button&gt;
 	&lt;/div&gt;
 {/if}
 
 &lt;header class=&quot;topbar no-print&quot;&gt;
-	&lt;a class=&quot;brand&quot; href=&quot;/&quot; aria-label=&quot;Abacus home&quot;&gt;
+	&lt;a class=&quot;brand&quot; href={resolve('/(app)')} aria-label=&quot;Abacus home&quot;&gt;
 		&lt;Logo /&gt;
 		&lt;span class=&quot;brand__name&quot;&gt;Abacus&lt;/span&gt;
 	&lt;/a&gt;
@@ -190,9 +218,9 @@
 		&lt;svelte:boundary&gt;
 			{const me = $derived(await whoAmI())}
 			{#if me}
-				&lt;a class=&quot;chip chip--on&quot; href=&quot;/settings&quot;&gt;{me.name}&lt;/a&gt;
+				&lt;a class=&quot;chip chip--on&quot; href={resolve('/(app)/settings')}&gt;{me.name}&lt;/a&gt;
 			{:else}
-				&lt;a class=&quot;chip&quot; href=&quot;/signin&quot;&gt;Sign in&lt;/a&gt;
+				&lt;a class=&quot;chip&quot; href={resolve('/(app)/signin')}&gt;Sign in&lt;/a&gt;
 			{/if}
 			{#snippet pending()}
 				&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
@@ -205,6 +233,7 @@
 	{@render children()}
 &lt;/main&gt;</code></pre>
 </figure>
+<p>Every <code>href</code> in the app goes through <code>resolve()</code> from <code>$app/paths</code>, with a *route id* — <code>/(app)/sheets</code>, the folder under <code>src/routes</code> with its layout group in it — rather than a string. A route id is checked against the routes that exist, so renaming a folder is a type error in every link to it rather than a 404 a reader finds; a dynamic segment takes its params as a second argument, by name. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> holds every link and <code>goto()</code> to it, and the rule stays on, because a link is the one place a typo ships silently. (SvelteKit 3 also accepts a plain pathname, now without its leading slash — <code>resolve('sheets')</code> — which is why only route ids appear here.)</p>
 
 <aside class="callout callout--why">
 	<h4>Why the header asks whoAmI instead of reading layout data</h4>
@@ -375,10 +404,11 @@ export function toast(message: string, tone: 'info' | 'error' = 'info'): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+error.svelte<span class="code__lines">:1-31</span></span>
+		<span class="code__file">src/routes/+error.svelte<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	/**
@@ -407,7 +437,7 @@ export function toast(message: string, tone: 'info' | 'error' = 'info'): void {
 	{#if page.error?.id}
 		&lt;p class=&quot;hint&quot;&gt;Reference &lt;code&gt;{page.error.id}&lt;/code&gt; if you report this.&lt;/p&gt;
 	{/if}
-	&lt;p&gt;&lt;a class=&quot;btn&quot; href=&quot;/&quot;&gt;Back to Abacus&lt;/a&gt;&lt;/p&gt;
+	&lt;p&gt;&lt;a class=&quot;btn&quot; href={resolve('/(app)')}&gt;Back to Abacus&lt;/a&gt;&lt;/p&gt;
 &lt;/section&gt;</code></pre>
 </figure>
 

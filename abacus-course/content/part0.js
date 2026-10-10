@@ -118,21 +118,21 @@ export const part0 = [
 				type: 'p',
 				text: 'There is no `svelte.config.js`. SvelteKit 3 moved every option into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
 			},
-			code('vite.config.ts', 1, 33, { partial: true }),
+			code('vite.config.ts', 1, 38, { partial: true }),
 			{
 				type: 'p',
 				text: '`defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. `paths.origin` is read from the environment at *build* time: adapter-node 6 bakes it into the server, so a process started on plain HTTP behind a proxy does not reconstruct `https://…` from headers and reject every form post as cross-site. The passkey ceremonies use the same value’s hostname as the relying-party id, which is why chapter 03 makes it a `static` environment variable.'
 			},
 
 			{ type: 'h3', id: 'compiler', text: 'The compiler options' },
-			code('vite.config.ts', 35, 53),
+			code('vite.config.ts', 40, 58),
 			{
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling. `experimental.async` is the one that changes how you write components: `await` at the top of a `<script>`, inside `$derived`, and directly in markup — and with it `pending` snippets, `$effect.pending()`, `settled()` and `fork()`. A spreadsheet has more of this than it looks: opening a sheet, importing a file, publishing, signing in with a passkey — every one is “wait, then draw”.'
 			},
 
 			{ type: 'h3', id: 'adapter', text: 'The adapter, and the experiments' },
-			code('vite.config.ts', 55, 89),
+			code('vite.config.ts', 60, 94),
 			{
 				type: 'p',
 				text: 'Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — `node build` behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. `precompress` writes `.br` and `.gz` beside every asset so the server never compresses on the fly.'
@@ -143,38 +143,38 @@ export const part0 = [
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 91, 139),
+			code('vite.config.ts', 96, 144),
 			{
 				type: 'p',
 				text: '`mode: \'auto\'` uses hashes for prerendered pages — where the whole document is known at build time — and nonces for dynamically rendered ones. The directives that are specific to a spreadsheet are each explained in place. The one worth reading twice is `style-src \'unsafe-inline\'`: a virtualised grid positions ten thousand cells with `style:` attributes and column widths are numbers a person drags, and attributes cannot be hashed. The exposure is CSS injection, not script execution, and the comment says so rather than pretending the trade is free.'
 			},
 
 			{ type: 'h3', id: 'version', text: 'CSRF, versioning, bundling' },
-			code('vite.config.ts', 140, 161),
+			code('vite.config.ts', 145, 166),
 			{
 				type: 'p',
 				text: 'Nobody else may POST here, so `trustedOrigins` is empty and stays empty until somebody can name a domain. `version.name` is the commit hash — deterministic, so two builds of the same code do not tell every open tab to reload for nothing — and `pollInterval` lets an open sheet notice a deploy and offer a reload while its edits are still saved.'
 			},
 
 			{ type: 'h3', id: 'router', text: 'The new one: server-side route resolution' },
-			code('vite.config.ts', 163, 181, { partial: true }),
+			code('vite.config.ts', 168, 186, { partial: true }),
 			{
 				type: 'p',
 				text: 'The other six projects resolve routes on the client: the route manifest ships to the browser and a click is matched locally. This one asks the server — `router.resolution: \'server\'` — which is the other half of the trade and worth seeing once. The manifest stays off the wire, and an unvisited path costs a round trip to resolve, which `data-sveltekit-preload-data="hover"` on the body hides for anything a pointer reaches first. The end-to-end suite has a test that navigates from the landing page to the templates page and asserts what it finds, which is the test that would fail if this option broke.'
 			},
 
 			{ type: 'h3', id: 'vite', text: 'Vite: workers, native modules, tests' },
-			code('vite.config.ts', 183, 211, { partial: true }),
+			code('vite.config.ts', 188, 216, { partial: true }),
 			{
 				type: 'p',
 				text: 'Three things that are Vite’s business rather than SvelteKit’s. The Phosphor plugin must come *after* `sveltekit()` because it parses its input as JavaScript and would die on the first `<h1>`. Workers are built as ES modules so the CSV importer can share the parser with the main thread instead of bundling a second copy. And libSQL is a native addon — a compiled `.node` binary — so it is kept out of the server bundle, where a bundler could inline the JavaScript that goes looking for it but not the binary.'
 			},
-			code('vite.config.ts', 213, 258, { partial: true }),
+			code('vite.config.ts', 218, 267, { partial: true }),
 			{
 				type: 'p',
-				text: 'Two Vitest projects. `client` is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. `server` is plain Node with `fileParallelism: false`, because SQLite allows exactly one writer and two spec files seeding the same file meet `SQLITE_BUSY` as a dozen unrelated failures.'
+				text: 'Two Vitest projects. `client` is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. `server` is plain Node with `fileParallelism: false`, because SQLite allows exactly one writer and two spec files seeding the same file meet `SQLITE_BUSY` as a dozen unrelated failures. Neither has an `extends` line: since Vitest 5 an inline project inherits the config that declares it — the SvelteKit plugin, `#lib`, the `ssr` externals — and naming this file again would load the Svelte plugin twice.'
 			},
-			code('vite.config.ts', 262, 277),
+			code('vite.config.ts', 271, 286),
 			{
 				type: 'checkpoint',
 				items: [
@@ -190,7 +190,7 @@ export const part0 = [
 		slug: 'the-map',
 		title: 'The map: every feature, and where it earns its place',
 		summary:
-			'A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September 2026 additions — and the chapter where each one is for something.',
+			'A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September and October 2026 additions — and the chapter where each one is for something.',
 		goal: 'Have a map of the framework as this project uses it, so you can read the course in any order and know what you are looking at.',
 		blocks: [
 			{
@@ -244,6 +244,19 @@ export const part0 = [
 					'**Hook types from `@sveltejs/kit/hooks`** — every hook file imports them from there, and the comment in `hooks.server.ts` says what silently goes wrong if you import them from `@sveltejs/kit` instead (ch. 29).',
 					'**`query.live`** with `.current`, `.connected` and `.reconnect()` — the whole of chapter 28, and the reconnect button on the sheet page (ch. 33).',
 					'**`requested(q, n).refreshAll()`** in a form handler — deleting a sheet from the workspace (ch. 27).'
+				]
+			},
+
+			{ type: 'h3', id: 'october', text: 'What the October 2026 release — SvelteKit 3.0 — changed, and where' },
+			{
+				type: 'ul',
+				items: [
+					'**`resolve()` on every link, with a route id** — `/(app)/sheets`, layout group included; a renamed folder is a type error in every link to it, and `no-navigation-without-resolve` keeps it that way (ch. 30). Pathnames lost their leading slash, which is why the project uses route ids only.',
+					'**`match()` before `goto()`** — SvelteKit 3’s `goto` rejects a URL that is not a route, so the sign-in page asks the router about `?next=` first and falls back to the workspace (ch. 34).',
+					'**`Response.json(…)`** — the platform’s own, in place of the deprecated `json()` helper; the API and the health check (ch. 35).',
+					'**Vitest 5** — an inline project inherits the config that declares it, so the two projects lost their `extends` lines (ch. 02, 36).',
+					'**adapter-node 6.0** — static assets are served from a list recorded at build time, with content-hash `ETag`s and no `Last-Modified`, and only to `GET` and `HEAD`; a file dropped into `build/client` after the build is not served, which is the right answer for an image that is built once (ch. 38).',
+					'**pnpm 12** — a release-age delay before a freshly published version is installed; `pnpm-workspace.yaml` records the ones taken early, and says why (ch. 38).'
 				]
 			},
 

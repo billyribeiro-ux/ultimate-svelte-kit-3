@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { beforeNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page, updated } from '$app/state';
 	import { fly } from 'svelte/transition';
 	import Logo from '#lib/components/Logo.svelte';
@@ -15,10 +16,25 @@
 	 */
 	let { children } = $props();
 
+	/**
+	 * EVERY INTERNAL LINK GOES THROUGH `resolve()`
+	 * ============================================
+	 *
+	 * `resolve('/(app)/sheets')` takes a *route id* — the folder under
+	 * `src/routes`, layout group included — and is checked against the routes
+	 * that exist: rename a folder and every link to it is a type error, not a
+	 * 404 found by a reader. It also applies the base path, which this app
+	 * does not have and a reused component should not assume. (A pathname is
+	 * accepted too, and since SvelteKit 3 it has no leading slash —
+	 * `resolve('sheets')` — which is why only route ids appear in this app.)
+	 * eslint-plugin-svelte's `no-navigation-without-resolve` holds every
+	 * `href` and `goto()` to it, and the rule stays on — a link is the one
+	 * place a typo ships silently.
+	 */
 	const links = [
-		{ href: '/sheets', label: 'Sheets' },
-		{ href: '/templates', label: 'Templates' },
-		{ href: '/lesson', label: 'The lesson' }
+		{ href: resolve('/(app)/sheets'), label: 'Sheets' },
+		{ href: resolve('/(app)/templates'), label: 'Templates' },
+		{ href: resolve('/(app)/lesson'), label: 'The lesson' }
 	] as const;
 
 	/**
@@ -33,6 +49,10 @@
 	 * `version.pollInterval` makes SvelteKit check for a new build every
 	 * minute; when there is one, the next navigation becomes a full load so
 	 * it never asks for JavaScript that no longer exists.
+	 *
+	 * SvelteKit 3 runs this hook for shallow navigations too. There are none
+	 * in this app — `page.state` is never written — so there is nothing to
+	 * filter out; a project that adds one checks `navigation.shallow` here.
 	 */
 	beforeNavigate(({ willUnload, to }) => {
 		if (updated.current && !willUnload && to?.url) location.href = to.url.href;
@@ -44,12 +64,20 @@
 {#if updated.current}
 	<div class="updated no-print" role="status" transition:fly={{ y: -16, duration: 240 }}>
 		<span>A new version of Abacus is ready.</span>
-		<a class="btn btn--sm btn--primary" href={page.url.href} data-sveltekit-reload>Reload</a>
+		<!--
+			A button, not a link to the current address. The banner only exists
+			once JavaScript has polled for the version, so there is no no-script
+			case to serve; a reload is a reload, and `location.reload()` says so
+			without a `data-sveltekit-reload` link that the linter cannot resolve.
+		-->
+		<button type="button" class="btn btn--sm btn--primary" onclick={() => location.reload()}>
+			Reload
+		</button>
 	</div>
 {/if}
 
 <header class="topbar no-print">
-	<a class="brand" href="/" aria-label="Abacus home">
+	<a class="brand" href={resolve('/(app)')} aria-label="Abacus home">
 		<Logo />
 		<span class="brand__name">Abacus</span>
 	</a>
@@ -82,9 +110,9 @@
 		<svelte:boundary>
 			{const me = $derived(await whoAmI())}
 			{#if me}
-				<a class="chip chip--on" href="/settings">{me.name}</a>
+				<a class="chip chip--on" href={resolve('/(app)/settings')}>{me.name}</a>
 			{:else}
-				<a class="chip" href="/signin">Sign in</a>
+				<a class="chip" href={resolve('/(app)/signin')}>Sign in</a>
 			{/if}
 			{#snippet pending()}
 				<span class="chip">…</span>

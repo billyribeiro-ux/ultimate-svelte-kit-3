@@ -36,7 +36,7 @@ const COURSE = {
 		recalculates only what changed, a grid that scrolls a million rows, passkeys,
 		a second person editing beside you, and the Dockerfile that ships it — built
 		from an empty folder, using every part of Svelte 5 and SvelteKit 3 that earns
-		its place, including everything the September 2026 releases added. A
+		its place, including everything the September and October 2026 releases added. A
 		spreadsheet is where reactivity was invented, and every chapter says so.`,
 	badges: ['Svelte 5.57', 'SvelteKit 3', 'Passkeys', 'adapter-node'],
 	closing: `Every code block in this course is read out of the finished project

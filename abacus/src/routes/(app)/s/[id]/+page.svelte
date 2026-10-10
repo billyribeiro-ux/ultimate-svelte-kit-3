@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 
@@ -31,11 +32,21 @@
 			</p>
 		</div>
 		<div class="cluster no-print">
-			<a class="btn btn--primary" href="/sheet/local?from={data.published.id}"
+			<!--
+				Three shapes of a resolved link. A route id may carry its query
+				string (`resolve` keeps it); a route id with `[id]` in it takes the
+				params as a second argument, checked by name; and an API route is a
+				route like any other.
+			-->
+			<a class="btn btn--primary" href={resolve(`/(app)/sheet/local?from=${data.published.id}`)}
 				>Make a copy to edit</a
 			>
-			<a class="btn" href="/api/sheets/{data.published.id}/export.csv">Download CSV</a>
-			<a class="btn btn--ghost" href="/embed/{data.published.id}">Embed</a>
+			<a class="btn" href={resolve('/api/sheets/[id]/export.csv', { id: data.published.id })}
+				>Download CSV</a
+			>
+			<a class="btn btn--ghost" href={resolve('/(app)/embed/[id]', { id: data.published.id })}
+				>Embed</a
+			>
 		</div>
 	</header>
 

@@ -101,8 +101,8 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 		/*
 		 * Preload the two fonts the first paint needs, by source filename.
 		 *
-		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
-		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * SvelteKit preloads `js` and `css` by default and never fonts. In
+		 * SvelteKit 3 a `font` input carries its `filename` — the project-relative
 		 * source path, before hashing — so this can name the exact file rather than
 		 * guessing at a hashed URL.
 		 */
@@ -151,7 +151,7 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 
 export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></pre>
 </figure>
-<p>Three things in the security handle. The <code>preload</code> filter preloads the two font files the first paint needs, by source filename — since 3.0.0-next.24 a <code>font</code> input carries its <code>filename</code>, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says <code>frame-ancestors 'none'</code> for the whole app, and for <code>/embed/</code> the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.</p>
+<p>Three things in the security handle. The <code>preload</code> filter preloads the two font files the first paint needs, by source filename — in SvelteKit 3 a <code>font</code> input carries its <code>filename</code>, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says <code>frame-ancestors 'none'</code> for the whole app, and for <code>/embed/</code> the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.</p>
 
 <figure class="code">
 	<figcaption>

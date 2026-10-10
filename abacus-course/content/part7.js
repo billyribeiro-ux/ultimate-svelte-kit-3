@@ -16,7 +16,7 @@ export const part7 = [
 			'Two Vitest projects: pure logic in Node, and the `$state` classes in a real Chromium. What each layer’s tests look like, and the one test that caught the bug the course is built around.',
 		goal: 'Know which test runs where and why, and write a test for a runes class without rendering a component.',
 		blocks: [
-			code('vite.config.ts', 213, 258),
+			code('vite.config.ts', 218, 267),
 			{
 				type: 'p',
 				text: 'The `server` project is the fast loop: the formula language, the engine, the locale layer, the CSV parser, the identity code — pure TypeScript, deterministic, milliseconds. The `client` project is a real browser, because the sheet model uses runes and `flushSync`, and because a `.svelte.test.ts` file is the way to test a `$state` class without a component.'
@@ -124,6 +124,15 @@ Running 46 tests using 1 worker
 			{
 				type: 'p',
 				text: 'Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes `paths.origin` into the server and the passkey relying-party id is derived from it: build one image per origin. `--frozen-lockfile` fails the build if the lockfile disagrees with `package.json` instead of resolving something newer.'
+			},
+			{
+				type: 'p',
+				text: 'adapter-node 6.0 serves `build/client` from a list it records at build time — each file with a content-hash `ETag`, no `Last-Modified`, and only to `GET` and `HEAD` (anything else is a 405). A file copied into the directory after the build is not served, and a replaced one keeps its old size and tag. That is the right answer for an image that is built once and started many times, and the reason the Dockerfile copies `build` as a unit: there is nothing to patch in place, and runtime configuration goes through environment variables.'
+			},
+			code('pnpm-workspace.yaml', 1, 23),
+			{
+				type: 'p',
+				text: 'The one file pnpm reads besides the lockfile. `allowBuilds` names the single dependency allowed to run an install script, because `postinstall` is arbitrary code from something you have never read. `minimumReleaseAgeExclude` is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early — pnpm appends each one as it installs it, and the comment says why the list exists.'
 			},
 			code('Dockerfile', 35, 51),
 			code('Dockerfile', 53, 92),

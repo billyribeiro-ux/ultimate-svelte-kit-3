@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:9-38</span></span>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:10-39</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -76,7 +76,7 @@ const when = (ms: number) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:45-72</span></span>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:46-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
@@ -111,7 +111,7 @@ const when = (ms: number) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:74-139</span></span>
+		<span class="code__file">src/routes/(app)/sheets/+page.svelte<span class="code__lines">:75-141</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">		&lt;svelte:boundary&gt;
@@ -120,7 +120,7 @@ const when = (ms: number) =&gt;
 					{@const del = remove.for(sheet.id)}
 					{@const ren = rename.for(sheet.id)}
 					&lt;li class=&quot;card sheetcard&quot;&gt;
-						&lt;a class=&quot;sheetcard__link&quot; href=&quot;/sheet/{sheet.id}&quot;&gt;
+						&lt;a class=&quot;sheetcard__link&quot; href={resolve('/(app)/sheet/[id]', { id: sheet.id })}&gt;
 							&lt;h3&gt;{sheet.title}&lt;/h3&gt;
 							&lt;p class=&quot;hint&quot;&gt;
 								{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
@@ -166,7 +166,8 @@ const when = (ms: number) =&gt;
 					&lt;/li&gt;
 				{:else}
 					&lt;li class=&quot;hint&quot;&gt;
-						No sheets yet. Make one above, or &lt;a href=&quot;/sheet/local&quot;&gt;start without saving&lt;/a&gt;.
+						No sheets yet. Make one above, or
+						&lt;a href={resolve('/(app)/sheet/local')}&gt;start without saving&lt;/a&gt;.
 					&lt;/li&gt;
 				{/each}
 			&lt;/ul&gt;
@@ -190,7 +191,7 @@ const when = (ms: number) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:14-58</span></span>
+		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:16-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -212,13 +213,29 @@ const next = $derived.by(() =&gt; {
 	return wanted.startsWith('/') &amp;&amp; !wanted.startsWith('//') ? wanted : '/sheets';
 });
 
+/**
+ * `?next=` is a string somebody else wrote. SvelteKit 3's `goto` rejects a
+ * URL that is not one of this app's routes — right for a typo in code,
+ * wrong for a stale bookmark, which should land somewhere rather than in a
+ * rejected promise. `match()` asks the router (the server, under
+ * `resolution: 'server'`) whether `next` is a route. If it is, `next` *is*
+ * a `ResolvedPathname` — a pathname of this app, base path included —
+ * and the cast states what `match` just established, which is also the
+ * type eslint-plugin-svelte's `no-navigation-without-resolve` accepts.
+ * If not, the workspace is the sensible place to arrive.
+ */
+async function leave() {
+	const target = (await match(next)) ? (next as ResolvedPathname) : resolve('/(app)/sheets');
+	await goto(target);
+}
+
 async function register(event: SubmitEvent) {
 	event.preventDefault();
 	busy = 'register';
 	try {
 		const user = await registerPasskey(name);
 		toast(`Welcome, ${user.name}`);
-		await goto(next);
+		await leave();
 	} catch (e) {
 		toast(explain(e), 'error');
 	} finally {
@@ -231,7 +248,7 @@ async function signIn() {
 	try {
 		const user = await signInWithPasskey();
 		toast(`Welcome back, ${user.name}`);
-		await goto(next);
+		await leave();
 	} catch (e) {
 		toast(explain(e), 'error');
 	} finally {
@@ -239,11 +256,11 @@ async function signIn() {
 	}
 }</code></pre>
 </figure>
-<p>Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. <code>next</code> is checked to be a path on this site — a <code>?next=https://elsewhere</code> must not become a redirect to elsewhere.</p>
+<p>Two buttons and a name field. Both ceremonies run in the browser’s own credential prompt, and this page only starts them and reads the result. <code>next</code> is checked to be a path on this site — a <code>?next=https://elsewhere</code> must not become a redirect to elsewhere — and then asked of the router: SvelteKit 3’s <code>goto</code> rejects a URL that is not one of the app’s routes, so <code>match()</code> from <code>$app/paths</code> decides whether <code>next</code> is one, and a stale bookmark lands on the workspace instead of in a rejected promise. A <code>next</code> that <code>match</code> accepted *is* a <code>ResolvedPathname</code>, and the cast says exactly that — it is the type the lint rule accepts in place of a <code>resolve()</code> call.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:65-114</span></span>
+		<span class="code__file">src/routes/(app)/signin/+page.svelte<span class="code__lines">:83-132</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;

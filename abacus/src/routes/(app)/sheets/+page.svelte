@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as v from 'valibot';
 	import { PlusIcon, TrashIcon } from 'phosphor-svelte';
+	import { resolve } from '$app/paths';
 	import Section from '#lib/components/Section.svelte';
 	import { create, getMine, remove, rename } from '#lib/remote/sheets.remote.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
@@ -77,7 +78,7 @@
 					{@const del = remove.for(sheet.id)}
 					{@const ren = rename.for(sheet.id)}
 					<li class="card sheetcard">
-						<a class="sheetcard__link" href="/sheet/{sheet.id}">
+						<a class="sheetcard__link" href={resolve('/(app)/sheet/[id]', { id: sheet.id })}>
 							<h3>{sheet.title}</h3>
 							<p class="hint">
 								{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
@@ -123,7 +124,8 @@
 					</li>
 				{:else}
 					<li class="hint">
-						No sheets yet. Make one above, or <a href="/sheet/local">start without saving</a>.
+						No sheets yet. Make one above, or
+						<a href={resolve('/(app)/sheet/local')}>start without saving</a>.
 					</li>
 				{/each}
 			</ul>

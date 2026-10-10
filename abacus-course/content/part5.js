@@ -255,7 +255,7 @@ export const part5 = [
 				type: 'p',
 				text: '`LiveSheet` hooks the sheet’s `onop`: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. A 409, 413 or 404 is a conflict the page must show and a reload must fix; anything else is a network failure, the operations are put back, and it tries again in two seconds. `status` is the honest state of the connection, and the page shows it, because a sheet that silently stopped saving is worse than one that says so.'
 			},
-			code('src/routes/(app)/sheet/[id]/+page.svelte', 30, 53),
+			code('src/routes/(app)/sheet/[id]/+page.svelte', 31, 54),
 			{
 				type: 'p',
 				text: 'On the page, `watchSheet(...)` returns the live query. Its `current` is the latest message and is reactive, so an effect that reads it runs once per message — which is where the room’s operations are applied. `beforeNavigate` flushes the queue before the page is left, and the effect’s cleanup disposes the connection.'
@@ -286,7 +286,7 @@ export const part5 = [
 			code('src/hooks.server.ts', 39, 102),
 			{
 				type: 'p',
-				text: 'Three things in the security handle. The `preload` filter preloads the two font files the first paint needs, by source filename — since 3.0.0-next.24 a `font` input carries its `filename`, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says `frame-ancestors \'none\'` for the whole app, and for `/embed/` the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.'
+				text: 'Three things in the security handle. The `preload` filter preloads the two font files the first paint needs, by source filename — in SvelteKit 3 a `font` input carries its `filename`, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says `frame-ancestors \'none\'` for the whole app, and for `/embed/` the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.'
 			},
 			code('src/hooks.server.ts', 104, 119),
 			code('src/hooks.server.ts', 121, 147),
