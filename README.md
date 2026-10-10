@@ -1,6 +1,6 @@
 # Ultimate SvelteKit 3
 
-Seven complete projects, each with its own build-along course.
+Eight complete projects, each with its own build-along course.
 
 | Folder | What it is |
 | --- | --- |
@@ -18,7 +18,7 @@ Seven complete projects, each with its own build-along course.
 | [`ostinato-course/`](./ostinato-course) | Its 39-chapter course, for somebody who has finished project 5. Open `ostinato-course/dist/index.html`. |
 | [`abacus/`](./abacus) | **Project 7** — Abacus, a spreadsheet in the browser. A formula language with a Pratt parser and fifty functions, an engine that recalculates only what changed and is property-tested against a from-scratch evaluator, a grid that scrolls a million rows, passkeys instead of passwords, a second person editing beside you over a live query, CSV in a worker, and a container that migrates before it listens — and a lesson page where the same engine is written out of `$derived`. |
 | [`abacus-course/`](./abacus-course) | Its 39-chapter course, for somebody who has finished project 6. Open `abacus-course/dist/index.html`. |
-| [`meridian/`](./meridian) | **Project 8** — Meridian, a collaborative trip planner. A pnpm workspace with a published geodesy library, an itinerary two people edit at once over a live query with presence, a map drawn from bundled world geodata with no tile server, a globe flyover in Threlte, fair expense splits in minor units, a Tiptap notes editor through an attachment, Markdown guides prerendered in three languages, an embeddable custom element, and a survey of the Svelte ecosystem as of September 2026 — every current Svelte 5 and SvelteKit 3 capability, each used for something. |
+| [`meridian/`](./meridian) | **Project 8** — Meridian, a collaborative trip planner. A pnpm workspace with a published geodesy library, an itinerary two people edit at once over a live query with presence, a map drawn from bundled world geodata with no tile server, a globe flyover in Threlte, fair expense splits in minor units, a Tiptap notes editor through an attachment, Markdown guides prerendered in three languages, an embeddable custom element, and a survey of the Svelte ecosystem as of October 2026 — every current Svelte 5 and SvelteKit 3 capability, each used for something. |
 | [`meridian-course/`](./meridian-course) | Its 45-chapter course, for somebody who has finished project 7, with an ecosystem part on choosing libraries. Open `meridian-course/dist/index.html`. |
 
 Requires **Node 24.21.0** (the current LTS line, "Krypton") and **pnpm 12**.
