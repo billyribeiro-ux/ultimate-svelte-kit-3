@@ -85,8 +85,15 @@
 	 *
 	 * Without this, tapping a link in the drawer changes the page underneath while
 	 * the drawer stays open on top of it — a classic SPA bug.
+	 *
+	 * SvelteKit 3 also fires the navigation hooks for *shallow* navigations —
+	 * `goto(url, { shallow: true, state })`, the replacement for `pushState`. Those
+	 * change `page.state`, not the page, so closing the drawer for one would be wrong.
+	 * The site has no shallow routing today; the guard is here so adding some later
+	 * can't quietly break the drawer.
 	 */
-	afterNavigate(() =&gt; {
+	afterNavigate((navigation) =&gt; {
+		if (navigation.shallow) return;
 		if (drawer?.open) drawer.close();
 	});
 

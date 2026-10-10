@@ -61,6 +61,7 @@ pnpm run build</code></pre>
 	<pre><code>pnpm run build
 node build/index.js</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>adapter-node</code> 6 — the version that ships with SvelteKit 3 — changed three things worth knowing before you deploy. The <code>ORIGIN</code> environment variable is gone: if the server sits behind a proxy that hides the real host, set <code>paths: { origin: 'https://strikeflow.io' }</code> inside <code>sveltekit()</code> in <code>vite.config.ts</code> instead (<code>PORT</code> and <code>HOST</code> still work as before). Static files are served from a list recorded at build time, with content-hash <code>ETag</code>s and no <code>Last-Modified</code> header, so a file copied into <code>build/client</code> after the build is simply not served — runtime configuration belongs in environment variables. And static assets answer only <code>GET</code> and <code>HEAD</code>; any other method gets a 405.</p></aside>
 <p>That runs anywhere Node runs — a VPS, a container, Fly, Railway, Render. If you would rather deploy to a specific platform, swap the adapter in <code>vite.config.ts</code>:</p>
 
 <figure class="code">

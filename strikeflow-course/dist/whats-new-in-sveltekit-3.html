@@ -114,8 +114,10 @@ const img = assets + '/logo.png';
 
 // SvelteKit 3 — base, assets and resolveRoute are gone
 import { resolve, asset } from '$app/paths';
-const url = resolve('/blog/[slug]', { slug });
-const img = asset('logo.png');   // note: no leading slash</code></pre>
+const url = resolve('/blog/[slug]', { slug });   // a route ID — leading slash
+const page = resolve('about');                   // a pathname — no leading slash
+const link = resolve('/about#team');             // either may carry ?search or #hash
+const img = asset('logo.png');                   // note: no leading slash</code></pre>
 </figure>
 <h3 id="nav">5. Navigation consolidated into goto()</h3>
 
@@ -134,7 +136,9 @@ import { goto, refreshAll } from '$app/navigation';
 await goto('/foo', { shallow: true, state });
 await refreshAll();</code></pre>
 </figure>
+<p>Shallow navigations now run <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code> too. A hook that should ignore them — the header drawer, which closes on navigation — checks <code>navigation.shallow</code> first.</p>
 <p>Also: <code>error(404, { message: 'Not found' })</code> became <code>error(404, 'Not found')</code>, with any extra properties in a third argument. And <code>page.url</code> is now read-only — clone it if you need to change a search param.</p>
+<aside class="callout callout--note"><p>Two more things changed between the long 3.0 prerelease and the 3.0.1 we use, so even Kit 3 tutorials from the summer get them wrong. First, single-flight refreshes that the *client* asks for — <code>submit().updates(getPosts)</code> on a <code>form</code>, or <code>myCommand().updates(getPosts)</code> on a <code>command</code> — must be accepted on the server with <code>requested(getPosts, limit)</code>. The <code>limit</code> is required: the client controls that list, and each entry makes the server validate an argument and usually re-fetch, so an unbounded one is a denial-of-service risk. Loop over it — <code>for (const { arg, query, ignore } of requested(getPosts, 10))</code>, calling <code>query.refresh()</code>, <code>query.set(...)</code> or <code>ignore()</code> per entry — or use the shorthands <code>requested(getPosts, 10).refreshAll()</code> and <code>.ignoreAll()</code>. An entry you neither refresh nor ignore puts *that query* into an error state on the client; the command or form itself still succeeds. Our guide form never calls <code>.updates()</code>, so there is nothing to handle, but you will meet this the day you add one. Second, <code>adapter-node</code> no longer reads an <code>ORIGIN</code> environment variable; the public origin is <code>paths.origin</code> in <code>vite.config.ts</code> (chapter 37).</p></aside>
 <aside class="callout callout--note"><p>You don't need to memorise this. Come back to it when something you copied from a blog post doesn't compile.</p></aside>
 
 <aside class="callout callout--check">

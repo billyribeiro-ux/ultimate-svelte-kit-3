@@ -37,7 +37,7 @@ export const part1 = [
 			{
 				type: 'ul',
 				items: [
-					'**SvelteKit 3** (release candidate) and **Svelte 5** — the current versions, with all the things that changed in 3',
+					'**SvelteKit 3** (3.0.1, the first stable release) and **Svelte 5** — the current versions, with all the things that changed in 3',
 					'**TypeScript**, strict, plus a couple of extra flags most people skip',
 					'**Vanilla CSS** — no Tailwind. You will understand every line you write',
 					'**Phosphor Icons** via `phosphor-svelte`',
@@ -59,15 +59,15 @@ export const part1 = [
 			},
 			{
 				type: 'p',
-				text: 'You need **Node 24.20.0**, the current LTS — SvelteKit 3 itself refuses anything below 22.17. Check with:'
+				text: 'You need **Node 24.21.0**, the current LTS — SvelteKit 3 itself refuses anything below 22.17. Check with:'
 			},
-			{ type: 'terminal', code: 'node -v\n# should print v24.20.0 or higher' },
+			{ type: 'terminal', code: 'node -v\n# should print v24.21.0 or higher' },
 			{
 				type: 'p',
 				text: "If it's older, install the current LTS from [nodejs.org](https://nodejs.org) or use a version manager like `nvm` or `fnm`."
 			},
 			{ type: 'p', text: "We'll use **pnpm**. If you don't have it:" },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # should be 10 or higher' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # the project pins 12.10.1; any pnpm 10+ switches to it by itself' },
 			{
 				type: 'note',
 				text: "You can use npm or yarn instead — nothing here depends on pnpm specifically. Just translate `pnpm run x` to `npm run x` as you go. I use pnpm because it's fast and its strict `node_modules` layout catches a class of dependency bug the others hide."
@@ -87,11 +87,11 @@ export const part1 = [
 			},
 			{
 				type: 'warn',
-				text: "One honest note about SvelteKit 3: it's a release candidate as of August 2026. It's stable enough to build on and the API is settled, but the docs live at [next.svelte.dev](https://next.svelte.dev) rather than svelte.dev. If you search for a SvelteKit answer, most results will describe version 2 — I'll flag every place they differ."
+				text: "One honest note about SvelteKit 3: it went stable on 1 October 2026 and this project is on 3.0.1, the first patch release. The docs now live at [svelte.dev](https://svelte.dev/docs/kit) — but most search results, and most blog posts, still describe version 2 or the long 3.0 prerelease. I'll flag every place they differ."
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` prints 24.20.0 or newer, and `pnpm -v` prints 10 or higher. That is all you need. Next we scaffold the project.'
+				text: '`node -v` prints 24.21.0 or newer, and `pnpm -v` prints 12.10.1 (or any 10+ that will switch to it). That is all you need. Next we scaffold the project.'
 			}
 		]
 	},
@@ -106,11 +106,11 @@ export const part1 = [
 		blocks: [
 			{
 				type: 'p',
-				text: "Make a folder for the course, and let the Svelte CLI create the project inside it. Note the `@next` — that's what gets you SvelteKit 3 rather than 2."
+				text: "Make a folder for the course, and let the Svelte CLI create the project inside it. Now that SvelteKit 3 is stable, plain `sv create` scaffolds it — the `@next` tag you will still see in older tutorials was only needed during the prerelease."
 			},
 			{
 				type: 'terminal',
-				code: 'mkdir strikeflow-course && cd strikeflow-course\n\nnpx sv@next create strikeflow-site'
+				code: 'mkdir strikeflow-course && cd strikeflow-course\n\nnpx sv create strikeflow-site'
 			},
 			{
 				type: 'p',
@@ -118,7 +118,7 @@ export const part1 = [
 			},
 			{
 				type: 'terminal',
-				code: `npx sv@next create strikeflow-site \\
+				code: `npx sv create strikeflow-site \\
   --template minimal \\
   --types ts \\
   --add prettier eslint "vitest=usages:unit,component" playwright \\
@@ -282,8 +282,10 @@ const img = assets + '/logo.png';
 
 // SvelteKit 3 — base, assets and resolveRoute are gone
 import { resolve, asset } from '$app/paths';
-const url = resolve('/blog/[slug]', { slug });
-const img = asset('logo.png');   // note: no leading slash`
+const url = resolve('/blog/[slug]', { slug });   // a route ID — leading slash
+const page = resolve('about');                   // a pathname — no leading slash
+const link = resolve('/about#team');             // either may carry ?search or #hash
+const img = asset('logo.png');                   // note: no leading slash`
 			},
 			{ type: 'h3', id: 'nav', text: '5. Navigation consolidated into goto()' },
 			{
@@ -302,7 +304,15 @@ await refreshAll();`
 			},
 			{
 				type: 'p',
+				text: 'Shallow navigations now run `beforeNavigate`, `onNavigate` and `afterNavigate` too. A hook that should ignore them — the header drawer, which closes on navigation — checks `navigation.shallow` first.'
+			},
+			{
+				type: 'p',
 				text: "Also: `error(404, { message: 'Not found' })` became `error(404, 'Not found')`, with any extra properties in a third argument. And `page.url` is now read-only — clone it if you need to change a search param."
+			},
+			{
+				type: 'note',
+				text: "Two more things changed between the long 3.0 prerelease and the 3.0.1 we use, so even Kit 3 tutorials from the summer get them wrong. First, single-flight refreshes that the *client* asks for — `submit().updates(getPosts)` on a `form`, or `myCommand().updates(getPosts)` on a `command` — must be accepted on the server with `requested(getPosts, limit)`. The `limit` is required: the client controls that list, and each entry makes the server validate an argument and usually re-fetch, so an unbounded one is a denial-of-service risk. Loop over it — `for (const { arg, query, ignore } of requested(getPosts, 10))`, calling `query.refresh()`, `query.set(...)` or `ignore()` per entry — or use the shorthands `requested(getPosts, 10).refreshAll()` and `.ignoreAll()`. An entry you neither refresh nor ignore puts *that query* into an error state on the client; the command or form itself still succeeds. Our guide form never calls `.updates()`, so there is nothing to handle, but you will meet this the day you add one. Second, `adapter-node` no longer reads an `ORIGIN` environment variable; the public origin is `paths.origin` in `vite.config.ts` (chapter 37)."
 			},
 			{
 				type: 'note',

@@ -56,6 +56,13 @@
 
 	// …
 	onNavigate((navigation) =&gt; {
+		// Kit 3 runs the navigation hooks for shallow navigations too — a
+		// `goto(url, { shallow: true })` that only changes `page.state`. Nothing on
+		// screen is replaced by one, so a full-page cross-fade would be a flash for
+		// no reason. Same guard as the header drawer; the site has no shallow routing
+		// today, so this is insurance rather than a fix.
+		if (navigation.shallow) return;
+
 		// Not supported in every browser, and correctly skipped for reduced motion.
 		// Returning nothing lets SvelteKit navigate normally.
 		if (!document.startViewTransition || prefersReducedMotion()) return;
@@ -88,7 +95,7 @@
 &lt;/div&gt;</code></pre>
 </figure>
 <p>That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.</p>
-<aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.</p></aside>
+<aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The <code>navigation.shallow</code> guard is the same one the header drawer uses in chapter 14: since Kit 3, <code>onNavigate</code> also fires for <code>goto(url, { shallow: true })</code>, and a change that only touches <code>page.state</code> should not cross-fade the whole page.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>The skip link and tabindex=&quot;-1&quot;</h4>

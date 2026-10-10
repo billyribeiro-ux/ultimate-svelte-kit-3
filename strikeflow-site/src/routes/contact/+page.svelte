@@ -77,6 +77,14 @@
 					<p class="channels__body">{channel.body}</p>
 
 					{#if channel.href}
+						<!--
+							`mailto:` and `tel:` are scheme URLs, not routes, so there is nothing
+							for `resolve()` to do. The lint rule accepts such hrefs when it can
+							read the literal, but not through an `{#each}` variable — hence the
+							targeted disable rather than a `rel="external"` that would be wrong
+							for an email address.
+						-->
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 						<a class="channels__link" href={channel.href}>{channel.linkLabel}</a>
 					{:else}
 						<!-- `<address>` is the correct element for contact details of its

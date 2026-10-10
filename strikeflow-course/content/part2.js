@@ -1221,8 +1221,15 @@ export default defineConfig({
 	 *
 	 * Without this, tapping a link in the drawer changes the page underneath while
 	 * the drawer stays open on top of it — a classic SPA bug.
+	 *
+	 * SvelteKit 3 also fires the navigation hooks for *shallow* navigations —
+	 * \`goto(url, { shallow: true, state })\`, the replacement for \`pushState\`. Those
+	 * change \`page.state\`, not the page, so closing the drawer for one would be wrong.
+	 * The site has no shallow routing today; the guard is here so adding some later
+	 * can't quietly break the drawer.
 	 */
-	afterNavigate(() => {
+	afterNavigate((navigation) => {
+		if (navigation.shallow) return;
 		if (drawer?.open) drawer.close();
 	});
 
@@ -1404,6 +1411,13 @@ export default defineConfig({
 
 	// …
 	onNavigate((navigation) => {
+		// Kit 3 runs the navigation hooks for shallow navigations too — a
+		// \`goto(url, { shallow: true })\` that only changes \`page.state\`. Nothing on
+		// screen is replaced by one, so a full-page cross-fade would be a flash for
+		// no reason. Same guard as the header drawer; the site has no shallow routing
+		// today, so this is insurance rather than a fix.
+		if (navigation.shallow) return;
+
 		// Not supported in every browser, and correctly skipped for reduced motion.
 		// Returning nothing lets SvelteKit navigate normally.
 		if (!document.startViewTransition || prefersReducedMotion()) return;
@@ -1441,7 +1455,7 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.'
+				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The `navigation.shallow` guard is the same one the header drawer uses in chapter 14: since Kit 3, `onNavigate` also fires for `goto(url, { shallow: true })`, and a change that only touches `page.state` should not cross-fade the whole page.'
 			},
 			{
 				type: 'why',

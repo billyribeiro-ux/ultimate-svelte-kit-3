@@ -341,10 +341,22 @@ export const part3 = [
 				lang: 'svelte',
 				file: 'src/routes/contact/+page.svelte',
 				code: `{#if channel.href}
+	<!--
+		\`mailto:\` and \`tel:\` are scheme URLs, not routes, so there is nothing
+		for \`resolve()\` to do. The lint rule accepts such hrefs when it can
+		read the literal, but not through an \`{#each}\` variable — hence the
+		targeted disable rather than a \`rel="external"\` that would be wrong
+		for an email address.
+	-->
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a class="channels__link" href={channel.href}>{channel.linkLabel}</a>
 {:else}
 	<address class="channels__address">{channel.linkLabel}</address>
 {/if}`
+			},
+			{
+				type: 'note',
+				text: 'The `eslint-disable` line is not decoration. `eslint-plugin-svelte` 3.23 makes `svelte/no-navigation-without-resolve` an **error** in its `recommended` config: every `href` must come from `resolve()`, be a literal the rule can see is not a route (`mailto:`, `https://…`), or carry `rel="external"` — which is what the footer and the team profile links do. Here the value hides behind an `{#each}` variable, so the rule cannot read it, and `rel="external"` would be a lie on an email address. So we switch the rule off for this one line and write down why. Type the anchor without it and `pnpm run lint` fails on this file.'
 			},
 			{
 				type: 'note',
@@ -911,7 +923,8 @@ const guideSchema = v.object({
 				type: 'code',
 				file: 'src/routes/guide/thank-you/+page.server.ts',
 				lang: 'ts',
-				code: `import type { PageServerLoad } from './$types';
+				code: `import { resolve } from '$app/paths';
+import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
 export const prerender = false;
@@ -932,7 +945,10 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 	return {
 		status: 'valid' as const,
 		reason: null,
-		downloadUrl: \`/guide/download?t=\${encodeURIComponent(token ?? '')}\`,
+		// resolve() works on the server too, and in SvelteKit 3 a route ID may carry a
+		// ?search suffix. The result is a typed ResolvedPathname — a plain string at
+		// runtime — which the component can drop straight into an href.
+		downloadUrl: resolve(\`/guide/download?t=\${encodeURIComponent(token ?? '')}\`),
 		email: result.email
 	};
 };`
@@ -1326,7 +1342,6 @@ export default defineConfig({
 	projects: [
 		{
 			// Component tests — a REAL Chromium, not a DOM emulator
-			extends: './vite.config.ts',
 			test: {
 				name: 'client',
 				browser: {
@@ -1340,7 +1355,6 @@ export default defineConfig({
 		},
 		{
 			// Pure logic — plain Node, no browser, very fast
-			extends: './vite.config.ts',
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -1350,6 +1364,10 @@ export default defineConfig({
 		}
 	]
 }`
+			},
+			{
+				type: 'note',
+				text: "Each project inherits the root config — the `sveltekit()` and Phosphor plugins included — automatically. That is a Vitest 5 behaviour: Vitest 4 needed `extends: './vite.config.ts'` on every project, which re-read this file from disk each time. If you see that line in an older example, it is no longer needed; `extends: false` is the opt-out for a project that must stand alone."
 			},
 			{
 				type: 'ul',
@@ -1795,6 +1813,10 @@ pnpm run build`
 				text: '`adapter-node` produces a plain Node server in `build/`:'
 			},
 			{ type: 'terminal', code: 'pnpm run build\nnode build/index.js' },
+			{
+				type: 'note',
+				text: "`adapter-node` 6 — the version that ships with SvelteKit 3 — changed three things worth knowing before you deploy. The `ORIGIN` environment variable is gone: if the server sits behind a proxy that hides the real host, set `paths: { origin: 'https://strikeflow.io' }` inside `sveltekit()` in `vite.config.ts` instead (`PORT` and `HOST` still work as before). Static files are served from a list recorded at build time, with content-hash `ETag`s and no `Last-Modified` header, so a file copied into `build/client` after the build is simply not served — runtime configuration belongs in environment variables. And static assets answer only `GET` and `HEAD`; any other method gets a 405."
+			},
 			{
 				type: 'p',
 				text: 'That runs anywhere Node runs — a VPS, a container, Fly, Railway, Render. If you would rather deploy to a specific platform, swap the adapter in `vite.config.ts`:'

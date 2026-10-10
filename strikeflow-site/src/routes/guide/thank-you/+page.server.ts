@@ -10,6 +10,7 @@
  * the server decides, and the page just renders the verdict.
  */
 
+import { resolve } from '$app/paths';
 import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
@@ -55,7 +56,13 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 		// The token is re-used for the download route, which verifies it again.
 		// Every entry point validates independently — never trust that an earlier
 		// step in the flow did its job.
-		downloadUrl: `/guide/download?t=${encodeURIComponent(token ?? '')}`,
+		//
+		// `resolve()` works on the server too, and in SvelteKit 3 it takes a route ID
+		// with a `?search` suffix. The result is a `ResolvedPathname` — a plain string
+		// at runtime, so it serialises like any other load data — and the component
+		// can put it straight into an `href` without the "link without resolve()"
+		// lint complaint a hand-built string would earn.
+		downloadUrl: resolve(`/guide/download?t=${encodeURIComponent(token ?? '')}`),
 		email: result.email
 	};
 };

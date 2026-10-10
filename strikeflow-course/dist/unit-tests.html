@@ -106,7 +106,6 @@ export default defineConfig({
 	projects: [
 		{
 			// Component tests — a REAL Chromium, not a DOM emulator
-			extends: './vite.config.ts',
 			test: {
 				name: 'client',
 				browser: {
@@ -120,7 +119,6 @@ export default defineConfig({
 		},
 		{
 			// Pure logic — plain Node, no browser, very fast
-			extends: './vite.config.ts',
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -131,6 +129,7 @@ export default defineConfig({
 	]
 }</code></pre>
 </figure>
+<aside class="callout callout--note"><p>Each project inherits the root config — the <code>sveltekit()</code> and Phosphor plugins included — automatically. That is a Vitest 5 behaviour: Vitest 4 needed <code>extends: './vite.config.ts'</code> on every project, which re-read this file from disk each time. If you see that line in an older example, it is no longer needed; <code>extends: false</code> is the opt-out for a project that must stand alone.</p></aside>
 <ul><li>Files named <code>something.spec.ts</code> run in <strong>Node</strong> — fast, for pure logic.</li><li>Files named <code>Something.svelte.spec.ts</code> run in a <strong>real browser</strong> — slower, for components.</li></ul>
 
 <aside class="callout callout--why">

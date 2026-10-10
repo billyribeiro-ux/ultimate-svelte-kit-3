@@ -37,6 +37,13 @@
 	 * than in JavaScript means it costs nothing when unsupported.
 	 */
 	onNavigate((navigation) => {
+		// Kit 3 runs the navigation hooks for shallow navigations too — a
+		// `goto(url, { shallow: true })` that only changes `page.state`. Nothing on
+		// screen is replaced by one, so a full-page cross-fade would be a flash for
+		// no reason. Same guard as the header drawer; the site has no shallow routing
+		// today, so this is insurance rather than a fix.
+		if (navigation.shallow) return;
+
 		// Not supported in every browser, and correctly skipped for reduced motion.
 		// Returning nothing lets SvelteKit navigate normally.
 		if (!document.startViewTransition || prefersReducedMotion()) return;

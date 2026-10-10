@@ -42,7 +42,8 @@
 		<span class="code__file">src/routes/guide/thank-you/+page.server.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import type { PageServerLoad } from './$types';
+	<pre><code class="lang-ts">import { resolve } from '$app/paths';
+import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
 export const prerender = false;
@@ -63,7 +64,10 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 	return {
 		status: 'valid' as const,
 		reason: null,
-		downloadUrl: `/guide/download?t=${encodeURIComponent(token ?? '')}`,
+		// resolve() works on the server too, and in SvelteKit 3 a route ID may carry a
+		// ?search suffix. The result is a typed ResolvedPathname — a plain string at
+		// runtime — which the component can drop straight into an href.
+		downloadUrl: resolve(`/guide/download?t=${encodeURIComponent(token ?? '')}`),
 		email: result.email
 	};
 };</code></pre>

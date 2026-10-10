@@ -269,7 +269,7 @@ function renderIndex(all) {
 
 	<div class="home__meta">
 		<span>${all.length} chapters</span>
-		<span>SvelteKit 3 RC</span>
+		<span>SvelteKit 3.0.1</span>
 		<span>Svelte 5</span>
 		<span>TypeScript strict</span>
 	</div>

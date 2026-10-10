@@ -95,8 +95,12 @@
 				<div class="post__byline-text">
 					<p class="post__author">
 						<!-- The author name links to their section on /about, which is the
-						     stable author page the Person schema points at. -->
-						<a href={`${resolve('/about')}#${author.id}`}>
+						     stable author page the Person schema points at. The hash goes
+						     INSIDE resolve(): SvelteKit 3 accepts a route ID with a `#hash`
+						     or `?search` suffix, so the whole href stays typed — and the
+						     lint rule can see it is a resolved link, which it can't through
+						     string concatenation. -->
+						<a href={resolve(`/about#${author.id}`)}>
 							{author.name}{#if author.credentials}, {author.credentials}{/if}
 						</a>
 					</p>

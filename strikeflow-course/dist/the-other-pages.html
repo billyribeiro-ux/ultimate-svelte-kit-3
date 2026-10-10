@@ -120,11 +120,20 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if channel.href}
+	&lt;!--
+		`mailto:` and `tel:` are scheme URLs, not routes, so there is nothing
+		for `resolve()` to do. The lint rule accepts such hrefs when it can
+		read the literal, but not through an `{#each}` variable — hence the
+		targeted disable rather than a `rel=&quot;external&quot;` that would be wrong
+		for an email address.
+	--&gt;
+	&lt;!-- eslint-disable-next-line svelte/no-navigation-without-resolve --&gt;
 	&lt;a class=&quot;channels__link&quot; href={channel.href}&gt;{channel.linkLabel}&lt;/a&gt;
 {:else}
 	&lt;address class=&quot;channels__address&quot;&gt;{channel.linkLabel}&lt;/address&gt;
 {/if}</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The <code>eslint-disable</code> line is not decoration. <code>eslint-plugin-svelte</code> 3.23 makes <code>svelte/no-navigation-without-resolve</code> an <strong>error</strong> in its <code>recommended</code> config: every <code>href</code> must come from <code>resolve()</code>, be a literal the rule can see is not a route (<code>mailto:</code>, <code>https://…</code>), or carry <code>rel=&quot;external&quot;</code> — which is what the footer and the team profile links do. Here the value hides behind an <code>{#each}</code> variable, so the rule cannot read it, and <code>rel=&quot;external&quot;</code> would be a lie on an email address. So we switch the rule off for this one line and write down why. Type the anchor without it and <code>pnpm run lint</code> fails on this file.</p></aside>
 <aside class="callout callout--note"><p><code>&lt;address&gt;</code> is the correct element for the contact details of its nearest article or the document as a whole. It is not for postal addresses generally — a shipping address in a table is not an <code>&lt;address&gt;</code>. Browsers italicise it by default, which we reset.</p></aside>
 
 <aside class="callout callout--check">

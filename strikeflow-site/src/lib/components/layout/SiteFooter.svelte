@@ -55,12 +55,19 @@
 					{#each socialLinks as social (social.href)}
 						{@const Icon = social.icon}
 						<li>
+							<!--
+								`external` is the HTML link type for "not part of this site". It is
+								also how SvelteKit's lint rule knows an href is not an internal route
+								that should go through `resolve()`, since it cannot see the value
+								behind a loop variable. `me` is the IndieWeb rel-me assertion that
+								these profiles belong to us.
+							-->
 							<a
 								class="footer__social-link"
 								href={social.href}
 								aria-label={social.label}
 								target="_blank"
-								rel="noopener noreferrer me"
+								rel="me external noopener noreferrer"
 							>
 								<Icon size={20} aria-hidden="true" />
 							</a>
