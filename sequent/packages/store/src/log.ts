@@ -203,15 +203,16 @@ export async function appendEvents(
 	events: readonly Event[]
 ): Promise<void> {
 	/*
-	 * `withTransaction`, not `client.transaction()`.
+	 * `withTransaction`, never a bare `client.transaction()`.
 	 *
 	 * This function runs **once per command** — it is the hottest write path in
-	 * the venue — and `client.transaction()` leaks two file descriptors every
-	 * time it is called. The engine died after about ten thousand orders with
-	 * `SQLITE_CANTOPEN`, which is an error about opening the database reported by
-	 * code that had the database open the whole time.
-	 *
-	 * See `withTransaction` in `client.ts` for the full account.
+	 * the venue — and it shares the client with the projector. Two transactions
+	 * opened side by side on a pooled client each take their own connection, and
+	 * the second waits for the first's write lock inside a native call that
+	 * blocks the event loop the first one needs to finish. `withTransaction`
+	 * queues them in JavaScript instead. It is also where the venue once worked
+	 * around a file-descriptor leak in this very call; see `client.ts` for the
+	 * full account of both.
 	 */
 	await withTransaction(client, async (tx) => {
 		for (const body of events) {

@@ -7,6 +7,18 @@ event-sourced log that the whole venue can be rebuilt from.
 This is project three of the course. It exists because the honest way to learn
 distributed systems is to build one whose bugs cost money.
 
+## Toolchain
+
+Node **24.21.0** (the current LTS; `.nvmrc` pins it, and `engines` refuses
+anything older), pnpm **12.10.1** (pinned by `packageManager`, so Corepack or
+pnpm's own version check picks it up), SvelteKit **3.0.1** with adapter-node
+**6**, Vitest **5**, TypeScript **6**. Everything else is at its latest
+release; `pnpm-lock.yaml` is the exact answer.
+
+The server-side code is TypeScript that Node runs directly — type stripping,
+no build step — which is why `tsconfig.base.json` is `noEmit` and why there is
+no `dist/` folder for the engine or the worker.
+
 ## Running it
 
 ```sh
@@ -117,9 +129,19 @@ a way that takes an auditor to find.
 ## The tests
 
 ```sh
-pnpm test        # 374 tests
+pnpm test        # 375 tests
 pnpm check       # types, across all six packages
 pnpm verify      # both, plus a production build
+```
+
+The build needs `PUBLIC_ORIGIN`. It is declared `static` in `apps/web/src/env.ts`,
+so SvelteKit reads it at build time and refuses to build without it — a missing
+origin is a venue whose CSRF check compares against `undefined`, and that is
+better discovered by the build than by the first POST. `pnpm dev` supplies a
+default; for `verify` either copy `.env.example` to `.env` or set it inline:
+
+```sh
+PUBLIC_ORIGIN=http://localhost:4173 pnpm verify
 ```
 
 Two kinds worth knowing about:

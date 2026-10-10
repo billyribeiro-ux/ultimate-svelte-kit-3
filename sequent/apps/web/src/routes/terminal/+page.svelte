@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import DepthLadder from '#lib/components/DepthLadder.svelte';
 	import { count, reveal, revealChildren, sweep } from '#lib/motion/motion.svelte.ts';
 	import {
@@ -87,11 +88,26 @@
 	});
 
 	function pick(symbol: string) {
-		const url = new URL(page.url.href);
-		url.searchParams.set('symbol', symbol);
-		// `reset: false` keeps scroll and focus. SvelteKit 3 merged Kit 2's
-		// `noScroll` and `keepFocus` into this one option.
-		void goto(url, { reset: false });
+		/*
+		 * `resolve(...)` rather than a URL built by hand.
+		 *
+		 * The first version copied `page.url`, set the param and passed the `URL`
+		 * to `goto`. Kit 3 made `page.url` readonly, which is right — a search
+		 * param set on the live object is a navigation nobody asked for — and
+		 * `resolve` now accepts a pathname *with* a query string and checks the
+		 * pathname against the real route table. So `/terminall?symbol=` is a
+		 * type error here rather than a 404 in production, the base path is
+		 * prefixed for us the day the venue is served from a sub-path, and the
+		 * lint rule that insists on `resolve` is right to.
+		 *
+		 * The symbol is this page's only query parameter, so the string is built
+		 * from it directly: no `URLSearchParams` to mutate, which is also what the
+		 * reactivity lint asks of anything mutable inside a component.
+		 *
+		 * `reset: false` keeps scroll and focus. SvelteKit 3 merged Kit 2's
+		 * `noScroll` and `keepFocus` into this one option.
+		 */
+		void goto(resolve(`/terminal?symbol=${encodeURIComponent(symbol)}`), { reset: false });
 	}
 
 	function useLevel(side: 'buy' | 'sell', priceUnits: number) {

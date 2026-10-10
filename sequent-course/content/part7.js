@@ -594,28 +594,28 @@ BEGIN / COMMIT           35 descriptors`
 			},
 			{
 				type: 'p',
-				text: '`@libsql/client`\'s `transaction()` opens a second connection and never releases it — not on commit, not on rollback, not on an explicit `close()`. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders.'
+				text: '`@libsql/client` 0.17.4\'s `transaction()` opened a second connection and never released it — not on commit, not on rollback, not on an explicit `close()`. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders. The first fix was `BEGIN IMMEDIATE` and `COMMIT` as plain statements on the one connection; 0.18 then fixed the leak with a connection pool, which made that impossible — a statement borrows a connection and the pool rolls back whatever it left open — and `withTransaction` went back to `transaction()`, this time with the leak gone:'
 			},
 			{
 				type: 'code',
 				file: 'packages/store/src/client.ts',
 				lang: 'ts',
 				code: `
-export type Executor = Pick<Client, 'execute'>;
-const chains = new WeakMap<Executor, Promise<unknown>>();
+export type Executor = Pick<Transaction, 'execute'>;
+const chains = new WeakMap<Client, Promise<unknown>>();
 
 export async function withTransaction<T>(
-	client: Executor,
+	client: Client,
 	work: (tx: Executor) => Promise<T>
 ): Promise<T> {
 	const previous = chains.get(client) ?? Promise.resolve();
 
 	const run = previous.then(async () => {
-		await client.execute('BEGIN IMMEDIATE');
+		const transaction = await client.transaction('write');
 
 		try {
-			const result = await work(client);
-			await client.execute('COMMIT');
+			const result = await work(transaction);
+			await transaction.commit();
 			return result;
 		} catch (thrown) {
 			/*
@@ -623,10 +623,11 @@ export async function withTransaction<T>(
 			 *
 			 * If the connection has gone, \`ROLLBACK\` throws too — and throwing *that*
 			 * would replace the real error with a meaningless one, hiding the reason
-			 * the transaction failed in the first place.
+			 * the transaction failed in the first place. Either way the connection
+			 * goes back to the pool: \`rollback()\` releases it even when it throws.
 			 */
 			try {
-				await client.execute('ROLLBACK');
+				await transaction.rollback();
 			} catch {
 				// The original error is the one worth having.
 			}
@@ -636,7 +637,7 @@ export async function withTransaction<T>(
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
-	// transaction would block every later one on this connection forever.
+	// transaction would block every later one on this client forever.
 	chains.set(
 		client,
 		run.then(
@@ -650,11 +651,11 @@ export async function withTransaction<T>(
 			},
 			{
 				type: 'p',
-				text: 'The promise chain is what serialises callers. SQLite allows one write transaction per connection, so two overlapping `withTransaction` calls would otherwise put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong.'
+				text: 'The promise chain is what serialises callers, and the pool made it more necessary rather than less. On one connection, two overlapping `withTransaction` calls would put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong. On a pool, each gets its own connection and the second `BEGIN IMMEDIATE` waits for the first\'s write lock inside a synchronous native call — blocking the event loop that the first transaction needs in order to finish. A deadlock with a five-second timeout on it. The chain makes the second caller wait in JavaScript, where waiting is free.'
 			},
 			{
 				type: 'p',
-				text: 'And the regression test measures file descriptors directly, so a future refactor back to `client.transaction()` fails in two seconds instead of in production after a few minutes of real trading.'
+				text: 'And the regression test still measures file descriptors directly. It is a test of the library now, and the library has been wrong about this once — so if a release leaks again it fails in two seconds instead of in production after a few minutes of real trading.'
 			},
 
 			{ type: 'h3', id: 'my-own-bugs', text: 'The tests that were wrong' },

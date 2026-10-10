@@ -157,28 +157,28 @@ try {
 client.batch()           35 descriptors
 BEGIN / COMMIT           35 descriptors</code></pre>
 </figure>
-<p><code>@libsql/client</code>'s <code>transaction()</code> opens a second connection and never releases it — not on commit, not on rollback, not on an explicit <code>close()</code>. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders.</p>
+<p><code>@libsql/client</code> 0.17.4's <code>transaction()</code> opened a second connection and never released it — not on commit, not on rollback, not on an explicit <code>close()</code>. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders. The first fix was <code>BEGIN IMMEDIATE</code> and <code>COMMIT</code> as plain statements on the one connection; 0.18 then fixed the leak with a connection pool, which made that impossible — a statement borrows a connection and the pool rolls back whatever it left open — and <code>withTransaction</code> went back to <code>transaction()</code>, this time with the leak gone:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/store/src/client.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export type Executor = Pick&lt;Client, 'execute'&gt;;
-const chains = new WeakMap&lt;Executor, Promise&lt;unknown&gt;&gt;();
+	<pre><code class="lang-ts">export type Executor = Pick&lt;Transaction, 'execute'&gt;;
+const chains = new WeakMap&lt;Client, Promise&lt;unknown&gt;&gt;();
 
 export async function withTransaction&lt;T&gt;(
-	client: Executor,
+	client: Client,
 	work: (tx: Executor) =&gt; Promise&lt;T&gt;
 ): Promise&lt;T&gt; {
 	const previous = chains.get(client) ?? Promise.resolve();
 
 	const run = previous.then(async () =&gt; {
-		await client.execute('BEGIN IMMEDIATE');
+		const transaction = await client.transaction('write');
 
 		try {
-			const result = await work(client);
-			await client.execute('COMMIT');
+			const result = await work(transaction);
+			await transaction.commit();
 			return result;
 		} catch (thrown) {
 			/*
@@ -186,10 +186,11 @@ export async function withTransaction&lt;T&gt;(
 			 *
 			 * If the connection has gone, `ROLLBACK` throws too — and throwing *that*
 			 * would replace the real error with a meaningless one, hiding the reason
-			 * the transaction failed in the first place.
+			 * the transaction failed in the first place. Either way the connection
+			 * goes back to the pool: `rollback()` releases it even when it throws.
 			 */
 			try {
-				await client.execute('ROLLBACK');
+				await transaction.rollback();
 			} catch {
 				// The original error is the one worth having.
 			}
@@ -199,7 +200,7 @@ export async function withTransaction&lt;T&gt;(
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
-	// transaction would block every later one on this connection forever.
+	// transaction would block every later one on this client forever.
 	chains.set(
 		client,
 		run.then(
@@ -211,8 +212,8 @@ export async function withTransaction&lt;T&gt;(
 	return run;
 }</code></pre>
 </figure>
-<p>The promise chain is what serialises callers. SQLite allows one write transaction per connection, so two overlapping <code>withTransaction</code> calls would otherwise put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong.</p>
-<p>And the regression test measures file descriptors directly, so a future refactor back to <code>client.transaction()</code> fails in two seconds instead of in production after a few minutes of real trading.</p>
+<p>The promise chain is what serialises callers, and the pool made it more necessary rather than less. On one connection, two overlapping <code>withTransaction</code> calls would put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong. On a pool, each gets its own connection and the second <code>BEGIN IMMEDIATE</code> waits for the first's write lock inside a synchronous native call — blocking the event loop that the first transaction needs in order to finish. A deadlock with a five-second timeout on it. The chain makes the second caller wait in JavaScript, where waiting is free.</p>
+<p>And the regression test still measures file descriptors directly. It is a test of the library now, and the library has been wrong about this once — so if a release leaks again it fails in two seconds instead of in production after a few minutes of real trading.</p>
 <h3 id="my-own-bugs">The tests that were wrong</h3>
 <p>Four of my own, because a course that only shows the tests that worked is teaching something false.</p>
 <ul><li><strong>A helper used the default <code>batchSize: 200</code>,</strong> so the first callback reported everything already applied and the test proved nothing.</li><li><strong>The same helper hung</strong> when the target sequence had already been passed before it started waiting.</li><li><strong>A load test asserted 10,000 <code>order_record</code> rows</strong> and got 2,582 — 7,418 were correctly rejected by the fat-finger collar. The right assertion was <code>accepted + rejected === COUNT</code>.</li><li><strong><code>expect(JSON.stringify(keys)).not.toContain(':')</code></strong> — meant to prove no secret leaked. JSON itself is full of colons. It passed nothing and failed nothing.</li></ul>
