@@ -12,7 +12,12 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { mdsvex } from 'mdsvex';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import adapter from '@sveltejs/adapter-node';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+/*
+ * A default import, not `{ version }`: per spec a JSON module has only a
+ * default export, and Vite's native config loader — the default in the next
+ * major — refuses the named form that the esbuild loader used to tolerate.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -220,7 +225,7 @@ export default defineConfig(({ mode }) => {
 				 * `name` is the commit, because it has to be deterministic.
 				 */
 				version: {
-					name: commitHash() ?? packageVersion,
+					name: commitHash() ?? pkg.version,
 					pollInterval: 60_000
 				},
 
@@ -285,8 +290,13 @@ export default defineConfig(({ mode }) => {
 					 * and `getBoundingClientRect`, and the itinerary animates with
 					 * `animate:flip`. jsdom has none of those and would pass every test
 					 * you thought to write while doing nothing.
+					 *
+					 * No `extends` line. Since Vitest 5 an inline project inherits the
+					 * config that declares it — the plugins, `#lib`, Paraglide — so
+					 * naming this file again would load the Svelte plugin twice and
+					 * earn a warning. `extends: false` is the only thing left to say,
+					 * and it would be wrong here.
 					 */
-					extends: './vite.config.ts',
 					/*
 					 * The icons the tested components use, pre-bundled before the first
 					 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
@@ -321,8 +331,8 @@ export default defineConfig(({ mode }) => {
 				},
 				{
 					// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
-					// schemas, the geodata build, the identity helpers.
-					extends: './vite.config.ts',
+					// schemas, the geodata build, the identity helpers. Inherits this
+					// config like the project above, for the same reason.
 					test: {
 						name: 'server',
 						environment: 'node',

@@ -246,11 +246,12 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'auth-tables', text: 'Better Auth’s tables, kept by hand' },
-			code('src/lib/server/db/auth.schema.ts', 1, 25),
-			code('src/lib/server/db/auth.schema.ts', 46, 80),
+			code('src/lib/server/db/auth.schema.ts', 1, 32),
+			code('src/lib/server/db/auth.schema.ts', 53, 75),
+			code('drizzle/0001_drop_account_issuer.sql', 1, 8),
 			{
 				type: 'p',
-				text: 'Better Auth can generate this file. It is kept by hand so the column names follow the same `snake_case` as the rest of the schema, and so that the one column Better Auth 1.7 added — `issuer` — carries a comment saying what it is for. Sign-in filters on it, so an `account` row without it is a person who exists and can never log in; the seed sets it with `createLocalAccountIssuer("credential")` from Better Auth itself for exactly that reason.'
+				text: 'Better Auth can generate this file. It is kept by hand so the column names follow the same `snake_case` as the rest of the schema — and so that a change *under* the app has somewhere to be explained. There was one. Better Auth 1.7.0 added a required `issuer` column to `account` (who vouches for the account: an OAuth provider’s URL, or `local:credential` for a password) with a unique index on `(issuer, account_id)`, and the first version of this file carried both, with the seed setting it through `createLocalAccountIssuer("credential")`. 1.7.3 withdrew the column and the helper; 1.7.7 never writes it, its own schema diff warns about it, and the 1.7 upgrade guide says what to do on SQLite — drop the index, then the column. So the comment moved to the header, the column left the table, and the seed lost a line.'
 			},
 
 			{ type: 'h3', id: 'connection', text: 'One connection, two pragmas' },
@@ -265,12 +266,12 @@ export const part2 = [
 				type: 'p',
 				text: 'drizzle-kit runs outside SvelteKit, so it reads `process.env` — the only file that does. `migrate.ts` applies whatever SQL in `drizzle/` has not been applied yet, and its comment gives the two ways to run it: on its own before the server, or as `node --import ./scripts/migrate.ts build`, which the Dockerfile uses so that migration and server share one process and `node` stays PID 1 to receive SIGTERM. `process.loadEnvFile` is Node’s built-in `.env` reader; no `dotenv` dependency.'
 			},
-			code('scripts/seed.ts', 1, 53),
+			code('scripts/seed.ts', 1, 52),
 			{
 				type: 'p',
 				text: '`seedId()` deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the `IdSchema` check on the server, where a fire-and-forget `.catch(() => {})` swallowed it (it warns in development now — `fireAndForget()` in chapter 31). Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.'
 			},
-			code('scripts/seed.ts', 96, 116),
+			code('scripts/seed.ts', 95, 119),
 			{
 				type: 'p',
 				text: 'The seed is idempotent — fixed ids, deleted before written — so running it twice gives one trip. The people are created the way Better Auth would create them: a `user` row and an `account` row with `providerId: "credential"`, the password hashed by Better Auth’s own `hashPassword`. A hand-rolled scrypt that differs by one parameter produces a person who cannot log in and no error saying why, and the comment says so, because that is the bug the first version had.'
@@ -297,7 +298,7 @@ Seeded. Sign in as any of these with the password "meridian-demo-2026":
 				items: [
 					'You can name the three schema conventions and the chapter each one comes from.',
 					'You can say what WAL mode and the busy timeout change for a shared trip.',
-					'You know why the seed uses Better Auth’s own password hash and issuer helpers.'
+					'You know why the seed uses Better Auth’s own password hash, and what migration `0001` undoes and why a migration — not an edit to `0000` — is the right shape for it.'
 				]
 			}
 		]

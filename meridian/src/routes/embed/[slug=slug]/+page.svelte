@@ -2,7 +2,8 @@
 	import { error } from '@sveltejs/kit';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate, formatRange } from '#lib/domain/dates.ts';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
@@ -50,7 +51,12 @@
 		{/each}
 	</ol>
 
-	<a class="embed__powered" href={localizeHref(`/t/${slug}`)} target="_blank" rel="noopener">
+	<a
+		class="embed__powered"
+		href={href('/(site)/t/[slug=slug]', { slug })}
+		target="_blank"
+		rel="noopener"
+	>
 		{m.embed_powered()}
 	</a>
 </article>

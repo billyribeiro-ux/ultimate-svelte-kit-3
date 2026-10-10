@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { version } from '$app/env';
 </script>
 
@@ -8,8 +8,8 @@
 	<div class="container cluster cluster--between">
 		<p class="muted">{m.footer_made()} <code class="muted">{version}</code></p>
 		<nav class="cluster" aria-label="Meta">
-			<a class="muted" href={localizeHref('/guides')}>{m.nav_guides()}</a>
-			<a class="muted" href={localizeHref('/diagnostics')}>{m.footer_diagnostics()}</a>
+			<a class="muted" href={href('/guides')}>{m.nav_guides()}</a>
+			<a class="muted" href={href('/(site)/(app)/diagnostics')}>{m.footer_diagnostics()}</a>
 		</nav>
 	</div>
 </footer>

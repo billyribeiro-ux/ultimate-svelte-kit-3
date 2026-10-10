@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { CommandIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { href } from '#lib/href.ts';
 	import { KIND_ICONS } from './kinds.ts';
 	import { TABS, type Tab, type TripState } from './state.svelte.ts';
 
@@ -44,7 +45,9 @@
 
 	function go(tab: Tab) {
 		open = false;
-		void goto(`?tab=${tab}`, { replace: true });
+		void goto(href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug: view.trip.slug }), {
+			replace: true
+		});
 	}
 
 	function jump(stopId: string) {

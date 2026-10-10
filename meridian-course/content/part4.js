@@ -35,7 +35,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'compiling', text: 'Compiling, twice' },
-			code('vite.config.ts', 230, 252),
+			code('vite.config.ts', 235, 257),
 			{
 				type: 'terminal',
 				code: `
@@ -62,10 +62,10 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 
 			{ type: 'h3', id: 'switching', text: 'Switching: three links' },
 			code('src/lib/ui/LocaleSwitcher.svelte', 1, 32),
-			code('src/lib/ui/LocaleSwitcher.svelte', 34, 47),
+			code('src/lib/ui/LocaleSwitcher.svelte', 34, 54),
 			{
 				type: 'p',
-				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice.'
+				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through `href()` from chapter 23: `here` is a pathname, not a route id, and there is nothing for `resolve()` to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.'
 			},
 			{
 				type: 'p',
@@ -74,7 +74,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 			{
 				type: 'why',
 				title: 'Why Paraglide and not svelte-i18n, or paraglide-sveltekit',
-				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.25, one universal hook, one server handler, and a component of links.'
+				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.'
 			},
 			{
 				type: 'checkpoint',
@@ -105,7 +105,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 				type: 'p',
 				text: 'Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
 			},
-			code('src/routes/(site)/(app)/trips/+page.svelte', 67, 79),
+			code('src/routes/(site)/(app)/trips/+page.svelte', 64, 76),
 			{
 				type: 'p',
 				text: 'The trips page puts them together with the plural messages from the last chapter: a date range from `Intl`, three counts through Paraglide’s plural rules, and a distance through the library’s `formatDistance`. Four sources of locale-awareness in one paragraph, and the component knows about none of them.'

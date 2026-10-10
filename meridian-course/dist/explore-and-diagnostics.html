@@ -112,7 +112,7 @@ const countries: Country[] = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:100-136</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:100-133</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each countries as country (country.code)}
@@ -135,15 +135,12 @@ const countries: Country[] = $derived.by(() =&gt; {
 						{#if guide}
 							&lt;a
 								class=&quot;btn btn--sm btn--ghost&quot;
-								href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}
+								href={href('/guides/[guide]', { guide: guide.slug })}
 							&gt;
 								{m.explore_guide()}
 							&lt;/a&gt;
 						{/if}
-						&lt;a
-							class=&quot;btn btn--sm&quot;
-							href={localizeHref(`${resolve('/(site)/(app)/trips/new')}?place=${place.id}`)}
-						&gt;
+						&lt;a class=&quot;btn btn--sm&quot; href={href(`/(site)/(app)/trips/new?place=${place.id}`)}&gt;
 							{m.explore_start()}
 						&lt;/a&gt;
 					&lt;/div&gt;
@@ -153,7 +150,7 @@ const countries: Country[] = $derived.by(() =&gt; {
 	&lt;/section&gt;
 {/each}</code></pre>
 </figure>
-<p>Two <code>resolve()</code> calls, one with a parameter and one without. The route id for the new-trip page is <code>/(site)/(app)/trips/new</code> — route ids include their groups, which surprises people the first time — and <code>resolve</code> gives back the pathname <code>/trips/new</code>, type-checked against the routes that exist. <code>localizeHref</code> then adds the language prefix. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34.</p>
+<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.26 they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34.</p>
 
 <aside class="callout callout--why">
 	<h4>Why runed, for one debounce</h4>

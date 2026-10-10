@@ -33,6 +33,12 @@
 
 <nav class="locales" aria-label={m.locale_label()}>
 	<TranslateIcon size={16} aria-hidden="true" />
+	<!--
+		The one link in the app that bypasses `#lib/href.ts`: `here` is whatever
+		page this is, in another language — a pathname, not a route id, and there
+		is nothing for `resolve()` to check. Said so to the linter, out loud.
+	-->
+	<!-- eslint-disable svelte/no-navigation-without-resolve -->
 	{#each locales as locale (locale)}
 		<a
 			href={localizeHref(here, { locale })}
@@ -44,6 +50,7 @@
 			{names[locale]}
 		</a>
 	{/each}
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
 </nav>
 
 <style>

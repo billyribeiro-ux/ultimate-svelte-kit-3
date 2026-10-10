@@ -54,6 +54,8 @@ function langFor(file) {
 	if (file.endsWith('.css')) return 'css';
 	if (file.endsWith('.json')) return 'json';
 	if (file.endsWith('.html')) return 'html';
+	if (file.endsWith('.sql')) return 'sql';
+	if (file.endsWith('.yaml') || file.endsWith('.yml')) return 'yaml';
 	return 'ts';
 }
 

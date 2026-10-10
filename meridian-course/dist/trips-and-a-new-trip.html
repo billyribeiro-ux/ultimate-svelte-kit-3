@@ -42,11 +42,11 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { resolve } from '$app/paths';
 	import { PlusIcon } from 'phosphor-svelte';
 	import { formatDistance } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { dayCount, formatRange } from '#lib/domain/dates.ts';
 	import type { Role } from '#lib/domain/schemas.ts';
 	import { tripPreview } from '#lib/remote/geo.remote.ts';
@@ -65,7 +65,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:35-85</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:35-82</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;!--
@@ -93,10 +93,7 @@
 				{#each trips as { trip, role, members, stops } (trip.id)}
 					{const preview = await tripPreview(trip.id)}
 					&lt;li class=&quot;card trip&quot;&gt;
-						&lt;a
-							class=&quot;trip__link&quot;
-							href={localizeHref(resolve('/(site)/t/[slug=slug]', { slug: trip.slug }))}
-						&gt;
+						&lt;a class=&quot;trip__link&quot; href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}&gt;
 							&lt;RouteThumb points={preview.points} label={trip.name} /&gt;
 							&lt;h2 class=&quot;trip__name&quot;&gt;{trip.name}&lt;/h2&gt;
 						&lt;/a&gt;
@@ -120,7 +117,7 @@
 	&lt;/svelte:boundary&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses <code>resolve()</code> with the route id, so a renamed folder is a type error and not a 404.</p>
+<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404.</p>
 
 <figure class="code">
 	<figcaption>

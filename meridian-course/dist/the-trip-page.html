@@ -278,7 +278,7 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:128-171</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:128-168</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -315,10 +315,7 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 				&lt;/button&gt;
 			{/if}
 			{#if owner}
-				&lt;a
-					class=&quot;btn btn--sm btn--ghost&quot;
-					href={localizeHref(resolve('/(site)/t/[slug=slug]/settings', { slug }))}
-				&gt;
+				&lt;a class=&quot;btn btn--sm btn--ghost&quot; href={href('/(site)/t/[slug=slug]/settings', { slug })}&gt;
 					&lt;GearSixIcon size={16} aria-hidden=&quot;true&quot; /&gt;
 					{m.trip_settings()}
 				&lt;/a&gt;
@@ -329,16 +326,23 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:173-184</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:170-188</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;nav class=&quot;tabs no-print&quot; aria-label={m.app_name()}&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	`data-sveltekit-reset=&quot;false&quot;`: a tab is the same page with a different
+	panel, so the scroll position and the focus — on the tab just pressed,
+	as a tablist keeps it — survive the navigation. SvelteKit 3 folded the
+	old `noscroll` and `keepfocus` attributes into this one `reset`, and
+	only warns about the old names in development: it no longer reads them.
+--&gt;
+&lt;nav class=&quot;tabs no-print&quot; aria-label={m.app_name()}&gt;
 	{#each TABS as name (name)}
 		&lt;a
 			class=&quot;tabs__link&quot;
-			href=&quot;?tab={name}&quot;
+			href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
 			aria-current={tab === name ? 'page' : undefined}
-			data-sveltekit-noscroll
+			data-sveltekit-reset=&quot;false&quot;
 		&gt;
 			{tabLabels[name]()}
 		&lt;/a&gt;
@@ -348,7 +352,7 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:186-216</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:190-220</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if tab === 'itinerary'}
@@ -383,11 +387,11 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 		/&gt;
 	&lt;/div&gt;</code></pre>
 </figure>
-<p>The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — <code>live.reconnect()</code> is the method SvelteKit gives every live query. The tabs are links with <code>data-sveltekit-noscroll</code>. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same <code>view</code> and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in <code>view</code>.</p>
+<p>The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — <code>live.reconnect()</code> is the method SvelteKit gives every live query. The tabs are links to the same route with a different <code>?tab=</code> — <code>href()</code> with a route id that carries its search string — marked <code>data-sveltekit-reset=&quot;false&quot;</code> so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old <code>noscroll</code> and <code>keepfocus</code> attributes into that one <code>reset</code>, and only warns about the old names in development, it no longer reads them. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same <code>view</code> and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in <code>view</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:260-268</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:264-272</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}

@@ -39,10 +39,10 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:1-51</span></span>
+		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:1-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { error, json } from '@sveltejs/kit';
+	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { db, schema } from '#lib/server/db/index.ts';
@@ -61,6 +61,9 @@ import { listStops } from '#lib/server/trips.ts';
  * `access-control-allow-origin: *` is what makes it usable from another
  * origin at all, and is safe precisely because the response holds nothing
  * that was not already public by link.
+ *
+ * `Response.json(...)` is the platform's own; SvelteKit 3 deprecated the
+ * `json()` helper it used to ship because the two had become the same call.
  */
 const CORS = {
 	'access-control-allow-origin': '*',
@@ -72,7 +75,7 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 	if (!trip || trip.visibility !== 'link') error(404, 'No such trip.');
 
 	const stops = await listStops(trip.id);
-	return json(
+	return Response.json(
 		{
 			name: trip.name,
 			slug: trip.slug,
@@ -94,7 +97,7 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 
 export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204, headers: CORS });</code></pre>
 </figure>
-<p>The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. <code>access-control-allow-origin: *</code> is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. <code>[slug=slug].json</code> in a folder name is SvelteKit’s way of giving an endpoint an extension.</p>
+<p>The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. <code>access-control-allow-origin: *</code> is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. <code>[slug=slug].json</code> in a folder name is SvelteKit’s way of giving an endpoint an extension. And the body goes out through <code>Response.json(...)</code>, the platform’s own static method: SvelteKit 3 deprecated the <code>json()</code> and <code>text()</code> helpers it used to export, because the two had become the same call — same <code>content-type</code>, same <code>{ status, headers }</code> second argument.</p>
 <h3 id="the-frame">The frame</h3>
 
 <figure class="code">
@@ -113,14 +116,15 @@ export const csr = false;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/embed/[slug=slug]/+page.svelte<span class="code__lines">:1-56</span></span>
+		<span class="code__file">src/routes/embed/[slug=slug]/+page.svelte<span class="code__lines">:1-62</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { error } from '@sveltejs/kit';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate, formatRange } from '#lib/domain/dates.ts';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
@@ -168,7 +172,12 @@ export const csr = false;</code></pre>
 		{/each}
 	&lt;/ol&gt;
 
-	&lt;a class=&quot;embed__powered&quot; href={localizeHref(`/t/${slug}`)} target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;
+	&lt;a
+		class=&quot;embed__powered&quot;
+		href={href('/(site)/t/[slug=slug]', { slug })}
+		target=&quot;_blank&quot;
+		rel=&quot;noopener&quot;
+	&gt;
 		{m.embed_powered()}
 	&lt;/a&gt;
 &lt;/article&gt;</code></pre>
@@ -300,7 +309,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-121</span></span>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-122</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -335,7 +344,8 @@ if (event.url.pathname.startsWith('/embed/')) {
 				&lt;li&gt;{stop.name}{stop.date ? ` · ${stop.date}` : ''}&lt;/li&gt;
 			{/each}
 		&lt;/ol&gt;
-		&lt;a class=&quot;powered&quot; href=&quot;{base}/t/{route.slug}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;
+		&lt;!-- `external` is the literal truth here: this element lives on somebody else's page. --&gt;
+		&lt;a class=&quot;powered&quot; href=&quot;{base}/t/{route.slug}&quot; target=&quot;_blank&quot; rel=&quot;noopener external&quot;&gt;
 			Planned with Meridian
 		&lt;/a&gt;
 	&lt;/div&gt;
@@ -345,7 +355,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:75-93</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:80-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -516,11 +526,10 @@ export { MeridianRoute };</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-32</span></span>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { json } from '@sveltejs/kit';
-import { version } from '$app/env';
+	<pre><code class="lang-ts">import { version } from '$app/env';
 import type { RequestHandler } from './$types';
 import { client } from '#lib/server/db/index.ts';
 
@@ -536,6 +545,11 @@ import { client } from '#lib/server/db/index.ts';
  * `version` is the commit the build was made from (see `vite.config.ts`), so
  * &quot;which version is live?&quot; is one request. `no-store`, because a cached
  * &quot;healthy&quot; is worse than none.
+ *
+ * `Response.json(...)`, not Kit's `json(...)`: SvelteKit 3 deprecated its
+ * `json` and `text` helpers because the platform grew the same thing. The
+ * static method sets `content-type: application/json` and takes the same
+ * `{ status, headers }` the helper did, so nothing else changes.
  */
 const startedAt = Date.now();
 
@@ -544,9 +558,9 @@ export const GET: RequestHandler = async () =&gt; {
 	try {
 		await client.execute('select 1');
 	} catch {
-		return json({ ok: false, version }, { status: 503, headers });
+		return Response.json({ ok: false, version }, { status: 503, headers });
 	}
-	return json(
+	return Response.json(
 		{ ok: true, version, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
 		{ headers }
 	);

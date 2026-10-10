@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 
 	let { data } = $props();
@@ -21,7 +22,7 @@
 
 <article class="container guide">
 	<header class="guide__header stack stack--sm">
-		<p><a href={localizeHref('/guides')}>← {m.guides_all()}</a></p>
+		<p><a href={href('/guides')}>← {m.guides_all()}</a></p>
 		<h1>{data.guide.title}</h1>
 		<p class="lede">{data.guide.summary}</p>
 		<p class="cluster meta">

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { browser } from '$app/env';
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import { GearSixIcon } from 'phosphor-svelte';
 	import { formatDistance } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { canEdit, isOwner, type ViewerRole } from '#lib/domain/roles.ts';
 	import { fireAndForget } from '#lib/remote/fire-and-forget.ts';
@@ -159,10 +159,7 @@
 				</button>
 			{/if}
 			{#if owner}
-				<a
-					class="btn btn--sm btn--ghost"
-					href={localizeHref(resolve('/(site)/t/[slug=slug]/settings', { slug }))}
-				>
+				<a class="btn btn--sm btn--ghost" href={href('/(site)/t/[slug=slug]/settings', { slug })}>
 					<GearSixIcon size={16} aria-hidden="true" />
 					{m.trip_settings()}
 				</a>
@@ -170,13 +167,20 @@
 		</div>
 	</header>
 
+	<!--
+		`data-sveltekit-reset="false"`: a tab is the same page with a different
+		panel, so the scroll position and the focus — on the tab just pressed,
+		as a tablist keeps it — survive the navigation. SvelteKit 3 folded the
+		old `noscroll` and `keepfocus` attributes into this one `reset`, and
+		only warns about the old names in development: it no longer reads them.
+	-->
 	<nav class="tabs no-print" aria-label={m.app_name()}>
 		{#each TABS as name (name)}
 			<a
 				class="tabs__link"
-				href="?tab={name}"
+				href={href(`/(site)/t/[slug=slug]?tab=${name}`, { slug })}
 				aria-current={tab === name ? 'page' : undefined}
-				data-sveltekit-noscroll
+				data-sveltekit-reset="false"
 			>
 				{tabLabels[name]()}
 			</a>

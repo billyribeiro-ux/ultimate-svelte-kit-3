@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 
 	/**
 	 * What an error page says. Two `+error.svelte` files render it — the root
@@ -24,7 +24,7 @@
 	{#if page.error?.id}
 		<p class="hint"><code>{m.error_id({ id: page.error.id })}</code></p>
 	{/if}
-	<p><a class="btn" href={localizeHref('/trips')}>{m.error_back()}</a></p>
+	<p><a class="btn" href={href('/(site)/(app)/trips')}>{m.error_back()}</a></p>
 </section>
 
 <style>

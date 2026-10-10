@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:33-57</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:38-62</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig(({ mode }) =&gt; {
@@ -74,7 +74,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:59-93</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:64-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -119,7 +119,7 @@ dynamicCompileOptions({ filename, environment }) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:95-111</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:100-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -145,7 +145,7 @@ dynamicCompileOptions({ filename, environment }) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:113-140</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:118-145</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -181,7 +181,7 @@ experimental: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:142-161</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:147-166</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -210,7 +210,7 @@ prerender: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:163-209</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:168-214</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -267,7 +267,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:211-227</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:216-232</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -282,7 +282,7 @@ csrf: { trustedOrigins: [] },</code></pre>
  * `name` is the commit, because it has to be deterministic.
  */
 version: {
-	name: commitHash() ?? packageVersion,
+	name: commitHash() ?? pkg.version,
 	pollInterval: 60_000
 },
 
@@ -293,7 +293,7 @@ output: { bundleStrategy: 'split' }</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:230-264</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:235-269</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -337,7 +337,7 @@ sveltePhosphorOptimize()</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:267-274</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:272-279</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -352,7 +352,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:276-342</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:281-352</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -367,8 +367,13 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			 * and `getBoundingClientRect`, and the itinerary animates with
 			 * `animate:flip`. jsdom has none of those and would pass every test
 			 * you thought to write while doing nothing.
+			 *
+			 * No `extends` line. Since Vitest 5 an inline project inherits the
+			 * config that declares it — the plugins, `#lib`, Paraglide — so
+			 * naming this file again would load the Svelte plugin twice and
+			 * earn a warning. `extends: false` is the only thing left to say,
+			 * and it would be wrong here.
 			 */
-			extends: './vite.config.ts',
 			/*
 			 * The icons the tested components use, pre-bundled before the first
 			 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
@@ -403,8 +408,8 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 		},
 		{
 			// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
-			// schemas, the geodata build, the identity helpers.
-			extends: './vite.config.ts',
+			// schemas, the geodata build, the identity helpers. Inherits this
+			// config like the project above, for the same reason.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -423,11 +428,11 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 	]
 }</code></pre>
 </figure>
-<p>Two Vitest projects in one config, extending it: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.</p>
+<p>Two Vitest projects in one config — and no <code>extends</code> line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and <code>#lib</code> included, unless it says <code>extends: false</code>: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:346-381</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:356-391</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

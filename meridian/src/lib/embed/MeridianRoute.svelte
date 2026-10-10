@@ -114,7 +114,8 @@
 				<li>{stop.name}{stop.date ? ` · ${stop.date}` : ''}</li>
 			{/each}
 		</ol>
-		<a class="powered" href="{base}/t/{route.slug}" target="_blank" rel="noopener">
+		<!-- `external` is the literal truth here: this element lives on somebody else's page. -->
+		<a class="powered" href="{base}/t/{route.slug}" target="_blank" rel="noopener external">
 			Planned with Meridian
 		</a>
 	</div>

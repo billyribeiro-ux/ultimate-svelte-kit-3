@@ -43,7 +43,7 @@
 		<span class="code__file">Dockerfile<span class="code__lines">:20-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">ARG NODE_VERSION=24.20.0
+	<pre><code class="lang-ts">ARG NODE_VERSION=24.21.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps
@@ -67,7 +67,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">Dockerfile<span class="code__lines">:41-61</span></span>
+		<span class="code__file">Dockerfile<span class="code__lines">:41-62</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">FROM deps AS build
@@ -87,16 +87,17 @@ RUN pnpm run package &amp;&amp; pnpm run i18n &amp;&amp; pnpm exec svelte-kit sy
 
 # Production dependencies only, for the runtime stage. `--prod` drops
 # everything under devDependencies: the compilers, the test runners, drizzle-kit.
-# `CI=true` because pnpm 11 asks before it purges a modules directory and, with
-# no terminal to ask on, aborts instead — the first CI run of this file found that.
+# `CI=true` because pnpm asks before it purges a modules directory (11 did,
+# 12 still does) and, with no terminal to ask on, aborts instead — the first CI
+# run of this file found that.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     CI=true pnpm prune --prod --ignore-scripts</code></pre>
 </figure>
-<p>The <code>build</code> stage is <code>prepare</code> spelled out: package the library, compile the messages, sync the types, then build the element and the app. <code>PUBLIC_ORIGIN</code> is a <strong>build argument</strong>, and the stage refuses to continue without it, because SvelteKit bakes <code>paths.origin</code> into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — <code>src/env.ts</code> validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. <code>pnpm prune --prod</code> then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of <code>node_modules</code>. The <code>CI=true</code> in front of it is a scar from the first pipeline run: pnpm 11 asks for confirmation before it purges a modules directory, and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.</p>
+<p>The <code>build</code> stage is <code>prepare</code> spelled out: package the library, compile the messages, sync the types, then build the element and the app. <code>PUBLIC_ORIGIN</code> is a <strong>build argument</strong>, and the stage refuses to continue without it, because SvelteKit bakes <code>paths.origin</code> into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — <code>src/env.ts</code> validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. <code>pnpm prune --prod</code> then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of <code>node_modules</code>. The <code>CI=true</code> in front of it is a scar from the first pipeline run: pnpm asks for confirmation before it purges a modules directory — 11 did, 12 still does — and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">Dockerfile<span class="code__lines">:64-102</span></span>
+		<span class="code__file">Dockerfile<span class="code__lines">:65-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">FROM node:${NODE_VERSION}-slim AS runtime
@@ -173,7 +174,7 @@ client.close();</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:19-32</span></span>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:23-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const startedAt = Date.now();
@@ -183,9 +184,9 @@ export const GET: RequestHandler = async () =&gt; {
 	try {
 		await client.execute('select 1');
 	} catch {
-		return json({ ok: false, version }, { status: 503, headers });
+		return Response.json({ ok: false, version }, { status: 503, headers });
 	}
-	return json(
+	return Response.json(
 		{ ok: true, version, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
 		{ headers }
 	);
@@ -203,7 +204,7 @@ export const GET: RequestHandler = async () =&gt; {
 	await client.execute('select 1');
 };</code></pre>
 </figure>
-<p>“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and <code>select 1</code> is the cheapest way to ask. The response carries the <code>version</code> — the commit the build was made from, through <code>kit.version.name</code> in chapter 03 — so “which version is live?” is one request, and <code>cache-control: no-store</code>, because a cached “healthy” is worse than none. <code>init</code> in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.</p>
+<p>“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and <code>select 1</code> is the cheapest way to ask. The response carries the <code>version</code> — the commit the build was made from, through <code>version.name</code> in chapter 03 — so “which version is live?” is one request, and <code>cache-control: no-store</code>, because a cached “healthy” is worse than none. It goes out through <code>Response.json</code>, where SvelteKit 3 points you now that its own <code>json()</code> helper is deprecated. <code>init</code> in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.</p>
 
 <figure class="code">
 	<figcaption>
@@ -228,7 +229,7 @@ provider.register();</code></pre>
 		<span class="code__file">compose.yaml<span class="code__lines">:10-44</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">services:
+	<pre><code class="lang-yaml">services:
   meridian:
     build:
       context: .
@@ -323,7 +324,7 @@ compose.yaml
 		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:46-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">jobs:
+	<pre><code class="lang-yaml">jobs:
   verify:
     name: verify (check · lint · unit · build · e2e · package)
     runs-on: ubuntu-latest
@@ -376,7 +377,7 @@ compose.yaml
 		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:92-135</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">  image:
+	<pre><code class="lang-yaml">  image:
     name: image (build · run · health)
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -428,7 +429,7 @@ compose.yaml
 		<span class="code__file">../.github/workflows/meridian.yml<span class="code__lines">:137-164</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">  course:
+	<pre><code class="lang-yaml">  course:
     name: course (verify ranges · build · check pages)
     runs-on: ubuntu-latest
     timeout-minutes: 15

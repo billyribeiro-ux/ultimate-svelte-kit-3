@@ -274,13 +274,14 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-46</span></span>
+		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
 
@@ -308,7 +309,9 @@ async function remove(userId: string) {
 
 		{#if invite.alreadyMember}
 			&lt;p&gt;{m.join_already()}&lt;/p&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href={localizeHref(`/t/${invite.trip.slug}`)}&gt;{m.join_open()}&lt;/a&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href={href('/(site)/t/[slug=slug]', { slug: invite.trip.slug })}&gt;
+				{m.join_open()}
+			&lt;/a&gt;
 		{:else if invite.used}
 			&lt;p class=&quot;issue&quot;&gt;{m.join_used()}&lt;/p&gt;
 		{:else if invite.expired}
@@ -370,15 +373,14 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-28</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-27</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { CURRENCIES } from '#lib/domain/money.ts';
 	import type { Visibility } from '#lib/domain/schemas.ts';
 	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
@@ -405,7 +407,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:30-55</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:29-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function save(event: SubmitEvent) {
@@ -439,7 +441,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:118-129</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:117-128</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- A remote form: deleting works with JavaScript off, and asks first when it is on. --&gt;

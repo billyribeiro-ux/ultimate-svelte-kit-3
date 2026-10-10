@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { db, schema } from '#lib/server/db/index.ts';
@@ -17,6 +17,9 @@ import { listStops } from '#lib/server/trips.ts';
  * `access-control-allow-origin: *` is what makes it usable from another
  * origin at all, and is safe precisely because the response holds nothing
  * that was not already public by link.
+ *
+ * `Response.json(...)` is the platform's own; SvelteKit 3 deprecated the
+ * `json()` helper it used to ship because the two had become the same call.
  */
 const CORS = {
 	'access-control-allow-origin': '*',
@@ -28,7 +31,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	if (!trip || trip.visibility !== 'link') error(404, 'No such trip.');
 
 	const stops = await listStops(trip.id);
-	return json(
+	return Response.json(
 		{
 			name: trip.name,
 			slug: trip.slug,

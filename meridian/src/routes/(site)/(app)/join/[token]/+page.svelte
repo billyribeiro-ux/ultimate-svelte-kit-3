@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
 
@@ -29,7 +30,9 @@
 
 		{#if invite.alreadyMember}
 			<p>{m.join_already()}</p>
-			<a class="btn btn--primary" href={localizeHref(`/t/${invite.trip.slug}`)}>{m.join_open()}</a>
+			<a class="btn btn--primary" href={href('/(site)/t/[slug=slug]', { slug: invite.trip.slug })}>
+				{m.join_open()}
+			</a>
 		{:else if invite.used}
 			<p class="issue">{m.join_used()}</p>
 		{:else if invite.expired}

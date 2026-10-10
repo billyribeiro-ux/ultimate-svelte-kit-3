@@ -42,8 +42,15 @@
 	 * `view-transition-name` (a trip card becoming a trip header) morph.
 	 * Browsers without the API, and people who prefer reduced motion (the
 	 * CSS turns the animation off), get an ordinary navigation.
+	 *
+	 * SvelteKit 3 runs the navigation hooks for shallow routing too — a
+	 * `goto(url, { shallow: true })` that only pushes `page.state` — and a
+	 * cross-fade over a page that did not change is a flicker, so those are
+	 * let through untouched. `navigation.shallow` is the flag Kit sets for
+	 * exactly this check.
 	 */
 	onNavigate((navigation) => {
+		if (navigation.shallow && navigation.type === 'goto') return;
 		if (!document.startViewTransition) return;
 		return new Promise((resolve) => {
 			document.startViewTransition(async () => {
@@ -58,8 +65,13 @@
 	 * navigation would ask for chunks that no longer exist, so the next
 	 * navigation becomes a full page load. `version.pollInterval` in
 	 * `vite.config.ts` is what makes `updated.current` flip.
+	 *
+	 * Not for a shallow `goto`, though: that asks for no chunk at all, and
+	 * turning "open a dialog" into a reload because a deploy happened would
+	 * lose whatever the person was typing. The next real navigation reloads.
 	 */
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(({ willUnload, to, shallow, type }) => {
+		if (shallow && type === 'goto') return;
 		if (updated.current && !willUnload && to?.url) location.href = to.url.href;
 	});
 

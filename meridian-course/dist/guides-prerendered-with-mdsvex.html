@@ -252,9 +252,9 @@ export const load: PageLoad = ({ params }) =&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 	import { guides } from '#lib/guides/index.ts';
 
@@ -281,7 +281,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 					so renaming the folder is a compile error here rather than a 404.
 				--&gt;
 				&lt;h2 class=&quot;title&quot;&gt;
-					&lt;a href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}&gt;
+					&lt;a href={href('/guides/[guide]', { guide: guide.slug })}&gt;
 						{guide.title}
 					&lt;/a&gt;
 				&lt;/h2&gt;
@@ -302,12 +302,13 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-40</span></span>
+		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-41</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 
 	let { data } = $props();
@@ -328,7 +329,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 &lt;article class=&quot;container guide&quot;&gt;
 	&lt;header class=&quot;guide__header stack stack--sm&quot;&gt;
-		&lt;p&gt;&lt;a href={localizeHref('/guides')}&gt;← {m.guides_all()}&lt;/a&gt;&lt;/p&gt;
+		&lt;p&gt;&lt;a href={href('/guides')}&gt;← {m.guides_all()}&lt;/a&gt;&lt;/p&gt;
 		&lt;h1&gt;{data.guide.title}&lt;/h1&gt;
 		&lt;p class=&quot;lede&quot;&gt;{data.guide.summary}&lt;/p&gt;
 		&lt;p class=&quot;cluster meta&quot;&gt;
@@ -356,7 +357,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
 
@@ -378,14 +379,14 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 &lt;header class=&quot;guides-header&quot;&gt;
 	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
-		&lt;a class=&quot;brand&quot; href={localizeHref('/')}&gt;
+		&lt;a class=&quot;brand&quot; href={href('/(site)')}&gt;
 			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
 			{m.app_name()}
 		&lt;/a&gt;
 		&lt;nav class=&quot;cluster&quot; aria-label={m.nav_menu()}&gt;
-			&lt;a href={localizeHref('/guides')} aria-current=&quot;page&quot;&gt;{m.nav_guides()}&lt;/a&gt;
-			&lt;a href={localizeHref('/explore')}&gt;{m.nav_explore()}&lt;/a&gt;
-			&lt;a href={localizeHref('/trips')}&gt;{m.nav_trips()}&lt;/a&gt;
+			&lt;a href={href('/guides')} aria-current=&quot;page&quot;&gt;{m.nav_guides()}&lt;/a&gt;
+			&lt;a href={href('/(site)/explore')}&gt;{m.nav_explore()}&lt;/a&gt;
+			&lt;a href={href('/(site)/(app)/trips')}&gt;{m.nav_trips()}&lt;/a&gt;
 			&lt;LocaleSwitcher keepSearch={false} /&gt;
 		&lt;/nav&gt;
 	&lt;/div&gt;

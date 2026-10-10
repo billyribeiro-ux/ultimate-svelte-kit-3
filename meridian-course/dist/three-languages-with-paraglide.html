@@ -97,7 +97,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:230-252</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:235-257</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -246,11 +246,17 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:34-47</span></span>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:34-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav class=&quot;locales&quot; aria-label={m.locale_label()}&gt;
 	&lt;TranslateIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+	&lt;!--
+		The one link in the app that bypasses `#lib/href.ts`: `here` is whatever
+		page this is, in another language — a pathname, not a route id, and there
+		is nothing for `resolve()` to check. Said so to the linter, out loud.
+	--&gt;
+	&lt;!-- eslint-disable svelte/no-navigation-without-resolve --&gt;
 	{#each locales as locale (locale)}
 		&lt;a
 			href={localizeHref(here, { locale })}
@@ -262,14 +268,15 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 			{names[locale]}
 		&lt;/a&gt;
 	{/each}
+	&lt;!-- eslint-enable svelte/no-navigation-without-resolve --&gt;
 &lt;/nav&gt;</code></pre>
 </figure>
-<p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice.</p>
+<p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through <code>href()</code> from chapter 23: <code>here</code> is a pathname, not a route id, and there is nothing for <code>resolve()</code> to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.</p>
 <p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Paraglide and not svelte-i18n, or paraglide-sveltekit</h4>
-	<p>svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. <code>@inlang/paraglide-sveltekit</code> was the framework-specific wrapper, and it has been folded into Paraglide 2’s own <code>strategy</code> plus the <code>reroute</code> hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.25, one universal hook, one server handler, and a component of links.</p>
+	<p>svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. <code>@inlang/paraglide-sveltekit</code> was the framework-specific wrapper, and it has been folded into Paraglide 2’s own <code>strategy</code> plus the <code>reroute</code> hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.</p>
 </aside>
 
 <aside class="callout callout--check">

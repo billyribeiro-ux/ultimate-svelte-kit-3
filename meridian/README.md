@@ -5,14 +5,15 @@ friends plan a trip together: stops on days, a map and a globe of the route,
 a shared ledger that says who owes whom, notes that save themselves, guides in
 three languages, and a link that puts the route on somebody else's page.
 
-It is built on Svelte 5.57, SvelteKit 3.0.0-next.25 and Vite 8, as of
-September 2026, and it exists to use every current capability of both for
-something real. The course in [`../meridian-course`](../meridian-course) reads
+It is built on Svelte 5.57, SvelteKit 3.0.1 and Vite 8.3, as of October
+2026, and it exists to use every current capability of both for something
+real. The course in [`../meridian-course`](../meridian-course) reads
 every line of it in order and says why.
 
 ## Run it
 
-Requires Node 24.20.0 (`.nvmrc`) and pnpm 11. This is a pnpm workspace: the
+Requires Node 24.21.0 (`.nvmrc`, the current LTS) and pnpm 12.10.1
+(`packageManager`; `corepack enable` gets it). This is a pnpm workspace: the
 app at the root, the geodesy library in `packages/waypoint`.
 
 ```bash
@@ -34,7 +35,7 @@ answers at `/embed/seedjapan2` and `/api/route/seedjapan2.json`.
 ```bash
 pnpm run check               # svelte-check, strict
 pnpm run lint                # prettier + eslint
-pnpm run test:unit -- --run  # two Vitest projects: Node for logic, Chromium for components
+pnpm run test:unit -- --run  # two Vitest 5 projects: Node for logic, Chromium for components
 pnpm run build               # the custom element, then the app
 pnpm run test:e2e            # Playwright against node build/index.js, desktop and Pixel 7
 pnpm run verify              # all of the above, in that order
@@ -70,6 +71,7 @@ image, and checks the course.
 | `src/lib/embed/`                         | the `<meridian-route>` custom element and its own Vite config                                   |
 | `src/lib/guides/`, `src/content/guides/` | mdsvex guides, prerendered in three languages                                                   |
 | `src/lib/styles/`, `src/lib/ui/`         | tokens, mobile-first CSS, the shell, the theme                                                  |
+| `src/lib/href.ts`                        | the one way to write an internal link: `resolve()` with a typed route id, then the locale       |
 | `src/hooks.server.ts`, `src/hooks.ts`    | locale, identity, security headers, `reroute`, `transport`                                      |
 | `vite.config.ts`                         | every SvelteKit option, commented: CSP, tracing, version, prerender, the test projects          |
 | `e2e/`                                   | five Playwright suites; `collab.e2e.ts` runs two browsers on one trip                           |

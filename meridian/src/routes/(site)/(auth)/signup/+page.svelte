@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { keepTyped } from '#lib/forms/keep-typed.ts';
 	import { signUp } from '#lib/remote/auth.remote.ts';
 
@@ -56,7 +56,7 @@
 
 	<p class="muted">
 		{m.auth_have_account()}
-		<a href={localizeHref(`/signin?redirectTo=${encodeURIComponent(redirectTo)}`)}>
+		<a href={href(`/(site)/(auth)/signin?redirectTo=${encodeURIComponent(redirectTo)}`)}>
 			{m.auth_sign_in()}
 		</a>
 	</p>

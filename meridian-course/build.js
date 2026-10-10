@@ -36,7 +36,7 @@ const COURSE = {
 		map, a globe that flies the route, days you can drag, expenses split to the
 		cent, notes that save themselves, invites, and three languages — built from
 		an empty folder as a pnpm workspace with a library you could publish. It uses
-		everything Svelte 5 and SvelteKit 3 offer as of September 2026, and it goes
+		everything Svelte 5 and SvelteKit 3.0.1 offer as of October 2026, and it goes
 		out into the ecosystem on purpose: Bits UI, svelte-maplibre, Threlte, TanStack
 		Table, LayerChart, Tiptap, svelte-dnd-action, Paraglide, Better Auth, runed,
 		mdsvex, enhanced-img — each chosen against alternatives, and each with the

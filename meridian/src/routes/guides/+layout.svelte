@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
 
@@ -23,14 +23,14 @@
 
 <header class="guides-header">
 	<div class="container cluster cluster--between">
-		<a class="brand" href={localizeHref('/')}>
+		<a class="brand" href={href('/(site)')}>
 			<CompassRoseIcon size={22} weight="duotone" aria-hidden="true" />
 			{m.app_name()}
 		</a>
 		<nav class="cluster" aria-label={m.nav_menu()}>
-			<a href={localizeHref('/guides')} aria-current="page">{m.nav_guides()}</a>
-			<a href={localizeHref('/explore')}>{m.nav_explore()}</a>
-			<a href={localizeHref('/trips')}>{m.nav_trips()}</a>
+			<a href={href('/guides')} aria-current="page">{m.nav_guides()}</a>
+			<a href={href('/(site)/explore')}>{m.nav_explore()}</a>
+			<a href={href('/(site)/(app)/trips')}>{m.nav_trips()}</a>
 			<LocaleSwitcher keepSearch={false} />
 		</nav>
 	</div>

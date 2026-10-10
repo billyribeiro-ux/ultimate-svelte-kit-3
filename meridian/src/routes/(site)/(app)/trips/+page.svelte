@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { PlusIcon } from 'phosphor-svelte';
 	import { formatDistance } from '@meridian/waypoint/geo';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { dayCount, formatRange } from '#lib/domain/dates.ts';
 	import type { Role } from '#lib/domain/schemas.ts';
 	import { tripPreview } from '#lib/remote/geo.remote.ts';
@@ -26,7 +26,7 @@
 <section class="container stack stack--lg trips">
 	<header class="cluster cluster--between">
 		<h1>{m.trips_title()}</h1>
-		<a class="btn btn--primary" href={localizeHref('/trips/new')}>
+		<a class="btn btn--primary" href={href('/(site)/(app)/trips/new')}>
 			<PlusIcon size={16} aria-hidden="true" />
 			{m.nav_new_trip()}
 		</a>
@@ -57,10 +57,7 @@
 				{#each trips as { trip, role, members, stops } (trip.id)}
 					{const preview = await tripPreview(trip.id)}
 					<li class="card trip">
-						<a
-							class="trip__link"
-							href={localizeHref(resolve('/(site)/t/[slug=slug]', { slug: trip.slug }))}
-						>
+						<a class="trip__link" href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}>
 							<RouteThumb points={preview.points} label={trip.name} />
 							<h2 class="trip__name">{trip.name}</h2>
 						</a>

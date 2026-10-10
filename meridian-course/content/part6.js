@@ -57,7 +57,7 @@ export const part6 = [
 				type: 'p',
 				text: 'The `(auth)` group is a centred card; the `(app)` group is a guard. Every route under `(app)` needs a person, and checking once in a layout `load` means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with `redirectTo` carrying the page they wanted. The remote functions check too, with `requireUser()`, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.'
 			},
-			code('src/lib/ui/Header.svelte', 68, 83, { partial: true }),
+			code('src/lib/ui/Header.svelte', 69, 84, { partial: true }),
 			{
 				type: 'p',
 				text: 'Signing out is a `<form>` spread from `signOut`, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s `load` runs again and the header renders the signed-out state.'
@@ -81,10 +81,10 @@ export const part6 = [
 		goal: 'Compose a page from two remote reads and one remote form, and let a headless picker participate in a form it knows nothing about.',
 		blocks: [
 			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 1, 20),
-			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 35, 85, { partial: true }),
+			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 35, 82, { partial: true }),
 			{
 				type: 'p',
-				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses `resolve()` with the route id, so a renamed folder is a type error and not a 404.'
+				text: 'The boundary has a `failed` snippet and no `pending` one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a `pending` snippet is what the server would render instead. Inside the loop, every card awaits `tripPreview(trip.id)`; those calls are made in the same tick, and `query.batch` sends them as one request. Twenty trips is two round trips, not twenty-one. The card link uses `href()` from chapter 23 — `resolve()` with the route id, then the language prefix — so a renamed folder is a type error and not a 404.'
 			},
 			code('src/lib/ui/RouteThumb.svelte', 1, 43),
 			code('src/lib/ui/RouteThumb.svelte', 45, 53),
@@ -147,7 +147,7 @@ export const part6 = [
 				text: 'Two page options do the work. `prerender = true` renders the page once at build time to a file. `csr = false` ships no client JavaScript for it — not deferred, none. A dynamic route can only be prerendered if SvelteKit knows its parameter values; the crawler finds most by following links, and `entries` says them out loud so a guide nothing links to is still built. The `load` is universal and runs at build time; the 404 for an unknown slug is what a request for a page that was not built gets from the server, because prerendered routes are not in the runtime manifest at all.'
 			},
 			code(`${ROUTES}/guides/+page.svelte`, 1, 47),
-			code(`${ROUTES}/guides/[guide]/+page.svelte`, 1, 40),
+			code(`${ROUTES}/guides/[guide]/+page.svelte`, 1, 41),
 			{
 				type: 'p',
 				text: 'The guide is a component — mdsvex compiled the Markdown into one — and `load` handed it over; rendering a component held in a variable is `<Guide />`, the same as any other. The dates are formatted in the page’s locale, which is decided per prerendered file: the crawler follows the language links, `reroute` maps `/de/guides` to the same route, the middleware sets German, and the output has a `de/guides.html` beside `guides.html`.'
@@ -205,10 +205,10 @@ Error: Cannot access url.search on a page with prerendering enabled
 				text: 'Three things in forty lines. `await places()` at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what `prerender` remote functions are for. `Intl.DisplayNames` turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s `Debounced` follows `query` with a delay: `settled.current` changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so `query` stays a plain `$state`.'
 			},
 			code(`${ROUTES}/(site)/explore/+page.svelte`, 52, 69),
-			code(`${ROUTES}/(site)/explore/+page.svelte`, 100, 136),
+			code(`${ROUTES}/(site)/explore/+page.svelte`, 100, 133),
 			{
 				type: 'p',
-				text: 'Two `resolve()` calls, one with a parameter and one without. The route id for the new-trip page is `/(site)/(app)/trips/new` — route ids include their groups, which surprises people the first time — and `resolve` gives back the pathname `/trips/new`, type-checked against the routes that exist. `localizeHref` then adds the language prefix. The place links to its guide when one exists, through `guideForPlace` from chapter 34.'
+				text: 'Two `href()` calls, one with a parameter and one without, and `resolve()` with the route id underneath each. The route id for the new-trip page is `/(site)/(app)/trips/new?place=…` — route ids include their groups, which surprises people the first time, and since SvelteKit 2.26 they may carry their search string — and `resolve` gives back `/trips/new?place=lisbon`, type-checked against the routes that exist, before the language prefix goes on. The place links to its guide when one exists, through `guideForPlace` from chapter 34.'
 			},
 			{
 				type: 'why',
@@ -257,15 +257,15 @@ Error: Cannot access url.search on a page with prerendering enabled
 				type: 'p',
 				text: 'A trip leaves the app in two shapes: an `<iframe>` pointing at `/embed/<slug>`, and a `<meridian-route>` element a host page includes with one script tag. Both exist only for trips the owner made visible by link, and both are the reason for two exceptions in the security configuration.'
 			},
-			code(`${ROUTES}/api/route/[slug=slug].json/+server.ts`, 1, 51),
+			code(`${ROUTES}/api/route/[slug=slug].json/+server.ts`, 1, 54),
 			{
 				type: 'p',
-				text: 'The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. `access-control-allow-origin: *` is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. `[slug=slug].json` in a folder name is SvelteKit’s way of giving an endpoint an extension.'
+				text: 'The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. `access-control-allow-origin: *` is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. `[slug=slug].json` in a folder name is SvelteKit’s way of giving an endpoint an extension. And the body goes out through `Response.json(...)`, the platform’s own static method: SvelteKit 3 deprecated the `json()` and `text()` helpers it used to export, because the two had become the same call — same `content-type`, same `{ status, headers }` second argument.'
 			},
 
 			{ type: 'h3', id: 'the-frame', text: 'The frame' },
 			code(`${ROUTES}/embed/[slug=slug]/+page.ts`, 1, 7),
-			code(`${ROUTES}/embed/[slug=slug]/+page.svelte`, 1, 56),
+			code(`${ROUTES}/embed/[slug=slug]/+page.svelte`, 1, 62),
 			code('src/hooks.server.ts', 119, 136),
 			{
 				type: 'p',
@@ -279,12 +279,12 @@ Error: Cannot access url.search on a page with prerendering enabled
 				type: 'p',
 				text: '`<svelte:options customElement>` names the tag, asks for an open shadow root, and maps two attributes onto props — so `<meridian-route slug="…">` on a host page becomes `slug` in the component. The element fetches the JSON and draws the stops as a projected line the way `RouteThumb` does. It is deliberately not the app’s component: an element that imported the design tokens would bring the tokens with it, and a shadow root means the host page’s CSS cannot reach in and ours cannot leak out.'
 			},
-			code('src/lib/embed/MeridianRoute.svelte', 85, 121),
+			code('src/lib/embed/MeridianRoute.svelte', 85, 122),
 			{
 				type: 'p',
 				text: 'Inside, a boundary with `pending` and `failed` around an `await` in markup — the same async pattern as every page, in a component that will run on a page that has never heard of SvelteKit. The style block is the whole of its styling, with literal colours, because there are no tokens where it is going.'
 			},
-			code('vite.config.ts', 75, 93),
+			code('vite.config.ts', 80, 98),
 			code('vite.element.config.ts', 1, 42),
 			{
 				type: 'p',
@@ -299,7 +299,7 @@ Error: Cannot access url.search on a page with prerendering enabled
 			},
 
 			{ type: 'h3', id: 'health', text: 'And one endpoint for the machines' },
-			code(`${ROUTES}/healthz/+server.ts`, 1, 32),
+			code(`${ROUTES}/healthz/+server.ts`, 1, 36),
 			{
 				type: 'p',
 				text: 'The question a load balancer, a container runtime and a person with `curl` all ask: is this process able to serve? “Able” means the database answers. `version` from `$app/env` is the commit the build was made from, so “which version is live?” is one request. `no-store`, because a cached “healthy” is worse than none. Chapter 44 shows the Dockerfile and the CI job asking it.'

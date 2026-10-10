@@ -28,7 +28,8 @@ export default defineConfig({
 		projects: [
 			{
 				// The components and the reactive `Route` class, in a real browser.
-				extends: './vite.config.ts',
+				// No `extends`: since Vitest 5 an inline project inherits the config
+				// that declares it, plugins included, unless it says `extends: false`.
 				test: {
 					name: 'client',
 					browser: {
@@ -41,7 +42,6 @@ export default defineConfig({
 			},
 			{
 				// The geodesy: pure functions, plain Node.
-				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',

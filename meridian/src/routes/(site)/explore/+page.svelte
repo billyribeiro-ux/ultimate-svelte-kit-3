@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Debounced } from 'runed';
 	import { MagnifyingGlassIcon } from 'phosphor-svelte';
-	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { guideForPlace } from '#lib/guides/index.ts';
 	import { places, type Place } from '#lib/remote/geo.remote.ts';
 
@@ -117,15 +117,12 @@
 							{#if guide}
 								<a
 									class="btn btn--sm btn--ghost"
-									href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}
+									href={href('/guides/[guide]', { guide: guide.slug })}
 								>
 									{m.explore_guide()}
 								</a>
 							{/if}
-							<a
-								class="btn btn--sm"
-								href={localizeHref(`${resolve('/(site)/(app)/trips/new')}?place=${place.id}`)}
-							>
+							<a class="btn btn--sm" href={href(`/(site)/(app)/trips/new?place=${place.id}`)}>
 								{m.explore_start()}
 							</a>
 						</div>

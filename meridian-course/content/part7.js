@@ -16,7 +16,7 @@ export const part7 = [
 		slug: 'choosing-libraries',
 		title: 'The survey: what was chosen, what was rejected, and why',
 		summary:
-			'Every dependency in the project against the four questions from chapter 01, with its version as of September 2026 and the alternatives it beat — and the packages that did not make it, with the reason: not yet on Svelte 5 or SvelteKit 3, folded into the framework, or too heavy for what it did.',
+			'Every dependency in the project against the four questions from chapter 01, with its version as of October 2026 and the alternatives it beat — and the packages that did not make it, with the reason: not yet on Svelte 5 or SvelteKit 3, folded into the framework, or too heavy for what it did.',
 		goal: 'Have a written, reproducible method for picking a library in the Svelte ecosystem, and know the state of the main candidates as of the day this project was built.',
 		blocks: [
 			{
@@ -29,7 +29,7 @@ export const part7 = [
 			{
 				type: 'terminal',
 				code: `
-$ pnpm add <package>           # against Svelte 5.57 / SvelteKit 3.0.0-next.25 / Vite 8.2
+$ pnpm add <package>           # against Svelte 5.57 / SvelteKit 3.0.1 / Vite 8.3
 $ pnpm run check               # svelte-check with the project's strict tsconfig
 $ pnpm run build               # the production build, including the server bundle
 $ pnpm exec vitest --project client   # a real Chromium, for anything that renders
@@ -46,13 +46,13 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 				type: 'ul',
 				items: [
 					'**Headless — behaviour and accessibility, no pixels.** Bits UI 2.19 (Dialog, Combobox, Command, DateRangePicker); TanStack Table 9.2. Beat: Melt UI (Bits is built on its builders and adds the component layer), shadcn-svelte (a copy-in kit *on top of* Bits — right for a team that wants the styling done, wrong for a course about the primitives), Skeleton (a full framework with its own tokens; the project already has tokens), Flowbite-Svelte (styled, Tailwind, Svelte 4 lineage).',
-					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.7; Threlte 8.6 / extras 9.21 over three.js 0.185; LayerChart 2.3 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
+					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.13; Threlte 8.6 / extras 9.22 over three.js 0.186; LayerChart 2.6 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
 					'**Imperative through an attachment — wants one element and owns it.** Tiptap 3.31 through `{@attach}`; GSAP 3.15 through `{@attach}`. Beat: the Svelte wrappers for Tiptap (nothing to add), ProseMirror directly (Tiptap *is* ProseMirror with a schema and commands), Lexical (React-first), Quill (its own data model).',
-					'**Actions.** svelte-dnd-action 0.9.79. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard).',
-					'**Compilers and preprocessors.** Paraglide 2.25; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0-next.5; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
-					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.2; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
-					'**Utilities.** runed 0.37 (`Debounced`); valibot 1.4 (every schema); svelte-sonner 1.2 (toasts); `@internationalized/date` 3.12 (dates without time zones). Beat: zod (works; twice the bytes for the same validators, and valibot’s functions tree-shake), `svelte-french-toast` (Svelte 4), `dayjs` and `date-fns` (instants, not calendar dates; and `Intl` formats better than either).',
-					'**Packaging and proof.** `@sveltejs/package` 3.0.0-next.7, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.0, Playwright 1.62. Beat: `tsup` (does not understand `.svelte`), Storybook (chapter 07’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
+					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard).',
+					'**Compilers and preprocessors.** Paraglide 2.26; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
+					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.7; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
+					'**Utilities.** runed 0.37 (`Debounced`); valibot 1.5 (every schema); svelte-sonner 1.2 (toasts); `@internationalized/date` 3.12 (dates without time zones). Beat: zod (works; twice the bytes for the same validators, and valibot’s functions tree-shake), `svelte-french-toast` (Svelte 4), `dayjs` and `date-fns` (instants, not calendar dates; and `Intl` formats better than either).',
+					'**Packaging and proof.** `@sveltejs/package` 3.0.0, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.1 on Vitest 5, Playwright 1.64. Beat: `tsup` (does not understand `.svelte`), Storybook (chapter 07’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
 				]
 			},
 
@@ -79,24 +79,27 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 			{
 				type: 'terminal',
 				code: `
-svelte                 5.57.x     runes, attachments, await in markup, boundaries
-@sveltejs/kit          3.0.0-next.25   remote functions, tracing, env.ts, defineParams
-vite                   8.2.x      rolldown-based; \`?worker&url\`, optimizeDeps as ever
-typescript             6.0.x
+node                   24.21.0    the current LTS; pnpm 12.10.1 through corepack
+svelte                 5.57.2     runes, attachments, await in markup, boundaries
+@sveltejs/kit          3.0.1      GA: remote functions, tracing, env.ts, defineParams
+@sveltejs/adapter-node 6.0.0      no ORIGIN variable; content-hash ETags; GET/HEAD only
+vite                   8.3.x      rolldown-based; \`?worker&url\`, optimizeDeps as ever
+vitest                 5.0.x      projects inherit the config; exact locators
+typescript             6.0.x      the newest major Kit, svelte-check and typescript-eslint take
 bits-ui                2.19.x     headless; DateRangePicker on @internationalized/date
-svelte-maplibre        2.0.x      maplibre-gl 6.7 (deduped)
-@threlte/core          8.6.x      + @threlte/extras 9.21, three 0.185
+svelte-maplibre        2.0.x      maplibre-gl 6.13 (deduped)
+@threlte/core          8.6.x      + @threlte/extras 9.22, three 0.186
 @tanstack/svelte-table 9.2.x      runes adapter; \`tableFeatures\`, \`columnMeta\` slot
-layerchart             2.3.x
+layerchart             2.6.x
 @tiptap/core           3.31.x     + starter-kit, pm
-svelte-dnd-action      0.9.79
-@inlang/paraglide-js   2.25.x
-better-auth            1.7.2      \`issuer\` column; \`better-auth/minimal\`
+svelte-dnd-action      0.9.80
+@inlang/paraglide-js   2.26.x
+better-auth            1.7.7      \`better-auth/minimal\`; the 1.7.0 \`issuer\` column withdrawn
 drizzle-orm            0.45.x     drizzle-kit 0.31
 runed                  0.37.x
 mdsvex                 0.12.8
-@sveltejs/enhanced-img 1.0.0-next.5
-@sveltejs/package      3.0.0-next.7   reads config from Vite`
+@sveltejs/enhanced-img 1.0.0      GA
+@sveltejs/package      3.0.0      GA; reads config from Vite, rewrites #lib to relative`
 			},
 			{
 				type: 'why',
@@ -132,7 +135,7 @@ mdsvex                 0.12.8
 				type: 'p',
 				text: 'Bits UI components are trees of *parts*: `Dialog.Root` holds the state, `Dialog.Portal` moves the content to the end of the body, `Dialog.Overlay` and `Dialog.Content` are the elements, `Dialog.Title` and `Dialog.Description` wire the ARIA relationships. Each part accepts `class`, which is how the tokens get in. The state is on the root, controlled two ways: `open={mode !== null}` plus `onOpenChange` for the dialog whose openness is derived from something else, `bind:open` for the palette whose openness is its own.'
 			},
-			code('src/lib/trip/CommandPalette.svelte', 69, 84, { partial: true }),
+			code('src/lib/trip/CommandPalette.svelte', 72, 87, { partial: true }),
 			{
 				type: 'p',
 				text: 'The same idiom nests: the palette is a `Dialog` around a `Command`, and the `Command` has its own root and parts. Nothing about the composition is special — they are components — which is what makes a headless library composable in the first place.'

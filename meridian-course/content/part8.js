@@ -23,10 +23,10 @@ export const part8 = [
 			},
 
 			{ type: 'h3', id: 'two-projects', text: 'Two projects in one config' },
-			code('vite.config.ts', 276, 342),
+			code('vite.config.ts', 281, 352),
 			{
 				type: 'p',
-				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Both `extends` the main config, so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
+				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Neither names an `extends`: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
 			},
 			{
 				type: 'p',
@@ -259,7 +259,7 @@ Running 36 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 163, 209),
+			code('vite.config.ts', 168, 214),
 			{
 				type: 'p',
 				text: 'A Content Security Policy is a header that tells the browser which sources of script, style, image, font, connection and frame the page is allowed to use; anything else is blocked and reported to the console. Its purpose is to make cross-site scripting *not work*: an attacker who manages to inject `<script>` into a page gains nothing if inline scripts are refused. `default-src \'self\'` is the floor — nothing from anywhere but this origin — and every other directive is a narrow, commented exception.'
@@ -269,7 +269,7 @@ Running 36 tests using 1 worker
 				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter 34) are the reason the project needs both.'
 			},
 			code('src/app.html', 20, 25),
-			code('vite.config.ts', 359, 364),
+			code('vite.config.ts', 369, 374),
 			{
 				type: 'p',
 				text: 'The theme boot script — the one that sets the dark class before first paint so a dark theme never flashes light — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'
@@ -312,7 +312,7 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: 'An **open redirect** is a sign-in page that will send a person anywhere the `redirectTo` parameter says — including `https://evil.example/signin`, styled to look like ours. The guard is a regular expression that allows one leading slash and *only* one: `//evil.example` is a protocol-relative URL, starts with a slash, and still leaves the site. The choice to **sanitise** rather than reject is deliberate: the value lives in a hidden field the person cannot see, so a crafted link would otherwise leave them staring at “invalid redirect” with no way in. Falling back to `/trips` is safe and kind.'
 			},
-			code('src/routes/api/route/[slug=slug].json/+server.ts', 21, 51),
+			code('src/routes/api/route/[slug=slug].json/+server.ts', 24, 54),
 			{
 				type: 'p',
 				text: 'The route API is the one endpoint with `access-control-allow-origin: *`, and the comment explains why that is safe rather than assumes it: the response holds nothing that was not already public by link. The authorisation is *content-based* — a trip that is not visible by link is a 404 whether or not the caller is signed in — because the custom element runs on somebody else’s page, where our cookies are not sent and must not matter. That is the rule for any CORS-open endpoint: it may return only what an anonymous stranger could already see, and it must decide from the data, not the session.'
@@ -360,12 +360,12 @@ Running 36 tests using 1 worker
 				type: 'p',
 				text: 'The `deps` stage installs dependencies, and nothing else, so that the layer is cached until the lockfile changes. Three details are the difference between a Dockerfile that works and one that works reliably. **The workspace needs every `package.json` the lockfile mentions**, so the library’s manifest is copied beside the root’s before `pnpm install` — without it, pnpm refuses the frozen install because the lockfile describes a package that is not there. **`--frozen-lockfile`** fails the build if the lockfile disagrees with `package.json` instead of quietly resolving something newer; the lockfile is the contract. **`--ignore-scripts`** skips the root `prepare` script, which would try to build the library before its source has been copied; the build stage runs those steps itself, in order, where it can see them. The `--mount=type=cache` keeps pnpm’s store between builds without putting it in a layer.'
 			},
-			code('Dockerfile', 41, 61, { partial: true }),
+			code('Dockerfile', 41, 62, { partial: true }),
 			{
 				type: 'p',
-				text: 'The `build` stage is `prepare` spelled out: package the library, compile the messages, sync the types, then build the element and the app. `PUBLIC_ORIGIN` is a **build argument**, and the stage refuses to continue without it, because SvelteKit bakes `paths.origin` into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — `src/env.ts` validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. `pnpm prune --prod` then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of `node_modules`. The `CI=true` in front of it is a scar from the first pipeline run: pnpm 11 asks for confirmation before it purges a modules directory, and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.'
+				text: 'The `build` stage is `prepare` spelled out: package the library, compile the messages, sync the types, then build the element and the app. `PUBLIC_ORIGIN` is a **build argument**, and the stage refuses to continue without it, because SvelteKit bakes `paths.origin` into the server bundle (chapter 03) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — `src/env.ts` validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. `pnpm prune --prod` then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of `node_modules`. The `CI=true` in front of it is a scar from the first pipeline run: pnpm asks for confirmation before it purges a modules directory — 11 did, 12 still does — and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.'
 			},
-			code('Dockerfile', 64, 102, { partial: true }),
+			code('Dockerfile', 65, 103, { partial: true }),
 			{
 				type: 'p',
 				text: 'The `runtime` stage starts from a clean `node:slim` and copies five things from the build: the manifest, the pruned `node_modules`, the `build/` directory, the `drizzle/` migrations and the migration script. Nothing else — no source, no tests, no `.git`. It runs as the `node` user the base image ships with, because nothing here needs root and a process that does not need root should not have it. `/data` is a volume owned by that user, and `DATABASE_URL` points into it, so the database outlives the container.'
@@ -387,11 +387,11 @@ Running 36 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'health', text: 'The health endpoint and the first request' },
-			code('src/routes/healthz/+server.ts', 19, 32),
+			code('src/routes/healthz/+server.ts', 23, 36),
 			code('src/hooks.server.ts', 200, 204),
 			{
 				type: 'p',
-				text: '“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and `select 1` is the cheapest way to ask. The response carries the `version` — the commit the build was made from, through `kit.version.name` in chapter 03 — so “which version is live?” is one request, and `cache-control: no-store`, because a cached “healthy” is worse than none. `init` in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.'
+				text: '“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and `select 1` is the cheapest way to ask. The response carries the `version` — the commit the build was made from, through `version.name` in chapter 03 — so “which version is live?” is one request, and `cache-control: no-store`, because a cached “healthy” is worse than none. It goes out through `Response.json`, where SvelteKit 3 points you now that its own `json()` helper is deprecated. `init` in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.'
 			},
 			code('src/instrumentation.server.ts', 19, 27),
 			{

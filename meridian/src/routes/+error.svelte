@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import ErrorView from '#lib/ui/ErrorView.svelte';
 
 	/*
@@ -12,7 +12,7 @@
 </script>
 
 <header class="bare container">
-	<a class="bare__brand" href={localizeHref('/')}>
+	<a class="bare__brand" href={href('/(site)')}>
 		<CompassRoseIcon size={22} weight="duotone" aria-hidden="true" />
 		{m.app_name()}
 	</a>

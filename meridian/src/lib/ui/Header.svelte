@@ -3,7 +3,7 @@
 	import { scrollY } from 'svelte/reactivity/window';
 	import { CompassRoseIcon, ListIcon, PlusIcon, XIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { signOut } from '#lib/remote/auth.remote.ts';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
@@ -24,9 +24,10 @@
 
 	let open = $state(false);
 
-	const isCurrent = (href: string) =>
-		page.url.pathname === localizeHref(href) ||
-		page.url.pathname.startsWith(localizeHref(href) + '/');
+	// The links are already localised (see `#lib/href.ts`), so this compares
+	// pathnames as the browser sees them: `/de/trips` against `/de/trips/…`.
+	const isCurrent = (target: string) =>
+		page.url.pathname === target || page.url.pathname.startsWith(target + '/');
 </script>
 
 <!--
@@ -36,14 +37,14 @@
 	that needs the list — so the list lives here, not in the script.
 -->
 {const links = [
-	...(user ? [{ href: '/trips', label: m.nav_trips() }] : []),
-	{ href: '/explore', label: m.nav_explore() },
-	{ href: '/guides', label: m.nav_guides() }
+	...(user ? [{ href: href('/(site)/(app)/trips'), label: m.nav_trips() }] : []),
+	{ href: href('/(site)/explore'), label: m.nav_explore() },
+	{ href: href('/guides'), label: m.nav_guides() }
 ]}
 
 <header class="header" class:header--scrolled={scrolled}>
 	<div class="container header__row">
-		<a class="brand" href={localizeHref('/')}>
+		<a class="brand" href={href('/(site)')}>
 			<CompassRoseIcon size={22} weight="duotone" aria-hidden="true" />
 			<span>{m.app_name()}</span>
 		</a>
@@ -52,7 +53,7 @@
 			{#each links as link (link.href)}
 				<a
 					class="nav__link"
-					href={localizeHref(link.href)}
+					href={link.href}
 					aria-current={isCurrent(link.href) ? 'page' : undefined}
 					onclick={() => (open = false)}
 				>
@@ -67,7 +68,7 @@
 
 			<div class="nav__account">
 				{#if user}
-					<a class="btn btn--primary btn--sm" href={localizeHref('/trips/new')}>
+					<a class="btn btn--primary btn--sm" href={href('/(site)/(app)/trips/new')}>
 						<PlusIcon size={14} aria-hidden="true" />
 						{m.nav_new_trip()}
 					</a>
@@ -78,7 +79,7 @@
 						</button>
 					</form>
 				{:else}
-					<a class="btn btn--sm" href={localizeHref('/signin')}>{m.auth_sign_in()}</a>
+					<a class="btn btn--sm" href={href('/(site)/(auth)/signin')}>{m.auth_sign_in()}</a>
 				{/if}
 			</div>
 		</nav>

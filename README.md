@@ -21,8 +21,10 @@ Seven complete projects, each with its own build-along course.
 | [`meridian/`](./meridian) | **Project 8** — Meridian, a collaborative trip planner. A pnpm workspace with a published geodesy library, an itinerary two people edit at once over a live query with presence, a map drawn from bundled world geodata with no tile server, a globe flyover in Threlte, fair expense splits in minor units, a Tiptap notes editor through an attachment, Markdown guides prerendered in three languages, an embeddable custom element, and a survey of the Svelte ecosystem as of September 2026 — every current Svelte 5 and SvelteKit 3 capability, each used for something. |
 | [`meridian-course/`](./meridian-course) | Its 45-chapter course, for somebody who has finished project 7, with an ecosystem part on choosing libraries. Open `meridian-course/dist/index.html`. |
 
-Requires **Node 24.20.0** (the current LTS line, "Krypton") and **pnpm 11+**.
-All eight pin it in `.nvmrc` and `engines`.
+Requires **Node 24.21.0** (the current LTS line, "Krypton") and **pnpm 12**.
+All eight pin both in `.nvmrc`, `engines` and `packageManager`, and all eight
+run on SvelteKit 3.0.1 (the October 2026 stable release), Svelte 5.57, Vite 8.3
+and Vitest 5.
 
 ## Quick start
 

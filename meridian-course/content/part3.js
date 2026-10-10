@@ -55,7 +55,7 @@ export const part3 = [
 			code('src/hooks.server.ts', 87, 150),
 			{
 				type: 'p',
-				text: 'Security last, because it acts on the *response*. The `preload` callback is the one new to SvelteKit 3.0.0-next.24: a `font` input carries its source `filename`, so the two latin subsets the first paint needs can be named exactly, rather than guessed at from a hashed URL. Then the headers, and the one route that may be framed: `/embed/<slug>` gets `frame-ancestors *` by replacing the directive SvelteKit built, because the CSP in the config is the right default for every other page. `Vary: Cookie` is there because the header shows a name and the locale cookie changes the language, and a shared cache must not serve one person’s page to another.'
+				text: 'Security last, because it acts on the *response*. The `preload` callback is the one that arrived late in the SvelteKit 3 prereleases and shipped in 3.0: a `font` input carries its source `filename`, so the two latin subsets the first paint needs can be named exactly, rather than guessed at from a hashed URL. Then the headers, and the one route that may be framed: `/embed/<slug>` gets `frame-ancestors *` by replacing the directive SvelteKit built, because the CSP in the config is the right default for every other page. `Vary: Cookie` is there because the header shows a name and the locale cookie changes the language, and a shared cache must not serve one person’s page to another.'
 			},
 
 			{ type: 'h3', id: 'fetch-errors-init', text: 'Fetch, errors, boot' },
@@ -170,10 +170,10 @@ export const part3 = [
 				type: 'warn',
 				text: 'On a page that is *itself* prerendered, `query` cannot be used at all — SvelteKit throws “Cannot call query while prerendering”. The guides in chapter 34 are prerendered and read nothing dynamic; the explore page in chapter 35 is dynamic and reads a `prerender`. Choosing which side of that line a page is on is a design decision, and the root layout in chapter 23 is arranged around it.'
 			},
-			code('src/routes/api/world.json/+server.ts', 1, 37),
+			code('src/routes/api/world.json/+server.ts', 1, 39),
 			{
 				type: 'p',
-				text: 'And the one that is not a remote function, with the reason written above it. The world’s coastlines are read from the `world-atlas` package with `read()` from `$app/server`, the API for opening a file that was imported through Vite. The first version was a `prerender()` remote function and failed at build time with `Asset does not exist`, because SvelteKit registers the assets `read()` may open by walking the server modules of routes and hooks, and as of `3.0.0-next.25` not the `.remote.ts` modules. An endpoint is walked, so this is one — prerendered, so it is a file in the output that the server never runs again. That is exactly the kind of thing a course should record: the constraint, the version, and the workaround.'
+				text: 'And the one that is not a remote function, with the reason written above it. The world’s coastlines are read from the `world-atlas` package with `read()` from `$app/server`, the API for opening a file that was imported through Vite. The first version was a `prerender()` remote function and failed at build time with `Asset does not exist`, because SvelteKit registers the assets `read()` may open by walking the server modules of routes and hooks, and — still true in 3.0.1; `find_server_assets.js` in Kit’s source visits endpoints, page nodes and the two hooks files, nothing else — not the `.remote.ts` modules. An endpoint is walked, so this is one — prerendered, so it is a file in the output that the server never runs again. That is exactly the kind of thing a course should record: the constraint, the version, and the workaround.'
 			},
 			code(`${SERVER}/geodata.ts`, 1, 34),
 			{

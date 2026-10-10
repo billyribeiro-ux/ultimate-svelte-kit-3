@@ -6,7 +6,7 @@
 		UsersThreeIcon
 	} from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { reveal } from '#lib/motion/reveal.ts';
 </script>
 
@@ -21,8 +21,10 @@
 		<h1 class="hero__title">{m.home_hero_title()}</h1>
 		<p class="hero__lede">{m.home_hero_lede()}</p>
 		<div class="cluster">
-			<a class="btn btn--primary" href={localizeHref('/trips/new')}>{m.home_cta()}</a>
-			<a class="btn" href={localizeHref('/t/seedjapan2')}>{m.home_cta_secondary()}</a>
+			<a class="btn btn--primary" href={href('/(site)/(app)/trips/new')}>{m.home_cta()}</a>
+			<a class="btn" href={href('/(site)/t/[slug=slug]', { slug: 'seedjapan2' })}>
+				{m.home_cta_secondary()}
+			</a>
 		</div>
 	</div>
 

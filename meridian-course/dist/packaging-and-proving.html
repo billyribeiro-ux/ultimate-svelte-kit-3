@@ -78,7 +78,7 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;peerDependencies&quot;: {
-	&quot;svelte&quot;: &quot;^5.0.0&quot;
+	&quot;svelte&quot;: &quot;^5.57.2&quot;
 },
 &quot;scripts&quot;: {
 	&quot;dev&quot;: &quot;vite dev&quot;,
@@ -127,7 +127,8 @@ export default defineConfig({
 		projects: [
 			{
 				// The components and the reactive `Route` class, in a real browser.
-				extends: './vite.config.ts',
+				// No `extends`: since Vitest 5 an inline project inherits the config
+				// that declares it, plugins included, unless it says `extends: false`.
 				test: {
 					name: 'client',
 					browser: {
@@ -140,7 +141,6 @@ export default defineConfig({
 			},
 			{
 				// The geodesy: pure functions, plain Node.
-				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',

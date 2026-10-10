@@ -40,7 +40,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:276-342</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:281-352</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -55,8 +55,13 @@
 			 * and `getBoundingClientRect`, and the itinerary animates with
 			 * `animate:flip`. jsdom has none of those and would pass every test
 			 * you thought to write while doing nothing.
+			 *
+			 * No `extends` line. Since Vitest 5 an inline project inherits the
+			 * config that declares it — the plugins, `#lib`, Paraglide — so
+			 * naming this file again would load the Svelte plugin twice and
+			 * earn a warning. `extends: false` is the only thing left to say,
+			 * and it would be wrong here.
 			 */
-			extends: './vite.config.ts',
 			/*
 			 * The icons the tested components use, pre-bundled before the first
 			 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
@@ -91,8 +96,8 @@
 		},
 		{
 			// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
-			// schemas, the geodata build, the identity helpers.
-			extends: './vite.config.ts',
+			// schemas, the geodata build, the identity helpers. Inherits this
+			// config like the project above, for the same reason.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -111,7 +116,7 @@
 	]
 }</code></pre>
 </figure>
-<p>Vitest’s <code>projects</code> are separate test environments that share one runner and one command. The <code>server</code> project is plain Node: it picks up every <code>*.spec.ts</code> and <code>*.test.ts</code> that is *not* a <code>.svelte.</code> test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The <code>client</code> project is a real Chromium started by Playwright, and it picks up only the <code>.svelte.test.ts</code> files. Both <code>extends</code> the main config, so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees <code>#lib/…</code> and <code>m.some_message()</code> exactly as the app does.</p>
+<p>Vitest’s <code>projects</code> are separate test environments that share one runner and one command. The <code>server</code> project is plain Node: it picks up every <code>*.spec.ts</code> and <code>*.test.ts</code> that is *not* a <code>.svelte.</code> test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The <code>client</code> project is a real Chromium started by Playwright, and it picks up only the <code>.svelte.test.ts</code> files. Neither names an <code>extends</code>: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees <code>#lib/…</code> and <code>m.some_message()</code> exactly as the app does.</p>
 <p>Three settings deserve a sentence each. <code>expect.requireAssertions</code> makes a test that asserts nothing a *failing* test — the most common way a test quietly stops testing is an early <code>return</code> or a promise nobody awaited, and this catches both. <code>fileParallelism: false</code> on the server project is for SQLite: it allows one writer, and two spec files seeding the same file at once produce a dozen <code>SQLITE_BUSY</code> failures in whichever file lost the race, none of which are bugs. And the <code>optimizeDeps.include</code> list on the client project is a Vite detail worth knowing: the Phosphor plugin rewrites <code>phosphor-svelte</code> imports into deep ones *during* transform, after Vite’s dependency scan, so on a cold cache Vite discovers them in the middle of a test run, re-bundles, and reloads the page under the test. Naming them up front is the fix Vitest itself suggests in its warning.</p>
 
 <aside class="callout callout--why">

@@ -56,7 +56,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'hero', text: 'A picture that is four pictures' },
-			code('src/routes/(site)/+page.svelte', 18, 43),
+			code('src/routes/(site)/+page.svelte', 18, 45),
 			{
 				type: 'p',
 				text: '`<enhanced:img>` is rewritten at build time — by the preprocessor that must come first in `vite.config.ts` — into a `<picture>` with AVIF and WebP sources at several widths, plus `width` and `height` so nothing shifts while it loads. `sizes` tells the browser how wide the image is on screen, so it picks the smallest file that is still sharp. The source PNG is drawn by `scripts/make-hero.ts` with sharp, which is why sharp is a devDependency named out loud rather than a transitive one hoped for.'
@@ -64,7 +64,7 @@ export const part5 = [
 
 			{ type: 'h3', id: 'motion', text: 'One reveal, three rules' },
 			code('src/lib/motion/reveal.ts', 1, 67),
-			code('src/routes/(site)/+page.svelte', 45, 70),
+			code('src/routes/(site)/+page.svelte', 47, 72),
 			{
 				type: 'p',
 				text: 'The project’s cinematic budget is spent on the globe. Everything else moves the way a good editor cuts: rarely, and for a reason. The reveal is an attachment — a function that receives an element and returns a cleanup — with three rules the comment states: nothing is hidden until JavaScript runs, reduced motion means no motion, and it plays once. GSAP does the tween because its easing and stagger are better than hand-written keyframes and because it is the tool the earlier projects taught; it is used in one file.'
@@ -92,7 +92,7 @@ export const part5 = [
 				text: 'The layout split is the decision this chapter is about, and it came from a failure. The first version had the header in the root layout, fed by a root `+layout.server.ts` that loaded the signed-in person. Then the guides were prerendered, and a prerendered page is rendered once, at build time, with nobody signed in — and that answer is baked into its data. A signed-in person navigating to a guide would see “Sign in” in the header. So the root knows nobody, and the pages that need to know live in a group.'
 			},
 			code('src/routes/+layout.svelte', 1, 34, { partial: true }),
-			code('src/routes/+layout.svelte', 36, 75, { partial: true }),
+			code('src/routes/+layout.svelte', 36, 87, { partial: true }),
 			{
 				type: 'p',
 				text: 'The last thing in the script is one line in `onMount`: a `data-hydrated` attribute on the root element. `onMount` in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter 32).'
@@ -101,7 +101,7 @@ export const part5 = [
 				type: 'p',
 				text: 'What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. `onNavigate` wraps the completion of every client-side navigation in `document.startViewTransition`, so the old page cross-fades into the new — and an element with a `view-transition-name`, like the trip title, morphs. `beforeNavigate` turns the next navigation into a full page load when `updated.current` says a new build was deployed, so no chunk from the old build is ever requested.'
 			},
-			code('src/routes/+layout.svelte', 78, 111),
+			code('src/routes/+layout.svelte', 90, 123),
 			code('src/routes/(site)/+layout.server.ts', 1, 11),
 			code('src/routes/(site)/+layout.svelte', 1, 27),
 			{
@@ -110,16 +110,27 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'header', text: 'The header' },
-			code(`${UI}/Header.svelte`, 1, 30),
-			code(`${UI}/Header.svelte`, 32, 42),
+			code(`${UI}/Header.svelte`, 1, 31),
+			code(`${UI}/Header.svelte`, 33, 43),
 			{
 				type: 'p',
 				text: 'Two small Svelte 5 things. `scrollY` from `svelte/reactivity/window` is the window’s scroll position as a reactive value with the listener managed for us — `undefined` on the server, where there is no window — and one `$derived` turns it into the border that appears when the page has scrolled. `{const}` is a declaration tag: a value computed in the markup, scoped to the block, re-evaluated when its dependencies change. The link list depends on whether somebody is signed in, and the header is the only place that needs it, so it lives where it is used.'
 			},
-			code(`${UI}/Header.svelte`, 44, 101),
+			code(`${UI}/Header.svelte`, 45, 102),
 			{
 				type: 'p',
-				text: 'Mobile first: the nav is a sheet under the header, opened by a button with `aria-expanded` and `aria-controls`, and at fifty-two ems it becomes a row and the button disappears. Signing out is a `<form>` spread from a remote `form` with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches.'
+				text: 'Mobile first: the nav is a sheet under the header, opened by a button with `aria-expanded` and `aria-controls`, and at fifty-two ems it becomes a row and the button disappears. Signing out is a `<form>` spread from a remote `form` with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every `href` in it is a call to `href()` — the next section — so the link list is a list of typed route ids, `/(site)/(app)/trips` and friends, not strings that happen to look like paths.'
+			},
+
+			{ type: 'h3', id: 'links', text: 'One way to write a link' },
+			code('src/lib/href.ts', 1, 44),
+			{
+				type: 'p',
+				text: 'Twelve lines of code under thirty of comment, and the comment is the point. `resolve()` from `$app/paths` is SvelteKit’s typed link: the route id — groups included, which is why it is `/(site)/(app)/trips/new` and not `/trips/new` — is checked against the routes that exist, the parameters against the matchers in `src/params.ts`, and since 2.26 the id may carry its own search string or hash, so `href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug })` is one call and still typed. Paraglide’s `localizeHref` then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.'
+			},
+			{
+				type: 'note',
+				text: 'The return type is `ResolvedPathname`, and that is not a trick played on the linter. SvelteKit defines the type as `/${Path}` *or* `/${string}/${Path}` — a slot for a base path in front of every resolved pathname — and `/de/trips` is exactly that shape, a prefix that `reroute` in `src/hooks.ts` strips before routing. eslint-plugin-svelte’s `no-navigation-without-resolve` rule, which started recognising SvelteKit 3 projects in 3.23.1, accepts an `href` or a `goto()` of that type; it cannot see through `localizeHref`, and this is the honest way to tell it what the wrapper does. The one link in the app that bypasses `href()` is the language switcher in chapter 20, and it says why in a comment the linter reads.'
 			},
 			code(`${UI}/Footer.svelte`, 1, 15),
 			code(`${UI}/UpdateBanner.svelte`, 1, 15),
@@ -196,14 +207,14 @@ export const part5 = [
 				type: 'p',
 				text: 'The heartbeat and the goodbye are sent and not awaited, and the first version wrote `.catch(() => {})` after each — reasonable for a heartbeat, whose next attempt is fifteen seconds away, and exactly how a real bug hid for an afternoon: when the seeded ids turned out not to be UUIDs (chapter 13), every heartbeat that named a seeded stop failed validation on the server and nobody heard. `fireAndForget()` keeps the production behaviour — nothing a person could act on — and adds a console warning in development, where somebody is looking. Silence is a decision; it should be one you can see in the code.'
 			},
-			code(`${TRIP}/TripView.svelte`, 128, 171),
-			code(`${TRIP}/TripView.svelte`, 173, 184),
-			code(`${TRIP}/TripView.svelte`, 186, 216, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 128, 168),
+			code(`${TRIP}/TripView.svelte`, 170, 188),
+			code(`${TRIP}/TripView.svelte`, 190, 220, { partial: true }),
 			{
 				type: 'p',
-				text: 'The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — `live.reconnect()` is the method SvelteKit gives every live query. The tabs are links with `data-sveltekit-noscroll`. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
+				text: 'The header shows the live status: a pulsing chip while the stream is connected, a reconnect button when it is not — `live.reconnect()` is the method SvelteKit gives every live query. The tabs are links to the same route with a different `?tab=` — `href()` with a route id that carries its search string — marked `data-sveltekit-reset="false"` so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old `noscroll` and `keepfocus` attributes into that one `reset`, and only warns about the old names in development, it no longer reads them. The itinerary tab is a split view on a desktop, with the map sticky beside the days, and a stack on a phone; both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
 			},
-			code(`${TRIP}/TripView.svelte`, 260, 268),
+			code(`${TRIP}/TripView.svelte`, 264, 272),
 			{
 				type: 'checkpoint',
 				items: [
@@ -293,13 +304,13 @@ export const part5 = [
 				type: 'p',
 				text: 'A command palette is a text input, a filtered list, and roving focus with Enter to run. Bits UI’s `Command` does the filtering, the scoring and the focus; a `Dialog` around it does the overlay and the focus trap. What is in the palette is this trip’s stops and a handful of actions.'
 			},
-			code(`${TRIP}/CommandPalette.svelte`, 1, 54),
+			code(`${TRIP}/CommandPalette.svelte`, 1, 57),
 			{
 				type: 'p',
-				text: '`<svelte:window onkeydown>` is how a component listens on the window without an `addEventListener` it has to remember to remove. `goto("?tab=map", { replace: true })` switches the tab through the URL — the same mechanism as clicking the tab — and `replace` keeps five palette jumps from becoming five history entries. The `GotoOptions` in SvelteKit 3 are `replace`, `replaceState`, `shallow`, `reset`, `refreshAll` and `invalidate`; the old `noScroll` and `keepFocus` are gone.'
+				text: '`<svelte:window onkeydown>` is how a component listens on the window without an `addEventListener` it has to remember to remove. `goto(href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug }), { replace: true })` switches the tab through the URL — the same typed `href()` the tabs themselves use, so the palette and the tab bar cannot disagree about where a tab lives — and `replace` keeps five palette jumps from becoming five history entries. SvelteKit 3 also rejects a `goto` to anything that is not a route of the app, which a resolved pathname never is. The `GotoOptions` in 3.0 are `replace`, `shallow`, `reset`, `refreshAll`, `invalidate`, `state` and `persistState`; `replaceState` and `invalidateAll` survive only as deprecated aliases of `replace` and `refreshAll`, and the old `noScroll` and `keepFocus` are gone — folded into `reset: false`.'
 			},
-			code(`${TRIP}/CommandPalette.svelte`, 56, 67),
-			code(`${TRIP}/CommandPalette.svelte`, 69, 129),
+			code(`${TRIP}/CommandPalette.svelte`, 59, 70),
+			code(`${TRIP}/CommandPalette.svelte`, 72, 132),
 			{
 				type: 'p',
 				text: 'Each `Command.Item` is a `value` to match against — the stop’s name plus its id, so two stops with the same name stay distinct — and `keywords` that also match, so typing “food” finds the restaurant. `onSelect` runs the action. The groups have headings; the empty state is a component. The `class` props are ours from the tokens, which is what headless means in practice: every visible pixel is in the `<style>` block below, and the library brought the behaviour.'
@@ -312,7 +323,7 @@ export const part5 = [
 				type: 'checkpoint',
 				items: [
 					'You can say what `Command` does and what the component adds to it.',
-					'You know why the tab switch is `goto` with `replace`, and which `GotoOptions` exist in SvelteKit 3.'
+					'You know why the tab switch is `goto` with `replace` over a typed `href()`, and which `GotoOptions` exist in SvelteKit 3.'
 				]
 			}
 		]
@@ -386,7 +397,7 @@ export const part5 = [
 				type: 'p',
 				text: 'Threlte is Svelte for three.js. `<T.Mesh>` is a `THREE.Mesh`; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.'
 			},
-			code(`${TRIP}/TripView.svelte`, 217, 250, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 221, 254, { partial: true }),
 			{
 				type: 'p',
 				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'
@@ -560,7 +571,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'join', text: 'The join page' },
-			code('src/routes/(site)/(app)/join/[token]/+page.svelte', 1, 46),
+			code('src/routes/(site)/(app)/join/[token]/+page.svelte', 1, 49),
 			{
 				type: 'p',
 				text: 'One query says whether the link still works; one remote form accepts it. The page is under `(app)`, so a stranger is sent to sign in and brought back here afterwards — the invite test in chapter 42 follows exactly that path with a brand-new account. Every state the invite can be in has a sentence: already a member, used, expired, or a button.'
@@ -572,13 +583,13 @@ export const part5 = [
 				type: 'p',
 				text: 'The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — `error()` in markup, which SvelteKit turns into the right status on the server and the error page in the browser.'
 			},
-			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 1, 28),
-			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 30, 55),
+			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 1, 27),
+			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 29, 54),
 			{
 				type: 'p',
 				text: 'The fields start from the trip and belong to the form from then on: `untrack` reads the prop once, on purpose, and the page keys the form on the slug so a different trip is a different form. This is the *other* answer to the stop dialog’s question — assignable deriveds reset on a prop change; `untrack` says the prop never changes — and each is right where it is used. The save is a command with `.updates(tripBySlug(trip.slug))`: single-flight from the client’s side, naming the query this page is holding so the server refreshes it in the same response and the embed section below sees the new visibility before the toast appears.'
 			},
-			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 118, 129),
+			code('src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte', 117, 128),
 			{
 				type: 'p',
 				text: 'Delete is a remote `form` with a `confirm()` in its `onsubmit`. With JavaScript off the form posts and the trip is gone; with it on, the browser asks first, and `preventDefault` cancels the submission if the person changes their mind. That is progressive enhancement in four lines, and it is the pattern for every destructive button in the app.'

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:1-54</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:1-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -47,6 +47,7 @@
 	import { goto } from '$app/navigation';
 	import { CommandIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { href } from '#lib/href.ts';
 	import { KIND_ICONS } from './kinds.ts';
 	import { TABS, type Tab, type TripState } from './state.svelte.ts';
 
@@ -88,7 +89,9 @@
 
 	function go(tab: Tab) {
 		open = false;
-		void goto(`?tab=${tab}`, { replace: true });
+		void goto(href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug: view.trip.slug }), {
+			replace: true
+		});
 	}
 
 	function jump(stopId: string) {
@@ -97,11 +100,11 @@
 	}
 &lt;/script&gt;</code></pre>
 </figure>
-<p><code>&lt;svelte:window onkeydown&gt;</code> is how a component listens on the window without an <code>addEventListener</code> it has to remember to remove. <code>goto(&quot;?tab=map&quot;, { replace: true })</code> switches the tab through the URL — the same mechanism as clicking the tab — and <code>replace</code> keeps five palette jumps from becoming five history entries. The <code>GotoOptions</code> in SvelteKit 3 are <code>replace</code>, <code>replaceState</code>, <code>shallow</code>, <code>reset</code>, <code>refreshAll</code> and <code>invalidate</code>; the old <code>noScroll</code> and <code>keepFocus</code> are gone.</p>
+<p><code>&lt;svelte:window onkeydown&gt;</code> is how a component listens on the window without an <code>addEventListener</code> it has to remember to remove. <code>goto(href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug }), { replace: true })</code> switches the tab through the URL — the same typed <code>href()</code> the tabs themselves use, so the palette and the tab bar cannot disagree about where a tab lives — and <code>replace</code> keeps five palette jumps from becoming five history entries. SvelteKit 3 also rejects a <code>goto</code> to anything that is not a route of the app, which a resolved pathname never is. The <code>GotoOptions</code> in 3.0 are <code>replace</code>, <code>shallow</code>, <code>reset</code>, <code>refreshAll</code>, <code>invalidate</code>, <code>state</code> and <code>persistState</code>; <code>replaceState</code> and <code>invalidateAll</code> survive only as deprecated aliases of <code>replace</code> and <code>refreshAll</code>, and the old <code>noScroll</code> and <code>keepFocus</code> are gone — folded into <code>reset: false</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:56-67</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:59-70</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:window {onkeydown} /&gt;
@@ -120,7 +123,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:69-129</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:72-132</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root bind:open&gt;
@@ -190,7 +193,7 @@
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what <code>Command</code> does and what the component adds to it.</li><li>You know why the tab switch is <code>goto</code> with <code>replace</code>, and which <code>GotoOptions</code> exist in SvelteKit 3.</li></ul>
+	<ul><li>You can say what <code>Command</code> does and what the component adds to it.</li><li>You know why the tab switch is <code>goto</code> with <code>replace</code> over a typed <code>href()</code>, and which <code>GotoOptions</code> exist in SvelteKit 3.</li></ul>
 </aside>
 		</article>
 

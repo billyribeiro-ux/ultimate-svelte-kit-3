@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 	import { guides } from '#lib/guides/index.ts';
 
@@ -28,7 +28,7 @@
 					so renaming the folder is a compile error here rather than a 404.
 				-->
 				<h2 class="title">
-					<a href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}>
+					<a href={href('/guides/[guide]', { guide: guide.slug })}>
 						{guide.title}
 					</a>
 				</h2>

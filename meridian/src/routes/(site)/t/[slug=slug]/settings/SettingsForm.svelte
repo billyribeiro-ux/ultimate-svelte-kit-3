@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { CURRENCIES } from '#lib/domain/money.ts';
 	import type { Visibility } from '#lib/domain/schemas.ts';
 	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
@@ -62,7 +61,7 @@
 <section class="container settings stack stack--lg">
 	<header class="stack stack--sm">
 		<p>
-			<a href={localizeHref(resolve('/(site)/t/[slug=slug]', { slug: trip.slug }))}>
+			<a href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}>
 				← {trip.name}
 			</a>
 		</p>

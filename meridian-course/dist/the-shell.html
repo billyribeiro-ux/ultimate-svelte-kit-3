@@ -80,7 +80,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:36-75</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:36-87</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -92,8 +92,15 @@
  * `view-transition-name` (a trip card becoming a trip header) morph.
  * Browsers without the API, and people who prefer reduced motion (the
  * CSS turns the animation off), get an ordinary navigation.
+ *
+ * SvelteKit 3 runs the navigation hooks for shallow routing too — a
+ * `goto(url, { shallow: true })` that only pushes `page.state` — and a
+ * cross-fade over a page that did not change is a flicker, so those are
+ * let through untouched. `navigation.shallow` is the flag Kit sets for
+ * exactly this check.
  */
 onNavigate((navigation) =&gt; {
+	if (navigation.shallow &amp;&amp; navigation.type === 'goto') return;
 	if (!document.startViewTransition) return;
 	return new Promise((resolve) =&gt; {
 		document.startViewTransition(async () =&gt; {
@@ -108,8 +115,13 @@ onNavigate((navigation) =&gt; {
  * navigation would ask for chunks that no longer exist, so the next
  * navigation becomes a full page load. `version.pollInterval` in
  * `vite.config.ts` is what makes `updated.current` flip.
+ *
+ * Not for a shallow `goto`, though: that asks for no chunk at all, and
+ * turning &quot;open a dialog&quot; into a reload because a deploy happened would
+ * lose whatever the person was typing. The next real navigation reloads.
  */
-beforeNavigate(({ willUnload, to }) =&gt; {
+beforeNavigate(({ willUnload, to, shallow, type }) =&gt; {
+	if (shallow &amp;&amp; type === 'goto') return;
 	if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) location.href = to.url.href;
 });
 
@@ -129,7 +141,7 @@ onMount(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:78-111</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:90-123</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{@render children()}
@@ -224,7 +236,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-30</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-31</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -232,7 +244,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	import { scrollY } from 'svelte/reactivity/window';
 	import { CompassRoseIcon, ListIcon, PlusIcon, XIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { signOut } from '#lib/remote/auth.remote.ts';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
@@ -253,15 +265,16 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 	let open = $state(false);
 
-	const isCurrent = (href: string) =&gt;
-		page.url.pathname === localizeHref(href) ||
-		page.url.pathname.startsWith(localizeHref(href) + '/');
+	// The links are already localised (see `#lib/href.ts`), so this compares
+	// pathnames as the browser sees them: `/de/trips` against `/de/trips/…`.
+	const isCurrent = (target: string) =&gt;
+		page.url.pathname === target || page.url.pathname.startsWith(target + '/');
 &lt;/script&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:32-42</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:33-43</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -271,21 +284,21 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	that needs the list — so the list lives here, not in the script.
 --&gt;
 {const links = [
-	...(user ? [{ href: '/trips', label: m.nav_trips() }] : []),
-	{ href: '/explore', label: m.nav_explore() },
-	{ href: '/guides', label: m.nav_guides() }
+	...(user ? [{ href: href('/(site)/(app)/trips'), label: m.nav_trips() }] : []),
+	{ href: href('/(site)/explore'), label: m.nav_explore() },
+	{ href: href('/guides'), label: m.nav_guides() }
 ]}</code></pre>
 </figure>
 <p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup, scoped to the block, re-evaluated when its dependencies change. The link list depends on whether somebody is signed in, and the header is the only place that needs it, so it lives where it is used.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:44-101</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:45-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={scrolled}&gt;
 	&lt;div class=&quot;container header__row&quot;&gt;
-		&lt;a class=&quot;brand&quot; href={localizeHref('/')}&gt;
+		&lt;a class=&quot;brand&quot; href={href('/(site)')}&gt;
 			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
 			&lt;span&gt;{m.app_name()}&lt;/span&gt;
 		&lt;/a&gt;
@@ -294,7 +307,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 			{#each links as link (link.href)}
 				&lt;a
 					class=&quot;nav__link&quot;
-					href={localizeHref(link.href)}
+					href={link.href}
 					aria-current={isCurrent(link.href) ? 'page' : undefined}
 					onclick={() =&gt; (open = false)}
 				&gt;
@@ -309,7 +322,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 
 			&lt;div class=&quot;nav__account&quot;&gt;
 				{#if user}
-					&lt;a class=&quot;btn btn--primary btn--sm&quot; href={localizeHref('/trips/new')}&gt;
+					&lt;a class=&quot;btn btn--primary btn--sm&quot; href={href('/(site)/(app)/trips/new')}&gt;
 						&lt;PlusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
 						{m.nav_new_trip()}
 					&lt;/a&gt;
@@ -320,7 +333,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 						&lt;/button&gt;
 					&lt;/form&gt;
 				{:else}
-					&lt;a class=&quot;btn btn--sm&quot; href={localizeHref('/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+					&lt;a class=&quot;btn btn--sm&quot; href={href('/(site)/(auth)/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
 				{/if}
 			&lt;/div&gt;
 		&lt;/nav&gt;
@@ -342,7 +355,61 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	&lt;/div&gt;
 &lt;/header&gt;</code></pre>
 </figure>
-<p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at fifty-two ems it becomes a row and the button disappears. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches.</p>
+<p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at fifty-two ems it becomes a row and the button disappears. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every <code>href</code> in it is a call to <code>href()</code> — the next section — so the link list is a list of typed route ids, <code>/(site)/(app)/trips</code> and friends, not strings that happen to look like paths.</p>
+<h3 id="links">One way to write a link</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/href.ts<span class="code__lines">:1-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE WAY TO WRITE A LINK
+ * =======================
+ *
+ * `href('/(site)/t/[slug=slug]', { slug })` is two things that every
+ * internal link in this app needs and that no link should be able to forget:
+ *
+ *   - `resolve()` from `$app/paths` — the route id checked against the routes
+ *     that exist (groups included: `/(site)/(app)/trips/new`), the parameters
+ *     checked against the matchers in `src/params.ts`, the base path applied.
+ *     Rename a folder and every link to it is a type error, not a 404.
+ *   - Paraglide's `localizeHref` — the language prefix in front, so the result
+ *     is `/de/t/abc` for a German reader and `/t/abc` for an English one.
+ *
+ * A route id may carry its search or hash — `` href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug }) ``
+ * — because `resolve` accepts `RouteIdWithSearchOrHash` and keeps the suffix.
+ *
+ * It returns `ResolvedPathname`, and that is the honest type, not a white
+ * lie for the linter. SvelteKit defines it as `/${Path}` *or*
+ * `/${string}/${Path}` — room for a base path in front of every resolved
+ * pathname — and `/de/trips` is exactly that shape: a prefix that `reroute`
+ * in `src/hooks.ts` strips off again before routing. eslint-plugin-svelte's
+ * `no-navigation-without-resolve` accepts an `href` or a `goto()` of that
+ * type, which is the rule doing its job: it cannot see through
+ * `localizeHref`, and it should not have to.
+ *
+ * Redirects on the server (`redirect(303, localizeHref('/trips'))` in the
+ * remote functions) keep calling `localizeHref` directly: a redirect is not a
+ * link, and the rule does not reach there.
+ */
+
+import { resolve } from '$app/paths';
+import type {
+	PathnameWithSearchOrHash,
+	ResolvedPathname,
+	RouteIdWithSearchOrHash
+} from '$app/types';
+import { localizeHref } from '#lib/paraglide/runtime.js';
+
+export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOrHash&gt;(
+	...args: Parameters&lt;typeof resolve&lt;T&gt;&gt;
+): ResolvedPathname {
+	return localizeHref(resolve&lt;T&gt;(...args)) as ResolvedPathname;
+}</code></pre>
+</figure>
+<p>Twelve lines of code under thirty of comment, and the comment is the point. <code>resolve()</code> from <code>$app/paths</code> is SvelteKit’s typed link: the route id — groups included, which is why it is <code>/(site)/(app)/trips/new</code> and not <code>/trips/new</code> — is checked against the routes that exist, the parameters against the matchers in <code>src/params.ts</code>, and since 2.26 the id may carry its own search string or hash, so <code>href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug })</code> is one call and still typed. Paraglide’s <code>localizeHref</code> then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.</p>
+<aside class="callout callout--note"><p>The return type is <code>ResolvedPathname</code>, and that is not a trick played on the linter. SvelteKit defines the type as <code>/${Path}</code> *or* <code>/${string}/${Path}</code> — a slot for a base path in front of every resolved pathname — and <code>/de/trips</code> is exactly that shape, a prefix that <code>reroute</code> in <code>src/hooks.ts</code> strips before routing. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> rule, which started recognising SvelteKit 3 projects in 3.23.1, accepts an <code>href</code> or a <code>goto()</code> of that type; it cannot see through <code>localizeHref</code>, and this is the honest way to tell it what the wrapper does. The one link in the app that bypasses <code>href()</code> is the language switcher in chapter 20, and it says why in a comment the linter reads.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -351,7 +418,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { version } from '$app/env';
 &lt;/script&gt;
 
@@ -359,8 +426,8 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
 		&lt;p class=&quot;muted&quot;&gt;{m.footer_made()} &lt;code class=&quot;muted&quot;&gt;{version}&lt;/code&gt;&lt;/p&gt;
 		&lt;nav class=&quot;cluster&quot; aria-label=&quot;Meta&quot;&gt;
-			&lt;a class=&quot;muted&quot; href={localizeHref('/guides')}&gt;{m.nav_guides()}&lt;/a&gt;
-			&lt;a class=&quot;muted&quot; href={localizeHref('/diagnostics')}&gt;{m.footer_diagnostics()}&lt;/a&gt;
+			&lt;a class=&quot;muted&quot; href={href('/guides')}&gt;{m.nav_guides()}&lt;/a&gt;
+			&lt;a class=&quot;muted&quot; href={href('/(site)/(app)/diagnostics')}&gt;{m.footer_diagnostics()}&lt;/a&gt;
 		&lt;/nav&gt;
 	&lt;/div&gt;
 &lt;/footer&gt;</code></pre>
@@ -398,7 +465,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 
 	/**
 	 * What an error page says. Two `+error.svelte` files render it — the root
@@ -421,7 +488,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	{#if page.error?.id}
 		&lt;p class=&quot;hint&quot;&gt;&lt;code&gt;{m.error_id({ id: page.error.id })}&lt;/code&gt;&lt;/p&gt;
 	{/if}
-	&lt;p&gt;&lt;a class=&quot;btn&quot; href={localizeHref('/trips')}&gt;{m.error_back()}&lt;/a&gt;&lt;/p&gt;
+	&lt;p&gt;&lt;a class=&quot;btn&quot; href={href('/(site)/(app)/trips')}&gt;{m.error_back()}&lt;/a&gt;&lt;/p&gt;
 &lt;/section&gt;</code></pre>
 </figure>
 
@@ -433,7 +500,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import ErrorView from '#lib/ui/ErrorView.svelte';
 
 	/*
@@ -444,7 +511,7 @@ export const load: LayoutServerLoad = ({ locals }) =&gt; ({
 &lt;/script&gt;
 
 &lt;header class=&quot;bare container&quot;&gt;
-	&lt;a class=&quot;bare__brand&quot; href={localizeHref('/')}&gt;
+	&lt;a class=&quot;bare__brand&quot; href={href('/(site)')}&gt;
 		&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
 		{m.app_name()}
 	&lt;/a&gt;
