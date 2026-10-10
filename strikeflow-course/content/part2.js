@@ -1144,8 +1144,12 @@ export const featureIcons: Record<IconName, Component<Record<string, unknown>>> 
 				type: 'code',
 				lang: 'svelte',
 				file: 'usage',
-				code: `{@const Icon = featureIcons[feature.icon]}
+				code: `{const Icon = $derived(featureIcons[feature.icon])}
 <Icon size={26} weight="duotone" />`
+			},
+			{
+				type: 'note',
+				text: '`{const Icon = $derived(…)}` is a **declaration tag**: a `const` written straight into the markup, naming a value for the markup around it. Since Svelte 5.56 the older `{@const Icon = …}` tag is legacy. The `$derived` is not decoration: `{@const}` was worked out again whenever what it read changed, while a bare `{const Icon = …}` is worked out once, like a `const` in the script, so `$derived` is what keeps that reactivity. The scope is lexical: the name is visible to the tag\'s siblings and their children, so inside an `{#each}`, as in the feature grid later on, it reaches that item\'s whole card and nothing outside the loop.'
 			},
 			{ type: 'h3', id: 'phosphor-vite', text: 'One important build setting' },
 			{
@@ -1936,7 +1940,7 @@ export function mulberry32(seed: number): () => number {
 				lang: 'svelte',
 				code: `<ul class="feature-grid auto-grid" role="list">
 	{#each items as feature (feature.id)}
-		{@const Icon = featureIcons[feature.icon]}
+		{const Icon = $derived(featureIcons[feature.icon])}
 		<li class="feature-grid__item">
 			<Card as="article">
 				<span class="feature-grid__icon" aria-hidden="true">

@@ -53,7 +53,7 @@
 
 				<ul class="footer__social" role="list">
 					{#each socialLinks as social (social.href)}
-						{@const Icon = social.icon}
+						{const Icon = $derived(social.icon)}
 						<li>
 							<!--
 								`external` is the HTML link type for "not part of this site". It is

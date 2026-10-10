@@ -124,7 +124,7 @@
 				<svelte:boundary>
 					<ul class="keys">
 						{#each await listPasskeys() as passkey (passkey.id)}
-							{@const del = removePasskey.for(passkey.id)}
+							{const del = $derived(removePasskey.for(passkey.id))}
 							<li class="card key">
 								<KeyIcon size={20} />
 								<div class="key__body">

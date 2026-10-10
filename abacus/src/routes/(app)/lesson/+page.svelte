@@ -82,8 +82,8 @@
 						{#each [1, 2, 3] as r (r)}
 							<tr>
 								{#each ['A', 'B', 'C'] as c (c)}
-									{@const name = `${c}${r}`}
-									{@const a = parseA1(name)!}
+									{const name = $derived(`${c}${r}`)}
+									{const a = $derived(parseA1(name)!)}
 									<td>
 										<label>
 											<span class="visually-hidden">{name}</span>
@@ -116,8 +116,8 @@
 						{#each [1, 2, 3] as r (r)}
 							<tr>
 								{#each ['A', 'B', 'C'] as c (c)}
-									{@const name = `${c}${r}`}
-									{@const cell = reactive.cells.get(name)!}
+									{const name = $derived(`${c}${r}`)}
+									{const cell = $derived(reactive.cells.get(name)!)}
 									<td>
 										<label>
 											<span class="visually-hidden">{name}</span>

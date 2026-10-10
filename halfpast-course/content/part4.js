@@ -397,7 +397,7 @@ const slotValueSchema = v.pipe(
 		shares one set of fields, so typing in the third card fills the first,
 		and a validation error appears on all of them at once.
 	-->
-	{@const editForm = saveService.for(entry.id)}
+	{const editForm = $derived(saveService.for(entry.id))}
 	<li class="card" class:inactive={!entry.isActive}>
 		<!-- … -->
 
@@ -432,6 +432,10 @@ const slotValueSchema = v.pipe(
 			{
 				type: 'p',
 				text: '`form.for(id)` gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.'
+			},
+			{
+				type: 'note',
+				text: '`{const editForm = $derived(saveService.for(entry.id))}` is a *declaration tag*: a `const` written straight into the markup. Declaration tags arrived in Svelte 5.56 and made the older `{@const}` legacy. The `$derived` keeps the reactivity `{@const}` had — the value is worked out again whenever something it reads changes — where a bare `{const editForm = saveService.for(entry.id)}` is worked out once, when the row is created, like a `const` in the script. A declaration tag is visible to its siblings and their children in the same lexical scope: here that is the body of the `{#each}`, so each row has its own `editForm`, the snippets inside its `<Field>`s can read it, and nothing outside the loop can.'
 			},
 			{
 				type: 'p',

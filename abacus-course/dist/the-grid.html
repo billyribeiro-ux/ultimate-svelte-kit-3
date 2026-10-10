@@ -167,19 +167,20 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:596-652</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:596-653</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#snippet cell(r: number, c: number, top: number, left: number)}
-	{@const k = key(r, c)}
-	{@const value = sheet.value(r, c)}
-	{@const selected = inRect(selection, { row: r, col: c })}
-	{@const anchor = sheet.anchor.row === r &amp;&amp; sheet.anchor.col === c}
-	{@const highlight = highlights.find((h) =&gt; inRect(h.rect, { row: r, col: c }))}
-	{@const cursor = cursorsByCell.get(k)}
-	{@const editing = sheet.editing?.row === r &amp;&amp; sheet.editing.col === c}
-	{@const filling =
-		fillTarget !== null &amp;&amp; inRect(fillTarget, { row: r, col: c }) &amp;&amp; !selected}
+	{const k = $derived(key(r, c))}
+	{const value = $derived(sheet.value(r, c))}
+	{const selected = $derived(inRect(selection, { row: r, col: c }))}
+	{const anchor = $derived(sheet.anchor.row === r &amp;&amp; sheet.anchor.col === c)}
+	{const highlight = $derived(highlights.find((h) =&gt; inRect(h.rect, { row: r, col: c })))}
+	{const cursor = $derived(cursorsByCell.get(k))}
+	{const editing = $derived(sheet.editing?.row === r &amp;&amp; sheet.editing.col === c)}
+	{const filling = $derived(
+		fillTarget !== null &amp;&amp; inRect(fillTarget, { row: r, col: c }) &amp;&amp; !selected
+	)}
 	&lt;div
 		id=&quot;cell-{r}-{c}&quot;
 		class={[
@@ -228,11 +229,11 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 	&lt;/div&gt;
 {/snippet}</code></pre>
 </figure>
-<p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position; its <code>{@const}</code>s compute everything the cell shows from the sheet and the decorations, and each one is reactive — when the sheet changes, <code>value</code> is worked out again. The Svelte docs now call <code>{@const}</code> legacy. Its replacement, since Svelte 5.56, is a <em>declaration tag</em> with a <code>$derived</code> inside: <code>{const value = $derived(sheet.value(r, c))}</code>. The <code>$derived</code> is not optional. A bare <code>{const value = sheet.value(r, c)}</code> is worked out once, like a <code>const</code> in the script, and the cell would never change again. The header uses the new form for <code>{const me = $derived(await whoAmI())}</code> (ch. 30). The grid still uses the legacy tag, which compiles unchanged; in new code, write <code>{const x = $derived(…)}</code>. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts <em>inside</em> the cell being edited, so it is positioned by the same geometry as everything else.</p>
+<p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position, and its eight <em>declaration tags</em> — <code>{const value = $derived(sheet.value(r, c))}</code> and the seven beside it — compute everything the cell shows from the sheet and the decorations. Declaration tags arrived in Svelte 5.56 and made <code>{@const}</code> legacy. The <code>$derived</code> keeps the reactivity <code>{@const}</code> had: when the sheet changes, <code>value</code> is worked out again. A bare <code>{const value = sheet.value(r, c)}</code> would be worked out once, like a <code>const</code> in the script, and the cell’s number, true/false and error styling would stop following its value; its text would still update, because <code>{sheet.display(r, c)}</code> is read straight in the markup. A declaration tag is visible to its siblings and their children in the same lexical scope, so these eight, the first children of the snippet, reach the cell’s markup and nothing outside the snippet. The header awaits the same way, <code>{const me = $derived(await whoAmI())}</code> (ch. 30). The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts <em>inside</em> the cell being edited, so it is positioned by the same geometry as everything else.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:693-747</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:694-748</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The corner, above everything. --&gt;
@@ -295,7 +296,7 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:782-823</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:783-824</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">.canvas {
@@ -452,7 +453,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:751-751</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:752-752</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;visually-hidden&quot; aria-live=&quot;polite&quot;&gt;{announcement}&lt;/div&gt;</code></pre>

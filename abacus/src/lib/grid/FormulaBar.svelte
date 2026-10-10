@@ -216,7 +216,7 @@
 		{#if suggestions.length > 0}
 			<ul class="suggestions" id="formula-suggestions" role="listbox">
 				{#each suggestions as name, i (name)}
-					{@const spec = FUNCTIONS.get(name)}
+					{const spec = $derived(FUNCTIONS.get(name))}
 					<li
 						role="option"
 						aria-selected={i === highlighted}

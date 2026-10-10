@@ -76,7 +76,7 @@
 				</div>
 			</div>
 		{:else}
-			{@const message = messages[data.reason ?? 'malformed']}
+			{const message = $derived(messages[data.reason ?? 'malformed'])}
 			<div class="thanks__panel">
 				<span class="thanks__icon thanks__icon--warn" aria-hidden="true">
 					<WarningCircleIcon size={38} weight="duotone" />

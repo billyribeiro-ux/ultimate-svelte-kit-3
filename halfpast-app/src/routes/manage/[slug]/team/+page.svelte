@@ -58,7 +58,7 @@
 				<fieldset class="offers">
 					<legend>Offers</legend>
 					{#each services as entry (entry.id)}
-						{@const offers = member.serviceIds.includes(entry.id)}
+						{const offers = $derived(member.serviceIds.includes(entry.id))}
 						<label class="chip" class:on={offers}>
 							<input
 								type="checkbox"

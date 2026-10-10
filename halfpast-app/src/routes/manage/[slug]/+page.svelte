@@ -129,8 +129,9 @@
 	{:else}
 		<ul class="entries" role="list" {@attach stagger({ y: 8, each: 0.04, onView: false })}>
 			{#each result.entries as entry (entry.id)}
-				{@const canManage =
-					result.viewer.role === 'owner' || result.viewer.staffId === entry.staffId}
+				{const canManage = $derived(
+					result.viewer.role === 'owner' || result.viewer.staffId === entry.staffId
+				)}
 				<li class="entry" style="--hue: {entry.colourHue}">
 					<div class="times">
 						<span class="start">{formatTime(entry.startsAt, result.timeZone)}</span>

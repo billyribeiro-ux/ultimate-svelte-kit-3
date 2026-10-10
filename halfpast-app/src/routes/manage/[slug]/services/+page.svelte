@@ -53,7 +53,7 @@
 				shares one set of fields, so typing in the third card fills the first,
 				and a validation error appears on all of them at once.
 			-->
-			{@const editForm = saveService.for(entry.id)}
+			{const editForm = $derived(saveService.for(entry.id))}
 			<li class="card" class:inactive={!entry.isActive}>
 				<div class="summary">
 					<div class="titles">

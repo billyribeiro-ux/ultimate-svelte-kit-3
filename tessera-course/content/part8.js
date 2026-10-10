@@ -369,7 +369,7 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 				lang: 'svelte',
 				code: `
 {#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
+	{const reply = $derived(postComment.for(thread.id))}
 	<article class="thread">
 		<header class="thread__head">
 			<strong>{thread.author}</strong>
@@ -410,7 +410,7 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 			},
 			{
 				type: 'note',
-				text: 'One line in that block is older syntax than the rest. `{@const reply = …}` is how this file declares the per-thread instance, and it still compiles; but since Svelte 5.56 the documentation calls `{@const}` legacy in favour of a declaration tag — `{const reply = $derived(postComment.for(thread.id))}` — which, unlike `{@const}`, is not confined to sitting directly inside a block. Write the declaration-tag form in new code.'
+				text: '`{const reply = $derived(…)}` is a **declaration tag** — a `const` written in markup — and it is how a block names a value: since Svelte 5.56 the older `{@const}` tag is legacy. The `$derived` is not decoration. `{@const}` re-evaluated whenever what it read changed, and a bare `{const}` is evaluated once, so `$derived` is what keeps that reactivity. The scope is lexical, too. `{@const}` had to sit directly inside a block, a component or a `<svelte:boundary>`; a declaration tag can go anywhere in markup, and its name is visible to its siblings and their children — the whole `<article>` here — and to nothing outside this `{#each}`.'
 			},
 			{
 				type: 'note',

@@ -56,7 +56,7 @@
 
 	<ul class="pricing__grid" role="list">
 		{#each plans as plan (plan.id)}
-			{@const price = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly}
+			{const price = $derived(billing === 'annual' ? plan.priceAnnual : plan.priceMonthly)}
 			<li class="pricing__item" id={plan.id}>
 				<Card highlighted={plan.featured}>
 					<div class="pricing__head">

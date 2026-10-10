@@ -115,8 +115,8 @@ const when = (ms: number) =&gt;
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
 	&lt;ul class=&quot;cards&quot;&gt;
 		{#each await getMine() as sheet (sheet.id)}
-			{@const del = remove.for(sheet.id)}
-			{@const ren = rename.for(sheet.id)}
+			{const del = $derived(remove.for(sheet.id))}
+			{const ren = $derived(rename.for(sheet.id))}
 			&lt;li class=&quot;card sheetcard&quot;&gt;
 				&lt;a class=&quot;sheetcard__link&quot; href={resolve('/(app)/sheet/[id]', { id: sheet.id })}&gt;
 					&lt;h3&gt;{sheet.title}&lt;/h3&gt;
@@ -420,7 +420,7 @@ async function addPasskey(name: string) {
 	&lt;svelte:boundary&gt;
 		&lt;ul class=&quot;keys&quot;&gt;
 			{#each await listPasskeys() as passkey (passkey.id)}
-				{@const del = removePasskey.for(passkey.id)}
+				{const del = $derived(removePasskey.for(passkey.id))}
 				&lt;li class=&quot;card key&quot;&gt;
 					&lt;KeyIcon size={20} /&gt;
 					&lt;div class=&quot;key__body&quot;&gt;

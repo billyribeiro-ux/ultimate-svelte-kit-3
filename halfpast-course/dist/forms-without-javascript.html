@@ -152,7 +152,7 @@
 		shares one set of fields, so typing in the third card fills the first,
 		and a validation error appears on all of them at once.
 	--&gt;
-	{@const editForm = saveService.for(entry.id)}
+	{const editForm = $derived(saveService.for(entry.id))}
 	&lt;li class=&quot;card&quot; class:inactive={!entry.isActive}&gt;
 		&lt;!-- … --&gt;
 
@@ -185,6 +185,7 @@
 {/each}</code></pre>
 </figure>
 <p><code>form.for(id)</code> gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.</p>
+<aside class="callout callout--note"><p><code>{const editForm = $derived(saveService.for(entry.id))}</code> is a <em>declaration tag</em>: a <code>const</code> written straight into the markup. Declaration tags arrived in Svelte 5.56 and made the older <code>{@const}</code> legacy. The <code>$derived</code> keeps the reactivity <code>{@const}</code> had — the value is worked out again whenever something it reads changes — where a bare <code>{const editForm = saveService.for(entry.id)}</code> is worked out once, when the row is created, like a <code>const</code> in the script. A declaration tag is visible to its siblings and their children in the same lexical scope: here that is the body of the <code>{#each}</code>, so each row has its own <code>editForm</code>, the snippets inside its <code>&lt;Field&gt;</code>s can read it, and nothing outside the loop can.</p></aside>
 <p>Notice the second argument again, this time on a text input. <code>as('text', entry.name)</code> renders each row's form already holding that row's current name, and it is also the value the field goes back to if the form is reset. <code>editForm.result</code> is whatever the handler returned, so <code>{ saved: true }</code> from the server becomes the &quot;Saved.&quot; message on that one card and no other.</p>
 
 <aside class="callout callout--check">

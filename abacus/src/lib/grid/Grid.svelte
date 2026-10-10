@@ -594,15 +594,16 @@
 			style:height="{HEADER_HEIGHT + totalHeight}px"
 		>
 			{#snippet cell(r: number, c: number, top: number, left: number)}
-				{@const k = key(r, c)}
-				{@const value = sheet.value(r, c)}
-				{@const selected = inRect(selection, { row: r, col: c })}
-				{@const anchor = sheet.anchor.row === r && sheet.anchor.col === c}
-				{@const highlight = highlights.find((h) => inRect(h.rect, { row: r, col: c }))}
-				{@const cursor = cursorsByCell.get(k)}
-				{@const editing = sheet.editing?.row === r && sheet.editing.col === c}
-				{@const filling =
-					fillTarget !== null && inRect(fillTarget, { row: r, col: c }) && !selected}
+				{const k = $derived(key(r, c))}
+				{const value = $derived(sheet.value(r, c))}
+				{const selected = $derived(inRect(selection, { row: r, col: c }))}
+				{const anchor = $derived(sheet.anchor.row === r && sheet.anchor.col === c)}
+				{const highlight = $derived(highlights.find((h) => inRect(h.rect, { row: r, col: c })))}
+				{const cursor = $derived(cursorsByCell.get(k))}
+				{const editing = $derived(sheet.editing?.row === r && sheet.editing.col === c)}
+				{const filling = $derived(
+					fillTarget !== null && inRect(fillTarget, { row: r, col: c }) && !selected
+				)}
 				<div
 					id="cell-{r}-{c}"
 					class={[

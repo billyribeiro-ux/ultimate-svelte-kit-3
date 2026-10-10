@@ -71,17 +71,17 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'the-cell', text: 'One snippet, five layers' },
-			code('src/lib/grid/Grid.svelte', 596, 652),
+			code('src/lib/grid/Grid.svelte', 596, 653),
 			{
 				type: 'p',
-				text: 'A snippet with parameters is a template function. `cell(r, c, top, left)` renders one cell at a position; its `{@const}`s compute everything the cell shows from the sheet and the decorations, and each one is reactive — when the sheet changes, `value` is worked out again. The Svelte docs now call `{@const}` legacy. Its replacement, since Svelte 5.56, is a *declaration tag* with a `$derived` inside: `{const value = $derived(sheet.value(r, c))}`. The `$derived` is not optional. A bare `{const value = sheet.value(r, c)}` is worked out once, like a `const` in the script, and the cell would never change again. The header uses the new form for `{const me = $derived(await whoAmI())}` (ch. 30). The grid still uses the legacy tag, which compiles unchanged; in new code, write `{const x = $derived(…)}`. The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.'
+				text: 'A snippet with parameters is a template function. `cell(r, c, top, left)` renders one cell at a position, and its eight *declaration tags* — `{const value = $derived(sheet.value(r, c))}` and the seven beside it — compute everything the cell shows from the sheet and the decorations. Declaration tags arrived in Svelte 5.56 and made `{@const}` legacy. The `$derived` keeps the reactivity `{@const}` had: when the sheet changes, `value` is worked out again. A bare `{const value = sheet.value(r, c)}` would be worked out once, like a `const` in the script, and the cell’s number, true/false and error styling would stop following its value; its text would still update, because `{sheet.display(r, c)}` is read straight in the markup. A declaration tag is visible to its siblings and their children in the same lexical scope, so these eight, the first children of the snippet, reach the cell’s markup and nothing outside the snippet. The header awaits the same way, `{const me = $derived(await whoAmI())}` (ch. 30). The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts *inside* the cell being edited, so it is positioned by the same geometry as everything else.'
 			},
-			code('src/lib/grid/Grid.svelte', 693, 747),
+			code('src/lib/grid/Grid.svelte', 694, 748),
 			{
 				type: 'p',
 				text: 'Frozen panes are the same snippet rendered in extra layers: frozen rows at the top, frozen columns at the left, and the corner where they meet, each with a different origin. The layers are sticky, and the trick that makes that work is in the stylesheet.'
 			},
-			code('src/lib/grid/Grid.svelte', 782, 823),
+			code('src/lib/grid/Grid.svelte', 783, 824),
 			{
 				type: 'p',
 				text: 'Each sticky layer is *zero-sized*: it takes no space in the canvas’s flow, and its absolutely positioned children overflow visibly and move with the canvas on the other axis. That is how the column headers stay at the top while scrolling down and still scroll sideways — with no JavaScript synchronising two scrollers, which is the way every grid used to do it and the way every grid got out of step.'
@@ -99,7 +99,7 @@ export const part4 = [
 				text: 'Three elements nest here, and the comment says what each is for: the grid takes the keys, the viewport scrolls, and the canvas is the size of the whole sheet, which is what gives the viewport something to scroll. The block stops where the canvas opens; inside it come the snippet and the five layers from earlier in the chapter. The outer element is `role="grid"` with `aria-rowcount`, `aria-colcount`, `aria-multiselectable` and `aria-activedescendant` pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is.'
 			},
 			code('src/lib/grid/Grid.svelte', 543, 550),
-			code('src/lib/grid/Grid.svelte', 751, 751),
+			code('src/lib/grid/Grid.svelte', 752, 752),
 			{
 				type: 'p',
 				text: 'After the canvas, as the last child of the grid, a polite live region announces the active cell’s address, value and formula on every move. `announcement` is a `$derived` that reads `sheet.version` as well as the anchor, so a recalculation that changes the active cell’s value is announced too, and `visually-hidden` keeps the text off the screen but in the accessibility tree.'

@@ -46,7 +46,7 @@
 	{:else}
 		<ul class="outline__list" role="tree" aria-label={t.a11y.outline}>
 			{#each roots as node (node.id)}
-				{@const children = childrenOf(node)}
+				{const children = $derived(childrenOf(node))}
 				<li
 					role="treeitem"
 					aria-selected={editor.selection.has(node.id)}

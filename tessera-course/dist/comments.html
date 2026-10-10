@@ -182,7 +182,7 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
+	{const reply = $derived(postComment.for(thread.id))}
 	&lt;article class=&quot;thread&quot;&gt;
 		&lt;header class=&quot;thread__head&quot;&gt;
 			&lt;strong&gt;{thread.author}&lt;/strong&gt;
@@ -218,7 +218,7 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 		&lt;/Button&gt;</code></pre>
 </figure>
 <p>Spread the bare <code>postComment</code> into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. <code>.for(id)</code> is the fix and it is four characters.</p>
-<aside class="callout callout--note"><p>One line in that block is older syntax than the rest. <code>{@const reply = …}</code> is how this file declares the per-thread instance, and it still compiles; but since Svelte 5.56 the documentation calls <code>{@const}</code> legacy in favour of a declaration tag — <code>{const reply = $derived(postComment.for(thread.id))}</code> — which, unlike <code>{@const}</code>, is not confined to sitting directly inside a block. Write the declaration-tag form in new code.</p></aside>
+<aside class="callout callout--note"><p><code>{const reply = $derived(…)}</code> is a <strong>declaration tag</strong> — a <code>const</code> written in markup — and it is how a block names a value: since Svelte 5.56 the older <code>{@const}</code> tag is legacy. The <code>$derived</code> is not decoration. <code>{@const}</code> re-evaluated whenever what it read changed, and a bare <code>{const}</code> is evaluated once, so <code>$derived</code> is what keeps that reactivity. The scope is lexical, too. <code>{@const}</code> had to sit directly inside a block, a component or a <code>&lt;svelte:boundary&gt;</code>; a declaration tag can go anywhere in markup, and its name is visible to its siblings and their children — the whole <code>&lt;article&gt;</code> here — and to nothing outside this <code>{#each}</code>.</p></aside>
 <aside class="callout callout--note"><p>Note <code>resolveThread</code>’s <code>where</code> clause: <code>and(eq(comment.id, id), isNull(comment.parentId))</code>. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.</p></aside>
 
 <aside class="callout callout--check">

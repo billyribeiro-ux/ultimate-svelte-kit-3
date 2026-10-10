@@ -438,7 +438,7 @@
 				{/each}
 
 				{#if editor.connectingFrom && editor.connectingTo}
-					{@const source = board.nodes.get(editor.connectingFrom)}
+					{const source = $derived(board.nodes.get(editor.connectingFrom))}
 					{#if source}
 						<line
 							class="board__wire"

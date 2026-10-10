@@ -193,13 +193,13 @@
 						price somebody is about to type into an order must never be
 						mid-animation when they read it.
 
-						`@const` rather than reaching through `market.last` inside the
-						getter: the narrowing from the `#if` does not survive into a
-						closure that runs later, and the checker is right to say so.
-						The const is scoped to this block, so it can only exist while
-						`last` does.
+						A declaration tag rather than reaching through `market.last` inside
+						the getter: the narrowing from the `#if` does not survive into a
+						closure that runs later, and the checker is right to say so. It is
+						`$derived` so it follows every trade, as the legacy `@const` did,
+						and it is scoped to this branch, so it only exists while `last` does.
 					-->
-					{@const last = market.last}
+					{const last = $derived(market.last)}
 					<span
 						class="mono last"
 						{@attach count(() => ({ value: last.price, format: priceLabel }))}

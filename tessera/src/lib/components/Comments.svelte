@@ -53,7 +53,7 @@
 		{/if}
 
 		{#each open as thread (thread.id)}
-			{@const reply = postComment.for(thread.id)}
+			{const reply = $derived(postComment.for(thread.id))}
 			<article class="thread">
 				<header class="thread__head">
 					<strong>{thread.author}</strong>

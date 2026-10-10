@@ -392,7 +392,7 @@ function pickService(slug: string | null) {
 				code: `
 <div class="grid" bind:this={grid}>
 	{#each slots as slot (slot.start)}
-		{@const value = valueOf(slot)}
+		{const value = $derived(valueOf(slot))}
 		<label class="slot" class:selected={selectedValue === value}>
 			<input {...field.as('radio', value)} />
 			<span>{labelFor(slot)}</span>
@@ -805,8 +805,8 @@ export const cancelOwnBooking = command(
 <nav class="tabs" aria-label="Dashboard sections">
 	<div class="tabs-inner container">
 		{#each visible as section (section.path)}
-			{@const Icon = section.icon}
-			{@const active = activePath === section.path}
+			{const Icon = $derived(section.icon)}
+			{const active = $derived(activePath === section.path)}
 			<a
 				class="tab"
 				class:active

@@ -75,8 +75,8 @@
 		<svelte:boundary>
 			<ul class="cards">
 				{#each await getMine() as sheet (sheet.id)}
-					{@const del = remove.for(sheet.id)}
-					{@const ren = rename.for(sheet.id)}
+					{const del = $derived(remove.for(sheet.id))}
+					{const ren = $derived(rename.for(sheet.id))}
 					<li class="card sheetcard">
 						<a class="sheetcard__link" href={resolve('/(app)/sheet/[id]', { id: sheet.id })}>
 							<h3>{sheet.title}</h3>

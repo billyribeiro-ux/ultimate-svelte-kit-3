@@ -68,7 +68,7 @@
 			{@attach revealGroup('.channels__item', { scale: true })}
 		>
 			{#each channels as channel (channel.title)}
-				{@const Icon = channel.icon}
+				{const Icon = $derived(channel.icon)}
 				<li class="channels__item">
 					<span class="channels__icon" aria-hidden="true">
 						<Icon size={24} weight="duotone" />

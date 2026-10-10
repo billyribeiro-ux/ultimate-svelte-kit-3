@@ -79,7 +79,7 @@
 	<div class="container">
 		<ul class="features auto-grid" role="list" {@attach stagger({ y: 14, each: 0.06 })}>
 			{#each FEATURES as feature (feature.title)}
-				{@const Icon = feature.icon}
+				{const Icon = feature.icon}
 				<li class="feature">
 					<span class="feature-icon" aria-hidden="true"><Icon weight="duotone" /></span>
 					<h2>{feature.title}</h2>

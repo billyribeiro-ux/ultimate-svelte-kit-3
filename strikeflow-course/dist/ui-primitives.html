@@ -236,9 +236,10 @@ export const featureIcons: Record&lt;IconName, Component&lt;Record&lt;string, un
 		<span class="code__file">usage</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{@const Icon = featureIcons[feature.icon]}
+	<pre><code class="lang-svelte">{const Icon = $derived(featureIcons[feature.icon])}
 &lt;Icon size={26} weight=&quot;duotone&quot; /&gt;</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>{const Icon = $derived(…)}</code> is a <strong>declaration tag</strong>: a <code>const</code> written straight into the markup, naming a value for the markup around it. Since Svelte 5.56 the older <code>{@const Icon = …}</code> tag is legacy. The <code>$derived</code> is not decoration: <code>{@const}</code> was worked out again whenever what it read changed, while a bare <code>{const Icon = …}</code> is worked out once, like a <code>const</code> in the script, so <code>$derived</code> is what keeps that reactivity. The scope is lexical: the name is visible to the tag's siblings and their children, so inside an <code>{#each}</code>, as in the feature grid later on, it reaches that item's whole card and nothing outside the loop.</p></aside>
 <h3 id="phosphor-vite">One important build setting</h3>
 <p><code>import { PulseIcon } from 'phosphor-svelte'</code> reads nicely but resolves a barrel file re-exporting roughly nine thousand components. Production builds tree-shake it, but the dev server has to crawl every one — which turns a cold start into a coffee break. Phosphor ships a Vite plugin that rewrites those imports into deep ones:</p>
 

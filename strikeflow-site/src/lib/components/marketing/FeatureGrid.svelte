@@ -30,7 +30,7 @@
 -->
 <ul class="feature-grid auto-grid" role="list">
 	{#each items as feature (feature.id)}
-		{@const Icon = featureIcons[feature.icon]}
+		{const Icon = $derived(featureIcons[feature.icon])}
 		<li class="feature-grid__item">
 			<Card as="article">
 				<span class="feature-grid__icon" aria-hidden="true">

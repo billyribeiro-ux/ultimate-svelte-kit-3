@@ -123,7 +123,7 @@
 {:else}
 	<div class="grid" bind:this={grid}>
 		{#each slots as slot (slot.start)}
-			{@const value = valueOf(slot)}
+			{const value = $derived(valueOf(slot))}
 			<label class="slot" class:selected={selectedValue === value}>
 				<input {...field.as('radio', value)} />
 				<span>{labelFor(slot)}</span>

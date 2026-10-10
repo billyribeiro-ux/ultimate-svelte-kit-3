@@ -163,8 +163,8 @@
 	</section>
 
 	{#each team.filter((member) => member.isActive) as member (member.id)}
-		{@const rules = byStaff.get(member.id) ?? []}
-		{@const canEdit = hours.canEdit.includes(member.id)}
+		{const rules = $derived(byStaff.get(member.id) ?? [])}
+		{const canEdit = $derived(hours.canEdit.includes(member.id))}
 		<section class="person" style="--hue: {member.colourHue}">
 			<h3>{member.displayName}</h3>
 

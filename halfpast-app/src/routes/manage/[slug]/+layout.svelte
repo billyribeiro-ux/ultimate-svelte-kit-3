@@ -73,8 +73,8 @@
 	<nav class="tabs" aria-label="Dashboard sections">
 		<div class="tabs-inner container">
 			{#each visible as section (section.path)}
-				{@const Icon = section.icon}
-				{@const active = activePath === section.path}
+				{const Icon = $derived(section.icon)}
+				{const active = $derived(activePath === section.path)}
 				<a
 					class="tab"
 					class:active
