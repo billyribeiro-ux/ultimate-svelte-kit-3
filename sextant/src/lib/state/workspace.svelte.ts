@@ -36,6 +36,7 @@
 import { untrack } from 'svelte';
 import { SvelteURLSearchParams } from 'svelte/reactivity';
 import { goto } from '$app/navigation';
+import { navigating } from '$app/state';
 import type { ResolvedPathname } from '$app/types';
 import { DEFAULT_RANGE } from '#lib/time/range.ts';
 
@@ -193,7 +194,7 @@ export class Workspace {
 	 * functions, which for this page would mean a round trip per keystroke;
 	 * `goto(url, { shallow: true })` — SvelteKit 3's replacement for the old
 	 * `replaceState`/`pushState` pair — changes the URL and `page.state` and
-	 * nothing else, which is right because the data is fetched by a remote
+	 * runs no `load`, which is right because the data is fetched by a remote
 	 * function that this page calls itself.
 	 *
 	 * The other half of the decision is `replace: true` rather than a push:
@@ -226,6 +227,30 @@ export class Workspace {
 
 	#write(search: string): void {
 		if (search === this.#written) return;
+
+		/*
+		 * Never while the router is navigating.
+		 *
+		 * In SvelteKit 3 a shallow `goto` is a navigation in its own right: it runs
+		 * the navigation hooks, and it takes over whatever navigation the router is
+		 * in the middle of. One that fires while a real navigation is loading does
+		 * not merely set the wrong URL — it supersedes the navigation somebody asked
+		 * for, which SvelteKit then abandons as "navigation aborted", sometimes after
+		 * its page has already rendered.
+		 *
+		 * Any navigation, shallow ones included, because `navigating` cannot tell
+		 * them apart. It has `from`, `to`, `type`, `willUnload`, `delta` and
+		 * `complete`, and nothing else. TypeScript would accept `navigating.shallow`,
+		 * since the type says `Navigation`, but the object has no such getter and
+		 * the read is `undefined` every time. `shallow` lives on the objects the
+		 * navigation hooks are handed.
+		 *
+		 * Nothing is lost by refusing. The page's out-effect reads `navigating` as
+		 * well, so the moment the router is idle it runs again and schedules
+		 * whatever is still unwritten. This line catches the write that comes due
+		 * before that: the Run button's `flush()`, pressed while the next page loads.
+		 */
+		if (navigating.type !== null) return;
 
 		// Both markers move together: the URL now says this, and we are the ones who
 		// said it — so the adopt effect that fires next is a no-op rather than a

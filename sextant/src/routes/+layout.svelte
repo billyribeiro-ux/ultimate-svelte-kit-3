@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { onNavigate } from '$app/navigation';
 	/*
 	 * `resolve` turns a route id and its parameters into a path, and the route
@@ -62,6 +63,27 @@
 				await navigation.complete;
 			});
 		});
+	});
+
+	/*
+	 * One attribute that says "the JavaScript is running".
+	 *
+	 * Anything that must tell the server's HTML from the live page needs
+	 * something honest to wait for. Above all that is the end-to-end test proving
+	 * that what is typed into a form before hydration survives it, which has to
+	 * see the moment happen.
+	 *
+	 * `onMount`, not an `afterNavigate` of type `enter`, although `enter` is
+	 * SvelteKit's own word for "the app has hydrated". SvelteKit sends `enter`
+	 * once, a moment after it starts hydrating, and `afterNavigate` registers its
+	 * callback when the component mounts. On a page whose script has a top-level
+	 * `await` (explore, traces, alerts), the layout mounts only after that
+	 * `await` has resolved. By then `enter` has come and gone, and the attribute
+	 * never appeared. `onMount` has no event to miss: the layout mounting is
+	 * exactly the moment this is meant to mark.
+	 */
+	onMount(() => {
+		document.documentElement.dataset.hydrated = '';
 	});
 
 	const signedIn = $derived(data.user !== null);

@@ -32,7 +32,7 @@ export const part6 = [
 				type: 'p',
 				text: 'Because it is a navigation: a hundred history entries for a sentence, and a re-run of every `load` on the route. The shape that works is to edit a local reactive params object and sync it to the address bar when the edits settle — which is exactly what `SvelteURLSearchParams` is for.'
 			},
-			code('src/lib/state/workspace.svelte.ts', 45, 69, { partial: true }),
+			code('src/lib/state/workspace.svelte.ts', 46, 70, { partial: true }),
 			{
 				type: 'note',
 				text: 'A plain `URLSearchParams` in `$state` would need replacing wholesale on every edit to be reactive at all, and `.set()` on it would silently do nothing. This is the case the reactive built-ins exist for, and the mirror image of the virtualizer’s plain `Map` in chapter 28.'
@@ -56,7 +56,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
         \`flush()\` then compared equal and did nothing — and so did
         the debounced write, forever after.`
 			},
-			code('src/lib/state/workspace.svelte.ts', 76, 98, { partial: true }),
+			code('src/lib/state/workspace.svelte.ts', 77, 99, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two fields: what the address bar last *said*, and what we last *wrote*. And the params are read inside `untrack`, so the adopt effect depends only on the URL — without which every keystroke re-runs it and the two would be conflated again by a different route.'
@@ -68,22 +68,85 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'canonicalising', text: 'And a consequence worth naming' },
-			code('src/lib/state/workspace.svelte.ts', 145, 187),
+			code('src/lib/state/workspace.svelte.ts', 146, 188),
 			{
 				type: 'p',
 				text: 'Arriving on `?q=from+logs` with no `range` rewrites the URL to include it, once, shortly after load. That is deliberate: the address bar is the state, so it should say all of it — and a link copied a moment later then carries the whole view rather than the half somebody happened to type.'
 			},
 
 			{ type: 'h3', id: 'the-write', text: 'The write itself: a shallow `goto`' },
-			code('src/lib/state/workspace.svelte.ts', 221, 241),
+			code('src/lib/state/workspace.svelte.ts', 228, 266),
 			{
 				type: 'p',
-				text: 'SvelteKit 3 folded `pushState` and `replaceState` into `goto`. `shallow: true` means "change the URL and `page.state`, run no `load`", and `replace: true` is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because `goto` only accepts a URL that resolves to a route, which is where the next block comes in.'
+				text: 'SvelteKit 3 folded `pushState` and `replaceState` into `goto`. `shallow: true` means "change the URL and `page.state`, run no `load`", and `replace: true` is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because `goto` only accepts a URL that resolves to a route, which is where the next block comes in. (The early return in the middle has a section of its own, below.)'
 			},
-			code('src/lib/state/workspace.svelte.ts', 100, 117),
+			code('src/lib/state/workspace.svelte.ts', 101, 118),
 			{
 				type: 'p',
 				text: 'The class does not know its own route. The page hands it a function that turns a search string into a URL through `resolve()` from `$app/paths`, and the return type — `ResolvedPathname` — is the proof that the URL points at a route this app has. That is what keeps the `goto` typed, and what lets the class be tested with no router at all.'
+			},
+
+			{ type: 'h3', id: 'settling-writes', text: 'A write that is still settling belongs to one entry' },
+			{
+				type: 'p',
+				text: 'A debounced write is a promise made to the address bar 400ms ahead of time, and the entry it was made to is not always the one that is current when it comes due. The end-to-end suite found that out under load, in a test that had passed every time before.'
+			},
+			{
+				type: 'terminal',
+				code: `
+arrive on ?q=… with no \`view\`, open a trace, press "Open full page"
+— all inside the first 400ms —
+
+expected URL   /demo/traces/19b4a728…
+received URL   /demo/explore?q=…&range=-6h&view=table   ← over the trace page
+page errors    navigation aborted  ×3
+
+cause:  the write that adds \`view=table\` fired while the router was
+        finishing the real navigation. A shallow \`goto\` is a navigation:
+        it took that one over, and SvelteKit abandoned the navigation
+        somebody had asked for — after its page had already rendered.`
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 47, 107),
+			{
+				type: 'p',
+				text: 'Two conditions on one effect. `ownsAddressBar` holds the write while the drawer’s trace URL is in the address bar, and lets the effect run again when the drawer closes, so the write is made after all, to the entry it was meant for. `navigating.type !== null` holds it while the router is in the middle of anything: a link, the back button, the drawer opening. Reading `navigating` is also what makes the effect run at the two moments that matter. When a navigation starts, the effect runs and its cleanup drops the waiting timer before the timer can take the navigation over. When the router is idle again, it runs once more and schedules whatever is still unwritten.'
+			},
+			{
+				type: 'p',
+				text: 'Where that second run lands depends on where the person went. A navigation to another page unmounts this one, effect and all, so nothing is written anywhere. A navigation back to this page, such as the header’s own Explore link, keeps the page mounted, and the edit goes to the entry the link made. A rule that only dropped the waiting write would get the first case right and the second wrong: the address bar would stay bare for good while the page showed a zoomed range.'
+			},
+			{
+				type: 'p',
+				text: 'The last word is the early return in `#write`, in the block above. It is for the one write that does not come through the effect: `flush()`, when somebody presses Run while the next page loads. It refuses during every navigation, shallow ones included. A shallow `goto` takes over a shallow navigation just as it takes over a real one, and refusing costs nothing, because the effect writes once the router is idle.'
+			},
+			{
+				type: 'warn',
+				text: '`navigating.shallow` type-checks, and it is `undefined` every time. `navigating` is declared as `Navigation` or an object of nulls, so once `type !== null` has narrowed it, TypeScript offers everything a `Navigation` has, `shallow` included. The object itself has getters for `from`, `to`, `type`, `willUnload`, `delta` and `complete`, the same list the documentation gives. `shallow` belongs to the objects handed to `beforeNavigate`, `onNavigate` and `afterNavigate`. A first draft of this guard tried to let shallow navigations through with `!navigating.shallow`, and in fact refused during all of them. That is now the rule on purpose.'
+			},
+			{
+				type: 'why',
+				title: 'Why the old `replaceState` did not race like this',
+				text: 'The deprecated function is still in SvelteKit 3, and for backwards compatibility it runs no navigation hooks and leaves the router’s in-flight navigation alone. `goto(url, { shallow: true })` is a navigation: it fires `beforeNavigate`, `onNavigate` and `afterNavigate` — the root layout’s view-transition guard depends on that — and it takes over whatever navigation the router is in the middle of. Going back to `replaceState` would only have changed the symptom. It would still have written the explore URL onto whichever entry was current: the drawer’s, or the trace page’s the moment the router had pushed it.'
+			},
+			{
+				type: 'note',
+				text: 'The in-effect changed for the same reason. In SvelteKit 3 `page.url` keeps describing the page as it was *rendered*; the address bar after a shallow `goto` is `page.shallow.url`. Adopting `page.url` was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.'
+			},
+
+			{ type: 'h3', id: 'holding-the-window', text: 'A test that holds the window open' },
+			code('e2e/explore.e2e.ts', 154, 187),
+			{
+				type: 'p',
+				text: 'A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds `view` — so "a write is waiting" is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, holds the next page’s request so its navigation is still in flight, then moves the clock past the debounce.'
+			},
+			{
+				type: 'p',
+				text: 'There are four, two for each half of the claim. Two check that nothing is written where it must not be: onto the drawer’s entry, or into a navigation to another page, and that includes pressing Run, which skips the effect and leaves only the guard in `#write`. The other two check that what was held back is still written: when the drawer closes, and when the navigation comes back to this page. Each was run against the code without the rule it covers, and failed at the step it targets.'
+			},
+			code('e2e/explore.e2e.ts', 299, 338),
+			{
+				type: 'warn',
+				text: 'A stopped clock stops more than your own timers. In async mode Svelte’s `tick()` resolves on a frame or a zero-length timeout, and on a clock that never moves neither comes — so the drawer waited for its data and then never painted, and the first version of these tests failed against the fixed code too. `openTheDrawer` moves the clock a millisecond at a time instead, which lets the frames through and stays nowhere near the 400ms.'
 			},
 
 			{
@@ -91,7 +154,10 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 				items: [
 					'Typing a query updates the address bar once, not once per character.',
 					'The back button restores the previous query.',
-					'Pressing Run immediately after typing produces a correct URL.'
+					'Pressing Run immediately after typing produces a correct URL.',
+					'Opening a trace within 400ms of an edit leaves the drawer open, and "Open full page" lands on the trace’s own URL.',
+					'Closing the drawer writes the edit that was waiting.',
+					'Pressing the header’s Explore link within 400ms of an edit still ends with the edit in the address bar.'
 				]
 			}
 		]
@@ -108,7 +174,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 				type: 'p',
 				text: 'Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 174, 218),
+			code('src/routes/[tenant]/explore/+page.svelte', 230, 274),
 			{
 				type: 'p',
 				text: '`goto(url, { shallow: true, state })` adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of `pushState(url, state)` so that one function owns every change to the address bar, and so that the URL has to be one `resolve()` can vouch for.'
@@ -119,7 +185,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'page-state', text: 'The drawer reads history, not a variable' },
-			code('src/routes/[tenant]/explore/+page.svelte', 426, 436),
+			code('src/routes/[tenant]/explore/+page.svelte', 482, 492),
 			{
 				type: 'warn',
 				text: 'A local `open` variable that the shallow `goto` also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading `page.state` directly means there is exactly one source of truth, and the browser’s own navigation is it.'
@@ -144,14 +210,14 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'typed-links', text: 'Every internal link is typed' },
-			code('src/routes/+layout.svelte', 4, 12),
+			code('src/routes/+layout.svelte', 5, 13),
 			{
 				type: 'p',
 				text: '`resolve(\'/[tenant]/traces/[traceId]\', { tenant, traceId })` instead of a template string. The route id is a member of a union SvelteKit generates from `src/routes`, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and `eslint-plugin-svelte`\'s `no-navigation-without-resolve` asks every `href` and every `goto` to go through it, for the same reason. The explore page imports it as `resolvePath`, because it already has a `resolve` of its own for time ranges, and two functions with one name are easier to read apart than to tell apart.'
 			},
 
 			{ type: 'h3', id: 'view-transitions', text: 'View transitions, in six lines and two guards' },
-			code('src/routes/+layout.svelte', 18, 65),
+			code('src/routes/+layout.svelte', 19, 66),
 			{
 				type: 'p',
 				text: 'The guards matter as much as the feature. `startViewTransition` does not exist in every browser, and there the navigation simply happens — which is the correct fallback and needs no polyfill. And somebody who asked their system for reduced motion asked for this too; honouring it *here* rather than only in CSS means the transition is never started, which is cheaper and avoids the flash that killing a running animation produces.'
@@ -200,7 +266,7 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'consuming', text: 'And nothing to show while it lands' },
-			code('src/routes/[tenant]/explore/+page.svelte', 275, 289),
+			code('src/routes/[tenant]/explore/+page.svelte', 331, 345),
 			{
 				type: 'p',
 				text: '`{#await … then}` with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.'

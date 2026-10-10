@@ -4,7 +4,7 @@
 	// Aliased: this page already has a `resolve` — the time-range one, from
 	// `#lib/time/range.ts` — and the two are easier to read apart than to tell apart.
 	import { resolve as resolvePath } from '$app/paths';
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import type { PageProps, Snapshot } from './$types.js';
 	import LiveTail from '#lib/components/LiveTail.svelte';
 	import MetricChart, { type Series } from '#lib/components/MetricChart.svelte';
@@ -12,6 +12,7 @@
 	import RangePicker from '#lib/components/RangePicker.svelte';
 	import ResultTable from '#lib/components/ResultTable.svelte';
 	import TraceDrawer from '#lib/components/TraceDrawer.svelte';
+	import { keepTyped } from '#lib/forms/keep-typed.ts';
 	import { runQuery } from '#lib/remote/query.remote.ts';
 	import { saveView } from '#lib/remote/settings.remote.ts';
 	import { SOURCES, type Source } from '#lib/sqf/ast.ts';
@@ -44,16 +45,66 @@
 	);
 
 	/*
+	 * A WRITE THAT IS STILL SETTLING BELONGS TO THIS PAGE
+	 * ---------------------------------------------------
+	 * The workspace writes the address bar with a shallow `goto` and
+	 * `replace: true`, up to 400ms after the edit that caused it. The write
+	 * replaces whichever history entry is current *when it fires* — so if the
+	 * person has moved on in those 400ms, it lands on somebody else's.
+	 *
+	 * The end-to-end suite found the expensive case under load. Arrive on a link
+	 * with no `view`, open a trace, press "Open full page" — all inside the 400ms
+	 * — and the write that adds `view=table` fired while the router was finishing
+	 * the real navigation. A shallow `goto` is a navigation in SvelteKit 3 — the
+	 * `replaceState` it replaced never touched the router — so it took that
+	 * navigation over: the trace page rendered under `/explore?…&view=table`, and
+	 * SvelteKit reported the navigation the person asked for as aborted.
+	 *
+	 * So the workspace writes only while the address bar is this page's, and
+	 * only while the router is idle. `page.shallow` is what SvelteKit 3 says
+	 * about a URL that a shallow `goto` put there — `page.url` goes on describing
+	 * the page that is rendered — and while it names another route, which is
+	 * what the drawer's trace URL does, the address bar belongs to the drawer.
+	 */
+	const ownsAddressBar = $derived(
+		page.shallow === null || page.shallow.route?.id === page.route.id
+	);
+
+	/*
 	 * Two effects, in opposite directions, and the pair is the whole mechanism.
 	 *
-	 * Out: local edits reach the address bar once they settle.
+	 * Out: local edits reach the address bar once they settle — while it is this
+	 * page's, and while no navigation is in flight. `navigating` is the router's
+	 * own word for the second: its fields are `null` when no navigation is
+	 * occurring. Reading it here does two jobs. When a navigation starts (a link,
+	 * the back button, the drawer opening), the effect runs again and its cleanup
+	 * drops the timer that was waiting. When the router is idle again, it runs
+	 * once more and schedules whatever is still unwritten. If the navigation came
+	 * back to this page, the header's own Explore link for instance, that write
+	 * lands on the entry the link made. If it went anywhere else, this page and
+	 * its effect are gone, and nothing is written at all. The workspace's own
+	 * writes and a selected row are navigations too, and only restart the wait.
+	 * The drawer works the same way through `ownsAddressBar`: the write it held
+	 * is made when it closes, to the entry it was always meant for.
+	 *
 	 * In: a back button, a forward button or a pasted link reaches the interface.
+	 * It reads the address bar as it is *now* — `page.shallow.url` once a shallow
+	 * `goto` has put a URL there — because `page.url` keeps the URL the page was
+	 * rendered from. Reading `page.url` here would undo a zoom made just before a
+	 * trace was opened: closing the drawer goes back to an entry SvelteKit
+	 * re-renders from the page's first URL, and the effect would adopt that.
 	 *
 	 * Both are guarded on equality inside `Workspace`, which is what stops them
 	 * from feeding each other forever.
 	 */
-	$effect(() => workspace.sync());
-	$effect(() => workspace.adopt(page.url.search));
+	$effect(() => {
+		if (!ownsAddressBar || navigating.type !== null) return;
+		return workspace.sync();
+	});
+	$effect(() => {
+		if (!ownsAddressBar) return;
+		workspace.adopt((page.shallow?.url ?? page.url).search);
+	});
 
 	/**
 	 * The query that has actually been *run*.
@@ -83,6 +134,11 @@
 	const result = $derived(
 		await runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range })
 	);
+
+	// After that `await` and before the template: the last moment the server's
+	// controls are still on the page as somebody left them, so a view name typed
+	// while the bundle loaded is read from them here and survives hydration.
+	keepTyped(saveView.fields.name);
 
 	const window_ = $derived(resolve(submitted.range));
 

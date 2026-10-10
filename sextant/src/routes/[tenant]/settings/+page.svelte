@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { keepTyped } from '#lib/forms/keep-typed.ts';
 	import { createKey, deleteView, keys, revokeKey, views } from '#lib/remote/settings.remote.ts';
 	import { clock, relative } from '#lib/reactivity/clock.svelte.ts';
 	import type { PageProps } from './$types.js';
@@ -7,6 +8,10 @@
 	let { data }: PageProps = $props();
 
 	const canAdmin = $derived(data.role === 'owner' || data.role === 'admin');
+
+	// Here in the `<script>`, before the template hydrates: a key's name and scope
+	// chosen while the bundle was still loading must survive it arriving.
+	keepTyped(createKey.fields.name, createKey.fields.scopes);
 </script>
 
 <svelte:head>

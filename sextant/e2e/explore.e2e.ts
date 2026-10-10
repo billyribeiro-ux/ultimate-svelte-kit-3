@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * THE EXPLORE WORKSPACE
@@ -118,4 +118,221 @@ test('the canvas chart is readable as a table', async ({ page }) => {
 
 	await page.getByText('Read as a table').click();
 	await expect(page.getByRole('columnheader', { name: 'Max' })).toBeVisible();
+});
+
+/**
+ * A URL WRITE THAT IS STILL SETTLING
+ * ==================================
+ *
+ * The workspace writes the address bar 400ms after an edit settles, with a
+ * shallow `goto` that replaces whichever entry is current when it fires. The
+ * claim in `+page.svelte` is that the write only ever lands on this page's own
+ * entry — never on the drawer's, never into a navigation in flight — and that
+ * holding it back does not lose it.
+ *
+ * Under load the suite once caught it doing exactly that, in the middle of
+ * "Open full page". The tests below hold that window open on purpose instead of
+ * hoping to land in it. The page's clock is Playwright's, stopped once the page
+ * has written its URL out — which is also the proof that it hydrated, because
+ * only the client adds `view`. From then on no timer fires unless a test moves
+ * the clock, so "a write is waiting" is a fact rather than a race. The edit that
+ * sets one waiting is a zoom, because a zoom moves the range and leaves the
+ * rows where they are.
+ */
+const WITH_TRACES = `${DEMO}?q=${encodeURIComponent(
+	'from spans | where service == "checkout" | sort duration desc | take 30'
+)}&range=-6h`;
+
+/** The workspace's debounce, from `workspace.svelte.ts`. */
+const SETTLE = 400;
+
+/** The page's own idea of the time: Playwright's clock, once it is installed. */
+async function clockOf(page: Page): Promise<number> {
+	return page.evaluate(() => Date.now());
+}
+
+/** Load the explore page, stop its clock, and leave a write waiting. Returns when the wait began. */
+async function aWriteIsWaiting(page: Page): Promise<number> {
+	await page.clock.install();
+	await page.goto(WITH_TRACES);
+	await expect(page).toHaveURL(/view=table/);
+	await page.clock.pauseAt(Date.now() + 1_000);
+
+	await page.getByRole('button', { name: 'Zoom in' }).click();
+	return clockOf(page);
+}
+
+/**
+ * Open the first row's trace in the drawer, moving the stopped clock a
+ * millisecond at a time.
+ *
+ * In async mode Svelte's `tick()` waits for a frame or a zero-length timeout,
+ * and on a stopped clock neither ever comes, so the drawer would wait for its
+ * data and then never paint. A millisecond a step lets those through and keeps
+ * the clock nowhere near the debounce — which each test then checks.
+ */
+async function openTheDrawer(page: Page): Promise<void> {
+	await page.getByRole('row').first().click();
+
+	const dialog = page.getByRole('dialog');
+	await expect
+		.poll(
+			async () => {
+				await page.clock.runFor(1);
+				return dialog.isVisible();
+			},
+			{ intervals: [50] }
+		)
+		.toBe(true);
+}
+
+/** Hold the requests `matches` picks out until the returned function is called. */
+async function hold(page: Page, matches: (url: URL) => boolean): Promise<() => void> {
+	let release: () => void = () => {};
+	const held = new Promise<void>((resolve) => (release = resolve));
+	await page.route(matches, async (route) => {
+		await held;
+		await route.continue();
+	});
+	return release;
+}
+
+test('a write still settling does not follow "Open full page" to the trace', async ({ page }) => {
+	const waitingSince = await aWriteIsWaiting(page);
+	await openTheDrawer(page);
+
+	// The full page's data is held, so its navigation is still in flight when the
+	// clock moves past the debounce.
+	const release = await hold(page, (url) => url.pathname.endsWith('/__data.json'));
+	const requested = page.waitForRequest((request) => request.url().includes('/__data.json'));
+
+	await page.getByRole('link', { name: 'Open full page' }).click();
+	// The router lets the browser paint before it navigates — a frame, then a
+	// zero-length timeout, both on the stopped clock.
+	await page.clock.runFor(20);
+	await requested;
+	expect((await clockOf(page)) - waitingSince).toBeLessThan(SETTLE);
+
+	/*
+	 * Past the debounce, with the navigation waiting for its data.
+	 *
+	 * This is where the waiting write used to fire: a shallow `goto` that took
+	 * the in-flight navigation over, so SvelteKit abandoned the one that was
+	 * asked for and the explore URL stayed in the address bar.
+	 */
+	await page.clock.runFor(SETTLE * 2);
+	release();
+	await page.clock.resume();
+
+	await expect(page.getByRole('tree', { name: 'Spans' })).toBeVisible();
+	await expect(page).toHaveURL(/\/demo\/traces\//);
+});
+
+test('the drawer is not closed by a write meant for the page under it', async ({ page }) => {
+	const waitingSince = await aWriteIsWaiting(page);
+	await openTheDrawer(page);
+	expect((await clockOf(page)) - waitingSince).toBeLessThan(SETTLE);
+
+	// Before the fix, the write fired here: it replaced the drawer's entry with
+	// the explore URL and an empty `page.state`, and the drawer closed itself
+	// with nobody touching it.
+	await page.clock.runFor(SETTLE * 2);
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await expect(page).toHaveURL(/\/demo\/traces\//);
+
+	/*
+	 * Closing the drawer hands the address bar back.
+	 *
+	 * The zoom was never written while the drawer was open, and it is not lost
+	 * either: it is written now, to the entry it was meant for.
+	 */
+	await page.clock.resume();
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page).toHaveURL(/\/demo\/explore\?.*range=\d+\.\.\d+/);
+});
+
+test('no write, waiting or asked for, takes over a navigation to another page', async ({
+	page
+}) => {
+	const waitingSince = await aWriteIsWaiting(page);
+
+	/*
+	 * A plain link this time, so no drawer stands in between.
+	 *
+	 * The list page loads no server data, so what keeps its navigation in flight
+	 * is the page's own code: the route's chunk, which nothing on the explore
+	 * page has needed until now.
+	 */
+	const release = await hold(page, (url) => url.pathname.startsWith('/_app/immutable/nodes/'));
+	const requested = page.waitForRequest((request) =>
+		request.url().includes('/_app/immutable/nodes/')
+	);
+
+	await page
+		.getByRole('navigation', { name: 'Workspace' })
+		.getByRole('link', { name: 'Traces' })
+		.click();
+	await page.clock.runFor(20);
+	await requested;
+
+	/*
+	 * Two more things while the next page is still loading.
+	 *
+	 * The zoom goes through the page's effect, which sees the router busy and
+	 * schedules nothing. Run is the one that does not wait for any effect: it
+	 * flushes, straight into `#write`, and the guard there is all that stands
+	 * between it and the navigation.
+	 */
+	await page.getByRole('button', { name: 'Zoom in' }).click();
+	await page.getByRole('button', { name: 'Run', exact: false }).click();
+	expect((await clockOf(page)) - waitingSince).toBeLessThan(SETTLE);
+
+	await page.clock.runFor(SETTLE * 2);
+	release();
+	await page.clock.resume();
+
+	await expect(page.getByRole('list', { name: 'Recent traces' })).toBeVisible();
+	await expect(page).toHaveURL(/\/demo\/traces$/);
+});
+
+test('a write held back by a navigation to this same page is made once it lands', async ({
+	page
+}) => {
+	const waitingSince = await aWriteIsWaiting(page);
+
+	/*
+	 * The header's own link to this page, with no query string.
+	 *
+	 * Its data is held, so the navigation is still in flight when the zoom would
+	 * have been written, and the write is held back. The page stays mounted
+	 * through a navigation to its own route, so this time the edit has somewhere
+	 * to go once the router is idle.
+	 */
+	const release = await hold(page, (url) => url.pathname.endsWith('/__data.json'));
+	const requested = page.waitForRequest((request) => request.url().includes('/__data.json'));
+
+	await page
+		.getByRole('navigation', { name: 'Workspace' })
+		.getByRole('link', { name: 'Explore' })
+		.click();
+	await page.clock.runFor(20);
+	await requested;
+	expect((await clockOf(page)) - waitingSince).toBeLessThan(SETTLE);
+
+	// Past the debounce, and nothing has been written: the router still has the
+	// explore URL it is leaving in the address bar, without the zoom.
+	await page.clock.runFor(SETTLE * 2);
+	await expect(page).not.toHaveURL(/range=\d+\.\.\d+/);
+	release();
+	await page.clock.resume();
+
+	/*
+	 * The link said nothing about `q`, `range` or `view`, and the workspace keeps
+	 * what it holds for a key the URL leaves out. So the zoom is still the range,
+	 * and once the router is idle it is written to the entry the link made. A
+	 * guard that only held the write back, with nothing to run the effect again,
+	 * would leave the address bar bare for good while the page showed the zoom.
+	 */
+	await expect(page).toHaveURL(/\/demo\/explore\?.*range=\d+\.\.\d+.*view=table/);
 });

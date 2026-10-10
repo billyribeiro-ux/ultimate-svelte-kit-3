@@ -129,12 +129,48 @@ write status AND outbox row in one transaction; a worker delivers
 			},
 			code('src/lib/remote/alerts.remote.ts', 176, 189),
 
+			{ type: 'h3', id: 'typed-before-hydration', text: 'What was typed before the page woke up' },
+			{
+				type: 'p',
+				text: 'The read API’s end-to-end tests mint their keys through this form, straight after the page loads. On the phone profile, under load, one of them typed the key’s name a few dozen milliseconds before the bundle hydrated — and hydration emptied the field, the `required` check stopped the submission without a request ever leaving the browser, and no key appeared. The trace showed it plainly: `fill` finished, the remote queries a hydrated page makes went out a few dozen milliseconds later, and at the very next action the input’s value was an empty string.'
+			},
+			code('src/lib/forms/keep-typed.ts', 1, 67),
+			{
+				type: 'p',
+				text: 'The fix is the comparison Svelte already makes for `bind:value` — what is in the control now against what the server rendered — applied to the controls a remote form spreads its fields onto. It runs in the page’s `<script>`, which is the one moment that is both after the server’s HTML arrived and before the template hydrates over it.'
+			},
+			code('src/routes/[tenant]/settings/+page.svelte', 12, 14),
+			{
+				type: 'p',
+				text: 'The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing. Its script has a top-level `await`, and the call goes after it, because code after a top-level `await` still runs before the template, and later is better here: it reads whatever was typed while the `await` was waiting too.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 138, 141),
+			{
+				type: 'warn',
+				text: 'The select is the worse half. An emptied name at least stops the form; a `read` scope chosen before hydration comes back as `ingest` and submits perfectly happily — a key that cannot do the one thing it was made for, and nothing on the screen to say so.'
+			},
+
+			{ type: 'h3', id: 'seeing-hydration', text: 'A test that has to see hydration happen' },
+			code('src/routes/+layout.svelte', 68, 87),
+			{
+				type: 'p',
+				text: 'The obvious hook was the wrong one. An `afterNavigate` of type `enter` is SvelteKit’s own word for “the app has hydrated”, and the first version of this marker used it. The marker then appeared on the settings page and on no other page. `enter` goes out once, a moment after hydration starts, to whichever callbacks are registered by then. `afterNavigate` registers in `onMount`, and on a page with a top-level `await` the layout does not mount until that `await` has resolved. `onMount` has no event to miss. So the marker has a test of its own, on all four workspace pages, checking both sides: absent while the bundle is held, present once it is let through.'
+			},
+			code('e2e/hydration.e2e.ts', 33, 48),
+			{
+				type: 'p',
+				text: 'The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reloads, so the scope it reads back is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.'
+			},
+			code('e2e/hydration.e2e.ts', 50, 78),
+
 			{
 				type: 'checkpoint',
 				items: [
 					'A key is displayed once and never again.',
 					'A revoked key still appears, marked, with who made it and when.',
-					'A saved view of "the last hour" means the last hour tomorrow.'
+					'A saved view of "the last hour" means the last hour tomorrow.',
+					'A name and a scope chosen before the page hydrates are the ones the key is minted with.',
+					'A view name typed before the explore page hydrates is the name it is saved under.'
 				]
 			}
 		]

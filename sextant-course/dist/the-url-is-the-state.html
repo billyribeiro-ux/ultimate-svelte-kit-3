@@ -83,7 +83,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:45-69</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:46-70</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	readonly range: string;
@@ -134,7 +134,7 @@ cause:  `adopt()` ended with `#synced = params.toString()`.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:76-98</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:77-99</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -171,7 +171,7 @@ cause:  `adopt()` ended with `#synced = params.toString()`.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:145-187</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:146-188</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">get search(): string {
@@ -223,17 +223,35 @@ adopt(search: string): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:221-241</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:228-266</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** Flush immediately. Used when running a query, so the URL is right to copy. */
-flush(): void {
-	clearTimeout(this.#timer);
-	this.#write(this.search);
-}
-
-#write(search: string): void {
+	<pre><code class="lang-ts">#write(search: string): void {
 	if (search === this.#written) return;
+
+	/*
+	 * Never while the router is navigating.
+	 *
+	 * In SvelteKit 3 a shallow `goto` is a navigation in its own right: it runs
+	 * the navigation hooks, and it takes over whatever navigation the router is
+	 * in the middle of. One that fires while a real navigation is loading does
+	 * not merely set the wrong URL — it supersedes the navigation somebody asked
+	 * for, which SvelteKit then abandons as &quot;navigation aborted&quot;, sometimes after
+	 * its page has already rendered.
+	 *
+	 * Any navigation, shallow ones included, because `navigating` cannot tell
+	 * them apart. It has `from`, `to`, `type`, `willUnload`, `delta` and
+	 * `complete`, and nothing else. TypeScript would accept `navigating.shallow`,
+	 * since the type says `Navigation`, but the object has no such getter and
+	 * the read is `undefined` every time. `shallow` lives on the objects the
+	 * navigation hooks are handed.
+	 *
+	 * Nothing is lost by refusing. The page's out-effect reads `navigating` as
+	 * well, so the moment the router is idle it runs again and schedules
+	 * whatever is still unwritten. This line catches the write that comes due
+	 * before that: the Run button's `flush()`, pressed while the next page loads.
+	 */
+	if (navigating.type !== null) return;
 
 	// Both markers move together: the URL now says this, and we are the ones who
 	// said it — so the adopt effect that fires next is a no-op rather than a
@@ -248,11 +266,11 @@ flush(): void {
 	void goto(this.#href(search), { shallow: true, replace: true });
 }</code></pre>
 </figure>
-<p>SvelteKit 3 folded <code>pushState</code> and <code>replaceState</code> into <code>goto</code>. <code>shallow: true</code> means &quot;change the URL and <code>page.state</code>, run no <code>load</code>&quot;, and <code>replace: true</code> is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because <code>goto</code> only accepts a URL that resolves to a route, which is where the next block comes in.</p>
+<p>SvelteKit 3 folded <code>pushState</code> and <code>replaceState</code> into <code>goto</code>. <code>shallow: true</code> means &quot;change the URL and <code>page.state</code>, run no <code>load</code>&quot;, and <code>replace: true</code> is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because <code>goto</code> only accepts a URL that resolves to a route, which is where the next block comes in. (The early return in the middle has a section of its own, below.)</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:100-117</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:101-118</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -275,10 +293,200 @@ constructor(init: WorkspaceInit, href: (search: string) =&gt; ResolvedPathname) 
 }</code></pre>
 </figure>
 <p>The class does not know its own route. The page hands it a function that turns a search string into a URL through <code>resolve()</code> from <code>$app/paths</code>, and the return type — <code>ResolvedPathname</code> — is the proof that the URL points at a route this app has. That is what keeps the <code>goto</code> typed, and what lets the class be tested with no router at all.</p>
+<h3 id="settling-writes">A write that is still settling belongs to one entry</h3>
+<p>A debounced write is a promise made to the address bar 400ms ahead of time, and the entry it was made to is not always the one that is current when it comes due. The end-to-end suite found that out under load, in a test that had passed every time before.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>arrive on ?q=… with no `view`, open a trace, press &quot;Open full page&quot;
+— all inside the first 400ms —
+
+expected URL   /demo/traces/19b4a728…
+received URL   /demo/explore?q=…&amp;range=-6h&amp;view=table   ← over the trace page
+page errors    navigation aborted  ×3
+
+cause:  the write that adds `view=table` fired while the router was
+        finishing the real navigation. A shallow `goto` is a navigation:
+        it took that one over, and SvelteKit abandoned the navigation
+        somebody had asked for — after its page had already rendered.</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:47-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * A WRITE THAT IS STILL SETTLING BELONGS TO THIS PAGE
+ * ---------------------------------------------------
+ * The workspace writes the address bar with a shallow `goto` and
+ * `replace: true`, up to 400ms after the edit that caused it. The write
+ * replaces whichever history entry is current *when it fires* — so if the
+ * person has moved on in those 400ms, it lands on somebody else's.
+ *
+ * The end-to-end suite found the expensive case under load. Arrive on a link
+ * with no `view`, open a trace, press &quot;Open full page&quot; — all inside the 400ms
+ * — and the write that adds `view=table` fired while the router was finishing
+ * the real navigation. A shallow `goto` is a navigation in SvelteKit 3 — the
+ * `replaceState` it replaced never touched the router — so it took that
+ * navigation over: the trace page rendered under `/explore?…&amp;view=table`, and
+ * SvelteKit reported the navigation the person asked for as aborted.
+ *
+ * So the workspace writes only while the address bar is this page's, and
+ * only while the router is idle. `page.shallow` is what SvelteKit 3 says
+ * about a URL that a shallow `goto` put there — `page.url` goes on describing
+ * the page that is rendered — and while it names another route, which is
+ * what the drawer's trace URL does, the address bar belongs to the drawer.
+ */
+const ownsAddressBar = $derived(
+	page.shallow === null || page.shallow.route?.id === page.route.id
+);
+
+/*
+ * Two effects, in opposite directions, and the pair is the whole mechanism.
+ *
+ * Out: local edits reach the address bar once they settle — while it is this
+ * page's, and while no navigation is in flight. `navigating` is the router's
+ * own word for the second: its fields are `null` when no navigation is
+ * occurring. Reading it here does two jobs. When a navigation starts (a link,
+ * the back button, the drawer opening), the effect runs again and its cleanup
+ * drops the timer that was waiting. When the router is idle again, it runs
+ * once more and schedules whatever is still unwritten. If the navigation came
+ * back to this page, the header's own Explore link for instance, that write
+ * lands on the entry the link made. If it went anywhere else, this page and
+ * its effect are gone, and nothing is written at all. The workspace's own
+ * writes and a selected row are navigations too, and only restart the wait.
+ * The drawer works the same way through `ownsAddressBar`: the write it held
+ * is made when it closes, to the entry it was always meant for.
+ *
+ * In: a back button, a forward button or a pasted link reaches the interface.
+ * It reads the address bar as it is *now* — `page.shallow.url` once a shallow
+ * `goto` has put a URL there — because `page.url` keeps the URL the page was
+ * rendered from. Reading `page.url` here would undo a zoom made just before a
+ * trace was opened: closing the drawer goes back to an entry SvelteKit
+ * re-renders from the page's first URL, and the effect would adopt that.
+ *
+ * Both are guarded on equality inside `Workspace`, which is what stops them
+ * from feeding each other forever.
+ */
+$effect(() =&gt; {
+	if (!ownsAddressBar || navigating.type !== null) return;
+	return workspace.sync();
+});
+$effect(() =&gt; {
+	if (!ownsAddressBar) return;
+	workspace.adopt((page.shallow?.url ?? page.url).search);
+});</code></pre>
+</figure>
+<p>Two conditions on one effect. <code>ownsAddressBar</code> holds the write while the drawer’s trace URL is in the address bar, and lets the effect run again when the drawer closes, so the write is made after all, to the entry it was meant for. <code>navigating.type !== null</code> holds it while the router is in the middle of anything: a link, the back button, the drawer opening. Reading <code>navigating</code> is also what makes the effect run at the two moments that matter. When a navigation starts, the effect runs and its cleanup drops the waiting timer before the timer can take the navigation over. When the router is idle again, it runs once more and schedules whatever is still unwritten.</p>
+<p>Where that second run lands depends on where the person went. A navigation to another page unmounts this one, effect and all, so nothing is written anywhere. A navigation back to this page, such as the header’s own Explore link, keeps the page mounted, and the edit goes to the entry the link made. A rule that only dropped the waiting write would get the first case right and the second wrong: the address bar would stay bare for good while the page showed a zoomed range.</p>
+<p>The last word is the early return in <code>#write</code>, in the block above. It is for the one write that does not come through the effect: <code>flush()</code>, when somebody presses Run while the next page loads. It refuses during every navigation, shallow ones included. A shallow <code>goto</code> takes over a shallow navigation just as it takes over a real one, and refusing costs nothing, because the effect writes once the router is idle.</p>
+<aside class="callout callout--warn"><p><code>navigating.shallow</code> type-checks, and it is <code>undefined</code> every time. <code>navigating</code> is declared as <code>Navigation</code> or an object of nulls, so once <code>type !== null</code> has narrowed it, TypeScript offers everything a <code>Navigation</code> has, <code>shallow</code> included. The object itself has getters for <code>from</code>, <code>to</code>, <code>type</code>, <code>willUnload</code>, <code>delta</code> and <code>complete</code>, the same list the documentation gives. <code>shallow</code> belongs to the objects handed to <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code>. A first draft of this guard tried to let shallow navigations through with <code>!navigating.shallow</code>, and in fact refused during all of them. That is now the rule on purpose.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why the old <code>replaceState</code> did not race like this</h4>
+	<p>The deprecated function is still in SvelteKit 3, and for backwards compatibility it runs no navigation hooks and leaves the router’s in-flight navigation alone. <code>goto(url, { shallow: true })</code> is a navigation: it fires <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code> — the root layout’s view-transition guard depends on that — and it takes over whatever navigation the router is in the middle of. Going back to <code>replaceState</code> would only have changed the symptom. It would still have written the explore URL onto whichever entry was current: the drawer’s, or the trace page’s the moment the router had pushed it.</p>
+</aside>
+<aside class="callout callout--note"><p>The in-effect changed for the same reason. In SvelteKit 3 <code>page.url</code> keeps describing the page as it was *rendered*; the address bar after a shallow <code>goto</code> is <code>page.shallow.url</code>. Adopting <code>page.url</code> was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.</p></aside>
+<h3 id="holding-the-window">A test that holds the window open</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:154-187</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Load the explore page, stop its clock, and leave a write waiting. Returns when the wait began. */
+async function aWriteIsWaiting(page: Page): Promise&lt;number&gt; {
+	await page.clock.install();
+	await page.goto(WITH_TRACES);
+	await expect(page).toHaveURL(/view=table/);
+	await page.clock.pauseAt(Date.now() + 1_000);
+
+	await page.getByRole('button', { name: 'Zoom in' }).click();
+	return clockOf(page);
+}
+
+/**
+ * Open the first row's trace in the drawer, moving the stopped clock a
+ * millisecond at a time.
+ *
+ * In async mode Svelte's `tick()` waits for a frame or a zero-length timeout,
+ * and on a stopped clock neither ever comes, so the drawer would wait for its
+ * data and then never paint. A millisecond a step lets those through and keeps
+ * the clock nowhere near the debounce — which each test then checks.
+ */
+async function openTheDrawer(page: Page): Promise&lt;void&gt; {
+	await page.getByRole('row').first().click();
+
+	const dialog = page.getByRole('dialog');
+	await expect
+		.poll(
+			async () =&gt; {
+				await page.clock.runFor(1);
+				return dialog.isVisible();
+			},
+			{ intervals: [50] }
+		)
+		.toBe(true);
+}</code></pre>
+</figure>
+<p>A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds <code>view</code> — so &quot;a write is waiting&quot; is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, holds the next page’s request so its navigation is still in flight, then moves the clock past the debounce.</p>
+<p>There are four, two for each half of the claim. Two check that nothing is written where it must not be: onto the drawer’s entry, or into a navigation to another page, and that includes pressing Run, which skips the effect and leaves only the guard in <code>#write</code>. The other two check that what was held back is still written: when the drawer closes, and when the navigation comes back to this page. Each was run against the code without the rule it covers, and failed at the step it targets.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:299-338</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a write held back by a navigation to this same page is made once it lands', async ({
+	page
+}) =&gt; {
+	const waitingSince = await aWriteIsWaiting(page);
+
+	/*
+	 * The header's own link to this page, with no query string.
+	 *
+	 * Its data is held, so the navigation is still in flight when the zoom would
+	 * have been written, and the write is held back. The page stays mounted
+	 * through a navigation to its own route, so this time the edit has somewhere
+	 * to go once the router is idle.
+	 */
+	const release = await hold(page, (url) =&gt; url.pathname.endsWith('/__data.json'));
+	const requested = page.waitForRequest((request) =&gt; request.url().includes('/__data.json'));
+
+	await page
+		.getByRole('navigation', { name: 'Workspace' })
+		.getByRole('link', { name: 'Explore' })
+		.click();
+	await page.clock.runFor(20);
+	await requested;
+	expect((await clockOf(page)) - waitingSince).toBeLessThan(SETTLE);
+
+	// Past the debounce, and nothing has been written: the router still has the
+	// explore URL it is leaving in the address bar, without the zoom.
+	await page.clock.runFor(SETTLE * 2);
+	await expect(page).not.toHaveURL(/range=\d+\.\.\d+/);
+	release();
+	await page.clock.resume();
+
+	/*
+	 * The link said nothing about `q`, `range` or `view`, and the workspace keeps
+	 * what it holds for a key the URL leaves out. So the zoom is still the range,
+	 * and once the router is idle it is written to the entry the link made. A
+	 * guard that only held the write back, with nothing to run the effect again,
+	 * would leave the address bar bare for good while the page showed the zoom.
+	 */
+	await expect(page).toHaveURL(/\/demo\/explore\?.*range=\d+\.\.\d+.*view=table/);
+});</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>A stopped clock stops more than your own timers. In async mode Svelte’s <code>tick()</code> resolves on a frame or a zero-length timeout, and on a clock that never moves neither comes — so the drawer waited for its data and then never painted, and the first version of these tests failed against the fixed code too. <code>openTheDrawer</code> moves the clock a millisecond at a time instead, which lets the frames through and stays nowhere near the 400ms.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>Typing a query updates the address bar once, not once per character.</li><li>The back button restores the previous query.</li><li>Pressing Run immediately after typing produces a correct URL.</li></ul>
+	<ul><li>Typing a query updates the address bar once, not once per character.</li><li>The back button restores the previous query.</li><li>Pressing Run immediately after typing produces a correct URL.</li><li>Opening a trace within 400ms of an edit leaves the drawer open, and &quot;Open full page&quot; lands on the trace’s own URL.</li><li>Closing the drawer writes the edit that was waiting.</li><li>Pressing the header’s Explore link within 400ms of an edit still ends with the edit in the address bar.</li></ul>
 </aside>
 		</article>
 
