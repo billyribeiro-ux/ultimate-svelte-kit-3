@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panels that are history entries — Building Ostinato</title>
-<meta name="description" content="A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is `pushState`, closing it is the back button: shallow routing.">
+<meta name="description" content="A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is a shallow `goto`, closing it is the back button: shallow routing.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,8 +33,8 @@
 		<article>
 			<p class="eyebrow">Chapter 18</p>
 			<h1>Panels that are history entries</h1>
-			<p class="lede">A sheet on a phone, a sidebar on a desktop — one component, one <code>MediaQuery</code>. Opening it is <code>pushState</code>, closing it is the back button: shallow routing.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use <code>MediaQuery</code> to make one component behave two ways, and use <code>pushState</code> and <code>page.state</code> so that something covering the screen closes the way people expect.</p></aside>
+			<p class="lede">A sheet on a phone, a sidebar on a desktop — one component, one <code>MediaQuery</code>. Opening it is a shallow <code>goto</code>, closing it is the back button: shallow routing.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Use <code>MediaQuery</code> to make one component behave two ways, and use <code>goto(…, { shallow: true })</code> and <code>page.state</code> so that something covering the screen closes the way people expect.</p></aside>
 			<p>The sound panel and the share panel cover part of the screen. On a phone they slide up from the bottom; on a desktop they slide in from the right. Same content, same props, and the difference is one reactive media query deciding which axis the transition uses.</p>
 
 <figure class="code">
@@ -132,33 +132,37 @@ function keydown(event: KeyboardEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:97-114</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:97-118</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
  * SHALLOW ROUTING
  * ===============
  * Opening the sound panel pushes a history entry with `{ panel: 'sound' }`
- * in its state and no change to the URL. The back button — or a swipe on a
+ * in its state and no change to the URL: `goto('')` is &quot;stay here&quot;, and
+ * `shallow: true` is &quot;but add an entry&quot;. The back button — or a swipe on a
  * phone — closes it, which is what a person expects of something that
  * covers the screen. `page.state.panel` is typed by `App.PageState`.
+ *
+ * SvelteKit 2 spelled this `pushState('', state)`. 3.0 folded shallow
+ * routing into `goto`, so there is one function for going somewhere and
+ * the options say how deep — and a shallow navigation now runs the
+ * navigation hooks like any other, which the two layouts allow for.
  */
 function open(panel: NonNullable&lt;App.PageState['panel']&gt;) {
 	if (page.state.panel === panel) return;
-	pushState('', { panel });
+	void goto('', { shallow: true, state: { panel } });
 }
 
 function close() {
 	if (page.state.panel) history.back();
-}
-
-const selectedTrack = $derived(session.selected ? session.track(session.selected) : undefined);</code></pre>
+}</code></pre>
 </figure>
-<p>Opening the sound panel pushes a history entry with <code>{ panel: &quot;sound&quot; }</code> in its state and *no change to the URL*. The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. <code>page.state</code> is typed by <code>App.PageState</code> in <code>app.d.ts</code>, so <code>page.state.panel</code> is <code>&quot;sound&quot; | &quot;share&quot; | undefined</code> and nothing else.</p>
+<p>Opening the sound panel pushes a history entry with <code>{ panel: &quot;sound&quot; }</code> in its state and *no change to the URL*: <code>goto(&quot;&quot;)</code> is “stay here”, <code>shallow: true</code> is “but add an entry”. SvelteKit 2 spelled this <code>pushState(&quot;&quot;, state)</code>; 3.0 folded shallow routing into <code>goto</code>, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs <code>beforeNavigate</code> and <code>onNavigate</code> like any other, which is why both layouts check <code>navigation.shallow</code> (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. <code>page.state</code> is typed by <code>App.PageState</code> in <code>app.d.ts</code>, so <code>page.state.panel</code> is <code>&quot;sound&quot; | &quot;share&quot; | undefined</code> and nothing else.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:329-337</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:335-343</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if page.state.panel === 'sound' &amp;&amp; selectedTrack}
@@ -175,7 +179,7 @@ const selectedTrack = $derived(session.selected ? session.track(session.selected
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what <code>MediaQuery</code> gives you that a CSS media query does not.</li><li>You can explain why opening a panel calls <code>pushState</code> and closing it calls <code>history.back()</code>.</li><li>You can say where <code>App.PageState</code> is declared and what it does for <code>page.state</code>.</li></ul>
+	<ul><li>You can say what <code>MediaQuery</code> gives you that a CSS media query does not.</li><li>You can explain why opening a panel calls <code>goto</code> with <code>shallow: true</code> and closing it calls <code>history.back()</code>.</li><li>You can say where <code>App.PageState</code> is declared and what it does for <code>page.state</code>.</li></ul>
 </aside>
 		</article>
 

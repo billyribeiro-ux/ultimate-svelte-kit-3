@@ -32,7 +32,8 @@ export function isApi(route) {
 /**
  * Split the route table. Fully prerendered routes go to neither function —
  * they are files, and the runtime serves them as files — which mirrors what
- * `builder.generateManifest()` does by default when no subset is given.
+ * `builder.generateServerInstance()` does by default when no `routes` subset is
+ * given.
  *
  * @template {RouteLike} R
  * @param {R[]} routes

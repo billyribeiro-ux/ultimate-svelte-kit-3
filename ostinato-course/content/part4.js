@@ -181,7 +181,7 @@ export const part4 = [
 			code('src/lib/remote/patterns.remote.ts', 81, 99),
 			{
 				type: 'p',
-				text: '`requested(getCounts, 8).refreshAll()` is the server half of an optimistic update. The browser called `recordPlay(id).updates(getCounts(id).withOverride(...))` — bump the number on screen now, and *name* the query it wants refreshed. `requested` refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number.'
+				text: '`requested(getCounts, 8).refreshAll()` is the server half of an optimistic update. The browser called `recordPlay(id).updates(getCounts(id).withOverride(...))` — bump the number on screen now, and *name* the query it wants refreshed. `requested` refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number. And since 3.0 it is not optional — the check shipped in the late prereleases and is in 3.0.0, so it is new to this project since the next.25 it was written on, not since 3.0.1: a refresh the client asked for and the server did not answer fails that query on the *client*, once the response is back, with a 400 `HttpError`, “Requested update was not handled by the remote function”. The server did nothing wrong by its own lights; the browser notices that the key it asked for is missing from the answer. So every command or form that a caller drives with `.updates(…)` either refreshes what was named — `requested(…).refreshAll()` here, `getMine().refresh()` in `remove` — or says `ignore()` on purpose.'
 			},
 			{
 				type: 'note',
@@ -201,7 +201,7 @@ export const part4 = [
 			},
 			{
 				type: 'p',
-				text: 'Two submit buttons share the form and `action` says which was pressed. `redirect(303, …)` from inside the handler is honoured by an enhanced submission since SvelteKit 3.0.0-next.17 — the browser navigates to the new pattern’s page, with the vanity address computed for the other button’s result.'
+				text: 'Two submit buttons share the form and `action` says which was pressed. `redirect(303, …)` from inside the handler is honoured by an enhanced submission in SvelteKit 3 — the browser navigates to the new pattern’s page, with the vanity address computed for the other button’s result.'
 			},
 			code('src/lib/server/patterns.ts', 123, 171),
 			{
@@ -313,7 +313,7 @@ export const part4 = [
 			code('src/hooks.server.ts', 50, 96),
 			{
 				type: 'p',
-				text: 'SvelteKit preloads scripts and styles by default and never fonts. Since 3.0.0-next.24 a `font` input to the `preload` filter carries its source `filename` — the project-relative path before hashing — so the hook can name the two latin subsets the first paint needs, rather than guessing at a hashed URL. `Vary: Cookie` goes on pages because the header shows the handle; the API and the remote functions set their own cache headers and are left alone.'
+				text: 'SvelteKit preloads scripts and styles by default and never fonts. In SvelteKit 3 a `font` input to the `preload` filter carries its source `filename` — the project-relative path before hashing — so the hook can name the two latin subsets the first paint needs, rather than guessing at a hashed URL. `Vary: Cookie` goes on pages because the header shows the handle; the API and the remote functions set their own cache headers and are left alone.'
 			},
 			{ type: 'h3', id: 'handle-fetch', text: '`handleFetch`, and one case that must leave the process' },
 			code('src/hooks.server.ts', 98, 138),

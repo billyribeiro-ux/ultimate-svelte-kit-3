@@ -44,6 +44,7 @@ Chrome and a Pixel 7 profile.
 | `src/lib/embed`                        | `<ostinato-player>`, a custom element built twice: inside the app and as a standalone file                                      |
 | `src/hooks.ts` / `src/hooks.server.ts` | `transport`, async `reroute`, `handle`, `handleFetch`, `handleError`, `init`                                                    |
 | `src/instrumentation.server.ts`        | OpenTelemetry, exporting to an in-memory ring the diagnostics page reads                                                        |
+| `src/service-worker/`                  | The application shell cached from `$app/manifest`, versioned by `$app/env`, type-checked as its own project                     |
 | `adapters/ostinato`                    | An adapter written from scratch: two functions and a catch-all joined by `applyReroute`                                         |
 | `e2e/`                                 | Thirty-three end-to-end scenarios on desktop and a Pixel 7 profile, including two-browser jam sessions                          |
 
@@ -51,3 +52,13 @@ Chrome and a Pixel 7 profile.
 
 See `.env.example`. Every variable is declared in `src/env.ts` with a schema; an
 undeclared one cannot be imported and a malformed one fails at boot.
+
+## Toolchain
+
+Node 24.21.0 (`.nvmrc`, the current LTS) and pnpm 12.10.1 (`packageManager`, so
+Corepack picks it). SvelteKit 3.0.1 on Svelte 5.57, Vite 8.3 and
+vite-plugin-svelte 7.3; Vitest 5 with `@vitest/browser-playwright`; Playwright
+1.64; TypeScript 6.0 — the latest of each as of October 2026, with one
+deliberate exception: TypeScript 7 exists, and SvelteKit, svelte-check and
+typescript-eslint do not support it yet. `pnpm run verify` is the gate, and
+`pnpm run check` type-checks the app and the service worker as two projects.

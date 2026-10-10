@@ -20,7 +20,7 @@ export const part7 = [
 			'Two Vitest projects: pure logic in Node, `$state` and audio in Chromium. Round-trips for the codec, headers read back with a `DataView`, a forged cookie, a route partition, and a `Session` tested with `flushSync` and no component.',
 		goal: 'Know which tests belong in Node and which need a browser, and test a `$state` class directly.',
 		blocks: [
-			code('vite.config.ts', 249, 299),
+			code('vite.config.ts', 254, 307),
 			{
 				type: 'why',
 				title: 'Why a real browser and not jsdom',
@@ -105,7 +105,7 @@ export const part7 = [
 			},
 			code('e2e/gallery.e2e.ts', 41, 73),
 			{ type: 'h3', id: 'what-it-found', text: 'What it found' },
-			code('vite.config.ts', 95, 116),
+			code('vite.config.ts', 100, 121),
 			code('e2e/studio.e2e.ts', 110, 133),
 			{
 				type: 'warn',
@@ -169,7 +169,7 @@ $ pnpm run verify
   check     svelte-check: 0 errors, 0 warnings · tsc (service worker): clean
   lint      prettier + eslint: clean
   test:unit 58 passed  (server: node · client: chromium)
-  build     adapter-ostinato · pages: 7 routes · api: 4 routes · 3 prerendered
+  build     adapter-ostinato · pages: 8 routes · api: 3 routes · 1 prerendered
   test:e2e  66 passed  (33 scenarios × desktop, phone)
 `
 			},

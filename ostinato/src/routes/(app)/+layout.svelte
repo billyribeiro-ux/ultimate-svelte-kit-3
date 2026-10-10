@@ -49,7 +49,11 @@
 	 * gives the person the choice to do that now; this makes sure it happens
 	 * anyway.
 	 */
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(({ willUnload, to, shallow }) => {
+		// Not for a shallow navigation: it never asks the server for a file, so
+		// a new deployment is no reason to reload the studio out from under a
+		// panel that is being opened.
+		if (shallow) return;
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}

@@ -25,29 +25,29 @@ export const part5 = [
 				type: 'p',
 				text: 'The root layout is deliberately almost empty: the stylesheet, the view transitions, a progress bar. The header lives one level down, in `(app)/+layout.svelte`. The parentheses make `(app)` a *layout group* — a folder that adds a layout without adding a segment to the URL — and the one page that must have no header, the embed demo that pretends to be somebody else’s site, resets to the root with a `+page@.svelte`.'
 			},
-			code('src/routes/+layout.svelte', 19, 70),
+			code('src/routes/+layout.svelte', 19, 75),
 			{
 				type: 'why',
 				title: 'Why the transition has a timeout',
 				text: '`onNavigate` returns a promise SvelteKit waits for before completing the navigation. Wrapping it in `startViewTransition` hands the browser both states of the page and lets it cross-fade. But a transition must never hold a navigation hostage: the promise resolves when the update callback runs, or when the transition reports it cannot start, or after three hundred milliseconds — whichever is first. While chasing a flaky back navigation this guard was the first suspect and was innocent (the cause was `forkPreloads`, ch. 38); it stayed because it rules out a whole class of hang for nothing.'
 			},
-			code('src/routes/+layout.svelte', 79, 89),
+			code('src/routes/+layout.svelte', 84, 94),
 			{ type: 'h3', id: 'the-app-layout', text: 'The app layout' },
 			code('src/routes/(app)/+layout.svelte', 8, 26),
 			code('src/routes/(app)/+layout.svelte', 28, 39),
-			code('src/routes/(app)/+layout.svelte', 79, 96),
+			code('src/routes/(app)/+layout.svelte', 83, 100),
 			{
 				type: 'why',
 				title: 'Why `$state.eager`',
 				text: 'With async Svelte, a navigation’s state changes are held back until the new page’s `await`s resolve, so the interface never shows half an update. That is right for content and wrong for the thing somebody just clicked: a nav link that stays un-highlighted for the four hundred milliseconds a remote query takes feels broken. `$state.eager(pathname)` reads the *incoming* value immediately — for this one attribute and nothing else. The rest of the page still waits.'
 			},
-			code('src/routes/(app)/+layout.svelte', 41, 56),
-			code('src/routes/(app)/+layout.svelte', 64, 71),
+			code('src/routes/(app)/+layout.svelte', 41, 60),
+			code('src/routes/(app)/+layout.svelte', 68, 75),
 			{
 				type: 'p',
 				text: '`version.pollInterval` in the config makes SvelteKit check for a new build every minute and set `updated.current` when it finds one. Client-side navigation would then ask for JavaScript files that no longer exist, so `beforeNavigate` turns the next navigation into a full page load. The banner gives the person the choice to do that now; the hook makes sure it happens anyway. `data-sveltekit-reload` on the link is what makes it a real reload rather than a client-side navigation.'
 			},
-			code('src/routes/(app)/+layout.svelte', 98, 117),
+			code('src/routes/(app)/+layout.svelte', 102, 121),
 			{
 				type: 'p',
 				text: 'Who this browser is comes from `whoAmI()`, a remote query, rather than from layout data. The forms that change the answer call `whoAmI().refresh()` in their handlers (ch. 24), and the new value arrives in the same response as the submission. A layout `load` would have needed a second round trip to notice — and in an earlier version of this project, it did, and the header showed the old name until the next navigation.'
@@ -214,7 +214,7 @@ export const part5 = [
 		slug: 'the-gallery',
 		title: 'The gallery',
 		summary:
-			'The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and `pushState` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.',
+			'The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and a shallow `goto` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.',
 		goal: 'Build a list page with async Svelte, preview a route without navigating to it, and delete optimistically with a per-item form.',
 		blocks: [
 			code('src/routes/(app)/gallery/+page.svelte', 21, 31),
@@ -222,20 +222,20 @@ export const part5 = [
 				type: 'p',
 				text: 'The sort is read from `page.url.searchParams`, so a sorted gallery is a link: `/gallery?sort=loved`. The chips are plain `<a href="?sort=…">` — SvelteKit navigates, `page.url` changes, the derived recomputes, and the query below re-runs with a new argument. No state, no handler.'
 			},
-			code('src/routes/(app)/gallery/+page.svelte', 82, 92),
-			code('src/routes/(app)/gallery/+page.svelte', 94, 124),
+			code('src/routes/(app)/gallery/+page.svelte', 90, 100),
+			code('src/routes/(app)/gallery/+page.svelte', 102, 132),
 			{
 				type: 'p',
 				text: 'Two `await`s in one `{#each}`: the list, and each card’s counts. Every `await getCounts(published.id)` in this render is one batched request (ch. 23). The boundary shows the `pending` snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache.'
 			},
 			{ type: 'h3', id: 'preview', text: 'Preview without leaving' },
-			code('src/routes/(app)/gallery/+page.svelte', 47, 72),
+			code('src/routes/(app)/gallery/+page.svelte', 47, 76),
 			{
 				type: 'why',
-				title: 'Why `preloadData` and then `pushState`',
-				text: 'On a wide screen, clicking a card opens it in a dialog rather than navigating away. `preloadData(href)` runs the pattern page’s `load` — which calls `getPattern` and warms its cache — and `pushState(href, { preview })` then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time.'
+				title: 'Why `preloadData` and then a shallow `goto`',
+				text: 'On a wide screen, clicking a card opens it in a dialog rather than navigating away. `preloadData(href)` runs the pattern page’s `load` — which calls `getPattern` and warms its cache — and `goto(href, { shallow: true, state: { preview } })` then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time — and SvelteKit 3 keeps the two URLs apart: `page.url` still says `/gallery`, which is what the sort chips read, and `page.shallow.url` is the address in the bar.'
 			},
-			code('src/routes/(app)/gallery/+page.svelte', 179, 208),
+			code('src/routes/(app)/gallery/+page.svelte', 187, 216),
 			{
 				type: 'p',
 				text: 'The dialog reads `page.state.preview` and calls `getPattern(id)` — cached by the preload — inside its own boundary. `data-sveltekit-reload` on “Open the full page” forces a real navigation, because the URL is already the pattern’s address and a client-side navigation to the same URL is a no-op.'
@@ -247,7 +247,7 @@ export const part5 = [
 				text: '`crossfade` returns a pair of transitions. An element leaving with `out:send` and another entering with `in:receive` under the same key are animated as one thing moving between two places — here, the card’s picture travelling into the dialog and back. The card renders its picture through the `grid` snippet with `{#if page.state.preview !== published.id}`, so opening the preview *removes* the card’s picture (send) as the dialog’s appears (receive). When there is no partner, `fallback` fades.'
 			},
 			{ type: 'h3', id: 'yours', text: 'Yours, with a delete per card' },
-			code('src/routes/(app)/gallery/+page.svelte', 127, 176),
+			code('src/routes/(app)/gallery/+page.svelte', 135, 184),
 			{
 				type: 'p',
 				text: '`remove.for(mine.id)` gives each card its own instance of the form, so a pending delete disables *its* button and no other. The `enhance` callback submits with `.updates(getMine().withOverride(list => list.filter(...)))`: the card disappears before the server has answered, and comes back if the server refuses. The `id` travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.'
@@ -321,11 +321,11 @@ export const part5 = [
 		blocks: [
 			{ type: 'h3', id: 'where-the-spans-go', text: 'Where the spans go' },
 			code('src/lib/server/tracing.ts', 1, 16),
-			code('src/lib/server/tracing.ts', 34, 46),
-			code('src/lib/server/tracing.ts', 84, 98),
+			code('src/lib/server/tracing.ts', 34, 54),
+			code('src/lib/server/tracing.ts', 87, 95),
 			{
 				type: 'p',
-				text: 'SvelteKit emits an OpenTelemetry span for every `handle`, `load`, form action and remote function when `tracing: { server: true }` is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by `TRACE_BUFFER`. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page.'
+				text: 'SvelteKit emits an OpenTelemetry span for every `handle`, `load`, form action and remote function when `tracing: { server: true }` is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by `TRACE_BUFFER`. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page. It hangs off `globalThis` rather than off the module, and that is the adapter’s doing (ch. 34): each function is bundled on its own, and the instrumentation file separately again, so this module exists four times in one process — once per function and once in the instrumentation bundle; `grep -rl __ostinato_spans build/` lists them — one copy records spans, another reads them, and the process is the only scope they share.'
 			},
 			code('src/instrumentation.server.ts', 1, 27),
 			{
@@ -357,20 +357,20 @@ export const part5 = [
 				type: 'p',
 				text: 'A plain endpoint rather than a remote function, because a remote function is called *by* the router once a route is known, and this runs *before* the route is known — that is what rerouting is. Cached for an hour when it finds something, `no-store` when it does not.'
 			},
-			code('src/routes/api/patterns/+server.ts', 1, 19),
-			code('src/routes/api/patterns/+server.ts', 28, 43),
-			code('src/routes/api/patterns/+server.ts', 65, 92),
+			code('src/routes/api/patterns/+server.ts', 1, 21),
+			code('src/routes/api/patterns/+server.ts', 30, 45),
+			code('src/routes/api/patterns/+server.ts', 67, 94),
 			{
 				type: 'p',
-				text: '`QUERY` is the HTTP method for “a read with a body” — a GET may not carry one, and a POST says “this changes something”, which a search does not. SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “this export is not a handler”, so the test beside it can import it.'
+				text: '`QUERY` is the HTTP method for “a read with a body” — a GET may not carry one, and a POST says “this changes something”, which a search does not. SvelteKit 3 added it to the methods a `+server.ts` may export, and the body is answered with `Response.json(...)`, the platform’s own, since 3.0 deprecated the `json()` helper. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “this export is not a handler”, so the test beside it can import it.'
 			},
 			code('src/routes/api/patterns/+server.test.ts', 1, 40),
 			{
 				type: 'note',
-				text: 'Until SvelteKit 3.0.0-next.19 every `+`-prefixed file under `src/routes` was a route, and this file would have been an endpoint exporting `describe`. Files with `.test.`, `.spec.` or `.stories.` in their names are now skipped by the router, so a schema’s defaults — the part of an API nobody reads and everybody depends on — get a fast unit test next to the thing they describe.'
+				text: 'Before SvelteKit 3 every `+`-prefixed file under `src/routes` was a route, and this file would have been an endpoint exporting `describe`. Files with `.test.`, `.spec.` or `.stories.` in their names are now skipped by the router, so a schema’s defaults — the part of an API nobody reads and everybody depends on — get a fast unit test next to the thing they describe.'
 			},
 			code('src/routes/api/patterns/[id]/+server.ts', 1, 13),
-			code('src/routes/api/patterns/[id]/+server.ts', 21, 37),
+			code('src/routes/api/patterns/[id]/+server.ts', 21, 38),
 			{
 				type: 'p',
 				text: 'The embeddable player (ch. 33) fetches this from somebody else’s page. Plain JSON with numbers for notes, because the element has no `transport` hook and rebuilds `Note`s itself; `Access-Control-Allow-Origin: *`, because the whole point is other origins, and there is nothing to protect that is not already on the pattern’s page.'

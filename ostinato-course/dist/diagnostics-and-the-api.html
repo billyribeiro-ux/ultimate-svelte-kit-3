@@ -62,7 +62,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:34-46</span></span>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:34-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -70,38 +70,40 @@
  * usually the bug. Here it is the point: the ring *is* the cross-request
  * memory, it contains nothing private to any one request, and it is read only
  * by the diagnostics page.
+ *
+ * It hangs off `globalThis` rather than off this module, and that is the
+ * adapter's doing. SvelteKit 3 configures a server as module-level state, so
+ * one module graph can hold one server — and `adapters/ostinato` deploys three.
+ * It therefore bundles each function on its own, as a real platform would, and
+ * the instrumentation file separately again: four copies of this module in one
+ * process — three functions and one instrumentation bundle, which is what
+ * `grep -rl __ostinato_spans build/` finds — one of which records spans and
+ * another of which reads them. The process is the only scope they share, so
+ * the ring lives there.
  */
-const ring: SpanRecord[] = [];
-let capacity = 200;
-
-export function setCapacity(size: number): void {
-	capacity = size;
-	while (ring.length &gt; capacity) ring.shift();
-}</code></pre>
+const shared = globalThis as typeof globalThis &amp; {
+	__ostinato_spans?: { ring: SpanRecord[]; capacity: number };
+};
+const spans = (shared.__ostinato_spans ??= { ring: [], capacity: 200 });
+const ring = spans.ring;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:84-98</span></span>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:87-95</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * The exporter OpenTelemetry calls. `export` is handed a batch of finished
- * spans and a callback to say how it went; there is no way for a push into an
- * array to go wrong, so it always says success.
- */
-export class RingExporter implements SpanExporter {
-	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) =&gt; void): void {
-		for (const span of spans) record(span);
-		resultCallback({ code: ExportResultCode.SUCCESS });
-	}
+	<pre><code class="lang-ts">/** Newest first. A copy, so a reader cannot reach into the ring. */
+export function recentSpans(limit = spans.capacity): SpanRecord[] {
+	return ring.slice(-limit).reverse();
+}
 
-	shutdown(): Promise&lt;void&gt; {
-		return Promise.resolve();
-	}
+/** The spans of one request, oldest first, for drawing as a waterfall. */
+export function trace(traceId: string): SpanRecord[] {
+	return ring.filter((span) =&gt; span.traceId === traceId);
 }</code></pre>
 </figure>
-<p>SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function when <code>tracing: { server: true }</code> is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by <code>TRACE_BUFFER</code>. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page.</p>
+<p>SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function when <code>tracing: { server: true }</code> is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by <code>TRACE_BUFFER</code>. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page. It hangs off <code>globalThis</code> rather than off the module, and that is the adapter’s doing (ch. 34): each function is bundled on its own, and the instrumentation file separately again, so this module exists four times in one process — once per function and once in the instrumentation bundle; <code>grep -rl __ostinato_spans build/</code> lists them — one copy records spans, another reads them, and the process is the only scope they share.</p>
 
 <figure class="code">
 	<figcaption>
@@ -354,7 +356,6 @@ export const getRuntime = query(async () =&gt; {
  * the pattern is deleted, and a stale hit then lands on a 404 that says so.
  */
 
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { resolveVanity } from '#lib/server/patterns.ts';
 
@@ -365,14 +366,15 @@ export const GET: RequestHandler = async ({ url, setHeaders }) =&gt; {
 	const id = await resolveVanity(handle.toLowerCase(), slug.toLowerCase());
 
 	setHeaders({ 'cache-control': id ? 'public, max-age=3600' : 'no-store' });
-	return json({ pathname: id ? `/p/${id}` : null });
+	// `Response.json`, the platform's own; SvelteKit 3 deprecated its `json()`.
+	return Response.json({ pathname: id ? `/p/${id}` : null });
 };</code></pre>
 </figure>
 <p>A plain endpoint rather than a remote function, because a remote function is called *by* the router once a route is known, and this runs *before* the route is known — that is what rerouting is. Cached for an hour when it finds something, <code>no-store</code> when it does not.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:1-19</span></span>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:1-21</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -386,19 +388,21 @@ export const GET: RequestHandler = async ({ url, setHeaders }) =&gt; {
  *
  * `QUERY` is the HTTP method for &quot;a read with a body&quot; — a GET may not carry
  * one, and a POST says &quot;this changes something&quot;, which a search does not.
- * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export,
- * and it is used here for the reason it exists: a search with a title, a tempo
- * range and a sort does not fit in a query string that anybody wants to read.
+ * SvelteKit 3 added it to the methods a `+server.ts` may export, and it is
+ * used here for the reason it exists: a search with a title, a tempo range
+ * and a sort does not fit in a query string that anybody wants to read.
  *
  * The response is deliberately plain JSON with numbers where the app has
  * `Note`s. This is for scripts, and a script does not have the `transport`
- * hook.
+ * hook. It is built with `Response.json(...)`, the platform's own: SvelteKit 3
+ * deprecated its `json(...)` helper the moment the standard grew the same
+ * thing — one call that serialises and sets the content type.
  */</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:28-43</span></span>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:30-45</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -421,7 +425,7 @@ export const _SearchSchema = v.object({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:65-92</span></span>
+		<span class="code__file">src/routes/api/patterns/+server.ts<span class="code__lines">:67-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const QUERY: RequestHandler = async ({ request }) =&gt; {
@@ -450,10 +454,10 @@ export const _SearchSchema = v.object({
 		)
 		.slice(0, limit);
 
-	return json({ patterns: matched.map(summary), total: matched.length });
+	return Response.json({ patterns: matched.map(summary), total: matched.length });
 };</code></pre>
 </figure>
-<p><code>QUERY</code> is the HTTP method for “a read with a body” — a GET may not carry one, and a POST says “this changes something”, which a search does not. SvelteKit 3.0.0-next.24 added it to the methods a <code>+server.ts</code> may export. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “this export is not a handler”, so the test beside it can import it.</p>
+<p><code>QUERY</code> is the HTTP method for “a read with a body” — a GET may not carry one, and a POST says “this changes something”, which a search does not. SvelteKit 3 added it to the methods a <code>+server.ts</code> may export, and the body is answered with <code>Response.json(...)</code>, the platform’s own, since 3.0 deprecated the <code>json()</code> helper. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “this export is not a handler”, so the test beside it can import it.</p>
 
 <figure class="code">
 	<figcaption>
@@ -465,8 +469,8 @@ import * as v from 'valibot';
 import { _SearchSchema } from './+server.ts';
 
 /**
- * A test file beside a route. Until SvelteKit 3.0.0-next.19 every `+`-prefixed
- * file under `src/routes` was a route, so this would have been an endpoint
+ * A test file beside a route. Before SvelteKit 3 every `+`-prefixed file
+ * under `src/routes` was a route, so this would have been an endpoint
  * exporting `describe`. Files with `.test.`, `.spec.` or `.stories.` in their
  * names are now skipped by the router, and a schema's defaults — the part of
  * an API nobody reads and everybody depends on — get a fast unit test next to
@@ -501,7 +505,7 @@ describe('the search body', () =&gt; {
 	});
 });</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Until SvelteKit 3.0.0-next.19 every <code>+</code>-prefixed file under <code>src/routes</code> was a route, and this file would have been an endpoint exporting <code>describe</code>. Files with <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> in their names are now skipped by the router, so a schema’s defaults — the part of an API nobody reads and everybody depends on — get a fast unit test next to the thing they describe.</p></aside>
+<aside class="callout callout--note"><p>Before SvelteKit 3 every <code>+</code>-prefixed file under <code>src/routes</code> was a route, and this file would have been an endpoint exporting <code>describe</code>. Files with <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> in their names are now skipped by the router, so a schema’s defaults — the part of an API nobody reads and everybody depends on — get a fast unit test next to the thing they describe.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -525,7 +529,7 @@ describe('the search body', () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-37</span></span>
+		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, setHeaders }) =&gt; {
@@ -537,7 +541,8 @@ describe('the search body', () =&gt; {
 		'access-control-allow-origin': '*'
 	});
 
-	return json({
+	// `Response.json`, the platform's own; SvelteKit 3 deprecated its `json()`.
+	return Response.json({
 		id: published.id,
 		title: published.title,
 		artist: published.artist.handle,

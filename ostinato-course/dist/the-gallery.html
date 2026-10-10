@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The gallery — Building Ostinato</title>
-<meta name="description" content="The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and `pushState` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.">
+<meta name="description" content="The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and a shallow `goto` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 30</p>
 			<h1>The gallery</h1>
-			<p class="lede">The sort lives in the URL; <code>await</code> in an <code>{#each}</code> with batched counts; a preview that opens with <code>preloadData</code> and <code>pushState</code> without leaving; <code>crossfade</code> between a card and the dialog; and a delete form per card with <code>remove.for(id)</code> and an optimistic override.</p>
+			<p class="lede">The sort lives in the URL; <code>await</code> in an <code>{#each}</code> with batched counts; a preview that opens with <code>preloadData</code> and a shallow <code>goto</code> without leaving; <code>crossfade</code> between a card and the dialog; and a delete form per card with <code>remove.for(id)</code> and an optimistic override.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a list page with async Svelte, preview a route without navigating to it, and delete optimistically with a per-item form.</p></aside>
 			
 <figure class="code">
@@ -57,7 +57,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:82-92</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:90-100</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav class=&quot;cluster&quot; aria-label=&quot;Sort&quot;&gt;
@@ -75,7 +75,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:94-124</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:102-132</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -115,7 +115,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:47-72</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:47-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -123,10 +123,18 @@ const sort = $derived.by((): Sort =&gt; {
  * =======================
  * On a wide screen, clicking a card opens it in a dialog rather than
  * navigating away. `preloadData` runs the pattern page's `load` — which
- * warms the `getPattern` cache — and `pushState` then changes the URL to
- * the pattern's address with `{ preview }` in the history state, *without*
+ * warms the `getPattern` cache — and a *shallow* `goto` then changes the URL
+ * to the pattern's address with `{ preview }` in the history state, *without*
  * rendering the pattern page. Reload, and the real page appears at that
  * URL; press back, and the dialog closes. On a phone, the link is a link.
+ *
+ * `goto(href, { shallow: true, state })` is SvelteKit 3's spelling of what
+ * used to be `pushState(href, state)`, and the change is more than a name.
+ * A shallow navigation runs the navigation hooks, so the root layout sees
+ * it — and declines to cross-fade it. And `page.url` keeps describing the
+ * page that is *rendered*, this one, while `page.shallow.url` describes the
+ * one in the address bar; the sort chips above, which read `page.url`, stay
+ * right while the dialog is open.
  */
 async function open(event: MouseEvent, id: string) {
 	if (event.metaKey || event.ctrlKey || event.shiftKey || (innerWidth.current ?? 0) &lt; 640) return;
@@ -135,25 +143,21 @@ async function open(event: MouseEvent, id: string) {
 	const href = `/p/${id}`;
 	const result = await preloadData(href);
 	if (result.type === 'loaded' &amp;&amp; result.status === 200) {
-		pushState(href, { preview: id });
+		await goto(href, { shallow: true, state: { preview: id } });
 	} else {
 		await goto(href);
 	}
-}
-
-function close() {
-	history.back();
 }</code></pre>
 </figure>
 
 <aside class="callout callout--why">
-	<h4>Why <code>preloadData</code> and then <code>pushState</code></h4>
-	<p>On a wide screen, clicking a card opens it in a dialog rather than navigating away. <code>preloadData(href)</code> runs the pattern page’s <code>load</code> — which calls <code>getPattern</code> and warms its cache — and <code>pushState(href, { preview })</code> then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time.</p>
+	<h4>Why <code>preloadData</code> and then a shallow <code>goto</code></h4>
+	<p>On a wide screen, clicking a card opens it in a dialog rather than navigating away. <code>preloadData(href)</code> runs the pattern page’s <code>load</code> — which calls <code>getPattern</code> and warms its cache — and <code>goto(href, { shallow: true, state: { preview } })</code> then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time — and SvelteKit 3 keeps the two URLs apart: <code>page.url</code> still says <code>/gallery</code>, which is what the sort chips read, and <code>page.shallow.url</code> is the address in the bar.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:179-208</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:187-216</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if page.state.preview}
@@ -214,7 +218,7 @@ const [send, receive] = crossfade({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:127-176</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:135-184</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;

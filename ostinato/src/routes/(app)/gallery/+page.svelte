@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { crossfade, fade } from 'svelte/transition';
 	import { innerWidth } from 'svelte/reactivity/window';
-	import { goto, preloadData, pushState } from '$app/navigation';
+	import { goto, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import { whoAmI } from '#lib/remote/artist.remote.ts';
 	import {
@@ -49,10 +49,18 @@
 	 * =======================
 	 * On a wide screen, clicking a card opens it in a dialog rather than
 	 * navigating away. `preloadData` runs the pattern page's `load` — which
-	 * warms the `getPattern` cache — and `pushState` then changes the URL to
-	 * the pattern's address with `{ preview }` in the history state, *without*
+	 * warms the `getPattern` cache — and a *shallow* `goto` then changes the URL
+	 * to the pattern's address with `{ preview }` in the history state, *without*
 	 * rendering the pattern page. Reload, and the real page appears at that
 	 * URL; press back, and the dialog closes. On a phone, the link is a link.
+	 *
+	 * `goto(href, { shallow: true, state })` is SvelteKit 3's spelling of what
+	 * used to be `pushState(href, state)`, and the change is more than a name.
+	 * A shallow navigation runs the navigation hooks, so the root layout sees
+	 * it — and declines to cross-fade it. And `page.url` keeps describing the
+	 * page that is *rendered*, this one, while `page.shallow.url` describes the
+	 * one in the address bar; the sort chips above, which read `page.url`, stay
+	 * right while the dialog is open.
 	 */
 	async function open(event: MouseEvent, id: string) {
 		if (event.metaKey || event.ctrlKey || event.shiftKey || (innerWidth.current ?? 0) < 640) return;
@@ -61,7 +69,7 @@
 		const href = `/p/${id}`;
 		const result = await preloadData(href);
 		if (result.type === 'loaded' && result.status === 200) {
-			pushState(href, { preview: id });
+			await goto(href, { shallow: true, state: { preview: id } });
 		} else {
 			await goto(href);
 		}

@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:141-172</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:146-177</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -105,7 +105,7 @@ csp: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:44-72</span></span>
+		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:44-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('every inline script the server emits is covered by the policy', async ({ request }) =&gt; {
@@ -136,6 +136,24 @@ csp: {
 			expect(covered, `${path}: uncovered inline script: ${body!.slice(0, 60)}…`).toBe(true);
 		}
 	}
+});
+
+test('nothing a page needs is blocked, scripts aside', async ({ page }) =&gt; {
+	const violations: string[] = [];
+	page.on('console', (message) =&gt; {
+		const text = message.text();
+		if (!/Content Security Policy/i.test(text)) return;
+		if (/script-src/.test(text)) return; // the harness's own injected scripts
+		violations.push(text);
+	});
+
+	await page.goto('/studio?preset=four-on-the-floor');
+	await page.getByRole('button', { name: 'Play' }).click();
+	await page.getByRole('button', { name: 'Stop' }).click();
+	await page.goto('/p/seedfour');
+	await expect(page.getByRole('img', { name: /Share card/ })).toBeVisible();
+
+	expect(violations, 'the policy blocked something the page needs').toEqual([]);
 });</code></pre>
 </figure>
 
@@ -147,7 +165,7 @@ csp: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:174-180</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:179-185</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -221,7 +239,7 @@ response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocatio
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-37</span></span>
+		<span class="code__file">src/routes/api/patterns/[id]/+server.ts<span class="code__lines">:21-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ params, setHeaders }) =&gt; {
@@ -233,7 +251,8 @@ response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocatio
 		'access-control-allow-origin': '*'
 	});
 
-	return json({
+	// `Response.json`, the platform's own; SvelteKit 3 deprecated its `json()`.
+	return Response.json({
 		id: published.id,
 		title: published.title,
 		artist: published.artist.handle,

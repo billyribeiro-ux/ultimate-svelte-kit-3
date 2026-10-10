@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:19-70</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:19-75</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -60,6 +60,11 @@
  * produces.
  */
 onNavigate((navigation) =&gt; {
+	// A shallow navigation — a panel opening in the studio, a preview in the
+	// gallery — changes history, not the document. Since SvelteKit 3 it runs
+	// the navigation hooks like any other, so this has to say: no cross-fade
+	// for those. The panel brings its own transition.
+	if (navigation.shallow) return;
 	if (!document.startViewTransition) return;
 	if (prefersReducedMotion.current) return;
 	if (document.visibilityState !== 'visible') return;
@@ -103,7 +108,7 @@ onNavigate((navigation) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:79-89</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:84-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -167,7 +172,7 @@ const pathname = $derived(page.url.pathname);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:79-96</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:83-100</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav aria-label=&quot;Primary&quot;&gt;
@@ -197,7 +202,7 @@ const pathname = $derived(page.url.pathname);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:41-56</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:41-60</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -211,7 +216,11 @@ const pathname = $derived(page.url.pathname);</code></pre>
  * gives the person the choice to do that now; this makes sure it happens
  * anyway.
  */
-beforeNavigate(({ willUnload, to }) =&gt; {
+beforeNavigate(({ willUnload, to, shallow }) =&gt; {
+	// Not for a shallow navigation: it never asks the server for a file, so
+	// a new deployment is no reason to reload the studio out from under a
+	// panel that is being opened.
+	if (shallow) return;
 	if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) {
 		location.href = to.url.href;
 	}
@@ -220,7 +229,7 @@ beforeNavigate(({ willUnload, to }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:64-71</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:68-75</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
@@ -236,7 +245,7 @@ beforeNavigate(({ willUnload, to }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:98-117</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:102-121</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;topbar__end&quot;&gt;

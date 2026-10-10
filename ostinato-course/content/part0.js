@@ -25,7 +25,7 @@ export const part0 = [
 			},
 			{
 				type: 'p',
-				text: 'The five projects before this one each had a *domain* problem at their centre — a booking system that must not double-book, an exchange that must balance, a canvas that must merge edits, a query language. This one is different on purpose. The domain — sound — is genuinely interesting, but the point of the project is **the framework**. Svelte 5.57 and SvelteKit 3 have a lot of surface area, and the September 2026 releases added more. This project uses all of it, and the rule for every feature was the same: it had to be *for* something. There is no `$host` demo page; there is a custom element that needs `$host` to dispatch an event.'
+				text: 'The five projects before this one each had a *domain* problem at their centre — a booking system that must not double-book, an exchange that must balance, a canvas that must merge edits, a query language. This one is different on purpose. The domain — sound — is genuinely interesting, but the point of the project is **the framework**. Svelte 5.57 and SvelteKit 3 have a lot of surface area, and the September and October 2026 releases — the release candidate and then 3.0 itself — added more. This project uses all of it, and the rule for every feature was the same: it had to be *for* something. There is no `$host` demo page; there is a custom element that needs `$host` to dispatch an event.'
 			},
 
 			{ type: 'h3', id: 'the-tour', text: 'The tour' },
@@ -117,26 +117,26 @@ export const part0 = [
 				type: 'p',
 				text: 'There is no `svelte.config.js`. SvelteKit 3 moved every option into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
 			},
-			code('vite.config.ts', 1, 32, { partial: true }),
+			code('vite.config.ts', 1, 37, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two things to notice. `defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. And `paths.origin` is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers.'
 			},
 
 			{ type: 'h3', id: 'compiler', text: 'The compiler options' },
-			code('vite.config.ts', 34, 52),
+			code('vite.config.ts', 39, 57),
 			{
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling. `experimental.async` is the one that changes how you write components: `await` at the top of a `<script>`, inside `$derived`, and directly in markup — and with it `pending` snippets, `$effect.pending()`, `settled()` and `fork()`. An instrument is full of “wait, then draw”, and this is the honest way to write that.'
 			},
-			code('vite.config.ts', 54, 86),
+			code('vite.config.ts', 59, 91),
 			{
 				type: 'p',
 				text: '`dynamicCompileOptions` is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.'
 			},
 
 			{ type: 'h3', id: 'experimental', text: 'Experimental, with evidence' },
-			code('vite.config.ts', 89, 131),
+			code('vite.config.ts', 94, 136),
 			{
 				type: 'why',
 				title: 'Why the comment is longer than the option',
@@ -148,21 +148,21 @@ export const part0 = [
 				type: 'p',
 				text: 'Three options that this file *tried* to set no longer exist, and SvelteKit says so at startup rather than ignoring them. `experimental.tracing` is now top-level `tracing`; `experimental.instrumentation` is gone because `src/instrumentation.server.ts` is picked up whenever the adapter says it can; and `output.preloadStrategy` is gone because `modulepreload` is the only strategy modern browsers need.'
 			},
-			code('vite.config.ts', 133, 141),
+			code('vite.config.ts', 138, 146),
 			{
 				type: 'note',
 				text: 'The removal list lives in SvelteKit’s own `src/core/config/options.js`, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.'
 			},
 
 			{ type: 'h3', id: 'security-and-versioning', text: 'Policy, origin, version' },
-			code('vite.config.ts', 157, 211),
+			code('vite.config.ts', 146, 227),
 			{
 				type: 'p',
 				text: 'The CSP directives are each a decision, and chapter 36 takes them one at a time. `version.pollInterval` is worth a sentence now: it makes SvelteKit poll for a new deployment every minute and set `updated.current`, so the layout can offer a reload *before* a navigation asks for a JavaScript file that no longer exists.'
 			},
 
 			{ type: 'h3', id: 'tests', text: 'Two test projects' },
-			code('vite.config.ts', 249, 318, { partial: true }),
+			code('vite.config.ts', 254, 307),
 			{
 				type: 'p',
 				text: 'The `client` project runs in a real Chromium, because jsdom has no `AudioContext` and no layout: a scheduler test under jsdom would pass while doing nothing. The `server` project is plain Node for the pure logic — the codec, the cookie, the adapter’s route partition — and runs one file at a time because SQLite has one writer.'
@@ -189,7 +189,7 @@ export const part0 = [
 		slug: 'the-map',
 		title: 'The map: everything the framework has to offer',
 		summary:
-			'Every Svelte 5 and SvelteKit 3 feature this project uses, and the file it lives in — including every item from the September 2026 releases.',
+			'Every Svelte 5 and SvelteKit 3 feature this project uses, and the file it lives in — including every item from the September and October 2026 releases, up to 3.0.1.',
 		goal: 'Have a lookup table: when you meet a feature in the code, know which chapter explains it, and when you want a feature, know where to see it used.',
 		blocks: [
 			{
@@ -329,7 +329,9 @@ ostinato/
 │  ├─ hooks.server.ts
 │  ├─ hooks.ts
 │  ├─ instrumentation.server.ts
-│  └─ service-worker.ts
+│  └─ service-worker/
+│     ├─ index.ts
+│     └─ tsconfig.json
 ├─ test-results/
 ├─ AGENTS.md
 ├─ README.md
@@ -340,7 +342,6 @@ ostinato/
 ├─ pnpm-workspace.yaml
 ├─ prettier.config.js
 ├─ tsconfig.json
-├─ tsconfig.service-worker.json
 ├─ vite.config.ts
 └─ vite.embed.config.ts
 `
@@ -398,30 +399,28 @@ ostinato/
 				type: 'ul',
 				items: [
 					'Remote functions: `query`, `query.batch`, `query.live`, `prerender`, `command`, `form` with `preflight`, `validate`, `issues`, `allIssues`, `invalid`, `.for(id)`, multiple submits, the `_` prefix; single-flight mutations with `refresh`, `requested().refreshAll()`, `.updates()`, `withOverride`, `reconnect` — `src/lib/remote/*` (ch. 23–25)',
-					'Hooks: `transport`, async `reroute` with `fetch`, `handle` with the `preload` filter (`filename`, next.24), `handleFetch`, `handleError` with `kind` (including `validation`), `init` — `src/hooks*.ts` (ch. 26)',
-					'`load` with `RouteParams`, `$app/types`, `resolve` from `$app/paths`, snapshots, shallow routing with `pushState`, `preloadData`, `page.state` — the studio, the pattern page, the gallery (ch. 19, 29, 30)',
+					'Hooks: `transport`, async `reroute` with `fetch`, `handle` with the `preload` filter (`filename`), `handleFetch`, `handleError` with `kind` (including `validation`), `init` — `src/hooks*.ts` (ch. 26)',
+					'`load` with `RouteParams`, `$app/types`, `resolve` from `$app/paths`, snapshots, shallow routing with `goto(…, { shallow: true })`, `preloadData`, `page.state` — the studio, the pattern page, the gallery (ch. 19, 29, 30)',
 					'`$app/state`: `page`, `navigating`, `updated` with `check()`; `version.pollInterval` — the layouts, diagnostics (ch. 27, 32)',
 					'Layout groups and `+page@.svelte` — `(app)`, the embed demo (ch. 27, 33)',
-					'`+server.ts` with `QUERY` (next.24) and a co-located `+server.test.ts` (next.19) — the read API (ch. 32)',
+					'`+server.ts` with `QUERY`, `Response.json(...)` and a co-located `+server.test.ts` — the read API (ch. 32)',
 					'`tracing.server`, `src/instrumentation.server.ts`, `event.tracing` — the ring exporter (ch. 32)',
-					'`$app/service-worker`, `$app/manifest` — the service worker (ch. 35)',
-					'Writing an adapter: `adapt`, `emulate`, `supports`, `vite.plugins.pre` (next.18), `applyReroute` (next.25), `builder.instrument` — `adapters/ostinato` (ch. 34)',
+					'`$app/service-worker`, `$app/manifest`, `$app/paths` in a worker, `$app/tsconfig/service-worker` — the service worker (ch. 35)',
+					'Writing an adapter: `adapt`, `emulate`, `supports`, `vite.plugins.pre`, `applyReroute`, `builder.generateServerInstance`, `builder.createInstrumentationInitializer` + `builder.instrument` — `adapters/ostinato` (ch. 34)',
 					'`defineEnvVars`, `csp` with `mode: auto`, `csrf.trustedOrigins`, `version`, `output.bundleStrategy`, `router.resolution` — `vite.config.ts` (ch. 2, 36)'
 				]
 			},
 
-			{ type: 'h3', id: 'september', text: 'The September 2026 releases, item by item' },
+			{ type: 'h3', id: 'september', text: 'On the way to 3.0: the September and October 2026 releases, item by item' },
 			{
 				type: 'ul',
 				items: [
 					'**Svelte 5.57** — `SvelteMap.getOrInsertComputed` (the engine’s channel strips, ch. 11); `createContext` returning `has` (`Player.svelte`, ch. 29); `<select defaultValue>` (the WAV bar count, ch. 20); `Csp`/`Sha256Source` types from `svelte/server` (the share card, ch. 29).',
-					'**SvelteKit 3.0.0-next.17** — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside `enhance` (ch. 24).',
-					'**next.18** — adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34).',
-					'**next.19** — `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32).',
-					'**next.24** — `QUERY` handlers in `+server.ts`; the `preload` filter gets `filename` for fonts (ch. 32, 26).',
-					'**next.25** — `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
-					'**sv 1.0.0-next / 0.17** — `sv create` with `#lib` imports and the `ai-tools` add-on, which wrote `AGENTS.md` and `.claude/settings.json` (ch. 39).',
-					'**vite-plugin-svelte 7.3.0** — `dynamicCompileOptions({ filename, environment })` (ch. 2, 33).'
+					'**SvelteKit 3 release candidate (September)** — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside `enhance` (ch. 24); adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34); `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32); `QUERY` handlers in `+server.ts`, and the `preload` filter gets `filename` for fonts (ch. 32, 26); `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
+					'**SvelteKit 3.0 and 3.0.1 (October)** — `builder.generateServerInstance` replaces `generateManifest`, and the `Server` class gives way to a generated `server` object (ch. 34); `builder.createInstrumentationInitializer` fills in the environment before `instrumentation.server.js` runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind `.updates(…)` calls `requested(…).refreshAll()` or `ignore()` on purpose (ch. 24); `json()` and `text()` are deprecated for `Response.json()` (ch. 32); `pushState` and `replaceState` are deprecated for `goto(…, { shallow: true })`, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in `src/service-worker/` with a tsconfig of its own (ch. 35); adapter-node 6 drops the `ORIGIN` variable in favour of `paths.origin`, and so does this adapter (ch. 34).',
+					'**sv 1.0** — `sv create` with `#lib` imports and the `ai-tools` add-on, which wrote `AGENTS.md` and `.claude/settings.json` (ch. 39); `sv migrate sveltekit-3` for the mechanical half of an upgrade.',
+					'**vite-plugin-svelte 7.3** — `dynamicCompileOptions({ filename, environment })` (ch. 2, 33).',
+					'**Vitest 5** — inline projects inherit the root config without an `extends` line, `clearMocks` on by default, locators exact by default (ch. 37).'
 				]
 			},
 			{

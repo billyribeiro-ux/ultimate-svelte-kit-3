@@ -7,7 +7,12 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import ostinato from './adapters/ostinato/index.js';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+/*
+ * A default import rather than `{ version }`: a JSON module has only a default
+ * export per spec, and Vite 8's native config loader — the default in the next
+ * major — refuses the named form. Vite says so, politely, on every `sync`.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -195,7 +200,7 @@ export default defineConfig(({ mode }) => {
 				 * to reload for nothing.
 				 */
 				version: {
-					name: commitHash() ?? packageVersion,
+					name: commitHash() ?? pkg.version,
 					pollInterval: 60_000
 				},
 
@@ -258,8 +263,12 @@ export default defineConfig(({ mode }) => {
 					 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
 					 * scheduler, the knobs and the waveform would all pass every test you
 					 * thought to write while doing nothing at all.
+					 *
+					 * No `extends` line: Vitest 5 hands every inline project the root
+					 * config — the plugins, `ssr.external`, `requireAssertions` — by
+					 * default. Vitest 4 needed `extends: './vite.config.ts'` here, which
+					 * loaded this very file a second time per project.
 					 */
-					extends: './vite.config.ts',
 					test: {
 						name: 'client',
 						browser: {
@@ -279,7 +288,6 @@ export default defineConfig(({ mode }) => {
 					// Pure logic — plain Node, no browser, fast. The pattern model, the
 					// codec, the identity cookie and the adapter's route partition live
 					// here, and these are the tests that run on every save.
-					extends: './vite.config.ts',
 					test: {
 						name: 'server',
 						environment: 'node',

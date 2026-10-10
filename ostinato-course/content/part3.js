@@ -305,8 +305,8 @@ export const part3 = [
 		slug: 'panels-as-history',
 		title: 'Panels that are history entries',
 		summary:
-			'A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is `pushState`, closing it is the back button: shallow routing.',
-		goal: 'Use `MediaQuery` to make one component behave two ways, and use `pushState` and `page.state` so that something covering the screen closes the way people expect.',
+			'A sheet on a phone, a sidebar on a desktop — one component, one `MediaQuery`. Opening it is a shallow `goto`, closing it is the back button: shallow routing.',
+		goal: 'Use `MediaQuery` to make one component behave two ways, and use `goto(…, { shallow: true })` and `page.state` so that something covering the screen closes the way people expect.',
 		blocks: [
 			{
 				type: 'p',
@@ -334,12 +334,12 @@ export const part3 = [
 			},
 			{ type: 'h3', id: 'shallow-routing', text: 'Opening a panel is a history entry' },
 			code('src/app.d.ts', 28, 39),
-			code('src/routes/(app)/studio/+page.svelte', 97, 114),
+			code('src/routes/(app)/studio/+page.svelte', 97, 118),
 			{
 				type: 'p',
-				text: 'Opening the sound panel pushes a history entry with `{ panel: "sound" }` in its state and *no change to the URL*. The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. `page.state` is typed by `App.PageState` in `app.d.ts`, so `page.state.panel` is `"sound" | "share" | undefined` and nothing else.'
+				text: 'Opening the sound panel pushes a history entry with `{ panel: "sound" }` in its state and *no change to the URL*: `goto("")` is “stay here”, `shallow: true` is “but add an entry”. SvelteKit 2 spelled this `pushState("", state)`; 3.0 folded shallow routing into `goto`, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs `beforeNavigate` and `onNavigate` like any other, which is why both layouts check `navigation.shallow` (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. `page.state` is typed by `App.PageState` in `app.d.ts`, so `page.state.panel` is `"sound" | "share" | undefined` and nothing else.'
 			},
-			code('src/routes/(app)/studio/+page.svelte', 329, 337),
+			code('src/routes/(app)/studio/+page.svelte', 335, 343),
 			{
 				type: 'p',
 				text: 'The template reads `page.state.panel` and shows the matching sheet. `close()` calls `history.back()` rather than clearing the state itself, so that closing with the button and closing with the back gesture are the same operation and leave the history the same shape.'
@@ -348,7 +348,7 @@ export const part3 = [
 				type: 'checkpoint',
 				items: [
 					'You can say what `MediaQuery` gives you that a CSS media query does not.',
-					'You can explain why opening a panel calls `pushState` and closing it calls `history.back()`.',
+					'You can explain why opening a panel calls `goto` with `shallow: true` and closing it calls `history.back()`.',
 					'You can say where `App.PageState` is declared and what it does for `page.state`.'
 				]
 			}
@@ -397,26 +397,26 @@ export const part3 = [
 				text: '`$effect(() => session.autosave())` is the root effect from chapter 14, wired in one line: the disposer it returns is this effect’s cleanup. `engine.prune` runs whenever the track list changes — a sync with an external system, the audio graph, which is what `$effect` is for. And `$inspect(...).with(...)` logs the tempo in development with a custom formatter that says *which* of the two values changed, which the default `console.log` does not.'
 			},
 			{ type: 'h3', id: 'settled', text: 'Presets and `settled()`' },
-			code('src/routes/(app)/studio/+page.svelte', 120, 136),
+			code('src/routes/(app)/studio/+page.svelte', 126, 142),
 			{
 				type: 'p',
 				text: 'Loading a preset replaces the pattern, which replaces the grid (the `{#key}` below), which creates a hundred new pads. Focusing the first pad *before* that has finished would focus a pad about to be removed. `settled()` resolves when the state change and everything it caused — the new rows, their transitions started — has reached the DOM. It is `await tick()` for a world with async in it.'
 			},
 			{ type: 'h3', id: 'the-keyboard', text: 'The keyboard, the window, the body' },
-			code('src/routes/(app)/studio/+page.svelte', 142, 175),
-			code('src/routes/(app)/studio/+page.svelte', 190, 197),
+			code('src/routes/(app)/studio/+page.svelte', 148, 181),
+			code('src/routes/(app)/studio/+page.svelte', 196, 203),
 			{
 				type: 'p',
 				text: 'Three special elements, each for what it is the right listener for. `<svelte:window>` for the shortcuts, because a key press goes to the window when nothing is focused. `<svelte:document>` for `visibilitychange`, which is a document event. `<svelte:body>` for the pointer press that wakes the audio engine — browsers will not start audio without a gesture, and any press anywhere on the page counts, after which the space bar (not a gesture in every browser) works too.'
 			},
 			{ type: 'h3', id: 'the-grid-in-place', text: 'The grid, keyed and bounded' },
-			code('src/routes/(app)/studio/+page.svelte', 282, 314),
+			code('src/routes/(app)/studio/+page.svelte', 288, 320),
 			{
 				type: 'p',
 				text: '`{#key session.generation}` destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, `<svelte:boundary>` catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the `failed` snippet with a “Try again” button instead of taking the page down. `onerror` sends the message to a toast as well.'
 			},
-			code('src/routes/(app)/studio/+page.svelte', 177, 187),
-			code('src/routes/(app)/studio/+page.svelte', 259, 267),
+			code('src/routes/(app)/studio/+page.svelte', 183, 193),
+			code('src/routes/(app)/studio/+page.svelte', 265, 273),
 			{
 				type: 'p',
 				text: '“Published 3s ago” needs a clock that ticks. `now` is a `SvelteDate`, updated by an interval; `session.savedAt` is another. Subtract one from the other in a `$derived.by` and the label re-renders every second, because reading a `SvelteDate` is tracked. A plain `Date` would show “0s ago” forever.'
@@ -502,7 +502,7 @@ export const part3 = [
 			code('src/lib/studio/SharePanel.svelte', 304, 319),
 			{
 				type: 'p',
-				text: 'Two submit buttons, one field: `publish.fields.action.as("submit", "stay")` and `as("submit", "open")`. Whichever is pressed sends its value as `action`, and the server either returns the result or redirects to the new page — a redirect from inside an enhanced submission navigates, since SvelteKit 3.0.0-next.17. With JavaScript off, the form posts, the hidden `_pattern` field carries the JSON, and everything still works.'
+				text: 'Two submit buttons, one field: `publish.fields.action.as("submit", "stay")` and `as("submit", "open")`. Whichever is pressed sends its value as `action`, and the server either returns the result or redirects to the new page — a redirect from inside an enhanced submission navigates, in SvelteKit 3. With JavaScript off, the form posts, the hidden `_pattern` field carries the JSON, and everything still works.'
 			},
 			{
 				type: 'checkpoint',

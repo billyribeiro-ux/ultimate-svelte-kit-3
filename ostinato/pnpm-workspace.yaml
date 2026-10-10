@@ -1,9 +1,22 @@
-# Not a workspace — a single package. This file exists for one line.
+# Not a workspace — a single package. This file exists for two settings.
 #
-# pnpm 11 refuses to run a dependency's install scripts unless you say so by
-# name, which is the correct default: `postinstall` is arbitrary code from a
-# transitive dependency you have never read. esbuild needs it to unpack its
-# platform binary, and Vite needs esbuild, so without this the dev server
+# pnpm (since 10) refuses to run a dependency's install scripts unless you say
+# so by name, which is the correct default: `postinstall` is arbitrary code
+# from a transitive dependency you have never read. esbuild needs it to unpack
+# its platform binary, and Vite needs esbuild, so without this the dev server
 # starts and then dies on the first transform.
 allowBuilds:
   esbuild: true
+
+# pnpm (since 11) will not resolve a version published less than a day ago —
+# `minimumReleaseAge`, 1440 minutes by default — because a hijacked release is
+# usually caught and pulled inside that window. The default is non-strict: when
+# nothing in range is old enough, pnpm takes the newest anyway and, since 12,
+# writes the exemption here so that the fallback is a reviewable line rather
+# than a silent one. These three were under a day old when the project moved
+# to SvelteKit 3.0.1 on 2026-10-09. Each names an exact version, so the
+# exemption expires with it: the next bump goes through the policy again.
+minimumReleaseAgeExclude:
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1

@@ -49,7 +49,7 @@ export const part6 = [
 				text: 'Two effects. The first fetches whenever the id or origin changes — a network request in response to a prop is an interaction with the outside world, which is what `$effect` is for — with a `cancelled` flag so a response for an old id is dropped. The second drives the transport from the `playing` prop and reports back, so setting the attribute, calling the method and pressing the button all do the same thing.'
 			},
 			{ type: 'h3', id: 'built-twice', text: 'Built twice' },
-			code('vite.config.ts', 54, 74),
+			code('vite.config.ts', 59, 79),
 			{
 				type: 'p',
 				text: 'Inside the app, `dynamicCompileOptions` — called per file and, since vite-plugin-svelte 7.3.0, per *environment* — says “for the client build of the `embed` folder, `customElement: true`”. The environment guard matters: a custom element registers itself with `customElements.define` and has no server-rendered form, so the SSR pass must not try.'
@@ -85,59 +85,60 @@ export const part6 = [
 		slug: 'an-adapter-from-scratch',
 		title: 'An adapter, from scratch',
 		summary:
-			'What an adapter is: `writeClient`, `writePrerendered`, `generateManifest` per function, a runtime bundled with rolldown, `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.',
-		goal: 'Read a whole adapter and know which five steps every adapter takes; understand the manifest-per-function split; and see how SvelteKit 3’s `applyReroute` hands a request between functions.',
+			'What an adapter is: `writeClient`, `writePrerendered`, `generateServerInstance` per function, a runtime bundled with rolldown, an instrumentation initializer and `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.',
+		goal: 'Read a whole adapter and know which five steps every adapter takes; understand the server-per-function split; and see how SvelteKit 3’s `applyReroute` hands a request between functions.',
 		blocks: [
-			code('adapters/ostinato/index.js', 1, 26),
+			code('adapters/ostinato/index.js', 1, 28),
 			{
 				type: 'p',
 				text: 'An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Everything up to step 2 in that list is *every* adapter; everything after it is this one. It targets a plain Node process, like `adapter-node`, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.'
 			},
-			code('adapters/ostinato/index.js', 47, 74, { partial: true }),
+			code('adapters/ostinato/index.js', 47, 80, { partial: true }),
 			{ type: 'h3', id: 'the-split', text: 'The split, and a manifest per function' },
 			code('adapters/ostinato/partition.js', 1, 21),
-			code('adapters/ostinato/partition.js', 23, 48),
+			code('adapters/ostinato/partition.js', 23, 49),
 			{
 				type: 'why',
 				title: 'Why split at all',
 				text: 'A single function would be simpler and, for this app, faster. But a single function never *needs* `applyReroute`, and the reason SvelteKit 3 added it is precisely that platforms split apps across functions. An adapter that shows how the hand-off works has to split something, and `/api` is the natural seam: the part somebody would scale, cache and rate-limit differently. Fully prerendered routes go to neither — they are files.'
 			},
-			code('adapters/ostinato/index.js', 76, 121),
+			code('adapters/ostinato/index.js', 82, 133),
 			{
 				type: 'p',
-				text: '`builder.generateManifest({ routes })` produces a manifest that knows *only* those routes. Three are written: pages, api, and one with no routes at all. A `Server` built from the empty manifest can still run the hooks — and when `reroute` changes the path of a request it received, SvelteKit sets an `x-sveltekit-rerouted-url` header on the response. That header is set only when the manifest has zero routes, which is why the catch-all is route-less rather than a copy of pages. `entries.js` carries what the runtime needs that only the build knows: the origin baked in for CSRF, the prerendered paths, the route patterns as regex sources.'
+				text: '`builder.generateServerInstance(dest, { routes })` writes a module whose `server` knows *only* those routes. Three are written: pages, api, and one with no routes at all. It replaced `generateManifest` in 3.0, and the difference is what the adapter gets to see: a manifest string to pair with a `Server` class before, nothing now — the manifest’s shape is SvelteKit’s business, `SSRManifest` is no longer a public type, and an adapter that read it would break on the next change. A server with no routes can still run the hooks — and when `reroute` changes the path of a request it received, SvelteKit sets an `x-sveltekit-rerouted-url` header on the response. That header is set only when the route table is empty, which is why the catch-all is route-less rather than a copy of pages. `entries.js` carries what the runtime needs that only the build knows: the origin baked in for CSRF, the prerendered paths, the route patterns as regex sources.'
 			},
 			{ type: 'h3', id: 'bundling', text: 'Bundling the runtime' },
-			code('adapters/ostinato/index.js', 123, 189),
+			code('adapters/ostinato/index.js', 135, 204),
 			{
 				type: 'p',
-				text: 'The runtime in `files/` imports `SERVER`, `MANIFEST_PAGES` and friends by name — modules that exist only after the build. A rolldown plugin resolves each to the generated file. Production dependencies stay external and everything else is bundled in, so `build/` runs with `pnpm install --prod`. One thing must not be bundled twice: the OpenTelemetry API, or the SvelteKit runtime and the instrumentation file would report spans to two different worlds.'
+				text: 'Four bundles, not one. SvelteKit 3 configures a server as *module-level* state — `server.init` writes the manifest into the runtime that `server.respond` reads — so one module graph holds exactly one server, and three in one bundle means the last `init` wins and every route answers 404. Each function is therefore bundled on its own under `functions/`, with its own copy of the app, and the runtime in `files/` is bundled once more beside them. The runtime does not import the functions at all: `handler.js` loads `functions/<name>/index.js` by path when the process starts, and the names travel through `entries.js`. Production dependencies stay external and everything else is bundled in, so `build/` runs with `pnpm install --prod`. One thing must not be bundled twice: the OpenTelemetry API, or the SvelteKit runtime and the instrumentation file would report spans to two different worlds. And one thing must be bundled *with* the server rather than beside it: the instrumentation initializer from `createInstrumentationInitializer`, which fills in the environment before `instrumentation.server.js` runs and has to share the server’s copy of `env.js` to do it — hence the extra entry.'
 			},
-			code('adapters/ostinato/index.js', 191, 203),
+			code('adapters/ostinato/index.js', 206, 225),
 			{
 				type: 'p',
-				text: '`builder.instrument` renames `index.js` to `start.js` and writes a new `index.js` that imports the instrumentation file and *then* dynamically imports `start.js`. That order is the whole feature (ch. 32).'
+				text: '`builder.instrument` renames `index.js` to `start.js` and writes a new `index.js` that imports the initializer, then the instrumentation file, and *then* dynamically imports `start.js`. That order is the whole feature (ch. 32): the environment exists before the SDK asks for it, and the SDK is registered before the modules it patches are loaded.'
 			},
-			code('adapters/ostinato/index.js', 206, 253),
+			code('adapters/ostinato/index.js', 227, 282),
 			{
 				type: 'p',
-				text: 'Three more things an adapter can declare. `emulate()` fills in `event.platform` during `vite dev` and `vite preview`, with the same shape the runtime produces, so nothing has to guard against `undefined`. `supports` says what the runtime can do — `read()` from `$app/server`, instrumentation. And since SvelteKit 3.0.0-next.18 an adapter can contribute Vite plugins, `pre` or `post`: this one provides `virtual:adapter`, which the diagnostics page imports.'
+				text: 'Three more things an adapter can declare. `emulate()` fills in `event.platform` during `vite dev` and `vite preview`, with the same shape the runtime produces, so nothing has to guard against `undefined`. `supports` says what the runtime can do — `read()` from `$app/server`, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, `pre` or `post`: this one provides `virtual:adapter`, which the diagnostics page imports.'
 			},
+			code('adapters/ostinato/index.js', 285, 334, { partial: true }),
 			code('src/app.d.ts', 41, 54),
 			{ type: 'h3', id: 'the-runtime', text: 'The runtime: four steps per request' },
 			code('adapters/ostinato/files/handler.js', 1, 17),
-			code('adapters/ostinato/files/handler.js', 19, 61),
+			code('adapters/ostinato/files/handler.js', 19, 79),
 			{
 				type: 'p',
-				text: 'Three `Server`s from three manifests — the whole SvelteKit runtime each, with a different idea of which routes exist; the code behind the routes is shared, because the bundle has one copy. `server.init` runs the app’s `init` hook and hands each server its environment and a `read` implementation that streams files from `client/`.'
+				text: 'Three `server`s, each written by `generateServerInstance` — the whole SvelteKit runtime each, `init` and `respond` and nothing else, with a different idea of which routes exist, each in a bundle of its own. 3.0 deprecated the `Server` class for these ready-made objects: an adapter no longer builds a server from a manifest, it imports one. It imports them *by path*, with a dynamic `import()` computed from `dir.js`, and the comment says why the obvious alternative failed: three static imports rewritten by rolldown into `./functions/…` land in whatever chunk the bundler put this code in — `index.js` and `handler.js` are both entries, so their shared body became `chunks/handler-….js` — and from there the relative path points at nothing. The end-to-end suite found that one on its first run against the new adapter. `server.init` runs the app’s `init` hook and hands each server its environment and a `read` implementation that streams files from `client/`.'
 			},
-			code('adapters/ostinato/partition.js', 62, 81),
-			code('adapters/ostinato/files/handler.js', 126, 163),
+			code('adapters/ostinato/partition.js', 63, 82),
+			code('adapters/ostinato/files/handler.js', 144, 187),
 			{
 				type: 'p',
-				text: '`originFor` is the origin SvelteKit compares against for CSRF: baked in at build time, else `ORIGIN` from the environment, else guessed from the headers — the guess that goes wrong behind a proxy, and why the first two exist. `respond` passes `platform`, which becomes `event.platform` in the app: the adapter’s name, which function answered, when the process started.'
+				text: '`originFor` is the origin SvelteKit compares against for CSRF: baked in at build time from `paths.origin`, else guessed from the headers — the guess that goes wrong behind a proxy, and why the first exists. There used to be an `ORIGIN` environment variable between the two; adapter-node 6 removed it and this adapter follows, because an origin that could differ between the build and the process is exactly what `static: true` on `PUBLIC_ORIGIN` rules out (ch. 36). `getRequest` is synchronous in 3.0 — the body becomes a stream, nothing is read yet — so there is no `await` on it. `respond` passes `platform`, which becomes `event.platform` in the app: the adapter’s name, which function answered, when the process started.'
 			},
-			code('adapters/ostinato/files/handler.js', 165, 211),
+			code('adapters/ostinato/files/handler.js', 189, 237),
 			{
 				type: 'why',
 				title: 'Why `applyReroute`',
@@ -147,7 +148,7 @@ export const part6 = [
 				type: 'warn',
 				text: 'Two things bit while building this, both about the catch-all having no routes. SvelteKit’s in-process same-origin `fetch` in a route-less server falls through to a *real* `fetch`, so `PUBLIC_ORIGIN` must match the port the server is actually on — the end-to-end config sets both. And `handleFetch` has to use `globalThis.fetch` when `event.platform.entry` is `router` (ch. 26), or the resolver call answers itself with a 404.'
 			},
-			code('adapters/ostinato/files/handler.js', 217, 231),
+			code('adapters/ostinato/files/handler.js', 243, 257),
 			code('adapters/ostinato/files/index.js', 13, 40),
 			{
 				type: 'p',
@@ -157,7 +158,7 @@ export const part6 = [
 				type: 'checkpoint',
 				items: [
 					'You can list the five things every adapter does and the two that only this one does.',
-					'You can say why the third manifest has no routes and what would break if it had one.',
+					'You can say why the third server has no routes and what would break if it had one, and why the three cannot share a bundle.',
 					'You can trace `/@ostinato/four-on-the-floor` from the socket to the `pages` function.'
 				]
 			}
@@ -168,24 +169,24 @@ export const part6 = [
 		slug: 'the-service-worker',
 		title: 'The service worker',
 		summary:
-			'The application shell cached on install from `$app/manifest`, versioned by `version` from `$app/env`, typed through `$app/service-worker` and its own tsconfig — and the two paths it must never cache, with the reason.',
+			'The application shell cached on install from `$app/manifest`, resolved with `$app/paths`, versioned by `version` from `$app/env`, typed through `$app/service-worker` and its own tsconfig in `src/service-worker/` — and the two paths it must never cache, with the reason.',
 		goal: 'Write a service worker against SvelteKit 3’s split modules, type-check it with the WebWorker library, and know what a cached live query would do to you.',
 		blocks: [
-			code('src/service-worker.ts', 1, 27),
+			code('src/service-worker/index.ts', 1, 34),
 			{
 				type: 'p',
-				text: 'SvelteKit 3 split the old `$service-worker` module apart. The build’s files are `$app/manifest` — `immutable`, `assets`, `prerendered` — the build id is `version` from `$app/env`, and `$app/service-worker` exports one thing: a correctly typed `self`, so the worker’s global is a `ServiceWorkerGlobalScope` without a cast.'
+				text: 'SvelteKit 3 split the old `$service-worker` module apart. The build’s files are `$app/manifest` — `immutable`, `assets`, `prerendered` — the build id is `version` from `$app/env`, the path helpers are `resolve` and `asset` from `$app/paths`, and `$app/service-worker` exports one thing: a correctly typed `self`, so the worker’s global is a `ServiceWorkerGlobalScope` without a cast. The manifest lists every file *relative to the base path* — `_app/…`, `robots.txt`, an empty string for the landing page — and the `fetch` handler compares against `url.pathname`, which is absolute; `resolve` is what turns the one into the other, and a worker that skipped it would cache the shell on install and then never match a request.'
 			},
-			code('src/service-worker.ts', 29, 56),
-			code('src/service-worker.ts', 58, 89),
+			code('src/service-worker/index.ts', 36, 80),
+			code('src/service-worker/index.ts', 82, 113),
 			{
 				type: 'warn',
 				text: 'A `query.live` response is a stream that stays open as long as the page does. A cached clone of it would keep streaming into the cache long after the page closed — the failure the docs warn about by name. Both remote functions and the API live under paths this file refuses to touch, and the `no-store` header those responses carry is checked as well: belt and braces, because the cost of being wrong is a leak.'
 			},
-			code('tsconfig.service-worker.json', 1, 13),
+			code('src/service-worker/tsconfig.json', 1, 18),
 			{
 				type: 'p',
-				text: 'The worker is excluded from the main `tsconfig.json` and checked by its own, which extends `$app/tsconfig/service-worker` — generated by SvelteKit, with the WebWorker library instead of the DOM one. The `check` script runs both: `svelte-check` for the app, `tsc --noEmit -p tsconfig.service-worker.json` for this file.'
+				text: 'The worker lives in a folder of its own, `src/service-worker/`, because it is a TypeScript project of its own: the `tsconfig.json` beside it extends `$app/tsconfig/service-worker` — generated by SvelteKit, with the WebWorker library instead of the DOM one — and the root `tsconfig.json` excludes the folder, so a `fetch` event is a `FetchEvent` in one project and the DOM’s in the other and never both. The `check` script runs both: `svelte-check` for the app, `tsc --noEmit -p src/service-worker/tsconfig.json` for the worker.'
 			},
 			code('playwright.config.ts', 45, 55),
 			code('e2e/service-worker.e2e.ts', 10, 24),
@@ -196,7 +197,7 @@ export const part6 = [
 			{
 				type: 'checkpoint',
 				items: [
-					'You can name the three modules that replaced `$service-worker` and what each exports.',
+					'You can name the four modules that replaced `$service-worker` and what each exports.',
 					'You can say what happens if the `/_app/remote/` guard is removed.',
 					'You can explain why the worker has its own tsconfig.'
 				]
@@ -211,20 +212,20 @@ export const part6 = [
 			'One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, and two tests that prove the policy covers every inline script.',
 		goal: 'Read the whole posture as one decision, and know which trade each line makes.',
 		blocks: [
-			code('vite.config.ts', 141, 172),
+			code('vite.config.ts', 146, 177),
 			{
 				type: 'p',
 				text: '`mode: "auto"`: hashes for prerendered pages, where the whole document is known at build time and a file cannot carry a header, and nonces for dynamically rendered ones, which stream scripts after the header has gone. Three directives are specific to an instrument. `media-src blob:` because the exported WAV is played from a Blob URL. `img-src data:` for the share card preview. And `style-src "unsafe-inline"` — a deliberate trade: knobs and the playhead set custom properties per frame through `style:` attributes, which cannot be hashed and to which a nonce does not apply. The exposure is CSS injection, not script execution, and `script-src` never gets the same allowance.'
 			},
 			code('e2e/landing.e2e.ts', 9, 28),
-			code('e2e/platform.e2e.ts', 44, 72, { partial: true }),
+			code('e2e/platform.e2e.ts', 44, 90, { partial: true }),
 			{
 				type: 'why',
 				title: 'Why a test hashes the scripts itself',
 				text: 'A policy that is too strict blocks the app’s own bootstrap and the page never hydrates; a policy that is too loose is decoration. The test fetches three pages — dynamic, dynamic with data, prerendered — finds every inline `<script>`, computes its SHA-256, and checks that the policy in force (header or `<meta>`) names that hash or that the script carries the nonce. It is the only way to know the policy covers what SvelteKit emits, and it is what would catch a framework upgrade that added a new inline script.'
 			},
 			{ type: 'h3', id: 'csrf-and-the-cookie', text: 'CSRF, and the cookie' },
-			code('vite.config.ts', 174, 180),
+			code('vite.config.ts', 179, 185),
 			code('src/env.ts', 23, 40),
 			{
 				type: 'p',
@@ -241,7 +242,7 @@ export const part6 = [
 				type: 'p',
 				text: '`nosniff`, a referrer policy, and a permissions policy that turns off the microphone, the camera and geolocation: an instrument that makes sound has no business hearing any. `frame-ancestors "none"` in the CSP is the modern `X-Frame-Options`.'
 			},
-			code('src/routes/api/patterns/[id]/+server.ts', 21, 37),
+			code('src/routes/api/patterns/[id]/+server.ts', 21, 38),
 			{
 				type: 'p',
 				text: 'Exactly one endpoint says `Access-Control-Allow-Origin: *`: the one the embeddable player fetches from other origins. It is read-only and public — the same data is on the pattern’s page for anyone — so there is nothing to protect by withholding it. Everything else is same-origin by default, which is the default worth keeping.'

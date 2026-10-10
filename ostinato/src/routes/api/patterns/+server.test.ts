@@ -3,8 +3,8 @@ import * as v from 'valibot';
 import { _SearchSchema } from './+server.ts';
 
 /**
- * A test file beside a route. Until SvelteKit 3.0.0-next.19 every `+`-prefixed
- * file under `src/routes` was a route, so this would have been an endpoint
+ * A test file beside a route. Before SvelteKit 3 every `+`-prefixed file
+ * under `src/routes` was a route, so this would have been an endpoint
  * exporting `describe`. Files with `.test.`, `.spec.` or `.stories.` in their
  * names are now skipped by the router, and a schema's defaults — the part of
  * an API nobody reads and everybody depends on — get a fast unit test next to

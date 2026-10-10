@@ -9,17 +9,19 @@
  *
  * `QUERY` is the HTTP method for "a read with a body" — a GET may not carry
  * one, and a POST says "this changes something", which a search does not.
- * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export,
- * and it is used here for the reason it exists: a search with a title, a tempo
- * range and a sort does not fit in a query string that anybody wants to read.
+ * SvelteKit 3 added it to the methods a `+server.ts` may export, and it is
+ * used here for the reason it exists: a search with a title, a tempo range
+ * and a sort does not fit in a query string that anybody wants to read.
  *
  * The response is deliberately plain JSON with numbers where the app has
  * `Note`s. This is for scripts, and a script does not have the `transport`
- * hook.
+ * hook. It is built with `Response.json(...)`, the platform's own: SvelteKit 3
+ * deprecated its `json(...)` helper the moment the standard grew the same
+ * thing — one call that serialises and sets the content type.
  */
 
 import * as v from 'valibot';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { toDto } from '#lib/pattern/dto.ts';
 import * as store from '#lib/server/patterns.ts';
@@ -59,7 +61,7 @@ function summary(pattern: store.Published) {
 export const GET: RequestHandler = async ({ setHeaders }) => {
 	const patterns = await store.listPatterns('new', 24);
 	setHeaders({ 'cache-control': 'public, max-age=60' });
-	return json({ patterns: patterns.map(summary) });
+	return Response.json({ patterns: patterns.map(summary) });
 };
 
 export const QUERY: RequestHandler = async ({ request }) => {
@@ -88,5 +90,5 @@ export const QUERY: RequestHandler = async ({ request }) => {
 		)
 		.slice(0, limit);
 
-	return json({ patterns: matched.map(summary), total: matched.length });
+	return Response.json({ patterns: matched.map(summary), total: matched.length });
 };

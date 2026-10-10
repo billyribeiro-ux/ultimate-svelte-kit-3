@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, settled, untrack } from 'svelte';
 	import { SvelteDate } from 'svelte/reactivity';
-	import { pushState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ArrowUUpLeftIcon, ArrowUUpRightIcon, PlusIcon, ShareNetworkIcon } from 'phosphor-svelte';
 	import type { PageProps, Snapshot } from './$types.js';
@@ -98,13 +98,19 @@
 	 * SHALLOW ROUTING
 	 * ===============
 	 * Opening the sound panel pushes a history entry with `{ panel: 'sound' }`
-	 * in its state and no change to the URL. The back button — or a swipe on a
+	 * in its state and no change to the URL: `goto('')` is "stay here", and
+	 * `shallow: true` is "but add an entry". The back button — or a swipe on a
 	 * phone — closes it, which is what a person expects of something that
 	 * covers the screen. `page.state.panel` is typed by `App.PageState`.
+	 *
+	 * SvelteKit 2 spelled this `pushState('', state)`. 3.0 folded shallow
+	 * routing into `goto`, so there is one function for going somewhere and
+	 * the options say how deep — and a shallow navigation now runs the
+	 * navigation hooks like any other, which the two layouts allow for.
 	 */
 	function open(panel: NonNullable<App.PageState['panel']>) {
 		if (page.state.panel === panel) return;
-		pushState('', { panel });
+		void goto('', { shallow: true, state: { panel } });
 	}
 
 	function close() {

@@ -7,9 +7,9 @@
  *   1. identity — reads the artist cookie into `locals.artist`
  *   2. security — headers, and which fonts to preload
  *
- * plus `handleFetch`, `handleError`, `handleValidationError` and `init`. The
- * universal hooks — `transport` and `reroute` — live in `src/hooks.ts`
- * because the browser needs them too.
+ * plus `handleFetch`, `handleError` and `init`. The universal hooks —
+ * `transport` and `reroute` — live in `src/hooks.ts` because the browser
+ * needs them too.
  */
 
 import { building } from '$app/env';
@@ -62,8 +62,8 @@ const handleSecurity: Handle = async ({ event, resolve }) => {
 		/*
 		 * Preload the two fonts the first paint needs, by source filename.
 		 *
-		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
-		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * SvelteKit preloads `js` and `css` by default and never fonts. In
+		 * SvelteKit 3 a `font` input carries its `filename` — the project-relative
 		 * source path, before hashing — so this can name the exact file rather than
 		 * guessing at a hashed URL. `endsWith`, because the path begins with a
 		 * `node_modules/` prefix that a pnpm store layout can make longer than it
