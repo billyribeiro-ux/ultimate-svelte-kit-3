@@ -18,6 +18,7 @@
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import UpdateBanner from '#lib/ui/UpdateBanner.svelte';
 	import { theme } from '#lib/ui/theme.svelte.ts';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * THE ROOT LAYOUT KNOWS NOBODY
@@ -34,7 +35,7 @@
 	 * What is left here is what every page shares: fonts, the stylesheet, the
 	 * theme, the toaster, view transitions, and the deploy banner.
 	 */
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 
 	/*
 	 * VIEW TRANSITIONS

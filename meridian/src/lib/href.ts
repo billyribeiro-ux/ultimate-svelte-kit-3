@@ -16,13 +16,19 @@
  * — because `resolve` accepts `RouteIdWithSearchOrHash` and keeps the suffix.
  *
  * It returns `ResolvedPathname`, and that is the honest type, not a white
- * lie for the linter. SvelteKit defines it as `/${Path}` *or*
- * `/${string}/${Path}` — room for a base path in front of every resolved
- * pathname — and `/de/trips` is exactly that shape: a prefix that `reroute`
- * in `src/hooks.ts` strips off again before routing. eslint-plugin-svelte's
- * `no-navigation-without-resolve` accepts an `href` or a `goto()` of that
- * type, which is the rule doing its job: it cannot see through
- * `localizeHref`, and it should not have to.
+ * lie for the linter — on one condition, which `vite.config.ts` sets:
+ * `paths.relative: false`. With it, `resolve()` answers `/trips` on the
+ * server as it does in the browser, and `localizeHref` keeps a path that
+ * starts with `/` a path. (With the default, a server render got `./trips`,
+ * and `localizeHref` turned that into a whole URL at the build's origin —
+ * the config says what that broke.) SvelteKit defines `ResolvedPathname` as
+ * `/${Path}` *or* `/${string}/${Path}` — room for a base path in front of
+ * every resolved pathname — and `/de/trips` is exactly that shape: a prefix
+ * that `reroute` in `src/hooks.ts` strips off again before routing. The
+ * `as` says so to TypeScript, which sees `localizeHref` return a `string`.
+ * eslint-plugin-svelte's `no-navigation-without-resolve` accepts an `href`
+ * or a `goto()` of that type, which is the rule doing its job: it cannot
+ * see through `localizeHref`, and it should not have to.
  *
  * Redirects on the server (`redirect(303, localizeHref('/trips'))` in the
  * remote functions) keep calling `localizeHref` directly: a redirect is not a

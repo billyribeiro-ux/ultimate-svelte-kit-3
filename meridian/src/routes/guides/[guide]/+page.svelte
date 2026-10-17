@@ -4,8 +4,9 @@
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
 	const locale = getLocale();
 	/*

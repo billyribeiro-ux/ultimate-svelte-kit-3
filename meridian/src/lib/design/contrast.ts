@@ -31,7 +31,8 @@ export function parseHex(hex: string): Rgb {
 	const h = hex.replace('#', '');
 	const full = h.length === 3 ? [...h].map((c) => c + c).join('') : h;
 	if (!/^[0-9a-f]{6}$/i.test(full)) throw new Error(`not a hex colour: ${hex}`);
-	return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as unknown as Rgb;
+	const channel = (at: number) => parseInt(full.slice(at, at + 2), 16);
+	return [channel(0), channel(2), channel(4)];
 }
 
 /** WCAG 2.x relative luminance, 0 (black) to 1 (white). */

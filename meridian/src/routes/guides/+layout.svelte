@@ -4,6 +4,7 @@
 	import { href } from '#lib/href.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * A CHROME THAT DOES NOT KNOW YOU
@@ -16,7 +17,7 @@
 	 * plain links. It is a small, honest header for a small, static site
 	 * inside the app.
 	 */
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 </script>
 
 <a class="skip" href="#main">{m.nav_skip()}</a>

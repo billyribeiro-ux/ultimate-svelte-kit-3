@@ -39,15 +39,24 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/+page.svelte<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/+page.svelte<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { page } from '$app/state';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
 	import TripView from '#lib/trip/TripView.svelte';
+	import type { PageProps } from './$types';
 
-	const slug = $derived(page.params.slug ?? '');
+	/*
+	 * `params` is this route's, typed from `./$types`: `params.slug` is a
+	 * string the matcher in `src/params.ts` has already accepted, so there is
+	 * nothing to default and nothing to check again. `page.params` from
+	 * `$app/state` holds the same value as global state typed for every
+	 * route at once — `slug` may be absent there — which is how a `?? ''`
+	 * creeps in and sends an empty string to a query that will only refuse it.
+	 */
+	let { params }: PageProps = $props();
+	const slug = $derived(params.slug);
 &lt;/script&gt;
 
 &lt;!--
@@ -71,6 +80,11 @@
 {/key}</code></pre>
 </figure>
 <p>One <code>await</code>, in the markup, with no boundary. The comment says why twice over: a <code>pending</code> snippet is what the server would render *instead of* the trip, so the first paint would be a placeholder and a second request; and the failure that matters is a 404, which belongs to <code>+error.svelte</code> with the right status and language — where an uncaught error from a remote function goes. The <code>await</code> sits inside <code>$derived</code> in a declaration tag, so <code>initial</code> follows the slug and the query; a bare <code>{const}</code> is worked out once, and would go on holding the first trip it was given. <code>{#key slug}</code> makes a different trip a fresh <code>TripView</code>, which is what lets the view read its props once.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>params</code> from the props, and not <code>page.params</code></h4>
+	<p>A page receives its route’s parameters as a prop, <code>params</code>, and <code>PageProps</code> from <code>./$types</code> is the type SvelteKit generates for exactly this route: <code>params.slug</code> is a <code>string</code>, already accepted by the matcher in <code>src/params.ts</code> (chapter 14), because a URL whose slug did not match never reached this file. <code>page.params</code> from <code>$app/state</code> holds the same value as global state, typed for every route in the app at once — so on that type <code>slug</code> may be missing, and the first version wrote <code>page.params.slug ?? ''</code>, a fallback that could never run and that would have sent an empty string to a query whose schema refuses it. The prop is also what makes the page an ordinary component: what it depends on is in its signature. SvelteKit’s documentation shows the same pair for the same reason — <code>let { params } = $props()</code> beside a remote query called with <code>params.slug</code>.</p>
+</aside>
 <h3 id="state">The state object</h3>
 
 <figure class="code">
@@ -111,7 +125,7 @@ export type Tab = (typeof TABS)[number];</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/state.svelte.ts<span class="code__lines">:31-65</span></span>
+		<span class="code__file">src/lib/trip/state.svelte.ts<span class="code__lines">:36-70</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export class TripState {
@@ -150,7 +164,7 @@ export type Tab = (typeof TABS)[number];</code></pre>
 	}
 }</code></pre>
 </figure>
-<p>Two kinds of thing, kept apart. What the server says — the document — is derived from whichever is newer: the live query’s latest snapshot, or the first paint’s document until the stream delivers. What this person is doing — the selected stop, the tab — is local <code>$state</code> that is never sent anywhere. Everything else is <code>$derived</code> from the two, so a change on the server or a click on the screen re-derives exactly the parts that depend on it. The <code>$derived.by</code> closures are there because the private fields are assigned in the constructor, after field initialisers run; the comment explains the TypeScript reason.</p>
+<p>Two kinds of thing, kept apart. What the server says — the document — is derived from whichever is newer: the live query’s latest snapshot, or the first paint’s document until the stream delivers. What this person is doing — the selected stop — is local <code>$state</code> that is never sent anywhere. (The open tab is not here at all: it lives in the URL, and the view below derives it from there.) Everything else is <code>$derived</code> from the two, so a change on the server or a click on the screen re-derives exactly the parts that depend on it. The <code>$derived.by</code> closures are there because the private fields are assigned in the constructor, after field initialisers run; the comment explains the TypeScript reason.</p>
 
 <aside class="callout callout--why">
 	<h4>Why a class and not a store, or a context</h4>
@@ -194,14 +208,14 @@ const locale = getLocale();
 
 const tab: Tab = $derived.by(() =&gt; {
 	const wanted = page.url.searchParams.get('tab');
-	return (TABS as readonly string[]).includes(wanted ?? '') ? (wanted as Tab) : 'itinerary';
+	return isTab(wanted) ? wanted : 'itinerary';
 });</code></pre>
 </figure>
-<p><code>watchTrip(slug)</code> is the live query; <code>.current</code> is the latest snapshot and <code>.connected</code> says whether the stream is up. It is created inside <code>untrack</code>, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and <code>untrack</code> both says so and quiets the compiler’s fair question. The tab comes from the URL: <code>?tab=map</code> is a link, so it works with the back button, can be shared, and needs no state.</p>
+<p><code>watchTrip(slug)</code> is the live query; <code>.current</code> is the latest snapshot and <code>.connected</code> says whether the stream is up. It is created inside <code>untrack</code>, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and <code>untrack</code> both says so and quiets the compiler’s fair question. The tab comes from the URL: <code>?tab=map</code> is a link, so it works with the back button, can be shared, and needs no state. What the URL says is a <code>string | null</code>, and <code>isTab</code> from <code>state.svelte.ts</code> is a type guard — <code>value is Tab</code> — so the value that passes it is a <code>Tab</code> to TypeScript with no cast, and anything else falls back to the itinerary.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:217-254</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:232-273</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -225,6 +239,10 @@ const tab: Tab = $derived.by(() =&gt; {
  * it: a synchronous loop that Svelte stops with
  * `effect_update_depth_exceeded`. `untrack` says: run this, depend on
  * nothing it touches.
+ *
+ * They are effects because each sends a command — a side effect on the
+ * server, on a schedule or on a change — and computes nothing that is
+ * drawn.
  */
 const tripId = untrack(() =&gt; initial.document.trip.id);
 
@@ -278,7 +296,7 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:92-113</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:92-117</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -292,6 +310,10 @@ export function fireAndForget(promise: Promise&lt;unknown&gt;, what: string): vo
  * network that something had failed when nothing had. All three sit in
  * one slot as wide as the widest of them (the `.status` rules say how),
  * so the palette and the settings button beside it never move.
+ *
+ * `patient` is state written by a timer inside an effect: three seconds
+ * passing is not something a `$derived` can depend on, and the effect's
+ * cleanup stops the timer if the page goes first.
  */
 let patient = $state(true);
 
@@ -307,7 +329,7 @@ const status: 'live' | 'connecting' | 'lost' = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:283-347</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:302-366</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -381,7 +403,7 @@ const status: 'live' | 'connecting' | 'lost' = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:349-385</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:368-404</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -426,7 +448,7 @@ const status: 'live' | 'connecting' | 'lost' = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:115-184</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:119-194</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -452,6 +474,12 @@ const status: 'live' | 'connecting' | 'lost' = $derived(
  * either side of it. `scrollIntoView({ inline: 'nearest' })` stopped at
  * the strip's edge, which is where the fade is, and left &quot;Notes&quot; with
  * its last letter and its bar faded out.
+ *
+ * All of it is measurement — `offsetLeft`, `scrollWidth` — which only a
+ * laid-out page can answer, so it happens in effects and in the scroll
+ * handler, never in a `$derived`, and it writes its answers to state for
+ * the markup to read. Three places measure the strip, which is why it is
+ * held with `bind:this` rather than handed to one attachment.
  */
 let strip = $state&lt;HTMLElement&gt;();
 const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
@@ -504,7 +532,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:186-215</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:196-230</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -518,6 +546,11 @@ $effect(() =&gt; {
  * the language, so it is measured: the panel's top, in page coordinates,
  * written to `--frame-top` whenever the header changes size. CSS does
  * the rest, with a floor and a ceiling.
+ *
+ * One observer needs two elements — it watches the header and measures
+ * the panel — and an attachment is handed one, so both are held with
+ * `bind:this`. `frameTop` is written by the effect because it is a
+ * measurement of the laid-out page, which a `$derived` cannot take.
  */
 let header = $state&lt;HTMLElement&gt;();
 let panel = $state&lt;HTMLElement&gt;();
@@ -542,7 +575,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:387-427</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:406-446</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The panel has its own transition name: the tabs and the header hold still while it changes. --&gt;
@@ -590,7 +623,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:262-268</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:281-287</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -605,7 +638,7 @@ const wide = new MediaQuery('(min-width: 64em)');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:478-486</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:497-505</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}
@@ -621,7 +654,7 @@ const wide = new MediaQuery('(min-width: 64em)');</code></pre>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why the trip page has no <code>pending</code> snippet and where a 404 goes.</li><li>You can explain what <code>TripState.document</code> is derived from and what that means for caching.</li><li>You can state the effect rule and identify both loops the presence effects avoid.</li></ul>
+	<ul><li>You can say why the trip page has no <code>pending</code> snippet and where a 404 goes.</li><li>You can say why the slug comes from <code>params</code> through <code>PageProps</code> rather than from <code>page.params</code>.</li><li>You can explain what <code>TripState.document</code> is derived from and what that means for caching.</li><li>You can state the effect rule and identify both loops the presence effects avoid.</li></ul>
 </aside>
 		</article>
 

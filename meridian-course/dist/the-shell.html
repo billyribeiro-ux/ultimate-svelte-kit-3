@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:1-37</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:1-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -62,6 +62,7 @@
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import UpdateBanner from '#lib/ui/UpdateBanner.svelte';
 	import { theme } from '#lib/ui/theme.svelte.ts';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * THE ROOT LAYOUT KNOWS NOBODY
@@ -78,12 +79,12 @@
 	 * What is left here is what every page shares: fonts, the stylesheet, the
 	 * theme, the toaster, view transitions, and the deploy banner.
 	 */
-	let { children } = $props();</code></pre>
+	let { children }: LayoutProps = $props();</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:39-95</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:40-96</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -149,7 +150,7 @@ onMount(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:131-216</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:132-217</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{@render children()}
@@ -264,13 +265,14 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+layout.svelte<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/routes/(site)/+layout.svelte<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { m } from '#lib/paraglide/messages.js';
 	import Footer from '#lib/ui/Footer.svelte';
 	import Header from '#lib/ui/Header.svelte';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * THE SITE
@@ -282,7 +284,7 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 	 * guides, which are prerendered, live outside this group — the root
 	 * layout says why.
 	 */
-	let { data, children } = $props();
+	let { data, children }: LayoutProps = $props();
 &lt;/script&gt;
 
 &lt;a class=&quot;skip&quot; href=&quot;#main&quot;&gt;{m.nav_skip()}&lt;/a&gt;
@@ -295,12 +297,12 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 
 &lt;Footer /&gt;</code></pre>
 </figure>
-<p>The only <code>load</code> in the project, and what it returns is about the shell, not a page. Identity is needed by every page and by the header around them, which is exactly the case a layout <code>load</code> exists for; the theme cookie is read here for the one picture with two prints (chapter 22), because the server has to choose its sources before any script runs. Everything page-specific comes through remote functions. The <code>(app)</code> group inside <code>(site)</code> adds a second layout load that redirects strangers to sign in — chapter 32 quotes it — so a page under it cannot forget to check.</p>
+<p>The one <code>load</code> that returns data, and what it returns is about the shell, not a page. (There are two more <code>load</code>s in the project, and neither carries anything for a component to show: the <code>(app)</code> group’s guard, below, and the guide page’s in chapter 34, which picks a prerendered file by its slug.) Identity is needed by every page and by the header around them, which is exactly the case a layout <code>load</code> exists for; the theme cookie is read here for the one picture with two prints (chapter 22), because the server has to choose its sources before any script runs. Everything page-specific comes through remote functions. The <code>(app)</code> group inside <code>(site)</code> adds a second layout load that redirects strangers to sign in — chapter 32 quotes it — so a page under it cannot forget to check. The layout takes its props as <code>LayoutProps</code> from <code>./$types</code>: the type SvelteKit generates for *this* layout, which knows that <code>data</code> has a <code>user</code> and a <code>theme</code> because the <code>load</code> beside it returned them, and that <code>children</code> is the snippet of the page inside. Every layout in the project types its props that way, and every page with a <code>params</code> or <code>data</code> uses its twin, <code>PageProps</code> (chapter 24).</p>
 <h3 id="header">The header</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-97</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:1-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -350,6 +352,12 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 	 * made inert comes back. `open` is an assignable `$derived` for that: the
 	 * menu button writes it, and crossing the 48em line, either way,
 	 * derives it afresh — closed. No effect has to notice and write it back.
+	 *
+	 * The one effect sets `inert` on elements this component does not own,
+	 * which is a write to the document, not a value to derive. The nav and
+	 * the menu button are held with `bind:this` because `toggle()` moves
+	 * focus between them after the sheet has opened or closed — an imperative
+	 * step, taken in a handler, that needs the elements themselves.
 	 */
 	const wide = new MediaQuery('(min-width: 48em)');
 
@@ -404,7 +412,7 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:101-114</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:107-120</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -422,21 +430,26 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 	{ href: href('/guides'), label: m.nav_guides() }
 ])}</code></pre>
 </figure>
-<p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup and visible to its siblings and their children. It is what Svelte 5.56 put in place of <code>{@const}</code>, which still compiles but is legacy — the old tag could only sit directly inside a block and only hold a constant, where a declaration tag works anywhere in the markup and can be a <code>let</code> holding <code>$state</code>. A bare one is worked out once, when the block is created; to follow what it reads it says so with <code>$derived</code>, as a <code>const</code> in a <code>&lt;script&gt;</code> would. The link list depends on whether somebody is signed in, and the header sits in the layout, so it outlives a sign-in. The first version was a bare <code>{const}</code>: after signing in there was no “Trips” link until a reload, and after signing out the link stayed. The sign-up test in chapter 42 now looks for it both ways. The header is the only place that needs the list, so it lives where it is used.</p>
+<p>Two small Svelte 5 things. <code>scrollY</code> from <code>svelte/reactivity/window</code> is the window’s scroll position as a reactive value with the listener managed for us — <code>undefined</code> on the server, where there is no window — and one <code>$derived</code> turns it into the border that appears when the page has scrolled. <code>{const}</code> is a declaration tag: a value computed in the markup and visible to its siblings and their children. It is what Svelte 5.56 put in place of <code>{@const}</code>, which still compiles but is legacy. The two are easy to confuse, and the difference is the whole lesson. <code>{@const}</code> could only sit directly inside a block, and it was *reactive*: the compiler made it a derived value, worked out again whenever what it read changed. A declaration tag works anywhere in the markup, can be a <code>let</code> holding <code>$state</code>, and is reactive only when it says so. A bare one is worked out once, when the block is created; to follow what it reads it wraps the value in <code>$derived</code>, as a <code>const</code> in a <code>&lt;script&gt;</code> would. So the one-for-one translation of old code is <code>{@const x = y}</code> → <code>{const x = $derived(y)}</code>, which is what Svelte’s own documentation gives. Dropping the <code>@</code> alone gives you the bare, once-only form — and this project made exactly that slip three times, in the header, the diagnostics page and the settings page, each found by a reader noticing something did not update. The link list depends on whether somebody is signed in, and the header sits in the layout, so it outlives a sign-in. The first version was a bare <code>{const}</code>: after signing in there was no “Trips” link until a reload, and after signing out the link stayed. The sign-up test in chapter 42 now looks for it both ways. The header is the only place that needs the list, so it lives where it is used.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:116-192</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:122-204</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={scrolled}&gt;
+	<pre><code class="lang-svelte">&lt;header class={['header', { 'header--scrolled': scrolled }]}&gt;
 	&lt;div class=&quot;container header__row&quot;&gt;
 		&lt;a class=&quot;brand&quot; href={href('/(site)')}&gt;
 			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
 			&lt;span&gt;{m.app_name()}&lt;/span&gt;
 		&lt;/a&gt;
 
-		&lt;nav id=&quot;primary-nav&quot; class=&quot;nav&quot; class:nav--open={open} aria-label=&quot;Primary&quot; bind:this={nav}&gt;
+		&lt;nav
+			id=&quot;primary-nav&quot;
+			class={['nav', { 'nav--open': open }]}
+			aria-label=&quot;Primary&quot;
+			bind:this={nav}
+		&gt;
 			{#each links as link, i (link.href)}
 				&lt;!-- `--i` staggers the links' arrival on the phone sheet, 30ms apart. --&gt;
 				&lt;a
@@ -505,14 +518,20 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
 	sits just under the header's layer and covers only what is below the
 	header; a tap on it closes the sheet. Decorative to a screen reader —
 	the page under it is `inert`, which is what a screen reader hears.
---&gt;</code></pre>
+--&gt;
+&lt;div class={['nav-scrim', { 'nav-scrim--open': open }]} aria-hidden=&quot;true&quot; onclick={toggle}&gt;&lt;/div&gt;</code></pre>
 </figure>
 <p>Mobile first: the nav is a sheet under the header, opened by a button with <code>aria-expanded</code> and <code>aria-controls</code>, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: <code>inert</code> on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and <code>afterNavigate</code> to close it whatever caused the navigation. The scrim is rendered after the <code>&lt;header&gt;</code>, not inside it: the header’s <code>backdrop-filter</code> makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And <code>open</code> is an assignable <code>$derived</code> that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header is also the same on every page. The first version left out whatever the page already was — no “New trip” on the trips list, no “Sign in” on the sign-in page — and the result was a header whose links, language switcher and theme toggle jumped 130px sideways on the most travelled path in the app, from the trips list into a trip. Now the action is always there, and on its own page it carries <code>aria-current=&quot;page&quot;</code>, like a nav link: a screen reader says “current page”, and the stylesheet can mark it without a second rule for the same idea. Signing out is a <code>&lt;form&gt;</code> spread from a remote <code>form</code> with no fields, so it works with JavaScript off. The end-to-end helper in chapter 42 has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every <code>href</code> in it is a call to <code>href()</code> — the next section — so the link list is a list of typed route ids, <code>/(site)/(app)/trips</code> and friends, not strings that happen to look like paths.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>class={[…]}</code>, and not <code>class:nav--open={open}</code></h4>
+	<p>A class that comes and goes is written in this project as the <code>class</code> attribute with an array or an object in it: <code>class={['nav', { 'nav--open': open }]}</code> — strings are always there, an object’s keys are there while their values are truthy, and Svelte turns the lot into one string with the same rules as the clsx library. Before Svelte 5.16 the convenient way was the <code>class:</code> directive, one per class: <code>class=&quot;nav&quot; class:nav--open={open}</code>. It still compiles, and Svelte’s documentation now says to prefer the attribute, because the attribute is one value — it can be built in the script, passed as a prop, and merged with a class handed in from outside, <code>class={['btn', props.class]}</code>, none of which a directive can do. You will meet the directive in older code and in libraries; read it as the same thing written the earlier way.</p>
+</aside>
 <h3 id="links">One way to write a link</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/href.ts<span class="code__lines">:1-44</span></span>
+		<span class="code__file">src/lib/href.ts<span class="code__lines">:1-50</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -533,13 +552,19 @@ export const load: LayoutServerLoad = ({ locals, cookies }) =&gt; ({
  * — because `resolve` accepts `RouteIdWithSearchOrHash` and keeps the suffix.
  *
  * It returns `ResolvedPathname`, and that is the honest type, not a white
- * lie for the linter. SvelteKit defines it as `/${Path}` *or*
- * `/${string}/${Path}` — room for a base path in front of every resolved
- * pathname — and `/de/trips` is exactly that shape: a prefix that `reroute`
- * in `src/hooks.ts` strips off again before routing. eslint-plugin-svelte's
- * `no-navigation-without-resolve` accepts an `href` or a `goto()` of that
- * type, which is the rule doing its job: it cannot see through
- * `localizeHref`, and it should not have to.
+ * lie for the linter — on one condition, which `vite.config.ts` sets:
+ * `paths.relative: false`. With it, `resolve()` answers `/trips` on the
+ * server as it does in the browser, and `localizeHref` keeps a path that
+ * starts with `/` a path. (With the default, a server render got `./trips`,
+ * and `localizeHref` turned that into a whole URL at the build's origin —
+ * the config says what that broke.) SvelteKit defines `ResolvedPathname` as
+ * `/${Path}` *or* `/${string}/${Path}` — room for a base path in front of
+ * every resolved pathname — and `/de/trips` is exactly that shape: a prefix
+ * that `reroute` in `src/hooks.ts` strips off again before routing. The
+ * `as` says so to TypeScript, which sees `localizeHref` return a `string`.
+ * eslint-plugin-svelte's `no-navigation-without-resolve` accepts an `href`
+ * or a `goto()` of that type, which is the rule doing its job: it cannot
+ * see through `localizeHref`, and it should not have to.
  *
  * Redirects on the server (`redirect(303, localizeHref('/trips'))` in the
  * remote functions) keep calling `localizeHref` directly: a redirect is not a
@@ -560,8 +585,8 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	return localizeHref(resolve&lt;T&gt;(...args)) as ResolvedPathname;
 }</code></pre>
 </figure>
-<p>Twelve lines of code under thirty of comment, and the comment is the point. <code>resolve()</code> from <code>$app/paths</code> is SvelteKit’s typed link: the route id — groups included, which is why it is <code>/(site)/(app)/trips/new</code> and not <code>/trips/new</code> — is checked against the routes that exist, the parameters against the matchers in <code>src/params.ts</code>, and since 2.54 — <code>resolve()</code> itself is from 2.26; the search-string form came later, so every 3.x has it — the id may carry its own search string or hash, so <code>href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug })</code> is one call and still typed. Paraglide’s <code>localizeHref</code> then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.</p>
-<aside class="callout callout--note"><p>The return type is <code>ResolvedPathname</code>, and that is not a trick played on the linter. SvelteKit defines the type as <code>/${Path}</code> *or* <code>/${string}/${Path}</code> — a slot for a base path in front of every resolved pathname — and <code>/de/trips</code> is exactly that shape, a prefix that <code>reroute</code> in <code>src/hooks.ts</code> strips before routing. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> rule, which started recognising SvelteKit 3 projects in 3.23.1, accepts an <code>href</code> or a <code>goto()</code> of that type; it cannot see through <code>localizeHref</code>, and this is the honest way to tell it what the wrapper does. The one link in the app that bypasses <code>href()</code> is the language switcher in chapter 20, and it says why in a comment the linter reads.</p></aside>
+<p>A dozen lines of code under three dozen of comment, and the comment is the point. <code>resolve()</code> from <code>$app/paths</code> is SvelteKit’s typed link: the route id — groups included, which is why it is <code>/(site)/(app)/trips/new</code> and not <code>/trips/new</code> — is checked against the routes that exist, the parameters against the matchers in <code>src/params.ts</code>, and since 2.54 — <code>resolve()</code> itself is from 2.26; the search-string form came later, so every 3.x has it — the id may carry its own search string or hash, so <code>href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug })</code> is one call and still typed. Paraglide’s <code>localizeHref</code> then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.</p>
+<aside class="callout callout--note"><p>The return type is <code>ResolvedPathname</code>, and that is not a trick played on the linter — on one condition, which <code>vite.config.ts</code> sets: <code>paths.relative: false</code>. With SvelteKit’s default, <code>true</code>, <code>resolve()</code> answers a *server* render with a path relative to the page, <code>./explore</code> or <code>../trips</code>, so the HTML still works if the whole app is moved under a subdirectory; Paraglide’s <code>localizeHref</code> then resolved that against an origin and handed back a whole URL, <code>http://localhost:4173/explore</code>. Every link in the server’s HTML carried the build’s origin, and so did every prerendered guide — and the header could not mark the page it was on, because <code>isCurrent</code> compares the page’s pathname with each <code>href</code>, and a URL is never equal to a pathname. Nobody saw it in a browser, which redraws the links as root-relative paths the moment it hydrates; chapter 42 has the test that reads the server’s HTML with JavaScript off. This app is served from the root of its domain, so the portability was worth nothing and the setting is <code>false</code>. SvelteKit defines the type as <code>/${Path}</code> *or* <code>/${string}/${Path}</code> — a slot for a base path in front of every resolved pathname — and <code>/de/trips</code> is exactly that shape, a prefix that <code>reroute</code> in <code>src/hooks.ts</code> strips before routing. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> rule, which started recognising SvelteKit 3 projects in 3.23.1, accepts an <code>href</code> or a <code>goto()</code> of that type; it cannot see through <code>localizeHref</code>, and this is the honest way to tell it what the wrapper does. The one link in the app that bypasses <code>href()</code> is the language switcher in chapter 20, and it says why in a comment the linter reads.</p></aside>
 
 <figure class="code">
 	<figcaption>

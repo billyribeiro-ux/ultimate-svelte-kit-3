@@ -45,6 +45,12 @@
 	 * made inert comes back. `open` is an assignable `$derived` for that: the
 	 * menu button writes it, and crossing the 48em line, either way,
 	 * derives it afresh — closed. No effect has to notice and write it back.
+	 *
+	 * The one effect sets `inert` on elements this component does not own,
+	 * which is a write to the document, not a value to derive. The nav and
+	 * the menu button are held with `bind:this` because `toggle()` moves
+	 * focus between them after the sheet has opened or closed — an imperative
+	 * step, taken in a handler, that needs the elements themselves.
 	 */
 	const wide = new MediaQuery('(min-width: 48em)');
 
@@ -113,14 +119,19 @@
 	{ href: href('/guides'), label: m.nav_guides() }
 ])}
 
-<header class="header" class:header--scrolled={scrolled}>
+<header class={['header', { 'header--scrolled': scrolled }]}>
 	<div class="container header__row">
 		<a class="brand" href={href('/(site)')}>
 			<CompassRoseIcon size={22} weight="duotone" aria-hidden="true" />
 			<span>{m.app_name()}</span>
 		</a>
 
-		<nav id="primary-nav" class="nav" class:nav--open={open} aria-label="Primary" bind:this={nav}>
+		<nav
+			id="primary-nav"
+			class={['nav', { 'nav--open': open }]}
+			aria-label="Primary"
+			bind:this={nav}
+		>
 			{#each links as link, i (link.href)}
 				<!-- `--i` staggers the links' arrival on the phone sheet, 30ms apart. -->
 				<a
@@ -190,7 +201,7 @@
 	header; a tap on it closes the sheet. Decorative to a screen reader —
 	the page under it is `inert`, which is what a screen reader hears.
 -->
-<div class="nav-scrim" class:nav-scrim--open={open} aria-hidden="true" onclick={toggle}></div>
+<div class={['nav-scrim', { 'nav-scrim--open': open }]} aria-hidden="true" onclick={toggle}></div>
 
 <style>
 	/*

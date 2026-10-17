@@ -5,6 +5,7 @@
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 	import Scene, { type GlobeStop } from './Scene.svelte';
 
 	/**
@@ -58,7 +59,7 @@
 		<!-- An `App.Error` from `handleError`, not the `Error` thrown below: the words are on `message`. -->
 		{#snippet failed(error, reset)}
 			<p class="globe__status issue">
-				{(error as App.Error).message}
+				{boundaryMessage(error)}
 				<button class="btn btn--sm" type="button" onclick={reset}>{m.live_reconnect()}</button>
 			</p>
 		{/snippet}

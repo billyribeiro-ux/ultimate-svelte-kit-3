@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { flip } from 'svelte/animate';
+	import { fromAction } from 'svelte/attachments';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { dndzone, TRIGGERS, type DndEvent } from 'svelte-dnd-action';
 	import { toast } from 'svelte-sonner';
@@ -26,6 +27,18 @@
 	 * press space, use the arrows — and tells us two things: `consider`
 	 * (the list as it would look if you dropped here) and `finalize` (you
 	 * dropped here).
+	 *
+	 * The library ships an action, the shape element behaviour took before
+	 * Svelte 5.29: `use:dndzone={options}`. `fromAction` from
+	 * `svelte/attachments` turns it into an attachment, so the zone is
+	 * applied with `{@attach}` like everything else in the project. The one
+	 * difference to remember is the second argument: a *function* returning
+	 * the options, which the attachment calls inside an effect — so when
+	 * `group.stops` or `editable` changes, the library's `update` is called
+	 * with the new options, exactly as the action's would have been. (The
+	 * two events it dispatches, `consider` and `finalize`, are typed for
+	 * every element in `src/app.d.ts`; the action used to carry those types
+	 * with it.)
 	 *
 	 * The server is the source of truth, and the live query will send the
 	 * new order a few hundred milliseconds after the drop. In between, the
@@ -109,6 +122,9 @@
 	 * with the last render's and puts a new one in `fresh` for 1.2 seconds,
 	 * and the stop card turns that into a highlight that fades over 700ms.
 	 * The first render marks nothing: forty stops do not all light up.
+	 * It is an effect and not a `$derived` because a mark lives on its own
+	 * clock — a timer takes it off again — and is not a function of the
+	 * stops alone.
 	 */
 	const duration = $derived(reducedMotion.current ? 0 : 240);
 
@@ -225,7 +241,7 @@
 			<ul
 				class="day__list"
 				role="list"
-				use:dndzone={{
+				{@attach fromAction(dndzone, () => ({
 					items: group.stops,
 					type: 'stops',
 					flipDurationMs: duration,
@@ -233,7 +249,7 @@
 					dropTargetStyle: {},
 					dropTargetClasses: ['day__list--target'],
 					transformDraggedElement: lift
-				}}
+				}))}
 				onconsider={(e) => consider(group.date, e)}
 				onfinalize={(e) => finalize(group.date, e)}
 			>

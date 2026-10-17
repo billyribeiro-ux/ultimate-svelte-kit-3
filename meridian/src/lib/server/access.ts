@@ -14,12 +14,19 @@
  * A 403 for "not yours" would tell a stranger that the slug they guessed is
  * real. A 404 for "yours, but read-only" would leave a viewer wondering
  * where the trip went.
+ *
+ * The sentence in each `error()` is read by a person — a toast prints it,
+ * and so does the error page — so it is a Paraglide message like every other
+ * sentence in the product. The remote function runs inside the request's
+ * `paraglideMiddleware`, so `m.error_no_trip()` comes out in the language
+ * of the page that called it, with nothing passed in.
  */
 
 import { error, redirect } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { and, eq, sql } from 'drizzle-orm';
 import type { User } from 'better-auth';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import type { ViewerRole } from '#lib/domain/roles.ts';
 import type { Role } from '#lib/domain/schemas.ts';
@@ -57,11 +64,9 @@ export async function requireMember(tripId: string, minimum: Role = 'viewer'): P
 		where: and(eq(schema.member.tripId, tripId), eq(schema.member.userId, user.id)),
 		with: { trip: true }
 	});
-	if (!membership) error(404, 'Not found');
+	if (!membership) error(404, m.error_no_trip());
 
-	if (RANK[membership.role] < RANK[minimum]) {
-		error(403, 'You can look at this trip but not change it.');
-	}
+	if (RANK[membership.role] < RANK[minimum]) error(403, m.error_read_only());
 
 	return { user, trip: membership.trip, role: membership.role };
 }
@@ -75,7 +80,7 @@ export type Viewer = { readonly trip: Trip; readonly role: ViewerRole; readonly 
  */
 export async function readableTrip(slug: string): Promise<Viewer> {
 	const trip = await db.query.trip.findFirst({ where: eq(schema.trip.slug, slug) });
-	if (!trip) error(404, 'Not found');
+	if (!trip) error(404, m.error_no_trip());
 
 	const user = currentUser();
 	if (user) {
@@ -87,7 +92,7 @@ export async function readableTrip(slug: string): Promise<Viewer> {
 
 	if (trip.visibility === 'link') return { trip, role: 'link', user };
 
-	error(404, 'Not found');
+	error(404, m.error_no_trip());
 }
 
 /**

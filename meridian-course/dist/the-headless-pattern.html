@@ -40,7 +40,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:211-232</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:212-233</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
@@ -122,7 +122,7 @@
 		button are wider than a card's column, and a field that cannot shrink
 		pokes out of the card it is in.
 	--&gt;
-	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
+	&lt;div class={['datefield', { 'datefield--invalid': issues.length &gt; 0 }]}&gt;
 		&lt;div class=&quot;datefield__dates&quot;&gt;
 			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
 				&lt;span class=&quot;datefield__date&quot;&gt;
@@ -210,7 +210,7 @@ function pick(id: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:144-157</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:145-158</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -232,7 +232,7 @@ const table = createTable({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:403-432</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:414-442</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each table.getHeaderGroups() as group (group.id)}
@@ -240,8 +240,7 @@ const table = createTable({
 		{#each group.headers as header (header.id)}
 			{const sorted = $derived(header.column.getIsSorted())}
 			&lt;th
-				class=&quot;sortable&quot;
-				class:num={header.column.columnDef.meta?.align === 'end'}
+				class={['sortable', { num: header.column.columnDef.meta?.align === 'end' }]}
 				aria-sort={sorted === 'asc'
 					? 'ascending'
 					: sorted === 'desc'

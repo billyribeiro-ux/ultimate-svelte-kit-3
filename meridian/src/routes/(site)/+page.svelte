@@ -15,8 +15,9 @@
 	import night from '#lib/assets/hero-night.png?w=640;960;1280;1600&enhanced';
 	import dayPhone from '#lib/assets/hero-phone.png?w=640;960;1200&enhanced';
 	import nightPhone from '#lib/assets/hero-phone-night.png?w=640;960;1200&enhanced';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
 	/*
 	 * FOUR PRINTS, ONE DOWNLOAD
@@ -48,6 +49,23 @@
 	 * width and height known so nothing shifts (the phone print has the
 	 * desktop's 16:10) — rendered by hand because the component cannot put
 	 * a `media` on a source.
+	 */
+
+	/*
+	 * WHY `running`, AND NOT `theme.choice` FROM THE START
+	 * ----------------------------------------------------
+	 * The server has no `localStorage`; it knows the choice from the cookie,
+	 * as `data.theme`, and renders the sources for that. The first render in
+	 * the browser is hydration, which does not draw the page again: it walks
+	 * the elements the server sent and attaches to them, so it must describe
+	 * the same markup. Read `theme.choice` straight away and a person whose
+	 * storage and cookie disagree — another tab changed the theme a moment
+	 * ago — describes different `<source>`s from the ones in the document.
+	 * Where only a `srcset` differs, Svelte keeps the server's and ignores
+	 * its own; where the number of sources differs, hydration fails, and
+	 * Svelte clears the server's page and renders all of it again. So the
+	 * first render reads `data.theme`, as the server did; `onMount` runs once
+	 * hydration is done, and from then on the live choice decides.
 	 */
 	let running = $state(false);
 	onMount(() => {

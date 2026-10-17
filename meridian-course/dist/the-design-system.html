@@ -193,7 +193,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:1-60</span></span>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:1-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -223,7 +223,8 @@ body {
  * one value gave an 18px heading the hairlines of a poster; letting the
  * browser map px → opsz (`font-optical-sizing: auto`, the default once no
  * `font-variation-settings` fights it) gives each size the cut drawn for
- * it. Only the hero title and the 404 numeral ask for the full 144 cut.
+ * it. Two places pin it: the hero title to the full 144 cut, and the 404
+ * numeral to 96, because at 46–72px the poster cut lost its hairlines.
  */
 h1,
 h2,
@@ -262,7 +263,7 @@ h4 {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-76</span></span>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-89</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -278,6 +279,19 @@ h4 {
  * `MediaQuery` from `svelte/reactivity` is the system's preference as a
  * reactive value: `resolved` updates when the OS switches at sunset without
  * anybody polling.
+ *
+ * WHY ONE INSTANCE IN A MODULE, WHEN SVELTE ADVISES CONTEXT
+ * ---------------------------------------------------------
+ * Svelte's best practices prefer context to state in a shared module, for a
+ * reason that matters on a server: a module is loaded once per process, so
+ * state in it is shared by every request the process renders, and one
+ * person's value can be rendered into another person's page. This module is
+ * safe from that by construction, and the constructor and `set` are where it
+ * is decided. On the server the constructor returns before it reads
+ * anything, and `set` is only ever called from a change handler, which never
+ * runs there — so the server's instance is `'system'` for its whole life and
+ * holds nothing of anybody's. The person's choice reaches a server render
+ * another way: as `data.theme`, read from the cookie for that one request.
  */
 
 import { MediaQuery } from 'svelte/reactivity';
@@ -343,6 +357,11 @@ class ThemeState {
 export const theme = new ThemeState();</code></pre>
 </figure>
 <p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too. Two things outside the stylesheet follow a change as well, and <code>set()</code> updates both: the <code>theme-color</code> meta tags, and a cookie for the server — the next two blocks say what each is for.</p>
+
+<aside class="callout callout--why">
+	<h4>Why one instance in a module, when Svelte advises context</h4>
+	<p>Svelte’s best practices prefer context to state declared in a shared module, and the reason is the server: a module is loaded once per process, so state in it is shared by every request that process renders, and one person’s value can end up in another person’s page. <code>theme</code> is safe from that by construction, and the comment at the top of the file says where. On the server the constructor returns before it reads anything, and <code>set()</code> is only called from a change handler, which never runs there — so the server’s instance is <code>system</code> for its whole life and holds nothing of anybody’s. The person’s choice reaches a server render by another road, as <code>data.theme</code>, read from the cookie for that one request. Context would be the answer the day the module held something per person on the server; until then, a singleton that is written only in the browser is the simpler honest thing.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
@@ -452,10 +471,10 @@ export const theme = new ThemeState();</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:19-91</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:20-109</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">let { data } = $props();
+	<pre><code class="lang-svelte">let { data }: PageProps = $props();
 
 /*
  * FOUR PRINTS, ONE DOWNLOAD
@@ -487,6 +506,23 @@ export const theme = new ThemeState();</code></pre>
  * width and height known so nothing shifts (the phone print has the
  * desktop's 16:10) — rendered by hand because the component cannot put
  * a `media` on a source.
+ */
+
+/*
+ * WHY `running`, AND NOT `theme.choice` FROM THE START
+ * ----------------------------------------------------
+ * The server has no `localStorage`; it knows the choice from the cookie,
+ * as `data.theme`, and renders the sources for that. The first render in
+ * the browser is hydration, which does not draw the page again: it walks
+ * the elements the server sent and attaches to them, so it must describe
+ * the same markup. Read `theme.choice` straight away and a person whose
+ * storage and cookie disagree — another tab changed the theme a moment
+ * ago — describes different `&lt;source&gt;`s from the ones in the document.
+ * Where only a `srcset` differs, Svelte keeps the server's and ignores
+ * its own; where the number of sources differs, hydration fails, and
+ * Svelte clears the server's page and renders all of it again. So the
+ * first render reads `data.theme`, as the server did; `onMount` runs once
+ * hydration is done, and from then on the live choice decides.
  */
 let running = $state(false);
 onMount(() =&gt; {
@@ -532,7 +568,7 @@ const sources = (picture: typeof day) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:99-158</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:117-176</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -599,7 +635,12 @@ const sources = (picture: typeof day) =&gt;
 <p>The hero is a map of the sample trip drawn by <code>scripts/make-hero.ts</code> with sharp — coastline, contours clipped to the land, a graticule, the dashed route and its numbered pins — once on cream for the light theme and once on near-black for the dark. Drawn twice rather than filtered once: the first version developed the cream print as a negative in the dark theme, <code>filter: invert(1) hue-rotate(180deg)</code>, and a negative is not a night map — the pins’ white numbers went black, and the land and the sea took whatever greys the arithmetic gave them rather than the night tokens’. The script is deterministic, so running it again produces the same bytes and the diff of a commit that touches it is honest.</p>
 <p>And each print is drawn twice, for two sizes of screen. A pin and its number are drawn in the pixels of the image, and the image is shown 40rem wide on a desktop and the full width of a 360px phone: the desktop drawing’s 26px pins came out 15px across on the phone, with numbers under 5px tall. So the script draws a desktop print at 1600×1000 and a phone print at 1200×750, framed a little tighter on the route, and every size in it — strokes, pins, numbers — is written in screen pixels at the narrowest the print is shown and multiplied out per print: the phone’s pins are 21px with 11.5px numbers at 360px. The compass rose is the desktop’s ornament only; drawn on the phone print it sat on Barcelona.</p>
 <p>Four prints must not mean four downloads, and the hero is the largest thing on the first screen — its paint *is* the page’s Largest Contentful Paint. <code>&lt;picture&gt;</code> makes the choice before any script runs: the browser takes the first <code>&lt;source&gt;</code> whose <code>media</code> and <code>type</code> match, so the order of the sources is the decision, and <code>prints</code> is that order as data. With no theme chosen, the night prints come first with <code>(prefers-color-scheme: dark)</code> in their <code>media</code> and the day prints follow, so the system decides. With a theme chosen, only that theme’s prints are rendered, with no colour scheme in their <code>media</code>, so a dark choice on a light phone fetches a night print and never a day one. Within each theme the desktop print carries <code>(min-width: 37em)</code> and comes first, and the phone print after it carries no width at all. 37em is not one of the layout’s breakpoints; it is where the desktop print’s numbers reach 11px — 30px of a 1600px drawing, shown about 590px wide — so below it the phone print, drawn for that, takes over. The server learns the choice from the cookie the boot script writes, through the <code>(site)</code> layout’s <code>load</code> (the next chapter quotes it); once the page is running, the live choice takes over, so flipping the toggle on this page swaps the print.</p>
-<p>Both prints are <code>?enhanced</code> imports with the widths named — the same pipeline as <code>&lt;enhanced:img&gt;</code>, run by the preprocessor that must come first in <code>vite.config.ts</code>: AVIF and WebP at four widths for a desktop print and three for a phone print, with the intrinsic width and height known so nothing shifts while it loads — the phone print is 16:10 like the desktop’s, so the one <code>&lt;img&gt;</code> reserves the right space for either. The component is not used because it cannot put a <code>media</code> on a source; the import gives the same <code>sources</code> and <code>img</code> and the markup is written by hand, with <code>src/images.d.ts</code> telling TypeScript what such an import returns. Each source’s <code>sizes</code> tells the browser how wide that print is on screen — 40rem from 64em or the whole width for a desktop print, the whole width for a phone print — so it picks the smallest file that is still sharp, and <code>fetchpriority=&quot;high&quot;</code> says it is the one to fetch first. On a phone the image steps out of the gutter to the screen’s edges and its bottom edge fades into the paper — only the bottom: a fade at the top as well left the map a faint band with dead space under it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>running</code>, and not <code>theme.choice</code> from the start</h4>
+	<p>The first render in the browser is hydration, and hydration does not draw the page again: it walks the elements the server sent and attaches to them, so it has to describe the same markup the server wrote. The server knew the choice only from the cookie, as <code>data.theme</code>. Read <code>theme.choice</code> straight away and a person whose storage and cookie disagree — another tab changed the theme a moment ago — describes different <code>&lt;source&gt;</code>s from the ones in the document. Where only a <code>srcset</code> differs Svelte keeps the server’s and ignores its own; where the number of sources differs hydration fails, and Svelte throws the server’s page away and renders all of it again. So the first render reads <code>data.theme</code>, as the server did; <code>onMount</code> runs once hydration is done and sets <code>running</code>, and from then on the live choice decides. The general rule is worth keeping: a value only the browser knows may change the page *after* hydration, never during it.</p>
+</aside>
+<p>All four prints are <code>?enhanced</code> imports with the widths named — the same pipeline as <code>&lt;enhanced:img&gt;</code>, run by the preprocessor that must come first in <code>vite.config.ts</code>: AVIF and WebP at four widths for a desktop print and three for a phone print, with the intrinsic width and height known so nothing shifts while it loads — the phone print is 16:10 like the desktop’s, so the one <code>&lt;img&gt;</code> reserves the right space for either. The component is not used because it cannot put a <code>media</code> on a source; the import gives the same <code>sources</code> and <code>img</code> and the markup is written by hand, with <code>src/images.d.ts</code> telling TypeScript what such an import returns. Each source’s <code>sizes</code> tells the browser how wide that print is on screen — 40rem from 64em or the whole width for a desktop print, the whole width for a phone print — so it picks the smallest file that is still sharp, and <code>fetchpriority=&quot;high&quot;</code> says it is the one to fetch first. On a phone the image steps out of the gutter to the screen’s edges and its bottom edge fades into the paper — only the bottom: a fade at the top as well left the map a faint band with dead space under it.</p>
 
 <aside class="callout callout--why">
 	<h4>Why a cookie, when the choice is already in storage</h4>
@@ -689,13 +730,17 @@ function alreadySeen(): boolean {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:160-188</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:178-210</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
 	`{const}` in markup: the list of features exists only for this loop, so it
-	is declared where the loop is, in the markup, rather than a screen away in
-	the script. It re-runs when the messages' locale changes.
+	is declared where the loop is, rather than a screen away in the script. It
+	is bare on purpose. A bare declaration tag is worked out once, and nothing
+	it reads changes while the page is open: a language switch is a full
+	reload (the `LocaleSwitcher` links carry `data-sveltekit-reload`), and the
+	new page works the list out afresh in the new language. The header's
+	links, which must follow a sign-in, are the opposite case: `$derived`.
 --&gt;
 {const features = [
 	{ icon: MapPinIcon, title: m.home_feature_map_title(), text: m.home_feature_map_text() },
@@ -763,7 +808,7 @@ export function inview(): Attachment&lt;HTMLElement&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:290-313</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:312-335</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -791,13 +836,18 @@ export function inview(): Attachment&lt;HTMLElement&gt; {
 	}
 }</code></pre>
 </figure>
-<p>The feature cards need no timeline, so they get none. <code>inview</code> only decides *when*: it sets <code>data-animate</code> in the browser while the grid is still below the fold, and <code>data-inview</code> the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on <code>--dur-5</code>, each card 70ms after the one before through the <code>--i</code> the markup sets — and rule 1 lives in the selector: a card is hidden only under <code>[data-animate]</code>, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match.</p>
+<p>The feature cards need no timeline, so they get none. <code>inview</code> only decides *when*: it sets <code>data-animate</code> in the browser while the grid is still below the fold, and <code>data-inview</code> the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on <code>--dur-5</code>, each card 70ms after the one before through the <code>--i</code> the markup sets — and rule 1 lives in the selector: a card is hidden only under <code>[data-animate]</code>, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match. The list itself is a declaration tag — a <code>{const}</code> in the markup, beside the one loop that uses it — and the next chapter says what one is in full.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the list is a bare <code>{const}</code> and the icon a <code>$derived</code> one</h4>
+	<p>A bare declaration tag is worked out once, when its block is created; one that wraps its value in <code>$derived</code> is worked out again whenever what it reads changes — the compiler turns the first into a plain <code>const</code> and the second into a derived signal. The list reads only messages, and the one thing that could change those is the language. A language switch loads a new page — the switcher’s links carry <code>data-sveltekit-reload</code> — and the new page works the list out afresh in the new language, so once is all it needs, and the comment above it says it is bare on purpose. <code>Icon</code> reads the loop’s item instead, and an item is like a prop: Svelte’s best practices say to “treat props as though they will change”, and to make a value that depends on one <code>$derived</code>. A keyed <code>{#each}</code> keeps a card whose key survives a change to the list and hands it the new item; a bare tag there would go on drawing the old icon. This list never changes, so the <code>$derived</code> costs nothing today, and it is the form that stays right on the day the list does.</p>
+</aside>
 <h3 id="checked">Contrast, checked on every lint</h3>
 <p>Every ratio in this chapter — 5.36:1 for the tertiary ink on paper, 3.06:1 for a chosen segment’s edge, 10.39:1 for the globe’s hints — is printed by a script, not remembered. Because every colour is a token and most tokens are a <code>light-dark()</code> pair, whether text is readable is a question <code>tokens.css</code> can answer on its own, without a browser: parse it, resolve both sides of each pair and the <code>var()</code> aliases between tokens, and work out the WCAG ratio of every pair the design puts on top of each other.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/design/contrast.ts<span class="code__lines">:105-143</span></span>
+		<span class="code__file">src/lib/design/contrast.ts<span class="code__lines">:106-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const TEXT = ['ink', 'ink-2', 'ink-3'] as const;

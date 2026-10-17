@@ -48,7 +48,7 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 					'**Headless — behaviour and accessibility, no pixels.** Bits UI 2.19 (Dialog, Combobox, Command, DateRangePicker, DatePicker); TanStack Table 9.2. Beat: Melt UI (Bits is built on its builders and adds the component layer), shadcn-svelte (a copy-in kit *on top of* Bits — right for a team that wants the styling done, wrong for a course about the primitives), Skeleton (a full framework with its own tokens; the project already has tokens), Flowbite-Svelte (styled, Tailwind, Svelte 4 lineage).',
 					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.13; Threlte 8.6 / extras 9.22 over three.js 0.186; LayerChart 2.6 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
 					'**Imperative through an attachment — wants one element and owns it.** Tiptap 3.31 through `{@attach}`, with `@tiptap/extension-placeholder` for the empty page (3KB, and one more extension rather than a hand-rolled decoration); GSAP 3.15 through `{@attach}`. Beat: the Svelte wrappers for Tiptap (nothing to add), ProseMirror directly (Tiptap *is* ProseMirror with a schema and commands), Lexical (React-first), Quill (its own data model).',
-					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard).',
+					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard). It ships an action — the shape before attachments — and `fromAction` from `svelte/attachments` applies it as one, so choosing it cost no legacy syntax in the app (chapter 25).',
 					'**Compilers and preprocessors.** Paraglide 2.26; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
 					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.7; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
 					'**Utilities.** runed 0.37 (`Debounced`); valibot 1.5 (every schema); svelte-sonner 1.2 (toasts); `@internationalized/date` 3.12 (dates without time zones). Beat: zod (works; twice the bytes for the same validators, and valibot’s functions tree-shake), `svelte-french-toast` (Svelte 4), `dayjs` and `date-fns` (instants, not calendar dates; and `Intl` formats better than either).',
@@ -131,7 +131,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			},
 
 			{ type: 'h3', id: 'parts', text: 'Idiom one: a root and its parts' },
-			code('src/lib/trip/StopDialog.svelte', 211, 232, { partial: true }),
+			code('src/lib/trip/StopDialog.svelte', 212, 233, { partial: true }),
 			{
 				type: 'p',
 				text: 'Bits UI components are trees of *parts*: `Dialog.Root` holds the state, `Dialog.Portal` moves the content to the end of the body, `Dialog.Overlay` and `Dialog.Content` are the elements, `Dialog.Title` and `Dialog.Description` wire the ARIA relationships. Each part accepts `class`, which is how the tokens get in. The state is on the root, controlled two ways: `open={mode !== null}` plus `onOpenChange` for the dialog whose openness is derived from something else, `bind:open` for the palette whose openness is its own. A part’s events are props as well: `onOpenAutoFocus` on `Dialog.Content` is where the stop dialog decides what takes focus when it opens — the place search from 40em, nothing new on a phone — by preventing the default and focusing the field itself.'
@@ -160,12 +160,12 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 				type: 'p',
 				text: 'The combobox filters nothing. It opens a list, moves a highlight, and reports a value; which items are in the list is yours, and here it is a `$derived` over the `places` prop and a `$state` string that an `oninput` handler updates. No effect copies library state into Svelte state or back — the root’s `bind:value` and `onValueChange` are the whole contract, and a `$derived` reads whatever it needs. The moment you find yourself writing an effect to “sync” a headless component, look for the prop or the callback you missed.'
 			},
-			code('src/lib/trip/Expenses.svelte', 144, 157),
+			code('src/lib/trip/Expenses.svelte', 145, 158),
 			{
 				type: 'p',
 				text: 'TanStack Table is headless in the same sense with one more idiom: the table is an *object* with methods, created once, and its options are read through getters so the object sees the latest state without being re-created. `get data() { return rows }` is a reactive getter — the adapter reads it inside `$effect.pre` — so the live document’s rows reach the table as they change. The rendering is a plain `<table>` that asks the object what to draw.'
 			},
-			code('src/lib/trip/Expenses.svelte', 403, 432, { partial: true }),
+			code('src/lib/trip/Expenses.svelte', 414, 442, { partial: true }),
 			{
 				type: 'why',
 				title: 'Why headless is the right default for an application',
@@ -203,17 +203,17 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 					'**The library exposes a value that changes over time** — a position watch, a media query, a resize observer — neither: use `createSubscriber`, which chapter 40 covers.'
 				]
 			},
-			code('src/lib/map/MapView.svelte', 445, 489, { partial: true }),
-			code('src/lib/globe/Scene.svelte', 299, 315),
+			code('src/lib/map/MapView.svelte', 456, 498, { partial: true }),
+			code('src/lib/globe/Scene.svelte', 314, 331),
 			{
 				type: 'p',
 				text: 'Two wrappers, one idea: an `{#each}` over the domain produces library objects, keyed so a change to one stop touches one object. Both wrappers hand back the underlying instance when you need it — `bind:map` on the map, `bind:ref` on the camera — for the one or two imperative calls a page genuinely needs. If you find yourself reaching for the instance on every line, the wrapper is the wrong shape for that part.'
 			},
-			code('src/lib/trip/Notes.svelte', 51, 73),
+			code('src/lib/trip/Notes.svelte', 72, 110),
 			code('src/lib/motion/hero.ts', 37, 63),
 			{
 				type: 'p',
-				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README.'
+				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README. It comes with one rule, which chapter 30 learned the hard way: an attachment runs inside an effect, so whatever state it reads while it runs is a reason to tear it down and run it again. A library built once — an editor with a cursor and an undo history — reads its starting values under `untrack` and follows later changes from a child `$effect`, the two moves Svelte’s documentation gives under “Controlling when attachments re-run”. And a library that ships an *action*, the shape this contract had before attachments, is the same thing with an older signature: `{@attach fromAction(dndzone, () => options)}` is how the itinerary applies svelte-dnd-action (chapter 25).'
 			},
 
 			{ type: 'h3', id: 'costs', text: 'What each shape costs' },
@@ -258,7 +258,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			},
 
 			{ type: 'h3', id: 'shipped', text: 'What the framework ships' },
-			code('src/lib/ui/theme.svelte.ts', 24, 31, { partial: true }),
+			code('src/lib/ui/theme.svelte.ts', 37, 44, { partial: true }),
 			code('src/lib/ui/Header.svelte', 20, 26),
 			code('src/lib/motion/prefers.svelte.ts', 1, 19),
 			{
@@ -272,14 +272,14 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			},
 
 			{ type: 'h3', id: 'runed', text: 'Where runed comes in' },
-			code('src/routes/(site)/explore/+page.svelte', 73, 90),
+			code('src/routes/(site)/explore/+page.svelte', 78, 95),
 			{
 				type: 'p',
 				text: 'runed is a collection of the utilities the framework does not ship, written against runes by the Bits UI maintainers. The project uses one, `Debounced`, and the reason is the one from chapter 35: a debounce is fifteen lines that get a subtle bug, and one import that does not. The others most apps reach for are `useEventListener` (an event with automatic cleanup), `ElementSize` and `useResizeObserver` (an element’s box as state), `PersistedState` (a `$state` mirrored to storage — the theme class in this project is a hand-written one, because it also has to set a data attribute), `IsIdle`, `Previous`, and `FiniteStateMachine`. The line: if the framework ships it, use the framework’s; if runed has it and you would write more than ten lines, use runed’s; otherwise write it.'
 			},
 
 			{ type: 'h3', id: 'plain-map', text: 'When a plain `Map` is right' },
-			code('src/lib/trip/Itinerary.svelte', 86, 95),
+			code('src/lib/trip/Itinerary.svelte', 99, 108),
 			{
 				type: 'p',
 				text: '`svelte/reactivity` also exports `SvelteMap`, `SvelteSet`, `SvelteDate` and `SvelteURL` — reactive versions of the built-ins, for state that is *mutated* over time and read by templates. The ESLint plugin and the autofixer suggest them whenever they see a `new Map()`, and four times in this project the suggestion is declined with a comment. The `Map` here is built whole inside a `$derived.by` and never mutated after: a reactive map would signal on every insert, for nobody, while the derivation is still running. The derivation itself is the reactive boundary; what happens inside it is plain JavaScript. The rule: `SvelteMap` for a map that lives across renders and changes; a plain `Map` for one that is computed and returned. The same file has the other case, a few lines down: the stops that have just arrived are a `SvelteSet`, because the set is added to and deleted from over time and the template reads it to light up a card.'

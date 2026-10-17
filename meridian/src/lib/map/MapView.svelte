@@ -102,6 +102,11 @@
 	 * counts the hidden strip as padding, so the route is fitted into the
 	 * part that is on screen — and when the map is all on screen, it is the
 	 * plain 40px on every side.
+	 *
+	 * `bind:this`, and not an attachment, because the frame is measured from
+	 * several places — `padding()` on every fit and every flight, and the
+	 * size watch below, which needs the map as well — so the element is held
+	 * rather than handed to one function once.
 	 */
 	let frame = $state<HTMLElement>();
 
@@ -142,6 +147,9 @@
 	 *
 	 * `framed` is a plain variable, not state: once it is true the effect
 	 * returns before it reads anything reactive, so it never runs again.
+	 * This effect, the size watch and the flight below are effects because
+	 * each one moves MapLibre's camera or canvas — a write to an object
+	 * outside Svelte — and none computes a value anything renders.
 	 */
 	let framed = false;
 
@@ -169,6 +177,9 @@
 	 * move ends. `resize()` at rest redraws the canvas and moves every marker
 	 * to match, which is all the cure needs to know about the cause. The
 	 * first report is the frame's starting size, not a change, and is let go.
+	 * An effect rather than an attachment on the frame: it needs the map as
+	 * well, which `bind:map` delivers after the frame exists, and it starts
+	 * again when it does.
 	 */
 	$effect(() => {
 		if (!map || !frame) return;
@@ -467,9 +478,7 @@
 						second button called "Alfama" beside the itinerary's own.
 					-->
 					<span
-						class="pin"
-						class:pin--selected={stop.id === selected}
-						class:pin--draggable={editable}
+						class={['pin', { 'pin--selected': stop.id === selected, 'pin--draggable': editable }]}
 						data-kind={stop.kind}
 						title={stop.name}
 					>
@@ -507,8 +516,7 @@
 			<FrameCornersIcon size={16} aria-hidden="true" />
 		</button>
 		<button
-			class="btn btn--sm btn--icon"
-			class:btn--primary={showMe}
+			class={['btn btn--sm btn--icon', { 'btn--primary': showMe }]}
 			type="button"
 			title={m.map_locate()}
 			aria-label={m.map_locate()}

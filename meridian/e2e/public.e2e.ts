@@ -88,6 +88,76 @@ test('a language switch is a full navigation that changes the document language'
 	await expect(page.getByRole('heading', { name: 'Ausgaben' })).toBeVisible();
 });
 
+/*
+ * THE SERVER'S OWN LINKS
+ * ======================
+ *
+ * With JavaScript off, the page is exactly the HTML the server sent. Every
+ * internal link goes through `href()` — `resolve()`, then Paraglide's
+ * `localizeHref` — and on the server, with SvelteKit's default
+ * `paths.relative`, `resolve()` answered `./explore`, which `localizeHref`
+ * turned into `http://localhost:4173/explore`: a whole URL at the build's
+ * origin, in the server's HTML and in every prerendered guide. The header
+ * compares the page's pathname with each link, so it never marked the page
+ * it was on until the browser had drawn it again.
+ */
+test.describe('without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('links are paths, and the header marks the page it is on', async ({ page }) => {
+		await page.goto('/de/explore');
+		const explore = page
+			// Hidden behind the menu on a phone, and still in the HTML.
+			.getByRole('navigation', { name: 'Primary', includeHidden: true })
+			.getByRole('link', { name: 'Entdecken', includeHidden: true });
+		await expect(explore).toHaveAttribute('href', '/de/explore');
+		await expect(explore).toHaveAttribute('aria-current', 'page');
+		await expect(page.locator('a[href^="/de/trips/new?place="]').first()).toBeAttached();
+		await expect(page.locator('a[href^="http://localhost"]')).toHaveCount(0);
+
+		// A prerendered page was rendered by the same server, at build time.
+		await page.goto('/guides');
+		await expect(page.getByRole('link', { name: 'Lisbon in three days' })).toHaveAttribute(
+			'href',
+			'/guides/lisbon-in-three-days'
+		);
+		await expect(page.locator('a[href^="http://localhost"]')).toHaveCount(0);
+	});
+});
+
+/*
+ * A CHUNK THAT NEVER ARRIVES
+ * ==========================
+ *
+ * The globe is the one part of the app loaded on demand, so it is the one
+ * part a dropped connection can take away after the page is up. The failure
+ * happens in the browser and never reaches the server, so the words for it
+ * come from `handleError` in `src/hooks.client.ts`: the product's sentence,
+ * in the page's language. Without that hook the boundary would print
+ * SvelteKit's own, `Internal Error`, in English on a German page.
+ *
+ * The chunk's name is a hash, so it is found by what only it contains.
+ */
+test('a chunk that never arrives is explained in the page’s language', async ({ page }) => {
+	await page.route('**/_app/immutable/**/*.js', async (route) => {
+		const response = await route.fetch();
+		const body = await response.text();
+		if (body.includes('globe__status')) return route.abort();
+		return route.fulfill({ response, body });
+	});
+	const logged: string[] = [];
+	page.on('console', (message) => {
+		if (message.type() === 'error') logged.push(message.text());
+	});
+
+	await page.goto(`/de/t/${TRIPS.japan}?tab=globe`);
+	const status = page.locator('.night__status.issue');
+	await expect(status).toContainText('Etwas ist schiefgelaufen');
+	await expect(status.getByRole('button', { name: 'Neu verbinden' })).toBeVisible();
+	// The detail went where somebody debugging looks.
+	expect(logged.some((text) => text.startsWith('[meridian]'))).toBe(true);
+});
+
 test('health, the route API and the embed frame answer for machines', async ({ page, request }) => {
 	const health = await request.get('/healthz');
 	expect(health.ok()).toBeTruthy();

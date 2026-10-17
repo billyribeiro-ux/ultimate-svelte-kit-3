@@ -8,6 +8,7 @@
 	import type { Role } from '#lib/domain/schemas.ts';
 	import { tripPreview } from '#lib/remote/geo.remote.ts';
 	import { myTrips } from '#lib/remote/trips.remote.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 	import Empty from '#lib/ui/Empty.svelte';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
 
@@ -56,12 +57,14 @@
 
 		`failed` is handed an `App.Error` — what `handleError` made of the
 		failure, `{ status, message }`, and not an `Error` — so the server's
-		sentence is on `message`. Both declarations are `$derived`, so a
-		refreshed query redraws the list; a bare `{const}` would keep the first.
+		sentence is on `message`; `boundaryMessage` reads it without a cast
+		(`#lib/ui/errors.ts` says why there is no annotation). Both
+		declarations are `$derived`, so a refreshed query redraws the list; a
+		bare `{const}` would keep the first.
 	-->
 	<svelte:boundary>
 		{#snippet failed(error, reset)}
-			<p class="issue">{(error as App.Error).message}</p>
+			<p class="issue">{boundaryMessage(error)}</p>
 			<button class="btn" onclick={reset}>{m.live_reconnect()}</button>
 		{/snippet}
 
@@ -83,7 +86,7 @@
 					<li class="card card--link trip">
 						<div class="trip__thumb">
 							<RouteThumb points={preview.points} label={trip.name} />
-							<span class="chip trip__role" class:chip--sea={role === 'owner'}>
+							<span class={['chip trip__role', { 'chip--sea': role === 'owner' }]}>
 								{roleLabel[role]()}
 							</span>
 						</div>

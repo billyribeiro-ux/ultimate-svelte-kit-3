@@ -76,7 +76,12 @@
 	{#if projected.length > 1}
 		<path d={path} class="thumb__route" />
 	{/if}
-	{#each dots as [x, y], i (i)}
+	<!--
+		Keyed by where the dot is. The loop that made `dots` keeps no two
+		within 6px of each other, so a position is unique, and it is all a dot
+		is: the stops behind it are not here, only their projection.
+	-->
+	{#each dots as [x, y] (`${x},${y}`)}
 		<circle cx={x} cy={y} r="3" class="thumb__stop" />
 	{/each}
 </svg>

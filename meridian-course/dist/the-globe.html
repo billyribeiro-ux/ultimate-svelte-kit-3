@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:428-467</span></span>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:447-486</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{:else if tab === 'globe'}
@@ -65,7 +65,7 @@
 				{/snippet}
 				{#snippet failed(error, reset)}
 					&lt;p class=&quot;night__status issue&quot;&gt;
-						{(error as App.Error).message}
+						{boundaryMessage(error)}
 						&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}
 							&gt;{m.live_reconnect()}&lt;/button
 						&gt;
@@ -83,11 +83,11 @@
 		{/if}
 	&lt;/div&gt;</code></pre>
 </figure>
-<p>Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: <code>{const { default: Globe } = await import(...)}</code>. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s <code>{const initial = $derived(await tripBySlug(slug))}</code> follows the slug. The <code>pending</code> snippet shows until the chunk arrives and the <code>failed</code> snippet if the network does not deliver it, with a <code>reset</code> that tries again. <code>failed</code> prints <code>error.message</code>, because what it is handed is an <code>App.Error</code> — the failure after <code>handleError</code> in <code>src/hooks.client.ts</code> has put it into words, in the page’s language (chapter 14) — and not the <code>Error</code> the import threw. The first version tested <code>error instanceof Error</code>, which an <code>App.Error</code> never is, so it showed its fallback whatever had happened. <code>browser</code> guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.</p>
+<p>Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: <code>{const { default: Globe } = await import(...)}</code>. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s <code>{const initial = $derived(await tripBySlug(slug))}</code> follows the slug. The <code>pending</code> snippet shows until the chunk arrives and the <code>failed</code> snippet if the network does not deliver it, with a <code>reset</code> that tries again. <code>failed</code> prints the <code>message</code> of what it is handed, through <code>boundaryMessage</code> (chapter 25), because that is an <code>App.Error</code> — the failure after <code>handleError</code> in <code>src/hooks.client.ts</code> has put it into words, in the page’s language (chapter 14) — and not the <code>Error</code> the import threw. The first version tested <code>error instanceof Error</code>, which an <code>App.Error</code> never is, so it showed its fallback whatever had happened. This is the one boundary whose failure never touches the server, so it is the one chapter 42 breaks on purpose: the test drops the chunk on its way to a German page and expects “Etwas ist schiefgelaufen” and a “Neu verbinden” button. <code>browser</code> guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-51</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:1-52</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -97,6 +97,7 @@
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 	import Scene, { type GlobeStop } from './Scene.svelte';
 
 	/**
@@ -145,7 +146,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:53-107</span></span>
+		<span class="code__file">src/lib/globe/Globe.svelte<span class="code__lines">:54-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;globe&quot;&gt;
@@ -156,7 +157,7 @@
 		&lt;!-- An `App.Error` from `handleError`, not the `Error` thrown below: the words are on `message`. --&gt;
 		{#snippet failed(error, reset)}
 			&lt;p class=&quot;globe__status issue&quot;&gt;
-				{(error as App.Error).message}
+				{boundaryMessage(error)}
 				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button&gt;
 			&lt;/p&gt;
 		{/snippet}
@@ -310,7 +311,7 @@ const outlines = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:121-156</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:121-164</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Leg {
@@ -329,7 +330,12 @@ const legs: Leg[] = $derived(
 	})
 );
 
-/* One arc per leg, lifted off the surface in proportion to its length. */
+/*
+ * One arc per leg, lifted off the surface in proportion to its length,
+ * and named by the two stops it joins: a stop is a row, so no two legs
+ * of one route join the same pair, and that name is what the loop below
+ * keys the arc by.
+ */
 const arcs = $derived(
 	legs.map(({ a, b }) =&gt; {
 		const lift = Math.min(0.12, distance(a, b) / 40_000_000);
@@ -337,24 +343,27 @@ const arcs = $derived(
 			const t = index / (all.length - 1);
 			return toVector(asLngLat(position), RADIUS + 0.004 + lift * Math.sin(Math.PI * t));
 		});
-		const geometry = new BufferGeometry().setFromPoints(points);
-		return geometry;
+		return { id: `${a.id}→${b.id}`, geometry: new BufferGeometry().setFromPoints(points) };
 	})
 );
 
-// Buffers are GPU memory; dispose the previous set when the legs change.
+/*
+ * Buffers are GPU memory; dispose the previous set when the legs change.
+ * An effect for its cleanup: it computes nothing, and what it frees lives
+ * outside Svelte, in WebGL.
+ */
 $effect(() =&gt; {
-	const current = [outlines, ...arcs];
+	const current = [outlines, ...arcs.map((leg) =&gt; leg.geometry)];
 	return () =&gt; current.forEach((geometry) =&gt; geometry.dispose());
 });
 
 const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADIUS + 0.006) })));</code></pre>
 </figure>
-<p>Each leg gets an arc from the library’s <code>arc()</code>, lifted off the surface by an amount that grows with the leg’s length so a long flight visibly arcs and a short hop hugs the ground. The geometries are built in <code>$derived</code>, so a change to the stops rebuilds exactly the arcs, and the <code>$effect</code> with a cleanup disposes the previous set — buffers are GPU memory, and a globe that leaks one per drag would not survive a planning session.</p>
+<p>Each leg gets an arc from the library’s <code>arc()</code>, lifted off the surface by an amount that grows with the leg’s length so a long flight visibly arcs and a short hop hugs the ground. The geometries are built in <code>$derived</code>, so a change to the stops rebuilds exactly the arcs, and the <code>$effect</code> with a cleanup disposes the previous set — buffers are GPU memory, and a globe that leaks one per drag would not survive a planning session. The effect computes nothing a template reads; it only frees what lives outside Svelte, which is the job an effect is for. Each arc carries a name, the ids of the two stops it joins, and the <code>{#each}</code> in the markup keys on that name rather than on the arc’s position in the list: a stop is a row, so no two legs of one route join the same pair, and a key that identifies the leg keeps each line with its leg when a stop is inserted before it.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:158-253</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:166-269</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	let camera = $state&lt;PerspectiveCamera&gt;();
@@ -389,6 +398,13 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 		return aim.multiplyScalar(distanceAway);
 	});
 
+	/*
+	 * The effects from here on write to the camera, which is three.js's
+	 * object and not Svelte state: they put a value *somewhere else*, which
+	 * is an effect's job, and none of them computes anything a template
+	 * reads. (`touched`, `leg` and `progress` are plain variables, for the
+	 * frame loop, and are never rendered.)
+	 */
 	$effect(() =&gt; {
 		// A selection or a flight moves the camera too, and it should not snap back afterwards.
 		if (flying || selected) touched = true;
@@ -401,6 +417,7 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 	let leg = 0;
 	let progress = 0;
 
+	// `flying` is a prop: the moment a flight starts is only visible here, so the frame loop is rewound here.
 	$effect(() =&gt; {
 		if (flying) {
 			leg = 0;
@@ -458,7 +475,7 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:255-315</span></span>
+		<span class="code__file">src/lib/globe/Scene.svelte<span class="code__lines">:271-331</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;T.PerspectiveCamera
@@ -505,7 +522,7 @@ const markers = $derived(stops.map((stop) =&gt; ({ stop, at: toVector(stop, RADI
 &lt;/T.LineSegments&gt;
 
 &lt;!-- The route, in the sea; the selected stop is white, the one thing lit. --&gt;
-{#each arcs as geometry, index (index)}
+{#each arcs as { id, geometry } (id)}
 	&lt;T.Line {geometry}&gt;
 		&lt;T.LineBasicMaterial color={ROUTE} linewidth={2} /&gt;
 	&lt;/T.Line&gt;

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:1-54</span></span>
+		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:1-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
@@ -53,7 +53,7 @@ import { listStops } from '#lib/server/trips.ts';
  * =======================
  *
  * What the `&lt;meridian-route&gt;` custom element fetches: the trip's name, its
- * dates and its scheduled stops — nothing else. Only trips whose owner made
+ * dates and its scheduled stops, each with its id — nothing else. Only trips whose owner made
  * them visible by link answer here; a private trip is a 404 whether or not
  * the caller is signed in, because the element runs on somebody else's
  * page, where our cookies are not sent and should not matter.
@@ -64,6 +64,11 @@ import { listStops } from '#lib/server/trips.ts';
  *
  * `Response.json(...)` is the platform's own; SvelteKit 3 deprecated the
  * `json()` helper it used to ship because the two had become the same call.
+ *
+ * The one English `error()` sentence in the project is here, on purpose: a
+ * program reads this 404, not a person. The element prints its own words
+ * for a failed fetch, and a request from somebody else's page carries no
+ * language of ours to answer in.
  */
 const CORS = {
 	'access-control-allow-origin': '*',
@@ -84,6 +89,8 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 			stops: stops
 				.filter((stop) =&gt; stop.date !== null)
 				.map((stop) =&gt; ({
+					// Opaque, and the one thing that tells two stops at the same place apart.
+					id: stop.id,
 					name: stop.name,
 					kind: stop.kind,
 					date: stop.date,
@@ -97,7 +104,7 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 
 export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204, headers: CORS });</code></pre>
 </figure>
-<p>The data both shapes read: name, dates, scheduled stops, nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. <code>access-control-allow-origin: *</code> is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. <code>[slug=slug].json</code> in a folder name is SvelteKit’s way of giving an endpoint an extension. And the body goes out through <code>Response.json(...)</code>, the platform’s own static method: SvelteKit 3 deprecated the <code>json()</code> and <code>text()</code> helpers it used to export, because the two had become the same call — same <code>content-type</code>, same <code>{ status, headers }</code> second argument.</p>
+<p>The data both shapes read: name, dates, scheduled stops — each with its id, the one thing that tells two stops at the same place apart, which the element keys its lists by — and nothing else. A private trip is a 404 whether or not the caller is signed in, because the element runs on somebody else’s page where our cookies are not sent and should not matter. <code>access-control-allow-origin: *</code> is what makes it usable from another origin, and is safe precisely because the response holds nothing that was not already public by link. <code>[slug=slug].json</code> in a folder name is SvelteKit’s way of giving an endpoint an extension. And the body goes out through <code>Response.json(...)</code>, the platform’s own static method: SvelteKit 3 deprecated the <code>json()</code> and <code>text()</code> helpers it used to export, because the two had become the same call — same <code>content-type</code>, same <code>{ status, headers }</code> second argument. Its 404 is the one <code>error()</code> in the project with an English sentence in it, and the comment says why that is right here and nowhere else: a program reads this answer, not a person — the element prints its own words for a failed fetch — and a request from somebody else’s page carries no language of ours to answer in.</p>
 <h3 id="the-frame">The frame</h3>
 
 <figure class="code">
@@ -116,20 +123,21 @@ export const csr = false;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/embed/[slug=slug]/+page.svelte<span class="code__lines">:1-62</span></span>
+		<span class="code__file">src/routes/embed/[slug=slug]/+page.svelte<span class="code__lines">:1-63</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { error } from '@sveltejs/kit';
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate, formatRange } from '#lib/domain/dates.ts';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
+	import type { PageProps } from './$types';
 
-	const slug = $derived(page.params.slug ?? '');
+	let { params }: PageProps = $props();
+	const slug = $derived(params.slug);
 	const locale = getLocale();
 &lt;/script&gt;
 
@@ -141,7 +149,7 @@ export const csr = false;</code></pre>
 	the frame is on somebody else's page and their visitors are strangers.
 --&gt;
 {#if document.trip.visibility !== 'link'}
-	{error(404, 'No such trip.')}
+	{error(404, m.error_no_trip())}
 {/if}
 
 {const scheduled = $derived(document.stops.filter((stop) =&gt; stop.date !== null))}
@@ -212,24 +220,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:1-10</span></span>
-		<button class="code__copy" type="button" data-copy>Copy</button>
-	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:options
-	customElement={{
-		tag: 'meridian-route',
-		shadow: 'open',
-		props: {
-			slug: { attribute: 'slug', type: 'String' },
-			origin: { attribute: 'origin', type: 'String' }
-		}
-	}}
-/&gt;</code></pre>
-</figure>
-
-<figure class="code">
-	<figcaption>
-		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:12-83</span></span>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:1-83</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -238,10 +229,14 @@ if (event.url.pathname.startsWith('/embed/')) {
 	 * ====================================
 	 *
 	 * A trip's route on any page: one script tag, one element, no framework
-	 * on the host page. Svelte compiles this component to a custom element
-	 * — `customElements.define('meridian-route', …)` happens on import — with
-	 * a shadow root, so the host page's CSS cannot reach in and ours cannot
-	 * leak out. The style block below is the whole of its styling.
+	 * on the host page. Every build that loads this folder compiles it with
+	 * `customElement: true`, so Svelte wraps it in a custom element class —
+	 * `element.ts` registers that class as `&lt;meridian-route&gt;` — with an open
+	 * shadow root, so the host page's CSS cannot reach in and ours cannot
+	 * leak out. The style block below is the whole of its styling. The two
+	 * props become the element's two attributes, `slug` and `origin`, read
+	 * as strings: Svelte takes them from the destructuring below, which is
+	 * why they are destructured rather than read off one `props` object.
 	 *
 	 * It fetches `/api/route/&lt;slug&gt;.json` from the app's origin and draws the
 	 * stops as a small projected line, the same way `RouteThumb` does inside
@@ -249,6 +244,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 	 * imported the design tokens would bring the tokens with it.
 	 */
 	interface RouteStop {
+		readonly id: string;
 		readonly name: string;
 		readonly kind: string;
 		readonly date: string | null;
@@ -283,9 +279,16 @@ if (event.url.pathname.startsWith('/embed/')) {
 	const WIDTH = 320;
 	const HEIGHT = 160;
 
+	/** A stop's place in the drawing, named by the stop it stands for. */
+	interface Dot {
+		readonly id: string;
+		readonly x: string;
+		readonly y: string;
+	}
+
 	/** Longitude across, latitude up, scaled to fit — right for a trip, wrong for the world. */
-	function project(stops: readonly RouteStop[]): string {
-		if (stops.length === 0) return '';
+	function project(stops: readonly RouteStop[]): Dot[] {
+		if (stops.length === 0) return [];
 		const lngs = stops.map((s) =&gt; s.lng);
 		const lats = stops.map((s) =&gt; s.lat);
 		const west = Math.min(...lngs);
@@ -296,20 +299,19 @@ if (event.url.pathname.startsWith('/embed/')) {
 		const scale = Math.min((WIDTH - inset * 2) / spanX, (HEIGHT - inset * 2) / spanY);
 		const offsetX = (WIDTH - spanX * scale) / 2;
 		const offsetY = (HEIGHT - spanY * scale) / 2;
-		return stops
-			.map(
-				(s) =&gt;
-					`${(offsetX + (s.lng - west) * scale).toFixed(1)},${(HEIGHT - offsetY - (s.lat - south) * scale).toFixed(1)}`
-			)
-			.join(' ');
+		return stops.map((s) =&gt; ({
+			id: s.id,
+			x: (offsetX + (s.lng - west) * scale).toFixed(1),
+			y: (HEIGHT - offsetY - (s.lat - south) * scale).toFixed(1)
+		}));
 	}
 &lt;/script&gt;</code></pre>
 </figure>
-<p><code>&lt;svelte:options customElement&gt;</code> names the tag, asks for an open shadow root, and maps two attributes onto props — so <code>&lt;meridian-route slug=&quot;…&quot;&gt;</code> on a host page becomes <code>slug</code> in the component. The element fetches the JSON and draws the stops as a projected line the way <code>RouteThumb</code> does. It is deliberately not the app’s component: an element that imported the design tokens would bring the tokens with it, and a shadow root means the host page’s CSS cannot reach in and ours cannot leak out.</p>
+<p>The file is an ordinary component with nothing at the top to say it is an element. What makes it one is how it is compiled: every build that loads <code>src/lib/embed</code> compiles it with <code>customElement: true</code>, and a component compiled that way gets a static <code>element</code> property — the custom element class Svelte generates around it, with an open shadow root by default. Its props become the element’s attributes, named after the props in lower case and read as strings, and Svelte finds the props in the <code>$props()</code> destructuring, which is why they are destructured rather than read off one <code>props</code> object; so <code>&lt;meridian-route slug=&quot;…&quot;&gt;</code> on a host page becomes <code>slug</code> in the component. Registering the class under a tag name is <code>element.ts</code>’s job, below. The element fetches the JSON and draws the stops as a projected line the way <code>RouteThumb</code> does. It is deliberately not the app’s component: an element that imported the design tokens would bring the tokens with it, and a shadow root means the host page’s CSS cannot reach in and ours cannot leak out. The stops are keyed by their ids, in the drawing and in the list, because two stops at one place — a hotel and a dinner in the same street — project to the same point, and a key has to name the thing it keys.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-130</span></span>
+		<span class="code__file">src/lib/embed/MeridianRoute.svelte<span class="code__lines">:85-129</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -333,22 +335,21 @@ if (event.url.pathname.startsWith('/embed/')) {
 	{/snippet}
 
 	{const route = $derived(await load(slug, base))}
-	{const points = $derived(project(route.stops))}
+	{const dots = $derived(project(route.stops))}
 
 	&lt;div class=&quot;card&quot;&gt;
 		&lt;p class=&quot;title&quot;&gt;{route.name}&lt;/p&gt;
 		&lt;p class=&quot;muted&quot;&gt;{route.startDate} → {route.endDate}&lt;/p&gt;
 		&lt;svg viewBox=&quot;0 0 {WIDTH} {HEIGHT}&quot; role=&quot;img&quot; aria-label=&quot;Route of {route.name}&quot;&gt;
-			{#if points}
-				&lt;polyline {points} /&gt;
-				{#each points.split(' ') as point, index (index)}
-					{const [x, y] = $derived(point.split(','))}
-					&lt;circle cx={x} cy={y} r=&quot;4&quot; /&gt;
+			{#if dots.length &gt; 0}
+				&lt;polyline points={dots.map((dot) =&gt; `${dot.x},${dot.y}`).join(' ')} /&gt;
+				{#each dots as dot (dot.id)}
+					&lt;circle cx={dot.x} cy={dot.y} r=&quot;4&quot; /&gt;
 				{/each}
 			{/if}
 		&lt;/svg&gt;
 		&lt;ol&gt;
-			{#each route.stops as stop, index (index)}
+			{#each route.stops as stop (stop.id)}
 				&lt;li&gt;{stop.name}{stop.date ? ` · ${stop.date}` : ''}&lt;/li&gt;
 			{/each}
 		&lt;/ol&gt;
@@ -363,7 +364,7 @@ if (event.url.pathname.startsWith('/embed/')) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:80-103</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:92-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -371,14 +372,15 @@ if (event.url.pathname.startsWith('/embed/')) {
  * =============================
  *
  * `src/lib/embed` holds `&lt;meridian-route&gt;`, which is compiled as a
- * custom element — `customElements.define`, a shadow root — rather
- * than as an ordinary component. That is a per-file compiler option,
- * and `dynamicCompileOptions` is how a per-file option is set.
+ * custom element — a class the browser can register, with a shadow
+ * root — rather than as an ordinary component. That is a per-file
+ * compiler option, and `dynamicCompileOptions` is how a per-file
+ * option is set.
  *
  * `environment.name === 'client'` because a custom element has no
- * server-rendered form: it registers itself with the browser and is
- * imported on mount. The server build compiles the same file as a
- * plain component it never renders.
+ * server-rendered form: `src/lib/embed/element.ts` registers it with
+ * the browser, and is imported on mount. The server build compiles
+ * the same file as a plain component it never renders.
  *
  * The test is the folder `src/lib/embed`, not any folder called
  * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
@@ -444,23 +446,51 @@ export default defineConfig({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/element.ts<span class="code__lines">:1-13</span></span>
+		<span class="code__file">src/lib/embed/element.ts<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Importing the component is what defines the element: `&lt;svelte:options
- * customElement={{ tag: 'meridian-route' }}&gt;` registers it with
- * `customElements.define` as a side effect of the import. This module is the
- * one entry for both places that need it — the settings page, which imports
- * it on mount to show a preview, and the standalone build in
- * `vite.element.config.ts`, which turns it into one file a host page can
- * include with a `&lt;script&gt;` tag.
+ * `&lt;meridian-route&gt;`, DEFINED
+ * ===========================
+ *
+ * `MeridianRoute.element` is the custom element class Svelte generates for a
+ * component compiled with `customElement: true` — which this folder is, in
+ * both builds that load this file: the app's browser build
+ * (`dynamicCompileOptions` in `vite.config.ts`) and the standalone one
+ * (`vite.element.config.ts`). This module is the one entry for both places
+ * that need the element: the settings page, which imports it on mount to
+ * show a preview, and the standalone file a host page includes with a
+ * `&lt;script&gt;` tag.
+ *
+ * WHY HERE, AND NOT `&lt;svelte:options customElement={{ tag }}&gt;`
+ * ------------------------------------------------------------
+ * The tag in the component would define the element as a side effect of
+ * importing it, and it is what Svelte's docs show. It also makes the
+ * component claim to be an element in every compile that does not set the
+ * option — the server build, `svelte-check`, the Svelte autofixer — and
+ * each of those warned `options_missing_custom_element`, which the `check`
+ * script used to silence for the whole project. Naming the tag here keeps
+ * the component an ordinary one everywhere, and nothing is silenced.
+ *
+ * `customElements.get` first, because defining one name twice throws, and a
+ * dev server re-running this module on a change would do exactly that.
  */
 
 import MeridianRoute from './MeridianRoute.svelte';
 
+const TAG = 'meridian-route';
+
+const element = MeridianRoute.element;
+if (!element) throw new Error(`${TAG}: compiled without customElement: true`);
+if (!customElements.get(TAG)) customElements.define(TAG, element);
+
 export { MeridianRoute };</code></pre>
 </figure>
+
+<aside class="callout callout--why">
+	<h4>Why the tag is named here, and not in <code>&lt;svelte:options customElement&gt;</code></h4>
+	<p>Svelte’s documentation shows the tag in the component, <code>&lt;svelte:options customElement=&quot;meridian-route&quot; /&gt;</code>, and that defines the element as a side effect of importing it. It also makes the component *claim* to be an element in every compile that does not set the option — and three do: the app’s server build, <code>svelte-check</code>, and Svelte’s autofixer. Each of them warned <code>options_missing_custom_element</code>, and the project’s <code>check</code> script carried a flag that silenced that warning for the whole project, which would have hidden the same mistake anywhere else. The same documentation offers the other road for exactly this case — leave out the tag, and name the element afterwards with <code>customElements.define('my-element', MyElement.element)</code> — so the component is an ordinary one everywhere, the one module that should define it does, and no warning is silenced. The test that holds it is the invite suite in chapter 42, which finds the route drawn inside <code>&lt;meridian-route&gt;</code> on the settings page.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
@@ -563,7 +593,7 @@ export { MeridianRoute };</code></pre>
 	{/if}
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The settings page shows both snippets and a live preview: it imports the element module on mount — importing is what defines the element — and writes <code>&lt;meridian-route&gt;</code> into its own markup. The snippet strings are assembled in two halves because a literal closing script tag inside a script block would end the block as far as the Svelte parser is concerned; that sentence is in the source too, because the next person to touch it would otherwise “fix” it.</p>
+<p><code>element.ts</code> is where the tag is decided: it takes <code>MeridianRoute.element</code>, refuses to go on if a build forgot the option, and calls <code>customElements.define</code> — after <code>customElements.get</code>, because defining one name twice throws, and a dev server re-running the module would do exactly that. The settings page shows both snippets and a live preview: it imports this module on mount — importing it is what defines the element — and writes <code>&lt;meridian-route&gt;</code> into its own markup. The snippet strings are assembled in two halves because a literal closing script tag inside a script block would end the block as far as the Svelte parser is concerned; that sentence is in the source too, because the next person to touch it would otherwise “fix” it.</p>
 <h3 id="health">And one endpoint for the machines</h3>
 
 <figure class="code">
@@ -612,7 +642,7 @@ export const GET: RequestHandler = async () =&gt; {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say which two security exceptions the embed needs and where each is made.</li><li>You can explain <code>dynamicCompileOptions</code> and why the element also has its own Vite config.</li><li>You know why the element has its own styles and its own colours.</li></ul>
+	<ul><li>You can say which two security exceptions the embed needs and where each is made.</li><li>You can explain <code>dynamicCompileOptions</code> and why the element also has its own Vite config.</li><li>You know why the element has its own styles and its own colours.</li><li>You can say where the element’s tag name is defined, and why there rather than in <code>&lt;svelte:options&gt;</code>.</li></ul>
 </aside>
 		</article>
 

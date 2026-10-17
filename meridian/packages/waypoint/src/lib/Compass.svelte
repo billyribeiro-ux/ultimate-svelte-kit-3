@@ -18,6 +18,12 @@
 	const point = $derived(compassPoint(heading));
 </script>
 
+<!--
+	The class is a string, not `class={['waypoint-compass', className]}`: the array
+	form arrived in Svelte 5.16, and a library promises the widest range it
+	can — `peerDependencies` says 5.0, and this is the line that would
+	break it.
+-->
 <svg
 	class="waypoint-compass {className}"
 	viewBox="0 0 48 48"

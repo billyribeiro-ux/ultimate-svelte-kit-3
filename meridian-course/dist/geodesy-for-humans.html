@@ -355,13 +355,37 @@ export function compassPoint(degrees: number): CompassPoint {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:279-326</span></span>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:279-330</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export type DistanceUnit = 'metric' | 'imperial';
 
 const METERS_PER_MILE = 1609.344;
 const FEET_PER_METER = 3.280839895;
+
+type DistanceUnitName = 'foot' | 'mile' | 'meter' | 'kilometer';
+
+const distanceFormats = new Map&lt;string, Intl.NumberFormat&gt;();
+
+/**
+ * One `Intl.NumberFormat` per locale, unit and precision, made the first time
+ * it is asked for. Building one means loading the locale's data, and a trips
+ * list formats a distance per card on every render; formatting with one that
+ * exists is cheap.
+ */
+function distanceFormat(locale: string, unit: DistanceUnitName, digits: number): Intl.NumberFormat {
+	const key = `${locale}|${unit}|${digits}`;
+	let format = distanceFormats.get(key);
+	if (!format) {
+		format = new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit,
+			maximumFractionDigits: digits
+		});
+		distanceFormats.set(key, format);
+	}
+	return format;
+}
 
 /**
  * A distance for a person to read, in their locale and their units.
@@ -377,37 +401,17 @@ export function formatDistance(
 ): string {
 	if (unit === 'imperial') {
 		const miles = meters / METERS_PER_MILE;
-		if (miles &lt; 0.1) {
-			return new Intl.NumberFormat(locale, {
-				style: 'unit',
-				unit: 'foot',
-				maximumFractionDigits: 0
-			}).format(meters * FEET_PER_METER);
-		}
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'mile',
-			maximumFractionDigits: miles &lt; 10 ? 1 : 0
-		}).format(miles);
+		if (miles &lt; 0.1) return distanceFormat(locale, 'foot', 0).format(meters * FEET_PER_METER);
+		return distanceFormat(locale, 'mile', miles &lt; 10 ? 1 : 0).format(miles);
 	}
 
-	if (meters &lt; 1000) {
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'meter',
-			maximumFractionDigits: 0
-		}).format(meters);
-	}
+	if (meters &lt; 1000) return distanceFormat(locale, 'meter', 0).format(meters);
 
 	const km = meters / 1000;
-	return new Intl.NumberFormat(locale, {
-		style: 'unit',
-		unit: 'kilometer',
-		maximumFractionDigits: km &lt; 10 ? 1 : 0
-	}).format(km);
+	return distanceFormat(locale, 'kilometer', km &lt; 10 ? 1 : 0).format(km);
 }</code></pre>
 </figure>
-<p>The last thing that happens to a distance is formatting, and it happens with <code>Intl.NumberFormat</code> and <code>style: &quot;unit&quot;</code>. That is not a convenience; it is the only correct way to do it. German writes <code>343 km</code> with a non-breaking space, Portuguese writes <code>343 km</code> the same way, English writes <code>343 km</code> too but <code>2.5 mi</code> with a point where German uses a comma — and the library never carries a table of any of that. Chapter 21 makes the same argument for dates and money.</p>
+<p>The last thing that happens to a distance is formatting, and it happens with <code>Intl.NumberFormat</code> and <code>style: &quot;unit&quot;</code>. That is not a convenience; it is the only correct way to do it. German writes <code>343 km</code> with a non-breaking space, Portuguese writes <code>343 km</code> the same way, English writes <code>343 km</code> too but <code>2.5 mi</code> with a point where German uses a comma — and the library never carries a table of any of that. Each formatter is built once per locale, unit and precision, and kept in a map: building one loads the locale’s data, and an app may format a distance per card on every render. Chapter 21 makes the same argument for dates and money.</p>
 
 <figure class="code">
 	<figcaption>

@@ -58,9 +58,7 @@ export function formatMoney(minor: number, currency: string, locale: string): st
  * space, a stray letter — is dropped before parsing.
  */
 export function parseAmount(text: string, locale: string): number | null {
-	const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
-	const group = parts.find((p) => p.type === 'group')?.value ?? ',';
-	const decimal = parts.find((p) => p.type === 'decimal')?.value ?? '.';
+	const { group, decimal } = separators(locale);
 
 	let s = text.trim();
 	s = s.split(group).join('');
@@ -70,4 +68,25 @@ export function parseAmount(text: string, locale: string): number | null {
 	if (!/^-?\d+(\.\d+)?$|^-?\.\d+$/.test(s)) return null;
 	const n = Number(s);
 	return Number.isFinite(n) ? n : null;
+}
+
+interface Separators {
+	readonly group: string;
+	readonly decimal: string;
+}
+
+const separatorsByLocale = new Map<string, Separators>();
+
+/** The locale's grouping and decimal marks, discovered once per locale and kept. */
+function separators(locale: string): Separators {
+	let found = separatorsByLocale.get(locale);
+	if (!found) {
+		const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
+		found = {
+			group: parts.find((p) => p.type === 'group')?.value ?? ',',
+			decimal: parts.find((p) => p.type === 'decimal')?.value ?? '.'
+		};
+		separatorsByLocale.set(locale, found);
+	}
+	return found;
 }

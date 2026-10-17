@@ -42,8 +42,7 @@
 </script>
 
 <article
-	class="stop"
-	class:stop--selected={selected}
+	class={['stop', { 'stop--selected': selected }]}
 	data-kind={stop.kind}
 	data-stop={stop.id}
 	data-fresh={fresh ? '' : undefined}
@@ -53,7 +52,10 @@
 		<span class="stop__grip" aria-hidden="true"><DotsSixVerticalIcon size={16} /></span>
 	{/if}
 
-	<span class="stop__number tabular" class:stop__number--idea={number === null} aria-hidden="true">
+	<span
+		class={['stop__number tabular', { 'stop__number--idea': number === null }]}
+		aria-hidden="true"
+	>
 		{#if number !== null}{number}{:else}<Icon size={14} />{/if}
 	</span>
 

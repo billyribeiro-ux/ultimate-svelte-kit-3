@@ -54,7 +54,7 @@
  * not under `server/`.
  *
  * valibot, because it is a set of small functions the bundler can shake:
- * the browser gets the eight it uses, not a schema runtime.
+ * the browser gets the ones these schemas call, not a schema runtime.
  *
  * MESSAGES IN THE PERSON'S LANGUAGE
  * ---------------------------------
@@ -106,7 +106,7 @@ const optionalText = (max: number) =&gt;
 
 export const CurrencySchema = v.picklist(CURRENCIES, () =&gt; m.issue_currency());</code></pre>
 </figure>
-<p>valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches <code>SLUG</code>, a date is an ISO string that <code>isIsoDate</code> accepts, a longitude is a number in range. <code>shortText</code> and <code>optionalText</code> are the two shapes of a text field, with <code>trim()</code> built in so <code>&quot;  Lisbon &quot;</code> is stored as <code>&quot;Lisbon&quot;</code> without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s <code>required</code> is satisfied by three spaces; this is not.</p>
+<p>valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the functions these schemas call — <code>pipe</code>, <code>object</code>, <code>string</code>, <code>trim</code>, <code>maxLength</code>, <code>picklist</code> and the rest of the twenty-two in this file — and not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches <code>SLUG</code>, a date is an ISO string that <code>isIsoDate</code> accepts, a longitude is a number in range. <code>shortText</code> and <code>optionalText</code> are the two shapes of a text field, with <code>trim()</code> built in so <code>&quot;  Lisbon &quot;</code> is stored as <code>&quot;Lisbon&quot;</code> without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s <code>required</code> is satisfied by three spaces; this is not.</p>
 <p>Now look at the second argument of almost every validator: not a string but a function, <code>() =&gt; m.issue_date()</code>. That is how a schema speaks three languages. valibot accepts a message as either, and calls the function only when the issue actually happens. By then the request is being handled, Paraglide’s middleware has stored that request’s locale (chapter 14 shows where), and <code>m.issue_date()</code> reads it — so the one schema object, created once when the module loaded, answers “Wähle ein Datum” to a form on <code>/de/trips/new</code> and “Pick a date” to one on <code>/trips/new</code>. A plain string would have been decided at import time, in English, for everybody; that is what this file did until a German sign-in page answered “Enter an email address”.</p>
 
 <aside class="callout callout--why">

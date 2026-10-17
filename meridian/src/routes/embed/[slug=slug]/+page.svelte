@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { error } from '@sveltejs/kit';
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate, formatRange } from '#lib/domain/dates.ts';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
+	import type { PageProps } from './$types';
 
-	const slug = $derived(page.params.slug ?? '');
+	let { params }: PageProps = $props();
+	const slug = $derived(params.slug);
 	const locale = getLocale();
 </script>
 
@@ -20,7 +21,7 @@
 	the frame is on somebody else's page and their visitors are strangers.
 -->
 {#if document.trip.visibility !== 'link'}
-	{error(404, 'No such trip.')}
+	{error(404, m.error_no_trip())}
 {/if}
 
 {const scheduled = $derived(document.stops.filter((stop) => stop.date !== null))}

@@ -10,7 +10,7 @@
  * not under `server/`.
  *
  * valibot, because it is a set of small functions the bundler can shake:
- * the browser gets the eight it uses, not a schema runtime.
+ * the browser gets the ones these schemas call, not a schema runtime.
  *
  * MESSAGES IN THE PERSON'S LANGUAGE
  * ---------------------------------

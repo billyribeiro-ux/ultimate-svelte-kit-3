@@ -99,7 +99,7 @@
 		button are wider than a card's column, and a field that cannot shrink
 		pokes out of the card it is in.
 	-->
-	<div class="datefield" class:datefield--invalid={issues.length > 0}>
+	<div class={['datefield', { 'datefield--invalid': issues.length > 0 }]}>
 		<div class="datefield__dates">
 			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
 				<span class="datefield__date">

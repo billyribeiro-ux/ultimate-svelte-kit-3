@@ -1,24 +1,17 @@
-<svelte:options
-	customElement={{
-		tag: 'meridian-route',
-		shadow: 'open',
-		props: {
-			slug: { attribute: 'slug', type: 'String' },
-			origin: { attribute: 'origin', type: 'String' }
-		}
-	}}
-/>
-
 <script lang="ts">
 	/**
 	 * <meridian-route slug="…" origin="…">
 	 * ====================================
 	 *
 	 * A trip's route on any page: one script tag, one element, no framework
-	 * on the host page. Svelte compiles this component to a custom element
-	 * — `customElements.define('meridian-route', …)` happens on import — with
-	 * a shadow root, so the host page's CSS cannot reach in and ours cannot
-	 * leak out. The style block below is the whole of its styling.
+	 * on the host page. Every build that loads this folder compiles it with
+	 * `customElement: true`, so Svelte wraps it in a custom element class —
+	 * `element.ts` registers that class as `<meridian-route>` — with an open
+	 * shadow root, so the host page's CSS cannot reach in and ours cannot
+	 * leak out. The style block below is the whole of its styling. The two
+	 * props become the element's two attributes, `slug` and `origin`, read
+	 * as strings: Svelte takes them from the destructuring below, which is
+	 * why they are destructured rather than read off one `props` object.
 	 *
 	 * It fetches `/api/route/<slug>.json` from the app's origin and draws the
 	 * stops as a small projected line, the same way `RouteThumb` does inside
@@ -26,6 +19,7 @@
 	 * imported the design tokens would bring the tokens with it.
 	 */
 	interface RouteStop {
+		readonly id: string;
 		readonly name: string;
 		readonly kind: string;
 		readonly date: string | null;
@@ -60,9 +54,16 @@
 	const WIDTH = 320;
 	const HEIGHT = 160;
 
+	/** A stop's place in the drawing, named by the stop it stands for. */
+	interface Dot {
+		readonly id: string;
+		readonly x: string;
+		readonly y: string;
+	}
+
 	/** Longitude across, latitude up, scaled to fit — right for a trip, wrong for the world. */
-	function project(stops: readonly RouteStop[]): string {
-		if (stops.length === 0) return '';
+	function project(stops: readonly RouteStop[]): Dot[] {
+		if (stops.length === 0) return [];
 		const lngs = stops.map((s) => s.lng);
 		const lats = stops.map((s) => s.lat);
 		const west = Math.min(...lngs);
@@ -73,12 +74,11 @@
 		const scale = Math.min((WIDTH - inset * 2) / spanX, (HEIGHT - inset * 2) / spanY);
 		const offsetX = (WIDTH - spanX * scale) / 2;
 		const offsetY = (HEIGHT - spanY * scale) / 2;
-		return stops
-			.map(
-				(s) =>
-					`${(offsetX + (s.lng - west) * scale).toFixed(1)},${(HEIGHT - offsetY - (s.lat - south) * scale).toFixed(1)}`
-			)
-			.join(' ');
+		return stops.map((s) => ({
+			id: s.id,
+			x: (offsetX + (s.lng - west) * scale).toFixed(1),
+			y: (HEIGHT - offsetY - (s.lat - south) * scale).toFixed(1)
+		}));
 	}
 </script>
 
@@ -103,22 +103,21 @@
 	{/snippet}
 
 	{const route = $derived(await load(slug, base))}
-	{const points = $derived(project(route.stops))}
+	{const dots = $derived(project(route.stops))}
 
 	<div class="card">
 		<p class="title">{route.name}</p>
 		<p class="muted">{route.startDate} → {route.endDate}</p>
 		<svg viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-label="Route of {route.name}">
-			{#if points}
-				<polyline {points} />
-				{#each points.split(' ') as point, index (index)}
-					{const [x, y] = $derived(point.split(','))}
-					<circle cx={x} cy={y} r="4" />
+			{#if dots.length > 0}
+				<polyline points={dots.map((dot) => `${dot.x},${dot.y}`).join(' ')} />
+				{#each dots as dot (dot.id)}
+					<circle cx={dot.x} cy={dot.y} r="4" />
 				{/each}
 			{/if}
 		</svg>
 		<ol>
-			{#each route.stops as stop, index (index)}
+			{#each route.stops as stop (stop.id)}
 				<li>{stop.name}{stop.date ? ` · ${stop.date}` : ''}</li>
 			{/each}
 		</ol>

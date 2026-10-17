@@ -74,7 +74,7 @@
 	<div class="date">
 		<DatePicker.Label class="label">{label}</DatePicker.Label>
 
-		<div class="datefield" class:datefield--invalid={issues.length > 0}>
+		<div class={['datefield', { 'datefield--invalid': issues.length > 0 }]}>
 			<div class="datefield__dates">
 				<DatePicker.Input {name} class="datefield__input">
 					{#snippet children({ segments })}

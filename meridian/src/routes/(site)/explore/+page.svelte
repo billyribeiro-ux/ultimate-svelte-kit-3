@@ -20,7 +20,10 @@
 	 * static file at build time, so the first call is a GET of a file a CDN
 	 * can cache, and the browser keeps it in the Cache API across reloads.
 	 * The page itself is dynamic — it has a header that knows who you are —
-	 * and the data on it is not. That split is what `prerender` is for.
+	 * and the data on it is not. That split is what `prerender` is for. (On
+	 * the server, rendering this page, the same call fetches that file from
+	 * the app's public address, and falls back to running the function when
+	 * it cannot; `geo.remote.ts` says why the function is `dynamic` for that.)
 	 *
 	 * `Intl.DisplayNames` turns `PT` into "Portugal", or "Portugal", or
 	 * "Portugal" — and `JP` into "Japan", "Japan" and "Japão". The gazetteer
@@ -64,7 +67,9 @@
 	 * only while there is a query, the one in the empty state only while
 	 * nothing matches — and a button that disappears under the keyboard's
 	 * focus drops it to the top of the document. So clearing puts focus
-	 * back in the field, where the next thing typed belongs.
+	 * back in the field, where the next thing typed belongs. That is an
+	 * imperative step in a click handler, so the field is held with
+	 * `bind:this` for it.
 	 */
 	function clear() {
 		query = '';
@@ -147,7 +152,7 @@
 		gutter and back in so the paper behind it covers the full width.
 	-->
 	<div class="toolbar__sentinel" aria-hidden="true" {@attach sentinel}></div>
-	<div class="toolbar" class:toolbar--stuck={stuck}>
+	<div class={['toolbar', { 'toolbar--stuck': stuck }]}>
 		<div class="search">
 			<label class="search__label">
 				<MagnifyingGlassIcon size={18} aria-hidden="true" class="search__icon" />

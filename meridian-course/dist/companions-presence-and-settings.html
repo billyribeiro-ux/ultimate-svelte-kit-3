@@ -333,18 +333,19 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-49</span></span>
+		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-50</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
+	import type { PageProps } from './$types';
 
-	const token = $derived(page.params.token ?? '');
+	let { params }: PageProps = $props();
+	const token = $derived(params.token);
 	const locale = getLocale();
 &lt;/script&gt;
 
@@ -391,43 +392,49 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:1-32</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:1-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { error } from '@sveltejs/kit';
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import type { PageProps } from './$types';
 	import DeleteTrip from './DeleteTrip.svelte';
 	import EmbedSection from './EmbedSection.svelte';
 	import SettingsForm from './SettingsForm.svelte';
 
-	const slug = $derived(page.params.slug ?? '');
-
-	/*
-	 * One query, read two ways. `await query` below gives the first render
-	 * its value and blocks the page until it is there. `query.current` is the
-	 * same value as a reactive read: when the form saves with
-	 * `.updates(tripBySlug(slug))`, the server sends the refreshed trip back
-	 * in the same response, the cache is set, and everything reading
-	 * `.current` — the embed section — re-renders with it. `undefined` only
-	 * before the first load, which the `await` has already waited out.
-	 */
-	const query = $derived(tripBySlug(slug));
-	const visibility = $derived(query.current?.document.trip.visibility ?? 'private');
+	// The route's own parameters, typed by the matcher in `src/params.ts` (chapter 14 says how).
+	let { params }: PageProps = $props();
 &lt;/script&gt;
 
 &lt;!--
+	ONE QUERY, FOLLOWED
+	-------------------
+	Both declarations are `$derived`. When the form saves with
+	`.updates(tripBySlug(slug))`, the server sends the refreshed trip back in
+	the same response, the query's value changes, and everything below that
+	reads `trip` — the form, and the embed section that only shows its code
+	for a trip visible by link — is drawn again from the new one. A bare
+	`{const}` would await the first answer and keep it for as long as the
+	page is open: the embed section would still say &quot;private&quot; after a save
+	that made the trip public.
+
 	Owner only. The remote function already refuses to *change* anything for
 	anybody else; this refuses to *show* the page, with a 403 rather than a
 	404 because a member who is not the owner already knows the trip exists.
 --&gt;
-{const initial = $derived(await query)}
-{#if initial.role !== 'owner'}
-	{error(403, 'Only the owner can change a trip.')}
-{/if}</code></pre>
+{const { role, document } = $derived(await tripBySlug(params.slug))}
+{#if role !== 'owner'}
+	{error(403, m.error_owner_only())}
+{/if}
+{const trip = $derived(document.trip)}
+
+{#key params.slug}
+	&lt;SettingsForm {trip} /&gt;
+{/key}</code></pre>
 </figure>
-<p>The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — <code>error()</code> in markup, which SvelteKit turns into the right status on the server and the error page in the browser, where <code>+error.svelte</code> prints the sentence from <code>page.error.message</code>. <code>initial</code> is <code>$derived(await query)</code>, like the trip page’s, so after a save it is the saved trip: the tab’s title changes with the name.</p>
+<p>The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — <code>error()</code> in markup, which SvelteKit turns into the right status on the server and the error page in the browser, where <code>+error.svelte</code> prints the sentence from <code>page.error.message</code>. That sentence is <code>m.error_owner_only()</code>, a Paraglide message: the error page prints it word for word, so a literal would have put an English sentence under a German heading. The slug is <code>params.slug</code> from <code>PageProps</code>, as on the trip page. Both declarations are <code>$derived</code>, so they follow the query: when the form below saves, the server refreshes <code>tripBySlug</code> in the same response, and <code>trip</code> — and everything drawn from it, the form’s heading and the embed section that only offers its code for a trip visible by link — is the saved trip. The first version read the query two ways, a template <code>await</code> for the first render and <code>query.current</code> for the embed section, and the comment that justified it outlived the code it described; one reactive read, declared once, is the version with nothing to keep in step.</p>
 
 <figure class="code">
 	<figcaption>
@@ -501,20 +508,16 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:34-45</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:40-47</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#key slug}
-	&lt;SettingsForm trip={initial.document.trip} /&gt;
-{/key}
-
-&lt;section class=&quot;container embed&quot;&gt;
-	&lt;EmbedSection {slug} {visibility} /&gt;
+	<pre><code class="lang-svelte">&lt;section class=&quot;container embed&quot;&gt;
+	&lt;EmbedSection slug={params.slug} visibility={trip.visibility} /&gt;
 &lt;/section&gt;
 
 &lt;!-- Last, after everything that can be undone. --&gt;
 &lt;section class=&quot;container danger-zone&quot;&gt;
-	&lt;DeleteTrip tripId={initial.document.trip.id} /&gt;
+	&lt;DeleteTrip tripId={trip.id} /&gt;
 &lt;/section&gt;</code></pre>
 </figure>
 

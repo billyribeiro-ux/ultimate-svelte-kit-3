@@ -89,9 +89,63 @@ test('a save the server refuses says what the server said', async ({ browser }) 
 	await expect(ana.getByText('Stop removed')).toBeVisible();
 
 	// The command rejects with the `HttpError` the browser rebuilt from the
-	// answer; the toast prints its `body.message`, the server's own words.
+	// answer; the toast prints its `body.message`, the server's own sentence.
+	// The whole title, not a part of it: `String(error)` — what the toast
+	// printed before `errorMessage` — is `{"status":404,"message":"…"}`, which
+	// *contains* the sentence, and a `hasText` match passed against it.
 	await dialog.getByRole('button', { name: 'Save stop' }).click();
-	await expect(ben.locator('[data-sonner-toast]', { hasText: 'Not found' })).toBeVisible();
+	await expect(ben.locator('[data-sonner-toast][data-type="error"] [data-title]')).toHaveText(
+		'That stop is no longer on the trip.'
+	);
+
+	await anaContext.close();
+	await benContext.close();
+});
+
+/*
+ * A NOTE THAT SURVIVES THE ROOM
+ * =============================
+ *
+ * The note's editor is built by an attachment, and an attachment runs again
+ * whenever state it read changes. It used to read the live document, which
+ * is a new object with every snapshot — after this person's own save, and
+ * whenever a companion arrives — so each one destroyed the editor and
+ * built another: focus gone, the next keystrokes typed into nothing.
+ *
+ * A snapshot after a save cannot be waited for directly, but its effect
+ * can: the presence chip is drawn from the same snapshot as the document,
+ * so once Ben is on Ana's screen, Ana's page has applied a snapshot after
+ * her save. Then she carries on typing without clicking anywhere.
+ */
+test('a note keeps its editor through a save and a companion arriving', async ({ browser }) => {
+	const anaContext = await browser.newContext();
+	const benContext = await browser.newContext();
+	const ana = await anaContext.newPage();
+	const ben = await benContext.newPage();
+
+	await signIn(ana, USERS.ana, `/t/${TRIPS.iberia}?tab=notes`);
+	await expect(ana.getByText('Live')).toBeVisible();
+	const editor = ana.locator('.notes__page');
+	await editor.click();
+	await ana.keyboard.press('ControlOrMeta+End');
+	await ana.keyboard.type(' Book the night train.');
+	await expect(ana.getByRole('status')).toHaveText('Saved', { timeout: 10_000 });
+
+	await signIn(ben, USERS.ben, `/t/${TRIPS.iberia}`);
+	await expect(ana.getByRole('list', { name: 'here now' })).toContainText('Ben Okafor', {
+		timeout: 20_000
+	});
+
+	// No click: the cursor is where Ana left it, or the test fails here.
+	await expect(editor).toBeFocused();
+	await ana.keyboard.type(' And the ferry back.');
+	await expect(editor).toContainText('Book the night train. And the ferry back.');
+	await expect(ana.getByRole('status')).toHaveText('Saved', { timeout: 10_000 });
+
+	await ana.reload();
+	await expect(ana.locator('.notes__page')).toContainText(
+		'Book the night train. And the ferry back.'
+	);
 
 	await anaContext.close();
 	await benContext.close();

@@ -18,6 +18,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { command, form, query } from '$app/server';
 import { PUBLIC_ORIGIN } from '$app/env/public';
 import { and, eq } from 'drizzle-orm';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import { newSlug } from '#lib/domain/ids.ts';
 import { IdSchema, InviteInputSchema } from '#lib/domain/schemas.ts';
@@ -53,7 +54,7 @@ export const inviteByToken = query(TokenSchema, async (token) => {
 			trip: { columns: { id: true, name: true, slug: true, startDate: true, endDate: true } }
 		}
 	});
-	if (!invite) error(404, 'Not found');
+	if (!invite) error(404, m.error_no_invite());
 
 	const user = requireUser();
 	const already = await membership(invite.tripId, user.id);
@@ -75,9 +76,10 @@ export const acceptInvite = form(v.object({ token: TokenSchema }), async ({ toke
 			where: eq(schema.invite.token, token),
 			with: { trip: { columns: { slug: true } } }
 		});
-		if (!invite) error(404, 'Not found');
-		if (invite.usedAt !== null) error(410, 'That invite has already been used.');
-		if (invite.expiresAt.getTime() < Date.now()) error(410, 'That invite has expired.');
+		if (!invite) error(404, m.error_no_invite());
+		// The join page says these two in the same words before the button is pressed.
+		if (invite.usedAt !== null) error(410, m.join_used());
+		if (invite.expiresAt.getTime() < Date.now()) error(410, m.join_expired());
 
 		const existing = await tx.query.member.findFirst({
 			where: and(eq(schema.member.tripId, invite.tripId), eq(schema.member.userId, user.id))
@@ -105,7 +107,7 @@ export const changeRole = command(
 	v.object({ tripId: IdSchema, userId: v.string(), role: v.picklist(['editor', 'viewer']) }),
 	async ({ tripId, userId, role }) => {
 		const { trip } = await requireMember(tripId, 'owner');
-		if (userId === trip.ownerId) error(400, 'The owner stays the owner.');
+		if (userId === trip.ownerId) error(400, m.error_owner_stays());
 
 		await db
 			.update(schema.member)
@@ -119,7 +121,7 @@ export const removeMember = command(
 	v.object({ tripId: IdSchema, userId: v.string() }),
 	async ({ tripId, userId }) => {
 		const { trip } = await requireMember(tripId, 'owner');
-		if (userId === trip.ownerId) error(400, 'The owner cannot be removed.');
+		if (userId === trip.ownerId) error(400, m.error_owner_kept());
 
 		await db
 			.delete(schema.member)
@@ -131,7 +133,7 @@ export const removeMember = command(
 /** A member walks away from a trip that is not theirs. */
 export const leaveTrip = form(v.object({ tripId: IdSchema }), async ({ tripId }) => {
 	const { user, trip } = await requireMember(tripId);
-	if (user.id === trip.ownerId) error(400, 'An owner can delete the trip but not leave it.');
+	if (user.id === trip.ownerId) error(400, m.error_owner_leaving());
 
 	await db
 		.delete(schema.member)

@@ -44,7 +44,7 @@ export const addStop = command(StopInputSchema, async (input) => {
 
 export const updateStop = command(StopPatchSchema, async ({ id, ...patch }) => {
 	const existing = await db.query.stop.findFirst({ where: eq(schema.stop.id, id) });
-	if (!existing) error(404, 'Not found');
+	if (!existing) error(404, m.error_no_stop());
 	await requireMember(existing.tripId, 'editor');
 
 	await db.update(schema.stop).set(patch).where(eq(schema.stop.id, id));
@@ -55,7 +55,7 @@ export const moveStop = command(MoveStopSchema, async ({ tripId, id, date, index
 	await requireMember(tripId, 'editor');
 
 	const stops = await trips.listStops(tripId);
-	if (!stops.some((s) => s.id === id)) error(404, 'Not found');
+	if (!stops.some((s) => s.id === id)) error(404, m.error_no_stop());
 
 	const changes = place(stops, id, date, index);
 	if (changes.length > 0) {

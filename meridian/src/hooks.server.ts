@@ -38,12 +38,12 @@ import { auth } from '#lib/server/auth.ts';
 import { localeUrl } from '#lib/server/locale-url.ts';
 
 /**
- * Paraglide's middleware does three things around `resolve`: it decides the
+ * Paraglide's middleware does two things around `resolve`: it decides the
  * locale from the URL, the cookie or `Accept-Language` (in the order
- * `vite.config.ts` gave it); it stores that locale in an `AsyncLocalStorage`
- * so `m.some_message()` anywhere in this request — a remote function, a
- * `load`, a component — speaks the right language without being told; and
- * it hands back a request whose URL has had the `/de` prefix removed.
+ * `vite.config.ts` gave it), and it stores that locale in an
+ * `AsyncLocalStorage`, so `m.some_message()` anywhere in this request — a
+ * remote function, a `load`, a component, the sentence in an `error()` —
+ * speaks the right language without being told.
  *
  * The middleware also offers a request whose URL has had the `/de` prefix
  * removed. It is not used: `event.request` is read-only in SvelteKit 3,
@@ -184,7 +184,8 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) => {
 /**
  * Every error the server catches, in one place, told apart by `kind`.
  *
- *   `app`         a deliberate `error(404, …)` — already says what it means
+ *   `app`         a deliberate `error(404, m.error_no_trip())` — already says
+ *                 what it means, in the request's language
  *   `framework`   SvelteKit's own: a 404 for a missing route, a bad request
  *   `validation`  a remote function argument that failed its schema
  *   `unknown`     something genuinely broken — the only one worth an id

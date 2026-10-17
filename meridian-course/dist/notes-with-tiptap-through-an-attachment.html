@@ -35,11 +35,11 @@
 			<h1>Notes: Tiptap through an attachment</h1>
 			<p class="lede">Tiptap has no Svelte binding and needs none: <code>{@attach tiptap()}</code> hands it the element and destroys it on cleanup. A debounced <code>command</code> saves the JSON; a counter makes <code>isActive()</code> reactive for the toolbar; remote edits arrive through the live query and are applied only when the person is not mid-sentence.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Integrate an imperative editor library with an attachment, make its non-reactive API drive a toolbar, and merge remote changes without stamping on someone typing.</p></aside>
-			<p>Tiptap’s <code>Editor</code> takes a DOM element and owns it. That is exactly the contract of a Svelte attachment: a function that receives the element when it is in the document and returns a cleanup for when it is not. No <code>onMount</code>, no <code>bind:this</code>, no lifecycle to get out of order — and no wrapper library, because there is nothing for one to add.</p>
+			<p>Tiptap’s <code>Editor</code> takes a DOM element and owns it. That is exactly the contract of a Svelte attachment: a function that receives the element when it is in the document and returns a cleanup for when it is not. No <code>onMount</code>, no <code>bind:this</code> — and no wrapper library, because there is nothing for one to add. One rule comes with the contract, though, and the first version of this file broke it: an attachment runs inside an effect, so any state it *reads* while it runs is a reason to run it again — to call its cleanup and start over.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:22-49</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:23-52</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -50,7 +50,9 @@
  * a DOM element and owns it — exactly the contract of an attachment:
  * `{@attach tiptap()}` hands Tiptap the `&lt;div&gt;` when it is in the
  * document and calls the cleanup, which destroys the editor, when it is
- * not. No `onMount`, no `bind:this`, no lifecycle to get out of order.
+ * not. No `onMount`, no `bind:this`. One rule comes with it, and the
+ * attachment below is written around it: state read while an attachment
+ * runs is a reason to run it again.
  *
  * Saving is a debounce: type, pause, a `command` sends the JSON. The
  * toolbar reads `editor.isActive(...)`, which is not reactive on its own;
@@ -74,45 +76,86 @@ let timer: ReturnType&lt;typeof setTimeout&gt; | undefined;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:51-73</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:54-110</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">function tiptap(): Attachment&lt;HTMLElement&gt; {
+	<pre><code class="lang-svelte">/*
+ * BUILT ONCE, FOLLOWED AFTERWARDS
+ * -------------------------------
+ * An attachment runs inside an effect, so whatever state it reads while
+ * it runs, it depends on: when that changes, Svelte calls the cleanup —
+ * which destroys the editor — and runs the attachment again. The first
+ * version read `view.document.note` and `editable` right here, and
+ * `view.document` is a new object with every live snapshot: every save,
+ * this person's own included, and every companion arriving or pointing
+ * at a stop. Each one threw the editor away mid-sentence — the cursor,
+ * the undo history, and the save still waiting for its pause.
+ *
+ * So the editor is built under `untrack`, which reads the starting note
+ * and `editable` without depending on them, and each thing that may
+ * change later gets an effect of its own: `editable` in the child effect
+ * here, which Svelte ties to this attachment and stops with it, and the
+ * note from the server in the effect after this function.
+ */
+function tiptap(): Attachment&lt;HTMLElement&gt; {
 	return (element) =&gt; {
-		const instance = new Editor({
-			element,
-			// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
-			extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
-			// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
-			content: (view.document.note ?? EMPTY) as JSONContent,
-			editable,
-			editorProps: { attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() } },
-			onUpdate: () =&gt; schedule(),
-			onTransaction: () =&gt; {
-				transactions += 1;
-			}
-		});
+		const instance = untrack(
+			() =&gt;
+				new Editor({
+					element,
+					// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
+					extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
+					// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
+					content: (view.document.note ?? EMPTY) as JSONContent,
+					editable,
+					editorProps: {
+						attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() }
+					},
+					onUpdate: () =&gt; schedule(),
+					onTransaction: () =&gt; {
+						transactions += 1;
+					}
+				})
+		);
 		editor = instance;
+
+		// `editable` is a prop, and a prop may change: the editor follows it without being rebuilt.
+		$effect(() =&gt; {
+			if (instance.isEditable !== editable) instance.setEditable(editable, false);
+		});
+
 		return () =&gt; {
-			clearTimeout(timer);
+			// A save still waiting for its pause is sent now, rather than destroyed with the editor.
+			if (timer !== undefined) {
+				clearTimeout(timer);
+				timer = undefined;
+				void save();
+			}
 			instance.destroy();
 			editor = undefined;
 		};
 	};
 }</code></pre>
 </figure>
-<p>The attachment creates the editor with the document from the live snapshot, the <code>editable</code> flag from the viewer’s role, and two callbacks: <code>onUpdate</code> schedules a save, <code>onTransaction</code> bumps a counter. The extensions are StarterKit and Placeholder, which writes the empty-note sentence from the message file onto the first empty paragraph as <code>data-placeholder</code> for the CSS to draw. The cleanup destroys the instance. <code>editor</code> is <code>$state.raw</code> because a Tiptap editor is a large object with its own internal state and must not be proxied — <code>raw</code> stores the reference and signals only on reassignment.</p>
+<p>The attachment creates the editor with the note from the live snapshot, the <code>editable</code> flag from the viewer’s role, and two callbacks: <code>onUpdate</code> schedules a save, <code>onTransaction</code> bumps a counter. All of that is read inside <code>untrack(() =&gt; new Editor(…))</code>, which reads without depending — the comment above the function tells the story of what happened without it. What may change later gets an effect of its own. <code>editable</code> is a prop, so a child <code>$effect</code> inside the attachment follows it with <code>setEditable</code>, and Svelte ties that effect to the attachment and stops it with the attachment; the note a companion saves arrives through the effect after the function. The extensions are StarterKit and Placeholder, which writes the empty-note sentence from the message file onto the first empty paragraph as <code>data-placeholder</code> for the CSS to draw. The cleanup destroys the instance — and first sends a save that is still waiting for its pause, rather than throwing it away with the editor; <code>save()</code> reads the editor’s JSON before its first <code>await</code>, so the save sent from the cleanup reads a live editor. <code>editor</code> is <code>$state.raw</code> because a Tiptap editor is a large object with its own internal state and must not be proxied — <code>raw</code> stores the reference and signals only on reassignment.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>untrack</code>, and what the first version did</h4>
+	<p>The first version read <code>view.document.note</code> and <code>editable</code> straight into <code>new Editor({…})</code>. That looks harmless — the values are only *used* once — but the attachment’s effect cannot tell using from depending: whatever it read, it now depends on. <code>view.document</code> is a new object with every snapshot of the live query, and a snapshot comes after every save, this person’s own included, and whenever a companion arrives or points at a stop. Each one destroyed the editor and built another: the cursor gone, the undo history gone, the save that was waiting for its pause cancelled by the cleanup’s <code>clearTimeout</code>, and the next keystrokes typed into nothing. The end-to-end test for notes typed once and waited for “Saved”, so it never typed *after* a snapshot and could not see it. Svelte’s documentation names both ways out, under “Controlling when attachments re-run”: read the starting values without tracking them, and apply later changes from a child effect. Chapter 42 has the test that types, waits for the save and for a companion to arrive, and carries on typing without clicking.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:75-105</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:112-148</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
  * Somebody else saved: the live document carries a new note. Replace the
  * editor's content — but only when this person is not mid-sentence, which
  * is what `isFocused` stands for here. Last writer wins; project 4 is the
- * one with the CRDT.
+ * one with the CRDT. An effect, like the one inside the attachment,
+ * because it writes into Tiptap's document — outside Svelte — and
+ * computes nothing that is drawn.
  */
 $effect(() =&gt; {
 	const remote = view.document.note;
@@ -125,9 +168,13 @@ $effect(() =&gt; {
 function schedule() {
 	status = 'saving';
 	clearTimeout(timer);
-	timer = setTimeout(save, 800);
+	timer = setTimeout(() =&gt; {
+		timer = undefined;
+		void save();
+	}, 800);
 }
 
+/** The JSON is read before the first `await`, so a save sent from the cleanup reads a live editor. */
 async function save() {
 	if (!editor) return;
 	try {
@@ -144,7 +191,7 @@ async function save() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:107-150</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:150-193</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** `transactions` is read so the derivation re-runs after every edit. */
@@ -196,7 +243,7 @@ const tools = [
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:153-188</span></span>
+		<span class="code__file">src/lib/trip/Notes.svelte<span class="code__lines">:196-231</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;notes stack&quot;&gt;
@@ -239,12 +286,12 @@ const tools = [
 
 <aside class="callout callout--why">
 	<h4>Why not a Svelte wrapper for Tiptap</h4>
-	<p>Several exist. Each is a component that calls <code>new Editor</code> in <code>onMount</code> and exposes the instance through a store or a prop — which is what the twenty-three lines of <code>tiptap()</code> do, with an attachment’s cleanup semantics for free. A wrapper would add a dependency, a version to track against Tiptap’s own, and an abstraction between you and the editor’s excellent API. The rule from chapter 01: could we remove it later? Here there was nothing to add in the first place.</p>
+	<p>Several exist. Each is a component that calls <code>new Editor</code> in <code>onMount</code> and exposes the instance through a store or a prop — which is what the forty lines of <code>tiptap()</code> do, with an attachment’s cleanup semantics for free. A wrapper would add a dependency, a version to track against Tiptap’s own, and an abstraction between you and the editor’s excellent API. The rule from chapter 01: could we remove it later? Here there was nothing to add in the first place.</p>
 </aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can write an attachment for a library that owns an element and say what the cleanup must do.</li><li>You can explain the counter that makes a non-reactive API reactive.</li><li>You can say when a remote note replaces the editor’s content and when it does not.</li></ul>
+	<ul><li>You can write an attachment for a library that owns an element and say what the cleanup must do.</li><li>You can say why state read inside an attachment re-runs it, and how <code>untrack</code> and a child <code>$effect</code> keep an editor alive through a live document’s snapshots.</li><li>You can explain the counter that makes a non-reactive API reactive.</li><li>You can say when a remote note replaces the editor’s content and when it does not.</li></ul>
 </aside>
 		</article>
 

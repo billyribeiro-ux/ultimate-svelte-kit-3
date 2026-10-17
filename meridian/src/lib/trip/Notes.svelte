@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
 	import { Editor, type JSONContent } from '@tiptap/core';
 	import Placeholder from '@tiptap/extension-placeholder';
@@ -27,7 +28,9 @@
 	 * a DOM element and owns it — exactly the contract of an attachment:
 	 * `{@attach tiptap()}` hands Tiptap the `<div>` when it is in the
 	 * document and calls the cleanup, which destroys the editor, when it is
-	 * not. No `onMount`, no `bind:this`, no lifecycle to get out of order.
+	 * not. No `onMount`, no `bind:this`. One rule comes with it, and the
+	 * attachment below is written around it: state read while an attachment
+	 * runs is a reason to run it again.
 	 *
 	 * Saving is a debounce: type, pause, a `command` sends the JSON. The
 	 * toolbar reads `editor.isActive(...)`, which is not reactive on its own;
@@ -48,24 +51,58 @@
 	let status: 'idle' | 'saving' | 'saved' = $state('idle');
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
+	/*
+	 * BUILT ONCE, FOLLOWED AFTERWARDS
+	 * -------------------------------
+	 * An attachment runs inside an effect, so whatever state it reads while
+	 * it runs, it depends on: when that changes, Svelte calls the cleanup —
+	 * which destroys the editor — and runs the attachment again. The first
+	 * version read `view.document.note` and `editable` right here, and
+	 * `view.document` is a new object with every live snapshot: every save,
+	 * this person's own included, and every companion arriving or pointing
+	 * at a stop. Each one threw the editor away mid-sentence — the cursor,
+	 * the undo history, and the save still waiting for its pause.
+	 *
+	 * So the editor is built under `untrack`, which reads the starting note
+	 * and `editable` without depending on them, and each thing that may
+	 * change later gets an effect of its own: `editable` in the child effect
+	 * here, which Svelte ties to this attachment and stops with it, and the
+	 * note from the server in the effect after this function.
+	 */
 	function tiptap(): Attachment<HTMLElement> {
 		return (element) => {
-			const instance = new Editor({
-				element,
-				// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
-				extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
-				// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
-				content: (view.document.note ?? EMPTY) as JSONContent,
-				editable,
-				editorProps: { attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() } },
-				onUpdate: () => schedule(),
-				onTransaction: () => {
-					transactions += 1;
-				}
-			});
+			const instance = untrack(
+				() =>
+					new Editor({
+						element,
+						// The placeholder is a Tiptap extension (3KB): it writes `data-placeholder` on an empty first paragraph and the CSS below draws it.
+						extensions: [StarterKit, Placeholder.configure({ placeholder: m.notes_empty() })],
+						// Our `NoteDoc` is the same JSON, typed loosely on purpose; Tiptap validates it on load.
+						content: (view.document.note ?? EMPTY) as JSONContent,
+						editable,
+						editorProps: {
+							attributes: { class: 'prose notes__page', 'aria-label': m.notes_title() }
+						},
+						onUpdate: () => schedule(),
+						onTransaction: () => {
+							transactions += 1;
+						}
+					})
+			);
 			editor = instance;
+
+			// `editable` is a prop, and a prop may change: the editor follows it without being rebuilt.
+			$effect(() => {
+				if (instance.isEditable !== editable) instance.setEditable(editable, false);
+			});
+
 			return () => {
-				clearTimeout(timer);
+				// A save still waiting for its pause is sent now, rather than destroyed with the editor.
+				if (timer !== undefined) {
+					clearTimeout(timer);
+					timer = undefined;
+					void save();
+				}
 				instance.destroy();
 				editor = undefined;
 			};
@@ -76,7 +113,9 @@
 	 * Somebody else saved: the live document carries a new note. Replace the
 	 * editor's content — but only when this person is not mid-sentence, which
 	 * is what `isFocused` stands for here. Last writer wins; project 4 is the
-	 * one with the CRDT.
+	 * one with the CRDT. An effect, like the one inside the attachment,
+	 * because it writes into Tiptap's document — outside Svelte — and
+	 * computes nothing that is drawn.
 	 */
 	$effect(() => {
 		const remote = view.document.note;
@@ -89,9 +128,13 @@
 	function schedule() {
 		status = 'saving';
 		clearTimeout(timer);
-		timer = setTimeout(save, 800);
+		timer = setTimeout(() => {
+			timer = undefined;
+			void save();
+		}, 800);
 	}
 
+	/** The JSON is read before the first `await`, so a save sent from the cleanup reads a live editor. */
 	async function save() {
 		if (!editor) return;
 		try {

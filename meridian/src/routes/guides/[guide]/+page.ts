@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { EntryGenerator, PageLoad } from './$types';
 import { guideBySlug, guides } from '#lib/guides/index.ts';
+import { m } from '#lib/paraglide/messages.js';
 
 export const prerender = true;
 export const csr = false;
@@ -18,6 +19,6 @@ export const entries: EntryGenerator = () => guides.map((guide) => ({ guide: gui
 
 export const load: PageLoad = ({ params }) => {
 	const guide = guideBySlug(params.guide);
-	if (!guide) error(404, 'There is no guide by that name.');
+	if (!guide) error(404, m.error_no_guide());
 	return { guide };
 };

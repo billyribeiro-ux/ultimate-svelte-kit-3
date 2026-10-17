@@ -15,6 +15,7 @@
 import * as v from 'valibot';
 import { error, redirect } from '@sveltejs/kit';
 import { command, form, query, requested } from '$app/server';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import { IdSchema, SlugSchema, TripInputSchema, TripPatchSchema } from '#lib/domain/schemas.ts';
 import { bump, readableTrip, requireMember, requireUser } from '#lib/server/access.ts';
@@ -31,7 +32,7 @@ export const myTrips = query(async () => trips.listTrips(requireUser().id));
 export const tripBySlug = query(SlugSchema, async (slug) => {
 	const viewer = await readableTrip(slug);
 	const document = await trips.loadDocument(viewer.trip.id);
-	if (!document) error(404, 'Not found');
+	if (!document) error(404, m.error_no_trip());
 	return { document, role: viewer.role, viewerId: viewer.user?.id ?? null };
 });
 

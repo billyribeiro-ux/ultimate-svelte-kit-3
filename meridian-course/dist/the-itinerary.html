@@ -35,11 +35,12 @@
 			<h1>The itinerary: days you can drag</h1>
 			<p class="lede">One <code>dndzone</code> per day with svelte-dnd-action, <code>animate:flip</code> for the settling, an optimistic override that is derived rather than synced, <code>place()</code> from the domain on both sides, a stop card, a dialog with assignable deriveds, and a combobox over the gazetteer.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Wire a drag-and-drop library into a live document so the screen shows the drop immediately and agrees with the server when it answers — and build the dialog and search that add stops.</p></aside>
-			<p>svelte-dnd-action is an *action*: <code>use:dndzone</code> on a list, with the items and a shared <code>type</code> so cards can move between lists. It handles pointer, touch and keyboard — focus a card, press space, arrow — and tells you two things: <code>consider</code> (how the list would look if you dropped here) and <code>finalize</code> (you dropped here). Everything else is ours, and the interesting part is what happens between the drop and the server’s answer.</p>
+			<p>svelte-dnd-action makes a list a drop zone, with the items and a shared <code>type</code> so cards can move between lists. It handles pointer, touch and keyboard — focus a card, press space, arrow — and tells you two things: <code>consider</code> (how the list would look if you dropped here) and <code>finalize</code> (you dropped here). Everything else is ours, and the interesting part is what happens between the drop and the server’s answer.</p>
+<p>The library ships an *action*, the shape element behaviour took before attachments arrived in Svelte 5.29: a function applied with <code>use:dndzone={options}</code>, handed the element once and given an <code>update</code> method for new options. This project applies it as an attachment instead, <code>{@attach fromAction(dndzone, () =&gt; options)}</code> — <code>fromAction</code> from <code>svelte/attachments</code> turns any action into one — so the zone is attached the same way as everything else in the project, and the difference is worth one sentence: the second argument is a *function* returning the options. The attachment calls it inside an effect of its own, so when <code>group.stops</code> or <code>editable</code> changes, the library’s <code>update</code> runs with the new options, exactly as the action’s would have, and the zone is never torn down. The action used to carry the types of its two events onto the element it was used on; applied through an attachment nothing does, so <code>src/app.d.ts</code> declares <code>onconsider</code> and <code>onfinalize</code> for every element — the augmentation Svelte’s TypeScript guide gives for events that come from an action.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:19-81</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:20-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -52,6 +53,18 @@
  * press space, use the arrows — and tells us two things: `consider`
  * (the list as it would look if you dropped here) and `finalize` (you
  * dropped here).
+ *
+ * The library ships an action, the shape element behaviour took before
+ * Svelte 5.29: `use:dndzone={options}`. `fromAction` from
+ * `svelte/attachments` turns it into an attachment, so the zone is
+ * applied with `{@attach}` like everything else in the project. The one
+ * difference to remember is the second argument: a *function* returning
+ * the options, which the attachment calls inside an effect — so when
+ * `group.stops` or `editable` changes, the library's `update` is called
+ * with the new options, exactly as the action's would have been. (The
+ * two events it dispatches, `consider` and `finalize`, are typed for
+ * every element in `src/app.d.ts`; the action used to carry those types
+ * with it.)
  *
  * The server is the source of truth, and the live query will send the
  * new order a few hundred milliseconds after the drop. In between, the
@@ -110,7 +123,7 @@ const groups = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:83-95</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:96-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** The route number of a scheduled stop, so the list agrees with the map's pins. */
@@ -130,7 +143,7 @@ const lookers = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:133-161</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:149-177</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function withZone(date: string | null, items: Stop[]): DayGroup&lt;Stop&gt;[] {
@@ -167,7 +180,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:182-261</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:198-277</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The panel's heading, for the outline: the page's h1, this h2, and a day's h3 under it. --&gt;
@@ -216,7 +229,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 			&lt;ul
 				class=&quot;day__list&quot;
 				role=&quot;list&quot;
-				use:dndzone={{
+				{@attach fromAction(dndzone, () =&gt; ({
 					items: group.stops,
 					type: 'stops',
 					flipDurationMs: duration,
@@ -224,7 +237,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 					dropTargetStyle: {},
 					dropTargetClasses: ['day__list--target'],
 					transformDraggedElement: lift
-				}}
+				}))}
 				onconsider={(e) =&gt; consider(group.date, e)}
 				onfinalize={(e) =&gt; finalize(group.date, e)}
 			&gt;
@@ -255,7 +268,7 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:97-131</span></span>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:110-147</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -273,6 +286,9 @@ async function finalize(date: string | null, event: CustomEvent&lt;DndEvent&gt;)
  * with the last render's and puts a new one in `fresh` for 1.2 seconds,
  * and the stop card turns that into a highlight that fades over 700ms.
  * The first render marks nothing: forty stops do not all light up.
+ * It is an effect and not a `$derived` because a mark lives on its own
+ * clock — a timer takes it off again — and is not a function of the
+ * stops alone.
  */
 const duration = $derived(reducedMotion.current ? 0 : 240);
 
@@ -348,12 +364,11 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:44-101</span></span>
+		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:44-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;article
-	class=&quot;stop&quot;
-	class:stop--selected={selected}
+	class={['stop', { 'stop--selected': selected }]}
 	data-kind={stop.kind}
 	data-stop={stop.id}
 	data-fresh={fresh ? '' : undefined}
@@ -363,7 +378,10 @@ $effect(() =&gt; {
 		&lt;span class=&quot;stop__grip&quot; aria-hidden=&quot;true&quot;&gt;&lt;DotsSixVerticalIcon size={16} /&gt;&lt;/span&gt;
 	{/if}
 
-	&lt;span class=&quot;stop__number tabular&quot; class:stop__number--idea={number === null} aria-hidden=&quot;true&quot;&gt;
+	&lt;span
+		class={['stop__number tabular', { 'stop__number--idea': number === null }]}
+		aria-hidden=&quot;true&quot;
+	&gt;
 		{#if number !== null}{number}{:else}&lt;Icon size={14} /&gt;{/if}
 	&lt;/span&gt;
 
@@ -414,7 +432,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:111-146</span></span>
+		<span class="code__file">src/lib/trip/StopCard.svelte<span class="code__lines">:113-148</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -574,7 +592,7 @@ const gazetteer = browser ? places() : undefined;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:125-209</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:126-210</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	let saving = $state(false);
@@ -668,44 +686,65 @@ const gazetteer = browser ? places() : undefined;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/errors.ts<span class="code__lines">:1-29</span></span>
+		<span class="code__file">src/lib/ui/errors.ts<span class="code__lines">:1-45</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
  * WHAT A FAILED CALL SAYS
  * =======================
  *
+ * Two helpers, for the two places a failure reaches a person.
+ *
  * A remote `command` that fails throws SvelteKit's `HttpError` in the
  * browser: `{ status, body: { message } }`, and *not* an `Error` — so the
  * old `error instanceof Error ? error.message : String(error)` printed the
  * whole body as JSON in the toast, `{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}`.
+ * `errorMessage` reads `body.message`. The server wrote that sentence, and
+ * every sentence it writes is a Paraglide message — `error(404,
+ * m.error_no_stop())`, `error(422, m.stop_limit(…))`, or `handleError`'s
+ * `m.error_bad_request()` for an argument that failed its schema — worked
+ * out inside the request's locale, so it arrives in the page's language.
+ * Anything else (the network went away, a bug) is not something the person
+ * can act on in detail, and the browser's own text for it is English, so it
+ * gets the product's one sentence for &quot;that did not work&quot;.
  *
- * The body's message is the one to show. The server wrote it — `error(422,
- * m.stop_limit(…))`, or `handleError`'s `m.error_bad_request()` for an
- * argument that failed its schema — in the request's language. Anything
- * else (the network went away, a bug) is not something the person can act
- * on in detail, and the browser's own text for it is English, so it gets
- * the product's one sentence for &quot;that did not work&quot;.
+ * A `&lt;svelte:boundary&gt;`'s `failed` snippet is handed an `App.Error` — the
+ * `{ status, message }` that `handleError` made — which is not an
+ * `HttpError` either, so `errorMessage` would answer its fallback every
+ * time. `boundaryMessage` is the boundary's half.
  *
- * Not for a `&lt;svelte:boundary&gt;`. Its `failed` snippet is handed an
- * `App.Error` — the `{ status, message }` that `handleError` made — which is
- * not an `HttpError` either, so this would answer the fallback every time.
- * A boundary reads `error.message`; a `catch` around a command calls this.
+ * WHY A GUARD, AND NOT `failed(error: App.Error)`
+ * -----------------------------------------------
+ * SvelteKit's own docs write `{#snippet failed(error: App.Error)}`, and inside
+ * SvelteKit an `App.Error` is what arrives. The annotation does not
+ * type-check: Svelte types the snippet as `Snippet&lt;[error: unknown, reset:
+ * () =&gt; void]&gt;`, because a boundary is a Svelte feature, and outside
+ * SvelteKit it is handed whatever was thrown — so a parameter that claims
+ * more than `unknown` is refused. The way round that the type system
+ * offers is a cast, `(error as App.Error).message`, and a cast is a claim
+ * nobody checks. A guard checks: four comparisons, and the snippet relies on
+ * exactly what it was given — a string `message`, or nothing.
  */
 
 import { isHttpError } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 
+/** The sentence for a toast, from whatever a `command` or a `form` threw. */
 export function errorMessage(error: unknown): string {
 	if (isHttpError(error)) return error.body.message;
 	return m.error_title();
 }</code></pre>
 </figure>
-<p>A failed <code>command</code> throws SvelteKit’s <code>HttpError</code> in the browser, and an <code>HttpError</code> is not an <code>Error</code> — so the <code>error instanceof Error ? error.message : String(error)</code> every component used to write fell through to <code>String()</code>, and the toast read <code>{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}</code>. <code>isHttpError()</code> from <code>@sveltejs/kit</code> is the test that knows the difference, and <code>body.message</code> is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place. A boundary is the other half of the rule, as the comment’s last paragraph says: its <code>failed</code> snippet is handed an <code>App.Error</code>, which is not an <code>HttpError</code> either, so this function would answer its fallback every time — a boundary reads <code>error.message</code> instead (chapter 14). The end-to-end suite holds the toast to it: Ben saves a stop that Ana has just removed, and the toast says the server’s “Not found” (chapter 42).</p>
+<p>A failed <code>command</code> throws SvelteKit’s <code>HttpError</code> in the browser, and an <code>HttpError</code> is not an <code>Error</code> — so the <code>error instanceof Error ? error.message : String(error)</code> every component used to write fell through to <code>String()</code>, and the toast read <code>{&quot;status&quot;:400,&quot;message&quot;:&quot;…&quot;}</code>. <code>isHttpError()</code> from <code>@sveltejs/kit</code> is the test that knows the difference, and <code>body.message</code> is a sentence the server wrote in the request’s language (chapter 20 says how). Anything else — the network went away, a bug — gets the product’s one sentence for “that did not work”, rather than the browser’s English for a failed fetch. Every toast in the trip page goes through this one function, so the rule is in one place. A boundary is the other half of the rule, as the comment’s last paragraph says: its <code>failed</code> snippet is handed an <code>App.Error</code>, which is not an <code>HttpError</code> either, so this function would answer its fallback every time. <code>boundaryMessage</code>, beside it, is the boundary’s half: it reads a <code>message</code> if there is a string one, and falls back to the same sentence if there is not. The end-to-end suite holds the toast to the rule: Ben saves a stop that Ana has just removed, and the toast must say the server’s sentence, “That stop is no longer on the trip.”, whole — not a fragment of it inside a dump of JSON (chapter 42).</p>
+
+<aside class="callout callout--why">
+	<h4>Why a guard, and not <code>failed(error: App.Error)</code></h4>
+	<p>SvelteKit’s documentation writes the snippet as <code>{#snippet failed(error: App.Error)}</code>, and inside SvelteKit an <code>App.Error</code> is what arrives. The annotation does not type-check: Svelte types the snippet as <code>Snippet&lt;[error: unknown, reset: () =&gt; void]&gt;</code>, because a boundary is a Svelte feature, and outside SvelteKit — the custom element in chapter 36 — it is handed whatever was thrown. A parameter that claims more than <code>unknown</code> is refused. The way round that the type system offers is a cast, <code>(error as App.Error).message</code>, and a cast is a claim nobody checks: the day <code>handleError</code> returns something else, it compiles and prints <code>undefined</code>. A guard checks — four comparisons, and the snippet relies on exactly what it was handed, a string <code>message</code> or nothing. The trips list, the diagnostics page, the globe and its loader all call it.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:211-378</span></span>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:212-379</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root open={mode !== null} onOpenChange={(open) =&gt; !open &amp;&amp; onclose()}&gt;
@@ -881,7 +920,7 @@ export function errorMessage(error: unknown): string {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:555-593</span></span>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:556-594</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*

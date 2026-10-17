@@ -134,7 +134,12 @@
 		})
 	);
 
-	/* One arc per leg, lifted off the surface in proportion to its length. */
+	/*
+	 * One arc per leg, lifted off the surface in proportion to its length,
+	 * and named by the two stops it joins: a stop is a row, so no two legs
+	 * of one route join the same pair, and that name is what the loop below
+	 * keys the arc by.
+	 */
 	const arcs = $derived(
 		legs.map(({ a, b }) => {
 			const lift = Math.min(0.12, distance(a, b) / 40_000_000);
@@ -142,14 +147,17 @@
 				const t = index / (all.length - 1);
 				return toVector(asLngLat(position), RADIUS + 0.004 + lift * Math.sin(Math.PI * t));
 			});
-			const geometry = new BufferGeometry().setFromPoints(points);
-			return geometry;
+			return { id: `${a.id}→${b.id}`, geometry: new BufferGeometry().setFromPoints(points) };
 		})
 	);
 
-	// Buffers are GPU memory; dispose the previous set when the legs change.
+	/*
+	 * Buffers are GPU memory; dispose the previous set when the legs change.
+	 * An effect for its cleanup: it computes nothing, and what it frees lives
+	 * outside Svelte, in WebGL.
+	 */
 	$effect(() => {
-		const current = [outlines, ...arcs];
+		const current = [outlines, ...arcs.map((leg) => leg.geometry)];
 		return () => current.forEach((geometry) => geometry.dispose());
 	});
 
@@ -187,6 +195,13 @@
 		return aim.multiplyScalar(distanceAway);
 	});
 
+	/*
+	 * The effects from here on write to the camera, which is three.js's
+	 * object and not Svelte state: they put a value *somewhere else*, which
+	 * is an effect's job, and none of them computes anything a template
+	 * reads. (`touched`, `leg` and `progress` are plain variables, for the
+	 * frame loop, and are never rendered.)
+	 */
 	$effect(() => {
 		// A selection or a flight moves the camera too, and it should not snap back afterwards.
 		if (flying || selected) touched = true;
@@ -199,6 +214,7 @@
 	let leg = 0;
 	let progress = 0;
 
+	// `flying` is a prop: the moment a flight starts is only visible here, so the frame loop is rewound here.
 	$effect(() => {
 		if (flying) {
 			leg = 0;
@@ -296,7 +312,7 @@
 </T.LineSegments>
 
 <!-- The route, in the sea; the selected stop is white, the one thing lit. -->
-{#each arcs as geometry, index (index)}
+{#each arcs as { id, geometry } (id)}
 	<T.Line {geometry}>
 		<T.LineBasicMaterial color={ROUTE} linewidth={2} />
 	</T.Line>

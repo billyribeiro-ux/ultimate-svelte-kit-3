@@ -258,7 +258,7 @@ export function fromMinor(minor: number, currency: string): number {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-73</span></span>
+		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-71</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const formatters = new Map&lt;string, Intl.NumberFormat&gt;();
@@ -283,9 +283,7 @@ export function formatMoney(minor: number, currency: string, locale: string): st
  * space, a stray letter — is dropped before parsing.
  */
 export function parseAmount(text: string, locale: string): number | null {
-	const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
-	const group = parts.find((p) =&gt; p.type === 'group')?.value ?? ',';
-	const decimal = parts.find((p) =&gt; p.type === 'decimal')?.value ?? '.';
+	const { group, decimal } = separators(locale);
 
 	let s = text.trim();
 	s = s.split(group).join('');

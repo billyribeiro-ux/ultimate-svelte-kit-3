@@ -23,7 +23,7 @@ export const part8 = [
 			},
 
 			{ type: 'h3', id: 'two-projects', text: 'Two projects in one config' },
-			code('vite.config.ts', 289, 363),
+			code('vite.config.ts', 303, 377),
 			{
 				type: 'p',
 				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Neither names an `extends`: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
@@ -35,7 +35,7 @@ export const part8 = [
 			{
 				type: 'why',
 				title: 'Why a real browser and not jsdom',
-				text: 'jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads `getBoundingClientRect` and listens for pointer events with real coordinates; `animate:flip` measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the six component tests in this project in under five, which is a cheap price for tests that mean something.'
+				text: 'jsdom is a DOM written in JavaScript, and it is a good one, but it has no layout engine, no WebGL and no real events. The map needs WebGL; the drag-and-drop reads `getBoundingClientRect` and listens for pointer events with real coordinates; `animate:flip` measures positions; Bits UI’s date picker positions a popover. In jsdom every one of those would “pass” by doing nothing. Chromium under Vitest starts in about two seconds and runs the eleven component tests in this project — four files, as the run at the end of this chapter shows — in under five, which is a cheap price for tests that mean something.'
 			},
 
 			{ type: 'h3', id: 'logic', text: 'The logic: worked examples, not just properties' },
@@ -180,7 +180,7 @@ $ pnpm run test:unit -- --run
 			},
 			{
 				type: 'p',
-				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and twenty-nine tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
+				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and forty-one tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
 			},
 			code('scripts/prepare-e2e-db.js', 18, 47),
 			{
@@ -211,7 +211,17 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'The same race as the sign-in form’s, on a plain input. Text typed into the explore filter before the page had hydrated was wiped when it did: the filter is a `bind:value` on a `$state` that starts empty, and hydration writes the state into the input. The account suite’s test of an explore-to-new-trip journey filled the filter straight after `goto` and failed on a slow run with “1 place” never appearing — the field was empty in its snapshot. The cure is the one `keepTyped()` applies to the form (chapter 32): the page’s script runs while the server’s input is still on the page, so the filter’s state starts from what is in it. The test holds the client bundle back, types, lets it go, and expects the text and the filtered list to have survived.'
 			},
-			code('e2e/public.e2e.ts', 91, 117),
+			code('e2e/public.e2e.ts', 91, 126),
+			{
+				type: 'p',
+				text: 'A test with JavaScript switched off, because the bug it guards was invisible with it on. With SvelteKit’s default `paths.relative`, a server render’s `resolve()` answered `./explore`, and Paraglide’s `localizeHref` made that a whole URL at the build’s origin — in every page the server sent and every prerendered guide (chapter 23). The browser then hydrated and redrew every link as a path, so nothing looked wrong to anybody with a working script. `test.use({ javaScriptEnabled: false })` makes the page exactly the HTML the server sent, and the test asks it three things: the header’s link is the path `/de/explore`, the header marks it `aria-current=\"page\"`, and no link anywhere starts with `http://localhost`. The phone project hides the nav behind a menu, so the locators say `includeHidden` — the links are in the HTML whether or not they are on screen, and the HTML is what is being tested.'
+			},
+			code('e2e/public.e2e.ts', 128, 159),
+			{
+				type: 'p',
+				text: 'And a test for the browser’s own `handleError` (chapter 14), which nothing else reaches: a remote function’s refusal goes through the server’s hook, so a page could lose its client hook and every other test would still pass. The globe is the one chunk loaded on demand, so the test drops it — `page.route` fetches each script and aborts the one that contains the globe’s class name, because the file’s own name is a hash — and opens the globe tab on a German page. The boundary must say “Etwas ist schiefgelaufen” with its “Neu verbinden” button, and the console must carry the hook’s `[meridian]` line. Without the hook, SvelteKit’s default fills the boundary with `Internal Error`, in English, and the first assertion fails.'
+			},
+			code('e2e/public.e2e.ts', 161, 187),
 			{
 				type: 'p',
 				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter 43). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter 36). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
@@ -261,10 +271,15 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'This is the test the project was built to pass. `browser.newContext()` twice gives two independent browser profiles — two cookie jars, two sessions — in one test. Ana and Ben sign in separately, and everything after that is a statement about the live query (chapter 18): Ben adds a stop and *Ana’s page* shows it, without a reload, because both pages hold the same `query.live` open and the server publishes to the room when the trip changes. The presence assertions ride on the same stream — Ana sees Ben arrive, and sees which stop he is looking at. The timeouts are longer than the default, deliberately: the presence heartbeat is fifteen seconds apart, and a test that asserts within five would be asserting on luck.'
 			},
-			code('e2e/collab.e2e.ts', 62, 98),
+			code('e2e/collab.e2e.ts', 62, 103),
 			{
 				type: 'p',
-				text: 'The second test uses the two people for something else: a command the server refuses for a real reason. Ben opens a stop to rename it; Ana removes it — after a reload, so nothing waits on the live query; Ben saves, and `updateStop` answers 404. What the browser’s `await` rejects with is the `HttpError` SvelteKit rebuilt from the answer, with the server’s words on `body.message`, and the toast must say them: “Not found”, not the product’s fallback. It passed against the old code too — `errorMessage` was already right (chapter 25) — and it is here so that it stays right.'
+				text: 'The second test uses the two people for something else: a command the server refuses for a real reason. Ben adds Bilbao, a stop the seed does not have, so no other test loses a row it counts on, and opens it to rename it; Ana removes it — after a reload, so nothing waits on the live query; Ben saves, and `updateStop` answers 404. What the browser’s `await` rejects with is the `HttpError` SvelteKit rebuilt from the answer, with the server’s sentence on `body.message`, and the toast must say it — “That stop is no longer on the trip.”, a Paraglide message (chapter 20) — and say nothing else. The assertion is on the toast’s whole title, `toHaveText`, and that is the point of the test. Its first version looked for the toast `{ hasText: \'Not found\' }`, and `hasText` matches a part of the text: the toast the old code printed, `String(error)`, was `{"status":404,"message":"Not found"}`, which *contains* the words, so the test passed against the very bug `errorMessage` was written to fix (chapter 25). Run against `String(error)` now, it fails, with the JSON in the call log.'
+			},
+			code('e2e/collab.e2e.ts', 105, 152),
+			{
+				type: 'p',
+				text: 'The third is about a bug only a second person could cause. The note’s editor was built by an attachment that read the live document, so every snapshot of the live query destroyed the editor and built a new one (chapter 30). A snapshot cannot be waited for directly, but its consequence can: the presence chip is drawn from the same snapshot as the document, so once Ben is on Ana’s screen, Ana’s page has applied a snapshot after her save. Then the test types again *without clicking* — `toBeFocused` first, because an editor that was rebuilt has lost the cursor, and the keystrokes after it go nowhere — and reloads to prove both sentences reached the server. The old notes test typed once and waited for “Saved”, which the bug never touched.'
 			},
 			code('e2e/invite.e2e.ts', 63, 93),
 			{
@@ -304,7 +319,7 @@ $ pnpm run test:unit -- --run
 			code('e2e/visual.e2e.ts', 53, 84),
 			{
 				type: 'p',
-				text: 'Signing in afresh for every signed-in screen would be over fifty sign-ins — fourteen screens, two themes, two projects. `test.extend` adds two fixtures: `anaState`, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and `signedIn`, an *option* a `describe` block sets with `use()`. The built-in `storageState` fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.'
+				text: 'Signing in afresh for every signed-in screen would be over eighty sign-ins — fourteen screens, two themes, three projects. `test.extend` adds two fixtures: `anaState`, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and `signedIn`, an *option* a `describe` block sets with `use()`. The built-in `storageState` fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.'
 			},
 			code('e2e/visual.e2e.ts', 86, 170),
 			{
@@ -356,7 +371,7 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'Two rules of the design can break while every test passes: GSAP belongs in the home page’s chunk and nowhere else, and no chunk over 20 KB gzipped may appear without somebody agreeing to it. A build that succeeds says nothing about either. So `pnpm run verify` runs `node scripts/bundle-guard.ts` between the build and the end-to-end suite, and the guard needs to know what is in each chunk — which a hashed file name does not say.'
 			},
-			code('vite.config.ts', 404, 438),
+			code('vite.config.ts', 418, 452),
 			{
 				type: 'p',
 				text: 'The bundler knows. A Vite plugin is an object with hooks, and `generateBundle` is called once per environment with every chunk the build is about to write, including the modules in each and how many bytes of each survived into the output (`renderedLength`). SvelteKit’s build has a client environment and a server one; the plugin writes only the client’s, to `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is not served.'
@@ -399,7 +414,7 @@ BUNDLE (133 chunks, gzipped)
 				items: [
 					'**The trip page was a 500 for signed-in members.** An `$effect` that sent the presence heartbeat read the heartbeat command’s own `pending` state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with `effect_update_depth_exceeded`. The fix is in chapter 24: read the trip id once, and wrap the command call in `untrack`. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.',
 					'**The place search never searched.** Bits UI’s `Combobox.Input` is a controlled input; binding its value is not the same as listening to it, and the `query` the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. `pressSequentially` in the test — typing a character at a time, as a person does — found it.',
-					'**The settings page did not update after Save.** The command used `.updates(tripBySlug(slug))` so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template `await`, which resolves once. Reading `query.current` in a `$derived` is the reactive way, and chapter 31 explains the difference.',
+					'**The settings page did not update after Save.** The command used `.updates(tripBySlug(slug))` so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through an `await` in the markup that was worked out once and kept its first answer — a bare `{const initial = await query}`, in today’s syntax. `{const initial = $derived(await query)}` follows the query, and chapter 31 shows the page reading it once, that way, with nothing beside it to keep in step.',
 					'**Text typed before the page had hydrated vanished.** One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is `keepTyped()` in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with `page.route`, types, releases it, and waits for a `data-hydrated` attribute the root layout sets in `onMount` before asserting the text is still there.',
 					'**The seed’s ids were not ids.** Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — `00000000-0000-4000-8000-0000000a001` — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the `IdSchema` check on the server, and the client’s `.catch(() => {})` on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: `seedId()` builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.',
 					'**On a phone, the Add-an-expense button could not be clicked.** Playwright’s call log said `<h3> intercepts pointer events` — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly `auto`, and an `auto` track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. `grid-template-columns: minmax(0, 1fr)` on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.'
@@ -418,11 +433,15 @@ BUNDLE (133 chunks, gzipped)
 				text: 'Then a review of the gates themselves. It changed the code under each check to the broken version and watched for red, and found checks that were looking away: the overflow walk never ran at 360px, where its own bug lived; axe and the target probe never saw the map’s markers; the embed’s stylesheet assertion was true with the bug. Pointed at the map, the new suite found three bugs the pictures could not show — a bubble press that also started a stop, a flight taken back by a heartbeat, and pins 25px from the route on a phone — and the account suite, failing once in a slow run, found the explore filter wiping what was typed before hydration. The method is the lesson: a test is only known to work once it has been seen to fail.'
 			},
 			{
+				type: 'p',
+				text: 'The latest review read the code against the documentation and found three more, each of which every existing test had passed: a notes editor that a companion’s arrival destroyed mid-sentence; links in the server’s HTML that were whole URLs at the build’s origin, so the header never marked the page it was on until a script redrew it; and a toast test whose `hasText` was satisfied by the JSON dump it existed to prevent. Each new test above was then run against the old code — the attachment without `untrack`, `paths.relative` back at its default, `String(error)` in the toast, the client hook removed — and seen to fail before it was trusted.'
+			},
+			{
 				type: 'terminal',
 				code: `
 $ pnpm run test:e2e
 
-Running 229 tests using 1 worker
+Running 241 tests using 1 worker
 
   ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
   ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
@@ -434,7 +453,7 @@ Running 229 tests using 1 worker
   ✓  [narrow] › visual.e2e.ts › light theme › trip-new › trip-new holds together
 
   17 skipped
-  212 passed`
+  224 passed`
 			},
 			{
 				type: 'note',
@@ -468,7 +487,7 @@ Running 229 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 173, 219),
+			code('vite.config.ts', 187, 233),
 			{
 				type: 'p',
 				text: 'A Content Security Policy is a header that tells the browser which sources of script, style, image, font, connection and frame the page is allowed to use; anything else is blocked and reported to the console. Its purpose is to make cross-site scripting *not work*: an attacker who manages to inject `<script>` into a page gains nothing if inline scripts are refused. `default-src \'self\'` is the floor — nothing from anywhere but this origin — and every other directive is a narrow, commented exception.'
@@ -478,7 +497,7 @@ Running 229 tests using 1 worker
 				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter 34) are the reason the project needs both.'
 			},
 			code('src/app.html', 44, 57),
-			code('vite.config.ts', 380, 385),
+			code('vite.config.ts', 394, 399),
 			{
 				type: 'p',
 				text: 'The theme boot script — the one that sets `data-theme` before first paint so a dark theme never flashes light, and points the `theme-color` tags and the theme cookie at the same choice (chapter 22) — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'
@@ -521,7 +540,7 @@ Running 229 tests using 1 worker
 				type: 'p',
 				text: 'An **open redirect** is a sign-in page that will send a person anywhere the `redirectTo` parameter says — including `https://evil.example/signin`, styled to look like ours. The guard is a regular expression that allows one leading slash and *only* one: `//evil.example` is a protocol-relative URL, starts with a slash, and still leaves the site. The choice to **sanitise** rather than reject is deliberate: the value lives in a hidden field the person cannot see, so a crafted link would otherwise leave them staring at “invalid redirect” with no way in. Falling back to `/trips` is safe and kind.'
 			},
-			code('src/routes/api/route/[slug=slug].json/+server.ts', 24, 54),
+			code('src/routes/api/route/[slug=slug].json/+server.ts', 29, 61),
 			{
 				type: 'p',
 				text: 'The route API is the one endpoint with `access-control-allow-origin: *`, and the comment explains why that is safe rather than assumes it: the response holds nothing that was not already public by link. The authorisation is *content-based* — a trip that is not visible by link is a 404 whether or not the caller is signed in — because the custom element runs on somebody else’s page, where our cookies are not sent and must not matter. That is the rule for any CORS-open endpoint: it may return only what an anonymous stranger could already see, and it must decide from the data, not the session.'
@@ -531,7 +550,7 @@ Running 229 tests using 1 worker
 				type: 'p',
 				text: '`handleFetch` wraps every server-side `fetch` the app makes. Same-origin requests go through untouched; anything leaving the server gets a ten-second `AbortSignal.timeout` and a user agent that names the app. The project makes no external requests today — the map is offline — which is exactly when to put the guard in: the first person to add a weather lookup inherits a timeout instead of a server that hangs when the weather service does.'
 			},
-			code('src/hooks.server.ts', 198, 213),
+			code('src/hooks.server.ts', 199, 214),
 			{
 				type: 'p',
 				text: 'Error handling is a security surface too. `handleError` receives a `kind` in SvelteKit 3 — `app`, `framework`, `validation` or `unknown` — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed sentence — `m.error_bad_request()`, in the request’s language, and the same sentence whatever failed — so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.'
@@ -597,7 +616,7 @@ Running 229 tests using 1 worker
 
 			{ type: 'h3', id: 'health', text: 'The health endpoint and the first request' },
 			code('src/routes/healthz/+server.ts', 23, 36),
-			code('src/hooks.server.ts', 220, 224),
+			code('src/hooks.server.ts', 221, 225),
 			{
 				type: 'p',
 				text: '“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and `select 1` is the cheapest way to ask. The response carries the `version` — the commit the build was made from, through `version.name` in chapter 03 — so “which version is live?” is one request, and `cache-control: no-store`, because a cached “healthy” is worse than none. It goes out through `Response.json`, where SvelteKit 3 points you now that its own `json()` helper is deprecated. `init` in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.'
@@ -706,16 +725,16 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 			{
 				type: 'ul',
 				items: [
-					'**Runes** — `$state`, `$derived`, `$derived.by`, `$effect`, `$effect.pre`, `$props`, `$bindable`, `$state.raw`, `$state.snapshot`, assignable `$derived`: chapters 06, 24, 25, 31. `untrack` and the effect-loop it prevents: 31. Classes with runes in `.svelte.ts`: 06, 24.',
-					'**Templates** — snippets and `{@render}`: 23, 25; `{#await}` and `await` in markup with `{const … = $derived(await …)}`: 24, 33, 35, 36; `<svelte:boundary>` with `pending` and `failed`: 24, 28; `{@attach}` attachments: 27, 30; `animate:flip` with `svelte-dnd-action`: 25; `<svelte:options customElement>`: 36; `{#key}`: 31.',
+					'**Runes** — `$state`, `$derived`, `$derived.by`, `$effect`, `$props`, `$props.id()`, `$state.raw`, `$state.snapshot`, assignable `$derived`: chapters 06, 24, 25, 31. `untrack` and the effect-loop it prevents: 24; `untrack` inside an attachment, so a snapshot does not rebuild an editor: 30. Classes with runes in `.svelte.ts`: 06, 24. (No `$bindable`: no component here offers two-way binding as its API, so none declares it.)',
+					'**Templates** — snippets and `{@render}`: 21, 23, 25, 33; `await` in markup with `{const … = $derived(await …)}`, and a bare `{const}` where once is right: 22, 23, 24, 28, 33, 35, 36 (there is no `{#await}` block anywhere; an `await` expression inside a boundary replaced it); `<svelte:boundary>` with `pending` and `failed`, read through `boundaryMessage`: 25, 28, 33, 35, 36; `{@attach}` attachments: 22, 29, 30, 39, and `fromAction` for a library’s action: 25; `class={[…]}` and `class={{…}}` in place of the `class:` directive: 23; keyed `{#each}` with a key that names the thing: 28, 33, 36; `animate:flip` with `svelte-dnd-action`: 25; `{#key}`: 24, 31.',
 					'**Reactivity utilities** — `MediaQuery`, `createSubscriber`, `scrollY` from `svelte/reactivity/window`, `SvelteMap` versus a plain `Map`: 40; `Debounced` from runed: 35, 40.',
 					'**Remote functions** — `query`, `query.batch`, `query.live`, `prerender`, `form`, `command`: 16, 17, 18; single-flight `.updates()` and `requested().refreshAll()`: 17, 18, 31; `invalid(issue.field())` and `fields.x.as(…)`: 17, 29; the transport hook: 14.',
-					'**Routing and loading** — route groups, `defineParams` matchers, `resolve()` with typed route ids including groups: 03, 23, 33; `entries()` with `prerender` and `csr = false`: 34, 36; `reroute` for locales: 20; `+server.ts` endpoints with CORS and `OPTIONS`: 36, 43; the root layout with no `load` so prerendered pages do not bake a user in: 23.',
+					'**Routing and loading** — route groups: 23; `defineParams` matchers: 14, and the typed `params` a page takes through `PageProps`, with `LayoutProps` for a layout: 23, 24; `resolve()` with typed route ids including groups, and `paths.relative: false` so the server writes paths too: 23, 35; `entries()` with `prerender` and `csr = false`: 34, 36; `reroute` for locales: 20; `+server.ts` endpoints with CORS and `OPTIONS`: 36, 43; the root layout with no `load` so prerendered pages do not bake a user in: 23.',
 					'**Hooks** — `sequence`, `handleFetch`, `handleError` with `kind` on the server and in the browser, `init`, `transport`, `reroute`; hook types from `@sveltejs/kit/hooks`: 14, 43, 44.',
-					'**Configuration** — everything in `vite.config.ts`: `dynamicCompileOptions` for a client-only custom element, `tracing`, `csp` in `auto` mode, `csrf`, `version`, `preprocess` for mdsvex, `optimizeDeps` for the browser tests: 03, 41, 43.',
-					'**Build and runtime** — `@sveltejs/package` with publint and arethetypeswrong: 08; `@sveltejs/enhanced-img`: 22; `read()` for a bundled asset from an endpoint: 27; a second Vite config for the element’s IIFE: 36; `$app/env`’s `browser`, `building`, `version`: 14, 24, 44; view transitions with `onNavigate` and an update banner from `version.pollInterval`: 23.',
+					'**Configuration** — everything in `vite.config.ts`: `paths.origin` and `paths.relative`, `dynamicCompileOptions` for a client-only custom element, `tracing`, `csp` in `auto` mode, `csrf`, `version`, `preprocess` for mdsvex, `optimizeDeps` for the browser tests: 03, 41, 43.',
+					'**Build and runtime** — `@sveltejs/package` with publint and arethetypeswrong: 08; `@sveltejs/enhanced-img`: 22; `read()` for a bundled asset from an endpoint: 16; a `prerender` function that is `dynamic` so a server render can fall back to it: 16; `customElement: true` and `customElements.define(…, Component.element)`, and a second Vite config for the element’s IIFE: 36; `$app/env`’s `browser`, `building`, `version`: 14, 24, 44; view transitions with `onNavigate` and an update banner from `version.pollInterval`: 23.',
 					'**The ecosystem** — headless (Bits UI, TanStack Table): 26, 29, 38; wrappers (svelte-maplibre, Threlte, LayerChart): 27, 28, 29, 39; imperative through an attachment (Tiptap, GSAP): 30, 22; compilers (Paraglide, mdsvex, Phosphor’s plugin): 20, 34, 22; the survey and the rejections: 37.',
-					'**Proof** — Vitest projects and `vitest-browser-svelte`: 41; Playwright on the built server, two viewports, two contexts: 42; the container, the health check, the pipeline: 44; the course’s own checks: 44.'
+					'**Proof** — Vitest projects and `vitest-browser-svelte`: 41; Playwright on the built server, in three projects — a desktop, a phone, and the phone at 360px — with two browser contexts on one trip and a test with JavaScript switched off: 42; the container, the health check, the pipeline: 44; the course’s own checks: 44.'
 				]
 			},
 

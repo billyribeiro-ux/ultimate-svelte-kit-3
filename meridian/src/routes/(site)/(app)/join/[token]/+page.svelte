@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
+	import type { PageProps } from './$types';
 
-	const token = $derived(page.params.token ?? '');
+	let { params }: PageProps = $props();
+	const token = $derived(params.token);
 	const locale = getLocale();
 </script>
 

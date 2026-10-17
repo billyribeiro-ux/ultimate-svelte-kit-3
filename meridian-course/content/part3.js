@@ -67,19 +67,19 @@ export const part3 = [
 			},
 
 			{ type: 'h3', id: 'fetch-errors-init', text: 'Fetch, errors, boot' },
-			code('src/hooks.server.ts', 169, 224),
+			code('src/hooks.server.ts', 169, 225),
 			{
 				type: 'p',
-				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404)`, `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
+				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404, m.error_no_trip())` — its sentence a Paraglide message like every other, worked out inside the request and so already in the page’s language, which is why the hook leaves it alone — `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
 			},
 			code('src/hooks.client.ts', 1, 28),
 			{
 				type: 'p',
-				text: 'The browser has a `handleError` of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at `kind` the same way, and only `unknown` needs words, because SvelteKit’s default for it is `\'Internal Error\'`, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose.'
+				text: 'The browser has a `handleError` of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at `kind` the same way, and only `unknown` needs words, because SvelteKit’s default for it is `\'Internal Error\'`, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose. Short is not the same as untested: chapter 42 drops the globe’s chunk on its way to a German page and expects the German sentence in the boundary, which SvelteKit’s English default would fail.'
 			},
 			{
 				type: 'why',
-				text: 'Why does the shape matter? Because a `failed` snippet, and `+error.svelte` through `page.error`, are handed the *result* of `handleError`: an `App.Error`, `{ status, message }`, a plain object and not an `Error`. The first versions of four boundaries tested `error instanceof Error`, which is never true here, so they printed the fallback every time — or, in the trips list, `String(error)`, which is `[object Object]`. A boundary reads `error.message`; this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an `HttpError`, with the server’s words on `body.message`.'
+				text: 'Why does the shape matter? Because a `failed` snippet, and `+error.svelte` through `page.error`, are handed the *result* of `handleError`: an `App.Error`, `{ status, message }`, a plain object and not an `Error`. The first versions of four boundaries tested `error instanceof Error`, which is never true here, so they printed the fallback every time — or, in the trips list, `String(error)`, which is `[object Object]`. A boundary reads its `message` — through `boundaryMessage` in `#lib/ui/errors.ts`, a guard rather than a type annotation, for a reason chapter 25 gives — and this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an `HttpError`, with the server’s words on `body.message`.'
 			},
 			code('src/hooks.ts', 1, 35),
 			{
@@ -89,7 +89,7 @@ export const part3 = [
 			code('src/params.ts', 1, 21),
 			{
 				type: 'p',
-				text: 'One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and `params.slug` arrives typed. Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.'
+				text: 'One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and `params.slug` arrives typed — in a page, as the `params` prop that `PageProps` describes (chapter 24). Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.'
 			},
 			{
 				type: 'checkpoint',
@@ -122,17 +122,17 @@ export const part3 = [
 			},
 
 			{ type: 'h3', id: 'who-may-do-what', text: 'Who may do what' },
-			code(`${SERVER}/access.ts`, 1, 30),
+			code(`${SERVER}/access.ts`, 1, 37),
 			{
 				type: 'p',
 				text: 'Every remote function that touches a trip begins with one of these, and they answer three questions in a fixed order: is anybody signed in, may they see this trip, may they change it. The status codes are chosen to give away the least. A 403 for “not yours” would tell a stranger that the slug they guessed is real; a 404 for “yours, but read-only” would leave a viewer wondering where the trip went. So a stranger gets 404 and a viewer gets 403, and the doc comment is the whole policy.'
 			},
-			code(`${SERVER}/access.ts`, 32, 67),
+			code(`${SERVER}/access.ts`, 39, 72),
 			{
 				type: 'p',
 				text: '`requireUser` throws a redirect — a real 303 — carrying the current URL in `redirectTo`, localised, so a person sent to sign in comes back where they were going in their language. `requireMember` is one query with the trip joined, and a rank table turns three roles into one comparison. Both use `getRequestEvent()` from `$app/server`, which is how a plain function reaches the request without being passed it.'
 			},
-			code(`${SERVER}/access.ts`, 69, 105),
+			code(`${SERVER}/access.ts`, 74, 110),
 			{
 				type: 'p',
 				text: '`readableTrip` is the read-side question with the `link` case: a member gets their role, and a stranger gets `role: "link"` if and only if the owner made the trip visible by link — otherwise the same 404 a nonexistent trip gives. `bump` is the last line of every write: increment the trip’s version in one `UPDATE … RETURNING` and wake the room. Chapter 18 shows who is listening.'
@@ -159,7 +159,7 @@ export const part3 = [
 				type: 'p',
 				text: 'A remote function is exported from a `.remote.ts` file, called anywhere, and always runs on the server. On the client the export becomes a `fetch` wrapper; on the server it is the function. Four flavours exist and this chapter is about the two that read — `query` and `prerender` — plus `query.batch`, which is `query` for the n+1 problem.'
 			},
-			code(`${REMOTE}/trips.remote.ts`, 1, 36),
+			code(`${REMOTE}/trips.remote.ts`, 1, 37),
 			{
 				type: 'p',
 				text: '`myTrips` takes no argument and reads who is asking from the request. `tripBySlug` takes a slug — validated by `SlugSchema` before the function runs — and returns the first paint of the trip page: the whole document plus what the viewer may do with it. After that first paint the live query takes over; this query is called once per page. Notice that authorisation is the first line, and the work is a call into `server/trips.ts`, which knows nothing about requests.'
@@ -171,18 +171,22 @@ export const part3 = [
 			},
 
 			{ type: 'h3', id: 'batch', text: 'One request for a page of cards' },
-			code(`${REMOTE}/geo.remote.ts`, 1, 22),
-			code(`${REMOTE}/geo.remote.ts`, 41, 81),
+			code(`${REMOTE}/geo.remote.ts`, 1, 37),
+			code(`${REMOTE}/geo.remote.ts`, 56, 96),
 			{
 				type: 'p',
 				text: 'The trips page renders one card per trip, and each card asks for its own route preview. Without `query.batch` that is one request per card. With it, every call made in the same tick is collected into one request; the server function receives the *array* of ids, answers with one database query, and returns a lookup function that SvelteKit calls per id. The authorisation is per person, not per id: the function fetches only the trips this person belongs to, and any other id answers as an empty route rather than an error — a stranger poking the endpoint learns nothing.'
 			},
 
 			{ type: 'h3', id: 'prerender', text: 'Data that never changes between deploys' },
-			code(`${REMOTE}/geo.remote.ts`, 24, 39),
+			code(`${REMOTE}/geo.remote.ts`, 39, 54),
 			{
 				type: 'p',
 				text: '`places` is a `prerender`: it runs once, at build time, and its result is written to disk as a static JSON asset. The client’s first call is a GET of a file a CDN can cache forever, and the browser keeps it in the Cache API across reloads. The explore page, the place search and the new-trip form all read the same copy. It is the right flavour for a hundred cities in a JSON module, and the wrong flavour for anything a person can change.'
+			},
+			{
+				type: 'why',
+				text: 'Why `{ dynamic: true }` on a function whose answer never changes? Because of the other side of the call. A server rendering `/explore` or the new-trip form for a request does not open the prerendered file off its disk: it *fetches* it, over the network, from the request’s own origin — which, with `paths.origin` set, is `PUBLIC_ORIGIN`, the public address in front of the proxy. If that fetch fails, SvelteKit runs the function instead, and a `prerender` function is left out of the server bundle unless it is dynamic, so the fallback threw `remote_prerender_not_dynamic` and the page was a 500. A container behind a proxy that terminates TLS often cannot reach its own public hostname, and every explore page failed that way. The option keeps the function in the server bundle, so the fallback runs in-process, from the same JSON module, and the browser still gets its cacheable file. The end-to-end suite could not have caught it: its server listens on `PUBLIC_ORIGIN` itself, so the fetch always succeeds. When a test environment is kinder than production, the kindness is worth writing down next to the code it hides.'
 			},
 			{
 				type: 'warn',
@@ -216,7 +220,7 @@ export const part3 = [
 				type: 'p',
 				text: 'Two flavours write. `form` returns an object you spread onto a `<form>`: it has `method` and `action`, so it works with JavaScript off, and an attachment that enhances it when JavaScript is on. `command` is a function you call from anywhere JavaScript is running. The rule this project follows is in the doc comment of `trips.remote.ts`: a page with a button is a `form`; a drag, a map click or a settings control is a `command`.'
 			},
-			code(`${REMOTE}/trips.remote.ts`, 38, 63),
+			code(`${REMOTE}/trips.remote.ts`, 39, 64),
 			{
 				type: 'p',
 				text: '`createTrip` and `deleteTrip` redirect, because after them the person should be somewhere else — and a `redirect` thrown inside a `form` is followed by the browser whether or not JavaScript ran. `updateTrip` is a `command`, and its last line is the single-flight idea: the client that sends the command asks, in the same request, for `tripBySlug` to be refreshed, and `requested(tripBySlug, 1).refreshAll()` refreshes exactly the instances that client is holding — at most one here, and the limit is required because the list is client-controlled. The settings form in chapter 31 is the other half: `updateTrip(patch).updates(tripBySlug(slug))`.'
@@ -229,7 +233,7 @@ export const part3 = [
 			code(`${REMOTE}/stops.remote.ts`, 45, 85),
 			{
 				type: 'p',
-				text: '`moveStop` is chapter 11 at the wire. It takes where the card was dropped, asks `place()` what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. `updateStop` looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. `me` is a command with no argument, for the presence chip to tell its own entry apart.'
+				text: '`moveStop` is chapter 11 at the wire. It takes where the card was dropped, asks `place()` what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. `updateStop` looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. When the stop is gone — a companion removed it a moment ago — the 404 carries a sentence, `m.error_no_stop()`, and not the words `Not found`, because a toast is going to print it to a person, in their language (chapter 25 shows the toast). `me` is a command with no argument, for the presence chip to tell its own entry apart.'
 			},
 
 			{ type: 'h3', id: 'forms-and-fields', text: 'A form whose fields carry their types' },
@@ -329,22 +333,22 @@ export const part3 = [
 				type: 'p',
 				text: 'An invite link is a secret that turns a stranger into a companion. Everything about its design follows from what happens when it is pasted into the wrong chat: it should be useless after one use, useless after a week, and useless to somebody who is not signed in.'
 			},
-			code(`${REMOTE}/invites.remote.ts`, 1, 46),
+			code(`${REMOTE}/invites.remote.ts`, 1, 47),
 			{
 				type: 'p',
 				text: 'The token is twenty-four characters from the slug alphabet — about a hundred and eighteen bits — and the schema that accepts it is as strict as the one that made it, so a malformed link is a validation error before the database is asked. Only the owner may create one; the URL that comes back uses `PUBLIC_ORIGIN` and `localizeHref`, so the link is absolute and in the owner’s language.'
 			},
-			code(`${REMOTE}/invites.remote.ts`, 48, 68),
+			code(`${REMOTE}/invites.remote.ts`, 49, 69),
 			{
 				type: 'p',
 				text: '`inviteByToken` is what the join page shows before the button: which trip, which role, and whether the link still works. It requires a signed-in person — `requireUser` redirects to sign in with the join page as the way back — so the page never renders a trip’s name to somebody with nothing but a link. `alreadyMember` lets the page offer “open the trip” instead of a button that would fail.'
 			},
-			code(`${REMOTE}/invites.remote.ts`, 70, 102),
+			code(`${REMOTE}/invites.remote.ts`, 71, 104),
 			{
 				type: 'p',
-				text: 'Accepting is a `form`, because the join page is a page: a person arrives from a link in a message, possibly on a phone with a flaky connection, and a button that works without JavaScript is the one that works. The transaction is the important part. Read the invite, refuse it if used or expired, add the membership unless one exists, mark the invite used — all or nothing, so two taps on the button cannot produce two memberships or one membership and an unused link. The explicit return type on the transaction callback is there because Drizzle’s inference needs a hand when the callback throws in some branches.'
+				text: 'Accepting is a `form`, because the join page is a page: a person arrives from a link in a message, possibly on a phone with a flaky connection, and a button that works without JavaScript is the one that works. The transaction is the important part. Read the invite, refuse it if used or expired, add the membership unless one exists, mark the invite used — all or nothing, so two taps on the button cannot produce two memberships or one membership and an unused link. The two refusals are `m.join_used()` and `m.join_expired()`, the very messages the join page shows before the button is pressed, so a link that expired between reading the page and pressing the button says the same thing in the same language either way. The explicit return type on the transaction callback is there because Drizzle’s inference needs a hand when the callback throws in some branches.'
 			},
-			code(`${REMOTE}/invites.remote.ts`, 104, 141),
+			code(`${REMOTE}/invites.remote.ts`, 106, 143),
 			{
 				type: 'p',
 				text: 'The rest of membership is three small functions with the same shape — authorise as owner, refuse the one case that must never happen (the owner losing ownership), write, `bump`. `leaveTrip` is a `form` for the same reason `acceptInvite` is, and it refuses the owner too: an owner can delete the trip but not leave it, because a trip with no owner is a trip nobody can delete.'

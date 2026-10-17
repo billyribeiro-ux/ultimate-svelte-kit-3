@@ -58,8 +58,20 @@ export default defineConfig(({ mode }) => {
 				 * HTTP behind a proxy does not reconstruct `https://…` from headers
 				 * and reject every POST as cross-site. Better Auth uses the same value
 				 * as its `baseURL` (see `src/lib/server/auth.ts`).
+				 *
+				 * `relative: false`, because every link goes through `href()` and
+				 * Paraglide. With the default, `true`, `resolve()` answers a server
+				 * render with a path relative to the page — `./trips`, `../trips` —
+				 * so the HTML is portable to a subdirectory; Paraglide's
+				 * `localizeHref` then resolves that against an origin and hands back
+				 * a whole URL, `http://localhost:4173/trips`. Every link in the
+				 * server's HTML, and in every prerendered guide, carried the
+				 * build's origin, and the header could never mark the current page:
+				 * it compares a pathname with an `href`, and a URL is never equal to
+				 * a pathname. Root-relative paths are what the browser's half
+				 * already produced, so now both halves write `/de/trips`.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },
 
 				/*
 				 * MARKDOWN COMPONENTS
@@ -82,14 +94,15 @@ export default defineConfig(({ mode }) => {
 				 * =============================
 				 *
 				 * `src/lib/embed` holds `<meridian-route>`, which is compiled as a
-				 * custom element — `customElements.define`, a shadow root — rather
-				 * than as an ordinary component. That is a per-file compiler option,
-				 * and `dynamicCompileOptions` is how a per-file option is set.
+				 * custom element — a class the browser can register, with a shadow
+				 * root — rather than as an ordinary component. That is a per-file
+				 * compiler option, and `dynamicCompileOptions` is how a per-file
+				 * option is set.
 				 *
 				 * `environment.name === 'client'` because a custom element has no
-				 * server-rendered form: it registers itself with the browser and is
-				 * imported on mount. The server build compiles the same file as a
-				 * plain component it never renders.
+				 * server-rendered form: `src/lib/embed/element.ts` registers it with
+				 * the browser, and is imported on mount. The server build compiles
+				 * the same file as a plain component it never renders.
 				 *
 				 * The test is the folder `src/lib/embed`, not any folder called
 				 * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
@@ -114,8 +127,9 @@ export default defineConfig(({ mode }) => {
 					 * snippets, `$effect.pending()`, `settled()` and `fork()`.
 					 *
 					 * A trip planner is full of it: the globe is a three-hundred-kilobyte
-					 * import that loads when a person asks for it, a place search is a
-					 * request per keystroke, and opening a trip is "wait, then draw".
+					 * import that loads when a person asks for it, the explore page
+					 * awaits the gazetteer at the top of its script, and opening a trip
+					 * is "wait, then draw".
 					 */
 					experimental: { async: true }
 				},

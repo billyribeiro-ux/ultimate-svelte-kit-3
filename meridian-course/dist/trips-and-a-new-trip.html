@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:1-32</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:1-33</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -51,6 +51,7 @@
 	import type { Role } from '#lib/domain/schemas.ts';
 	import { tripPreview } from '#lib/remote/geo.remote.ts';
 	import { myTrips } from '#lib/remote/trips.remote.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 	import Empty from '#lib/ui/Empty.svelte';
 	import RouteThumb from '#lib/ui/RouteThumb.svelte';
 
@@ -77,7 +78,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:47-124</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:48-127</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;!--
@@ -92,12 +93,14 @@
 
 		`failed` is handed an `App.Error` — what `handleError` made of the
 		failure, `{ status, message }`, and not an `Error` — so the server's
-		sentence is on `message`. Both declarations are `$derived`, so a
-		refreshed query redraws the list; a bare `{const}` would keep the first.
+		sentence is on `message`; `boundaryMessage` reads it without a cast
+		(`#lib/ui/errors.ts` says why there is no annotation). Both
+		declarations are `$derived`, so a refreshed query redraws the list; a
+		bare `{const}` would keep the first.
 	--&gt;
 	&lt;svelte:boundary&gt;
 		{#snippet failed(error, reset)}
-			&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
+			&lt;p class=&quot;issue&quot;&gt;{boundaryMessage(error)}&lt;/p&gt;
 			&lt;button class=&quot;btn&quot; onclick={reset}&gt;{m.live_reconnect()}&lt;/button&gt;
 		{/snippet}
 
@@ -119,7 +122,7 @@
 					&lt;li class=&quot;card card--link trip&quot;&gt;
 						&lt;div class=&quot;trip__thumb&quot;&gt;
 							&lt;RouteThumb points={preview.points} label={trip.name} /&gt;
-							&lt;span class=&quot;chip trip__role&quot; class:chip--sea={role === 'owner'}&gt;
+							&lt;span class={['chip trip__role', { 'chip--sea': role === 'owner' }]}&gt;
 								{roleLabel[role]()}
 							&lt;/span&gt;
 						&lt;/div&gt;
@@ -159,7 +162,7 @@
 	&lt;/svelte:boundary&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. Both declarations are <code>$derived</code>, so a refreshed query redraws the list rather than leaving the first answer on screen. When the server refuses, the <code>failed</code> snippet prints <code>error.message</code>: it is handed an <code>App.Error</code>, <code>{ status, message }</code>, the failure after <code>handleError</code> (chapter 14). The first version wrote <code>error instanceof Error ? error.message : String(error)</code>, and since an <code>App.Error</code> is a plain object the list read <code>[object Object]</code>. Now an end-to-end test makes the preview request invalid on its way out and expects the server’s own sentence (chapter 42). The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an <code>::after</code> on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes <code>view-transition-name: trip-title</code> — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s <code>&lt;h1&gt;</code> carries the same name, so the title morphs into the header during the navigation.</p>
+<p>The boundary has a <code>failed</code> snippet and no <code>pending</code> one, for the reason the comment gives: on the server every promise inside is awaited before the HTML is sent, so the first paint is the list, and a <code>pending</code> snippet is what the server would render instead. Inside the loop, every card awaits <code>tripPreview(trip.id)</code>; those calls are made in the same tick, and <code>query.batch</code> sends them as one request. Twenty trips is two round trips, not twenty-one. Both declarations are <code>$derived</code>, so a refreshed query redraws the list rather than leaving the first answer on screen. When the server refuses, the <code>failed</code> snippet prints the <code>message</code> of what it is handed, through <code>boundaryMessage</code> (chapter 25): an <code>App.Error</code>, <code>{ status, message }</code>, the failure after <code>handleError</code> (chapter 14). The first version wrote <code>error instanceof Error ? error.message : String(error)</code>, and since an <code>App.Error</code> is a plain object the list read <code>[object Object]</code>. Now an end-to-end test makes the preview request invalid on its way out and expects the server’s own sentence (chapter 42). The card link uses <code>href()</code> from chapter 23 — <code>resolve()</code> with the route id, then the language prefix — so a renamed folder is a type error and not a 404. There is one link per card, named by the trip, and an <code>::after</code> on it covers the whole card, so the card is the click target while the accessible name stays the name. On pointer down, or Enter, the card’s title takes <code>view-transition-name: trip-title</code> — the name must be unique on the page, so it goes on the one card being opened — and the trip page’s <code>&lt;h1&gt;</code> carries the same name, so the title morphs into the header during the navigation.</p>
 
 <figure class="code">
 	<figcaption>
@@ -301,7 +304,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:63-82</span></span>
+		<span class="code__file">src/lib/ui/RouteThumb.svelte<span class="code__lines">:63-87</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -320,12 +323,17 @@
 	{#if projected.length &gt; 1}
 		&lt;path d={path} class=&quot;thumb__route&quot; /&gt;
 	{/if}
-	{#each dots as [x, y], i (i)}
+	&lt;!--
+		Keyed by where the dot is. The loop that made `dots` keeps no two
+		within 6px of each other, so a position is unique, and it is all a dot
+		is: the stops behind it are not here, only their projection.
+	--&gt;
+	{#each dots as [x, y] (`${x},${y}`)}
 		&lt;circle cx={x} cy={y} r=&quot;3&quot; class=&quot;thumb__stop&quot; /&gt;
 	{/each}
 &lt;/svg&gt;</code></pre>
 </figure>
-<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip, once a degree of longitude is shrunk by the cosine of the trip’s middle latitude, as it is on the ground. Without that, Iberia at 40°N was a flat smear across the top half of the box, drawn a third wider than it is. The route goes through every stop and the dots do not: five stops in one city are five rings drawn over each other at this size, a smudge, so a stop closer than 6 units to one already drawn shares its dot. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at <code>width</code> × <code>height</code> — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, <code>style:aspect-ratio</code>, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry <code>vector-effect: non-scaling-stroke</code> — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.</p>
+<p>The thumbnail is the library’s sparkline idea applied to a route: longitude across, latitude up, scaled to fit — wrong for the world and right for a trip, once a degree of longitude is shrunk by the cosine of the trip’s middle latitude, as it is on the ground. Without that, Iberia at 40°N was a flat smear across the top half of the box, drawn a third wider than it is. The route goes through every stop and the dots do not: five stops in one city are five rings drawn over each other at this size, a smudge, so a stop closer than 6 units to one already drawn shares its dot. That rule is also what keys the dots’ <code>{#each}</code>: no two are within 6 units of each other, so a dot’s position is unique, and it is all a dot is — the stops behind it are not in the loop, only their projection. A key that names the thing is the rule; an index is a position in a list, and says nothing about what is there. <code>role=&quot;img&quot;</code> with the trip’s name is what a screen reader gets. Chapter 41 tests it in a browser: three points, three circles, one path. The box is drawn at <code>width</code> × <code>height</code> — 160×90 on the trips list, 320×160 in the embed frame — and its shape comes from those two numbers, <code>style:aspect-ratio</code>, not from a fixed 16:9 in the CSS that letterboxed the embed’s 2:1 drawing between two empty bands. It is shown at whatever width the card or the frame is, so the route and the stops carry <code>vector-effect: non-scaling-stroke</code> — without it the 2px line would be 4px on a wide card and 1px in a narrow embed. And it holds still: twenty thumbnails tracing themselves at once would be the opposite of one thing moving at a time.</p>
 <h3 id="new-trip">A new trip</h3>
 
 <figure class="code">

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:38-79</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:39-80</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -88,7 +88,7 @@ const categoryLabels: Record&lt;ExpenseCategory, () =&gt; string&gt; = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:81-101</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:82-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Row {
@@ -117,7 +117,7 @@ const rows: Row[] = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:103-157</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:104-158</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* ------------------------------------------------------------------ */
@@ -180,7 +180,7 @@ const table = createTable({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:177-191</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:181-195</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -202,10 +202,10 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:400-478</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:411-490</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;table-wrap&quot; bind:this={wrap} data-overflow={overflowing ? '' : undefined}&gt;
+	<pre><code class="lang-svelte">&lt;div class=&quot;table-wrap&quot; data-overflow={overflowing ? '' : undefined} {@attach watchOverflow}&gt;
 	&lt;table class=&quot;table&quot;&gt;
 		&lt;thead&gt;
 			{#each table.getHeaderGroups() as group (group.id)}
@@ -213,8 +213,7 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 					{#each group.headers as header (header.id)}
 						{const sorted = $derived(header.column.getIsSorted())}
 						&lt;th
-							class=&quot;sortable&quot;
-							class:num={header.column.columnDef.meta?.align === 'end'}
+							class={['sortable', { num: header.column.columnDef.meta?.align === 'end' }]}
 							aria-sort={sorted === 'asc'
 								? 'ascending'
 								: sorted === 'desc'
@@ -244,9 +243,11 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 				&lt;tr&gt;
 					{#each row.getAllCells() as cell (cell.id)}
 						&lt;td
-							class:num={cell.column.columnDef.meta?.align === 'end'}
-							class:what={cell.column.id === 'title'}
-							class:amount={cell.column.id === 'amountMinor'}
+							class={{
+								num: cell.column.columnDef.meta?.align === 'end',
+								what: cell.column.id === 'title',
+								amount: cell.column.id === 'amountMinor'
+							}}
 						&gt;
 							{#if cell.column.id === 'category'}
 								&lt;span class=&quot;category&quot; data-kind={row.original.category}&gt;
@@ -285,12 +286,17 @@ const total = $derived(rows.reduce((sum, r) =&gt; sum + r.amountMinor, 0));</cod
 	&lt;/table&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>The markup is a plain <code>&lt;table&gt;</code> in our own CSS. Header and cell templates in TanStack are functions that return strings, or strings; the library’s own <code>FlexRender</code> also renders components, and this table only needs text, so a six-line <code>render</code> helper calls the template with the context the library provides. <code>aria-sort</code> goes on the <code>&lt;th&gt;</code>, not the button inside it — the attribute belongs to the column header — and <code>getToggleSortingHandler()</code> is the whole of the sorting interaction. The amount is the third column, beside what it was for: on a phone the table scrolls sideways and the first three columns are what fits, and the amount is the reason the table exists. “Fits” is a number, not a hope — the title column is 8rem on a phone, 12rem from 40em, so the date, the title and the amount end before the wrapper’s right-hand fade, and only the category, the payer and the shares scroll. The sort button fills its header cell edge to edge — the cell gives its padding to the button, so the label sits where it did and the column is no wider — and it is a control’s 44px tall, so the whole cell is the target; and the last header, over the remove buttons, has a visually hidden name, because an empty <code>&lt;th&gt;</code> is a column a screen reader announces as nothing.</p>
+<p>The markup is a plain <code>&lt;table&gt;</code> in our own CSS. Header and cell templates in TanStack are functions that return strings, or strings; the library’s own <code>FlexRender</code> also renders components, and this table only needs text, so a six-line <code>render</code> helper calls the template with the context the library provides. <code>aria-sort</code> goes on the <code>&lt;th&gt;</code>, not the button inside it — the attribute belongs to the column header — and <code>getToggleSortingHandler()</code> is the whole of the sorting interaction. The amount is the third column, beside what it was for: on a phone the table scrolls sideways and the first three columns are what fits, and the amount is the reason the table exists. “Fits” is a number, not a hope — the title column is 8rem on a phone, 12rem from 40em, so the date, the title and the amount end before the wrapper’s right-hand fade, and only the category, the payer and the shares scroll. The sort button fills its header cell edge to edge — the cell gives its padding to the button, so the label sits where it did and the column is no wider — and it is a control’s 44px tall, so the whole cell is the target; and the last header, over the remove buttons, has a visually hidden name, because an empty <code>&lt;th&gt;</code> is a column a screen reader announces as nothing. The wrapper’s right-hand fade shows only while there is more table than screen, and that is measured: <code>{@attach watchOverflow}</code> hands the wrapper to a <code>ResizeObserver</code> and writes <code>overflowing</code> whenever its width changes.</p>
+
+<aside class="callout callout--why">
+	<h4>Why an attachment, and not <code>bind:this</code> and an effect</h4>
+	<p>The first version held the wrapper with <code>bind:this={wrap}</code> and watched it from an <code>$effect</code> that returned early until <code>wrap</code> arrived — two pieces of code, a variable that is <code>undefined</code> for the first render, and an effect whose only job was to wait for an element. Watching one element is exactly an attachment’s contract: it is handed the element when the element is in the document, its cleanup runs when it is not, and it runs again only if state it *read* changes. <code>watchOverflow</code> reads none, so it runs once per element and disconnects its observer when the table goes. <code>bind:this</code> is still the right tool elsewhere in this project, wherever an element is needed by several pieces of code — the map’s frame is measured on every fit and every flight, and the tab strip in three places — and each of those says so where it is declared.</p>
+</aside>
 <h3 id="charts">Two charts</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:205-305</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:209-316</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const byDay = $derived.by(() =&gt; {
@@ -364,6 +370,13 @@ const whole = $derived(
  * its `color`, and `getComputedStyle` hands back the plain `rgb(…)` the
  * theme currently means. It runs again when `theme.resolved` changes,
  * which is the one time those answers change.
+ *
+ * An effect that writes state — the thing effects are usually told not
+ * to do, and the right tool here, because the answer comes from the
+ * DOM. It needs a document, which a server render has not got, and a
+ * style resolution, which a `$derived` must not force in the middle of
+ * drawing. The server draws the slices in `currentColor`; the effect
+ * paints them once the page is in a browser.
  */
 let colours = $state&lt;Partial&lt;Record&lt;ExpenseCategory, string&gt;&gt;&gt;({});
 
@@ -398,7 +411,7 @@ const transfers = $derived(settle(ledger));</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:341-398</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:352-409</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;charts&quot;&gt;
@@ -460,12 +473,12 @@ const transfers = $derived(settle(ledger));</code></pre>
 	&lt;/figure&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>LayerChart is components over d3 scales: <code>&lt;BarChart data x y&gt;</code> and <code>&lt;PieChart data key value&gt;</code> draw with sensible defaults. The bars take <code>--sea</code> through a class, and the axes are told what a person needs from them: under each bar the date while there is room and the day of the month alone when there is not — the box’s width is bound, and below 56px a band six “May 10”s run into one string — and up the side round amounts in the trip’s currency, with the ticks and the top of the domain computed from one step, so the top line is at or above the tallest bar (LayerChart rounds the domain and picks its ticks separately, and a 264 bar rose past a top line at 250). Two settings are about looking right rather than being right: <code>tickLength: 8</code> is the gap between the baseline and the labels, since no tick marks are drawn; and LayerChart draws a halo round every label in <code>--color-surface-100</code>, white or black, so the chart sets that variable to the card’s own paper — the halo still keeps a label legible over a bar, and no longer embosses every label in black on a dark card. The amounts are <code>fromMinor()</code>, which asks <code>Intl</code> how many decimals the currency has, so yen are yen. The donut’s slices need one colour per category, as strings, and a token is <code>light-dark(#…, #…)</code> until a browser resolves it for an element — so a hidden probe element is given each <code>--kind-*</code> as its <code>color</code> and <code>getComputedStyle</code> hands back the plain <code>rgb(…)</code> the current theme means, again whenever <code>theme.resolved</code> changes. The pie is a donut with the total in the hole and a legend of chips under it, because five labels around a 14rem circle are unreadable. The data for both is derived from the rows into small arrays of <code>{ label, total }</code>, and the <code>Map</code> inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a <code>SvelteMap</code> that signals on every insert for nobody. The settle-up is the domain’s <code>balances()</code> and <code>settle()</code> on the raw minor units: the cents on screen are the cents the server would compute. Balances and transfers sit side by side from 64em, each list no wider than 28rem and pushed to the two edges of the card, so an amount is never a screen’s width from its name and the card has no empty third on the right, and a negative balance is written with U+2212, the minus sign, rather than the hyphen <code>Intl</code> produces. Above it all, the total is shown only when there is something to total, and the empty state says “add the first one below” only to somebody with a form below.</p>
+<p>LayerChart is components over d3 scales: <code>&lt;BarChart data x y&gt;</code> and <code>&lt;PieChart data key value&gt;</code> draw with sensible defaults. The bars take <code>--sea</code> through a class, and the axes are told what a person needs from them: under each bar the date while there is room and the day of the month alone when there is not — the box’s width is bound, and below 56px a band six “May 10”s run into one string — and up the side round amounts in the trip’s currency, with the ticks and the top of the domain computed from one step, so the top line is at or above the tallest bar (LayerChart rounds the domain and picks its ticks separately, and a 264 bar rose past a top line at 250). Two settings are about looking right rather than being right: <code>tickLength: 8</code> is the gap between the baseline and the labels, since no tick marks are drawn; and LayerChart draws a halo round every label in <code>--color-surface-100</code>, white or black, so the chart sets that variable to the card’s own paper — the halo still keeps a label legible over a bar, and no longer embosses every label in black on a dark card. The amounts are <code>fromMinor()</code>, which asks <code>Intl</code> how many decimals the currency has, so yen are yen. The donut’s slices need one colour per category, as strings, and a token is <code>light-dark(#…, #…)</code> until a browser resolves it for an element — so a hidden probe element is given each <code>--kind-*</code> as its <code>color</code> and <code>getComputedStyle</code> hands back the plain <code>rgb(…)</code> the current theme means, again whenever <code>theme.resolved</code> changes. That is an effect writing state — the thing effects are usually told not to do — and the right tool here, because the answer comes from the DOM: a server render has no document to ask, and a <code>$derived</code> must not force a style resolution in the middle of drawing. The server draws the slices in <code>currentColor</code>, and the effect paints them once the page is in a browser. The pie is a donut with the total in the hole and a legend of chips under it, because five labels around a 14rem circle are unreadable. The data for both is derived from the rows into small arrays of <code>{ label, total }</code>, and the <code>Map</code> inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a <code>SvelteMap</code> that signals on every insert for nobody. The settle-up is the domain’s <code>balances()</code> and <code>settle()</code> on the raw minor units: the cents on screen are the cents the server would compute. Balances and transfers sit side by side from 64em, each list no wider than 28rem and pushed to the two edges of the card, so an amount is never a screen’s width from its name and the card has no empty third on the right, and a negative balance is written with U+2212, the minus sign, rather than the hyphen <code>Intl</code> produces. Above it all, the total is shown only when there is something to total, and the empty state says “add the first one below” only to somebody with a form below.</p>
 <h3 id="the-form">A form that submits numbers and arrays</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:526-632</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:538-644</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if editable}

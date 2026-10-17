@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/trips.remote.ts<span class="code__lines">:1-36</span></span>
+		<span class="code__file">src/lib/remote/trips.remote.ts<span class="code__lines">:1-37</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -59,6 +59,7 @@
 import * as v from 'valibot';
 import { error, redirect } from '@sveltejs/kit';
 import { command, form, query, requested } from '$app/server';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import { IdSchema, SlugSchema, TripInputSchema, TripPatchSchema } from '#lib/domain/schemas.ts';
 import { bump, readableTrip, requireMember, requireUser } from '#lib/server/access.ts';
@@ -75,7 +76,7 @@ export const myTrips = query(async () =&gt; trips.listTrips(requireUser().id));
 export const tripBySlug = query(SlugSchema, async (slug) =&gt; {
 	const viewer = await readableTrip(slug);
 	const document = await trips.loadDocument(viewer.trip.id);
-	if (!document) error(404, 'Not found');
+	if (!document) error(404, m.error_no_trip());
 	return { document, role: viewer.role, viewerId: viewer.user?.id ?? null };
 });</code></pre>
 </figure>
@@ -125,7 +126,7 @@ export async function loadDocument(tripId: string): Promise&lt;TripDocument | nu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:1-22</span></span>
+		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:1-37</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -138,7 +139,22 @@ export async function loadDocument(tripId: string): Promise&lt;TripDocument | nu
  * written to disk as a static JSON asset. The client's first call is a plain
  * GET of a file a CDN can cache forever. The gazetteer is a hundred cities
  * in a JSON module — small enough to prerender whole, and the explore page,
- * the place search and the custom element all read the same copy.
+ * the new-trip form and the stop dialog's place search read the same copy.
+ *
+ * `dynamic: true` is for the OTHER side: the server, rendering the explore
+ * page or the new-trip form for a request (the stop dialog asks only in the
+ * browser). It does not read the prerendered file off the disk. It
+ * *fetches* it, over the network, from the request's own origin — which,
+ * with `paths.origin` set, is `PUBLIC_ORIGIN`, the public address in front
+ * of the proxy. If that request fails, SvelteKit falls back to running the
+ * function itself; and a `prerender` function is left out of the server
+ * bundle unless it is dynamic, so without this option the fallback throws
+ * `remote_prerender_not_dynamic` and the page is a 500. A container that
+ * cannot reach its own public hostname — common behind a proxy that
+ * terminates TLS — rendered every `/explore` that way. With it, the
+ * fallback runs here, in-process, from the same JSON module. The test suite
+ * could not see the difference: its server listens on `PUBLIC_ORIGIN`
+ * itself, so the fetch always succeeded.
  *
  * `tripPreview` is a `query.batch`: the trips page renders one card per
  * trip and each card asks for its own preview, and SvelteKit collects every
@@ -154,10 +170,10 @@ export async function loadDocument(tripId: string): Promise&lt;TripDocument | nu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:41-81</span></span>
+		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:56-96</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export const places = prerender(async (): Promise&lt;Place[]&gt; =&gt; gazetteer);
+	<pre><code class="lang-ts">export const places = prerender(async (): Promise&lt;Place[]&gt; =&gt; gazetteer, { dynamic: true });
 
 export interface TripPreview {
 	readonly id: string;
@@ -204,7 +220,7 @@ export const tripPreview = query.batch(IdSchema, async (ids) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:24-39</span></span>
+		<span class="code__file">src/lib/remote/geo.remote.ts<span class="code__lines">:39-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { prerender, query } from '$app/server';
@@ -225,6 +241,11 @@ export interface Place {
 }</code></pre>
 </figure>
 <p><code>places</code> is a <code>prerender</code>: it runs once, at build time, and its result is written to disk as a static JSON asset. The client’s first call is a GET of a file a CDN can cache forever, and the browser keeps it in the Cache API across reloads. The explore page, the place search and the new-trip form all read the same copy. It is the right flavour for a hundred cities in a JSON module, and the wrong flavour for anything a person can change.</p>
+
+<aside class="callout callout--why">
+	<h4>Why this matters</h4>
+	<p>Why <code>{ dynamic: true }</code> on a function whose answer never changes? Because of the other side of the call. A server rendering <code>/explore</code> or the new-trip form for a request does not open the prerendered file off its disk: it *fetches* it, over the network, from the request’s own origin — which, with <code>paths.origin</code> set, is <code>PUBLIC_ORIGIN</code>, the public address in front of the proxy. If that fetch fails, SvelteKit runs the function instead, and a <code>prerender</code> function is left out of the server bundle unless it is dynamic, so the fallback threw <code>remote_prerender_not_dynamic</code> and the page was a 500. A container behind a proxy that terminates TLS often cannot reach its own public hostname, and every explore page failed that way. The option keeps the function in the server bundle, so the fallback runs in-process, from the same JSON module, and the browser still gets its cacheable file. The end-to-end suite could not have caught it: its server listens on <code>PUBLIC_ORIGIN</code> itself, so the fetch always succeeds. When a test environment is kinder than production, the kindness is worth writing down next to the code it hides.</p>
+</aside>
 <aside class="callout callout--warn"><p>On a page that is *itself* prerendered, <code>query</code> cannot be used at all — SvelteKit throws “Cannot call query while prerendering”. The guides in chapter 34 are prerendered and read nothing dynamic; the explore page in chapter 35 is dynamic and reads a <code>prerender</code>. Choosing which side of that line a page is on is a design decision, and the root layout in chapter 23 is arranged around it.</p></aside>
 
 <figure class="code">

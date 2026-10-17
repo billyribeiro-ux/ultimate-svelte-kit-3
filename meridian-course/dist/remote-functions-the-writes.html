@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/trips.remote.ts<span class="code__lines">:38-63</span></span>
+		<span class="code__file">src/lib/remote/trips.remote.ts<span class="code__lines">:39-64</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const createTrip = form(TripInputSchema, async (input) =&gt; {
@@ -129,7 +129,7 @@ export const addStop = command(StopInputSchema, async (input) =&gt; {
 	</figcaption>
 	<pre><code class="lang-ts">export const updateStop = command(StopPatchSchema, async ({ id, ...patch }) =&gt; {
 	const existing = await db.query.stop.findFirst({ where: eq(schema.stop.id, id) });
-	if (!existing) error(404, 'Not found');
+	if (!existing) error(404, m.error_no_stop());
 	await requireMember(existing.tripId, 'editor');
 
 	await db.update(schema.stop).set(patch).where(eq(schema.stop.id, id));
@@ -140,7 +140,7 @@ export const moveStop = command(MoveStopSchema, async ({ tripId, id, date, index
 	await requireMember(tripId, 'editor');
 
 	const stops = await trips.listStops(tripId);
-	if (!stops.some((s) =&gt; s.id === id)) error(404, 'Not found');
+	if (!stops.some((s) =&gt; s.id === id)) error(404, m.error_no_stop());
 
 	const changes = place(stops, id, date, index);
 	if (changes.length &gt; 0) {
@@ -169,7 +169,7 @@ export const removeStop = command(
 /** The person's own id, for the client to tell its own presence chip apart. */
 export const me = command(async () =&gt; getRequestEvent().locals.user?.id ?? null);</code></pre>
 </figure>
-<p><code>moveStop</code> is chapter 11 at the wire. It takes where the card was dropped, asks <code>place()</code> what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. <code>updateStop</code> looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. <code>me</code> is a command with no argument, for the presence chip to tell its own entry apart.</p>
+<p><code>moveStop</code> is chapter 11 at the wire. It takes where the card was dropped, asks <code>place()</code> what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. <code>updateStop</code> looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. When the stop is gone — a companion removed it a moment ago — the 404 carries a sentence, <code>m.error_no_stop()</code>, and not the words <code>Not found</code>, because a toast is going to print it to a person, in their language (chapter 25 shows the toast). <code>me</code> is a command with no argument, for the presence chip to tell its own entry apart.</p>
 <h3 id="forms-and-fields">A form whose fields carry their types</h3>
 
 <figure class="code">

@@ -3,6 +3,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { diagnostics } from '#lib/remote/diagnostics.remote.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 
 	/*
 	 * DIAGNOSTICS
@@ -52,12 +53,13 @@
 	<!--
 		`failed` is handed an `App.Error`, the `{ status, message }` that
 		`handleError` made of the failure — not an `Error` — so the words are
-		on `message`. `$derived` is what makes Refresh redraw: a bare `{const}`
-		would await the first report and keep it.
+		on `message`, and `boundaryMessage` reads them. `$derived` is what
+		makes Refresh redraw: a bare `{const}` would await the first report
+		and keep it.
 	-->
 	<svelte:boundary>
 		{#snippet failed(error)}
-			<p class="issue">{(error as App.Error).message}</p>
+			<p class="issue">{boundaryMessage(error)}</p>
 		{/snippet}
 
 		{const report = $derived(await diagnostics())}
@@ -107,14 +109,16 @@
 					</thead>
 					<tbody>
 						{#each report.spans as span (span.spanId)}
-							<tr class:span--child={span.parentId !== null}>
+							<tr class={{ 'span--child': span.parentId !== null }}>
 								<td>
 									<span class="span__name">{span.name}</span>
 									<span class="muted">{clock.format(span.start)}</span>
 								</td>
 								<td class="num tabular">{millis.format(span.duration)} ms</td>
 								<td>
-									<span class="chip" class:chip--coral={!span.ok}>{span.ok ? 'ok' : 'error'}</span>
+									<span class={['chip', { 'chip--coral': !span.ok }]}
+										>{span.ok ? 'ok' : 'error'}</span
+									>
 								</td>
 								<td><code class="muted">{span.traceId.slice(0, 8)}</code></td>
 							</tr>

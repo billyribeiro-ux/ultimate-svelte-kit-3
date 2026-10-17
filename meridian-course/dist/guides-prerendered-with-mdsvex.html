@@ -217,12 +217,13 @@ export const csr = false;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/[guide]/+page.ts<span class="code__lines">:1-23</span></span>
+		<span class="code__file">src/routes/guides/[guide]/+page.ts<span class="code__lines">:1-24</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
 import type { EntryGenerator, PageLoad } from './$types';
 import { guideBySlug, guides } from '#lib/guides/index.ts';
+import { m } from '#lib/paraglide/messages.js';
 
 export const prerender = true;
 export const csr = false;
@@ -240,7 +241,7 @@ export const entries: EntryGenerator = () =&gt; guides.map((guide) =&gt; ({ guid
 
 export const load: PageLoad = ({ params }) =&gt; {
 	const guide = guideBySlug(params.guide);
-	if (!guide) error(404, 'There is no guide by that name.');
+	if (!guide) error(404, m.error_no_guide());
 	return { guide };
 };</code></pre>
 </figure>
@@ -301,7 +302,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-48</span></span>
+		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -310,8 +311,9 @@ export const load: PageLoad = ({ params }) =&gt; {
 	import { href } from '#lib/href.ts';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
 	const locale = getLocale();
 	/*
@@ -357,7 +359,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/+layout.svelte<span class="code__lines">:1-50</span></span>
+		<span class="code__file">src/routes/guides/+layout.svelte<span class="code__lines">:1-51</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -366,6 +368,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 	import { href } from '#lib/href.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * A CHROME THAT DOES NOT KNOW YOU
@@ -378,7 +381,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 	 * plain links. It is a small, honest header for a small, static site
 	 * inside the app.
 	 */
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 &lt;/script&gt;
 
 &lt;a class=&quot;skip&quot; href=&quot;#main&quot;&gt;{m.nav_skip()}&lt;/a&gt;

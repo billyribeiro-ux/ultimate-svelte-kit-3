@@ -7,7 +7,7 @@
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
-	import { errorMessage } from '#lib/ui/errors.ts';
+	import { boundaryMessage, errorMessage } from '#lib/ui/errors.ts';
 	import {
 		GearSixIcon,
 		GlobeHemisphereWestIcon,
@@ -35,7 +35,7 @@
 	import Expenses from './Expenses.svelte';
 	import Notes from './Notes.svelte';
 	import StopDialog, { type Mode } from './StopDialog.svelte';
-	import { TABS, TripState, type Tab } from './state.svelte.ts';
+	import { isTab, TABS, TripState, type Tab } from './state.svelte.ts';
 
 	interface Props {
 		initial: { document: TripDocument; role: ViewerRole; viewerId: string | null };
@@ -68,7 +68,7 @@
 
 	const tab: Tab = $derived.by(() => {
 		const wanted = page.url.searchParams.get('tab');
-		return (TABS as readonly string[]).includes(wanted ?? '') ? (wanted as Tab) : 'itinerary';
+		return isTab(wanted) ? wanted : 'itinerary';
 	});
 
 	const tabLabels: Record<Tab, () => string> = {
@@ -100,6 +100,10 @@
 	 * network that something had failed when nothing had. All three sit in
 	 * one slot as wide as the widest of them (the `.status` rules say how),
 	 * so the palette and the settings button beside it never move.
+	 *
+	 * `patient` is state written by a timer inside an effect: three seconds
+	 * passing is not something a `$derived` can depend on, and the effect's
+	 * cleanup stops the timer if the page goes first.
 	 */
 	let patient = $state(true);
 
@@ -135,6 +139,12 @@
 	 * either side of it. `scrollIntoView({ inline: 'nearest' })` stopped at
 	 * the strip's edge, which is where the fade is, and left "Notes" with
 	 * its last letter and its bar faded out.
+	 *
+	 * All of it is measurement — `offsetLeft`, `scrollWidth` — which only a
+	 * laid-out page can answer, so it happens in effects and in the scroll
+	 * handler, never in a `$derived`, and it writes its answers to state for
+	 * the markup to read. Three places measure the strip, which is why it is
+	 * held with `bind:this` rather than handed to one attachment.
 	 */
 	let strip = $state<HTMLElement>();
 	const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
@@ -194,6 +204,11 @@
 	 * the language, so it is measured: the panel's top, in page coordinates,
 	 * written to `--frame-top` whenever the header changes size. CSS does
 	 * the rest, with a floor and a ceiling.
+	 *
+	 * One observer needs two elements — it watches the header and measures
+	 * the panel — and an attachment is handed one, so both are held with
+	 * `bind:this`. `frameTop` is written by the effect because it is a
+	 * measurement of the laid-out page, which a `$derived` cannot take.
 	 */
 	let header = $state<HTMLElement>();
 	let panel = $state<HTMLElement>();
@@ -235,6 +250,10 @@
 	 * it: a synchronous loop that Svelte stops with
 	 * `effect_update_depth_exceeded`. `untrack` says: run this, depend on
 	 * nothing it touches.
+	 *
+	 * They are effects because each sends a command — a side effect on the
+	 * server, on a schedule or on a change — and computes nothing that is
+	 * drawn.
 	 */
 	const tripId = untrack(() => initial.document.trip.id);
 
@@ -448,7 +467,7 @@
 						{/snippet}
 						{#snippet failed(error, reset)}
 							<p class="night__status issue">
-								{(error as App.Error).message}
+								{boundaryMessage(error)}
 								<button class="btn btn--sm" type="button" onclick={reset}
 									>{m.live_reconnect()}</button
 								>

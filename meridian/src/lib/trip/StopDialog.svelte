@@ -120,6 +120,7 @@
 	/* Search first from 40em; on a phone the sheet opens without a keyboard over it. */
 	const wide = new MediaQuery('(min-width: 40em)');
 	const searchId = $props.id();
+	// Held with `bind:this` for one imperative step: Bits UI's open-focus handler below focuses it on an edit.
 	let nameInput = $state<HTMLInputElement>();
 
 	let saving = $state(false);

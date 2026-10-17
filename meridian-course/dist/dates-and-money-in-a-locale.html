@@ -92,7 +92,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:110-118</span></span>
+		<span class="code__file">src/routes/(site)/(app)/trips/+page.svelte<span class="code__lines">:113-121</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;p class=&quot;trip__dates&quot;&gt;{formatRange(trip.startDate, trip.endDate, locale)}&lt;/p&gt;
@@ -221,7 +221,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 		button are wider than a card's column, and a field that cannot shrink
 		pokes out of the card it is in.
 	--&gt;
-	&lt;div class=&quot;datefield&quot; class:datefield--invalid={issues.length &gt; 0}&gt;
+	&lt;div class={['datefield', { 'datefield--invalid': issues.length &gt; 0 }]}&gt;
 		&lt;div class=&quot;datefield__dates&quot;&gt;
 			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
 				&lt;span class=&quot;datefield__date&quot;&gt;
@@ -343,7 +343,7 @@ export function formatRange(start: string, end: string, locale: string): string 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-73</span></span>
+		<span class="code__file">src/lib/domain/money.ts<span class="code__lines">:39-71</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const formatters = new Map&lt;string, Intl.NumberFormat&gt;();
@@ -368,9 +368,7 @@ export function formatMoney(minor: number, currency: string, locale: string): st
  * space, a stray letter — is dropped before parsing.
  */
 export function parseAmount(text: string, locale: string): number | null {
-	const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
-	const group = parts.find((p) =&gt; p.type === 'group')?.value ?? ',';
-	const decimal = parts.find((p) =&gt; p.type === 'decimal')?.value ?? '.';
+	const { group, decimal } = separators(locale);
 
 	let s = text.trim();
 	s = s.split(group).join('');
@@ -385,7 +383,7 @@ export function parseAmount(text: string, locale: string): number | null {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:551-568</span></span>
+		<span class="code__file">src/lib/trip/Expenses.svelte<span class="code__lines">:563-580</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;label class=&quot;field&quot;&gt;
@@ -407,55 +405,66 @@ export function parseAmount(text: string, locale: string): number | null {
 	{/each}
 &lt;/label&gt;</code></pre>
 </figure>
-<p>The amount field is <code>type=&quot;number&quot;</code> with <code>inputmode=&quot;decimal&quot;</code>, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes <code>v.number()</code> and the server converts to minor units with the trip’s currency. <code>formatMoney</code> on the way out uses <code>Intl.NumberFormat</code> with <code>style: &quot;currency&quot;</code>: “€12.60”, “12,60 €”, “R$ 12,60”. <code>parseAmount</code> exists for the one place a free-text amount is typed, and it discovers the separators from <code>Intl</code> rather than knowing them.</p>
+<p>The amount field is <code>type=&quot;number&quot;</code> with <code>inputmode=&quot;decimal&quot;</code>, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes <code>v.number()</code> and the server converts to minor units with the trip’s currency. <code>formatMoney</code> on the way out uses <code>Intl.NumberFormat</code> with <code>style: &quot;currency&quot;</code>: “€12.60”, “12,60 €”, “R$ 12,60”. <code>parseAmount</code> exists for the one place a free-text amount is typed, and it discovers the separators from <code>Intl</code> rather than knowing them — once per locale, then kept.</p>
 <h3 id="distances-and-countries">Distances, and a hundred country names for free</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:291-326</span></span>
+		<span class="code__file">packages/waypoint/src/lib/geo/index.ts<span class="code__lines">:284-330</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function formatDistance(
+	<pre><code class="lang-ts">type DistanceUnitName = 'foot' | 'mile' | 'meter' | 'kilometer';
+
+const distanceFormats = new Map&lt;string, Intl.NumberFormat&gt;();
+
+/**
+ * One `Intl.NumberFormat` per locale, unit and precision, made the first time
+ * it is asked for. Building one means loading the locale's data, and a trips
+ * list formats a distance per card on every render; formatting with one that
+ * exists is cheap.
+ */
+function distanceFormat(locale: string, unit: DistanceUnitName, digits: number): Intl.NumberFormat {
+	const key = `${locale}|${unit}|${digits}`;
+	let format = distanceFormats.get(key);
+	if (!format) {
+		format = new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit,
+			maximumFractionDigits: digits
+		});
+		distanceFormats.set(key, format);
+	}
+	return format;
+}
+
+/**
+ * A distance for a person to read, in their locale and their units.
+ *
+ * `Intl.NumberFormat` with `style: 'unit'` knows that German writes &quot;343 km&quot;
+ * with a space and that a mile is &quot;mi&quot; — so the library never carries a table
+ * of unit strings, and a locale it has never heard of still comes out right.
+ */
+export function formatDistance(
 	meters: number,
 	locale = 'en',
 	unit: DistanceUnit = 'metric'
 ): string {
 	if (unit === 'imperial') {
 		const miles = meters / METERS_PER_MILE;
-		if (miles &lt; 0.1) {
-			return new Intl.NumberFormat(locale, {
-				style: 'unit',
-				unit: 'foot',
-				maximumFractionDigits: 0
-			}).format(meters * FEET_PER_METER);
-		}
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'mile',
-			maximumFractionDigits: miles &lt; 10 ? 1 : 0
-		}).format(miles);
+		if (miles &lt; 0.1) return distanceFormat(locale, 'foot', 0).format(meters * FEET_PER_METER);
+		return distanceFormat(locale, 'mile', miles &lt; 10 ? 1 : 0).format(miles);
 	}
 
-	if (meters &lt; 1000) {
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'meter',
-			maximumFractionDigits: 0
-		}).format(meters);
-	}
+	if (meters &lt; 1000) return distanceFormat(locale, 'meter', 0).format(meters);
 
 	const km = meters / 1000;
-	return new Intl.NumberFormat(locale, {
-		style: 'unit',
-		unit: 'kilometer',
-		maximumFractionDigits: km &lt; 10 ? 1 : 0
-	}).format(km);
+	return distanceFormat(locale, 'kilometer', km &lt; 10 ? 1 : 0).format(km);
 }</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:30-32</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:33-35</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const locale = getLocale();
@@ -463,7 +472,7 @@ const regions = new Intl.DisplayNames(locale, { type: 'region' });
 const countryName = (code: string) =&gt; regions.of(code) ?? code;</code></pre>
 </figure>
 <p>Two more <code>Intl</code> APIs. <code>style: &quot;unit&quot;</code> formats a kilometre or a mile with the right abbreviation and spacing for the locale; a unit the code has never seen still comes out right. <code>Intl.DisplayNames</code> with <code>type: &quot;region&quot;</code> turns <code>PT</code> into “Portugal” and <code>JP</code> into “Japan”, “Japan” or “Japão” — a hundred country names in three languages that nobody translated, from the browser’s own locale data. The gazetteer stores a two-letter code and nothing else.</p>
-<aside class="callout callout--note"><p>Every <code>Intl</code> object here is created once and cached — a <code>DateTimeFormat</code> or <code>NumberFormat</code> loads locale data when it is built, and an itinerary formats forty dates a render. The cache keys always include the locale. That sentence is the whole of project 5’s i18n bug, and it is why <code>formatter()</code> in <code>dates.ts</code> exists.</p></aside>
+<aside class="callout callout--note"><p>Every <code>Intl</code> object here is built once and kept — a <code>DateTimeFormat</code> or <code>NumberFormat</code> loads locale data when it is built, and an itinerary formats forty dates a render. The shared helpers keep theirs in a module-level map: <code>formatter()</code> in <code>dates.ts</code>, <code>formatMoney</code> and the separators <code>parseAmount</code> discovers, and the library’s <code>distanceFormat()</code> above. A component that needs one builds it once, at the top of its script, as the explore page does with <code>DisplayNames</code>. The cache keys always include the locale. That sentence is the whole of project 5’s i18n bug, and it is why <code>formatter()</code> in <code>dates.ts</code> exists. The distance formatter was the last to join: the first version built a new <code>NumberFormat</code> on every call, and the trips list formats a distance per card on every render.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -9,7 +9,7 @@ import { listStops } from '#lib/server/trips.ts';
  * =======================
  *
  * What the `<meridian-route>` custom element fetches: the trip's name, its
- * dates and its scheduled stops — nothing else. Only trips whose owner made
+ * dates and its scheduled stops, each with its id — nothing else. Only trips whose owner made
  * them visible by link answer here; a private trip is a 404 whether or not
  * the caller is signed in, because the element runs on somebody else's
  * page, where our cookies are not sent and should not matter.
@@ -20,6 +20,11 @@ import { listStops } from '#lib/server/trips.ts';
  *
  * `Response.json(...)` is the platform's own; SvelteKit 3 deprecated the
  * `json()` helper it used to ship because the two had become the same call.
+ *
+ * The one English `error()` sentence in the project is here, on purpose: a
+ * program reads this 404, not a person. The element prints its own words
+ * for a failed fetch, and a request from somebody else's page carries no
+ * language of ours to answer in.
  */
 const CORS = {
 	'access-control-allow-origin': '*',
@@ -40,6 +45,8 @@ export const GET: RequestHandler = async ({ params }) => {
 			stops: stops
 				.filter((stop) => stop.date !== null)
 				.map((stop) => ({
+					// Opaque, and the one thing that tells two stops at the same place apart.
+					id: stop.id,
 					name: stop.name,
 					kind: stop.kind,
 					date: stop.date,

@@ -35,7 +35,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'compiling', text: 'Compiling, twice' },
-			code('vite.config.ts', 240, 262),
+			code('vite.config.ts', 254, 276),
 			{
 				type: 'terminal',
 				code: `
@@ -44,7 +44,8 @@ $ pnpm run i18n
     --emit-ts-declarations --strategy url cookie preferredLanguage baseLocale
 
 $ ls src/lib/paraglide
-messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  server.d.ts`
+README.md  messages/  messages.d.ts  messages.js  registry.d.ts  registry.js
+runtime.d.ts  runtime.js  server.d.ts  server.js`
 			},
 			{
 				type: 'p',
@@ -74,7 +75,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 			},
 			{
 				type: 'p',
-				text: 'Those sentences are messages like any other. A schema’s message is written as a function, `() => m.issue_email()`, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter 12 has the schemas). An `error()` thrown by a remote function carries `m.stop_limit({ limit })`, a message with a parameter, and the toast shows its `body.message` as it is. So the rule for this app is short: *no sentence a person reads is a string literal in a `.ts` file*. The end-to-end suite holds it to that on one form, in chapter 42, by typing a bad address into `/de/signin` and expecting German back.'
+				text: 'Those sentences are messages like any other. A schema’s message is written as a function, `() => m.issue_email()`, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter 12 has the schemas). So is every sentence in an `error()` that a person can see: `m.stop_limit({ limit })`, a message with a parameter, when a trip is full; `m.error_no_stop()` when a companion removed the stop a moment ago; `m.error_owner_only()` on the settings page; `m.join_expired()` for an invite that ran out. A toast prints `body.message` as it is, and so does the error page, so an English literal there is an English sentence on a German page that looks deliberate. So the rule for this app is short: *no sentence a person reads is a string literal in a `.ts` file*. The one `error()` with English in it is the route API’s 404, and it says why: a program reads it, on somebody else’s page, with no language of ours to answer in (chapter 36). The end-to-end suite holds the rule to account in chapter 42 — a bad address typed into `/de/signin` must come back in German, and a refused save must show the server’s sentence, whole.'
 			},
 			{
 				type: 'why',
@@ -128,7 +129,7 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 				type: 'p',
 				text: 'Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
 			},
-			code('src/routes/(site)/(app)/trips/+page.svelte', 110, 118),
+			code('src/routes/(site)/(app)/trips/+page.svelte', 113, 121),
 			{
 				type: 'p',
 				text: 'The trips page puts them together with the plural messages from the last chapter: a date range from `Intl`, three counts through Paraglide’s plural rules, and a distance through the library’s `formatDistance`. Four sources of locale-awareness in one paragraph, and the component knows about none of them.'
@@ -168,23 +169,23 @@ messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  serv
 			},
 
 			{ type: 'h3', id: 'money', text: 'Money in and out' },
-			code('src/lib/domain/money.ts', 39, 73),
-			code('src/lib/trip/Expenses.svelte', 551, 568),
+			code('src/lib/domain/money.ts', 39, 71),
+			code('src/lib/trip/Expenses.svelte', 563, 580),
 			{
 				type: 'p',
-				text: 'The amount field is `type="number"` with `inputmode="decimal"`, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes `v.number()` and the server converts to minor units with the trip’s currency. `formatMoney` on the way out uses `Intl.NumberFormat` with `style: "currency"`: “€12.60”, “12,60 €”, “R$ 12,60”. `parseAmount` exists for the one place a free-text amount is typed, and it discovers the separators from `Intl` rather than knowing them.'
+				text: 'The amount field is `type="number"` with `inputmode="decimal"`, so a phone shows a numeric keyboard with the locale’s decimal separator, the currency sits inside the field as a trailing adornment, so the number is what is typed and the unit is what is read, and the browser hands the form a plain number — which is why the remote form’s schema takes `v.number()` and the server converts to minor units with the trip’s currency. `formatMoney` on the way out uses `Intl.NumberFormat` with `style: "currency"`: “€12.60”, “12,60 €”, “R$ 12,60”. `parseAmount` exists for the one place a free-text amount is typed, and it discovers the separators from `Intl` rather than knowing them — once per locale, then kept.'
 			},
 
 			{ type: 'h3', id: 'distances-and-countries', text: 'Distances, and a hundred country names for free' },
-			code('packages/waypoint/src/lib/geo/index.ts', 291, 326),
-			code('src/routes/(site)/explore/+page.svelte', 30, 32),
+			code('packages/waypoint/src/lib/geo/index.ts', 284, 330),
+			code('src/routes/(site)/explore/+page.svelte', 33, 35),
 			{
 				type: 'p',
 				text: 'Two more `Intl` APIs. `style: "unit"` formats a kilometre or a mile with the right abbreviation and spacing for the locale; a unit the code has never seen still comes out right. `Intl.DisplayNames` with `type: "region"` turns `PT` into “Portugal” and `JP` into “Japan”, “Japan” or “Japão” — a hundred country names in three languages that nobody translated, from the browser’s own locale data. The gazetteer stores a two-letter code and nothing else.'
 			},
 			{
 				type: 'note',
-				text: 'Every `Intl` object here is created once and cached — a `DateTimeFormat` or `NumberFormat` loads locale data when it is built, and an itinerary formats forty dates a render. The cache keys always include the locale. That sentence is the whole of project 5’s i18n bug, and it is why `formatter()` in `dates.ts` exists.'
+				text: 'Every `Intl` object here is built once and kept — a `DateTimeFormat` or `NumberFormat` loads locale data when it is built, and an itinerary formats forty dates a render. The shared helpers keep theirs in a module-level map: `formatter()` in `dates.ts`, `formatMoney` and the separators `parseAmount` discovers, and the library’s `distanceFormat()` above. A component that needs one builds it once, at the top of its script, as the explore page does with `DisplayNames`. The cache keys always include the locale. That sentence is the whole of project 5’s i18n bug, and it is why `formatter()` in `dates.ts` exists. The distance formatter was the last to join: the first version built a new `NumberFormat` on every call, and the trips list formats a distance per card on every render.'
 			},
 			{
 				type: 'checkpoint',

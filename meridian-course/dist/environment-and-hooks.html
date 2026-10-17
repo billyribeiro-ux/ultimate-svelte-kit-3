@@ -172,12 +172,12 @@ import { localeUrl } from '#lib/server/locale-url.ts';</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Paraglide's middleware does three things around `resolve`: it decides the
+ * Paraglide's middleware does two things around `resolve`: it decides the
  * locale from the URL, the cookie or `Accept-Language` (in the order
- * `vite.config.ts` gave it); it stores that locale in an `AsyncLocalStorage`
- * so `m.some_message()` anywhere in this request — a remote function, a
- * `load`, a component — speaks the right language without being told; and
- * it hands back a request whose URL has had the `/de` prefix removed.
+ * `vite.config.ts` gave it), and it stores that locale in an
+ * `AsyncLocalStorage`, so `m.some_message()` anywhere in this request — a
+ * remote function, a `load`, a component, the sentence in an `error()` —
+ * speaks the right language without being told.
  *
  * The middleware also offers a request whose URL has had the `/de` prefix
  * removed. It is not used: `event.request` is read-only in SvelteKit 3,
@@ -325,7 +325,7 @@ export const handle: Handle = sequence(handleParaglide, handleAuth, handleSecuri
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:169-224</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:169-225</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -346,7 +346,8 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
 /**
  * Every error the server catches, in one place, told apart by `kind`.
  *
- *   `app`         a deliberate `error(404, …)` — already says what it means
+ *   `app`         a deliberate `error(404, m.error_no_trip())` — already says
+ *                 what it means, in the request's language
  *   `framework`   SvelteKit's own: a 404 for a missing route, a bad request
  *   `validation`  a remote function argument that failed its schema
  *   `unknown`     something genuinely broken — the only one worth an id
@@ -385,7 +386,7 @@ export const init: ServerInit = async () =&gt; {
 	await client.execute('select 1');
 };</code></pre>
 </figure>
-<p><code>handleError</code> is told apart by <code>kind</code>, which SvelteKit 3 added: <code>app</code> is a deliberate <code>error(404)</code>, <code>framework</code> is SvelteKit’s own, <code>validation</code> is a remote function argument that failed its schema — with the <code>issues</code> handed over, so the log can say which field — and <code>unknown</code> is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, <code>m.error_bad_request()</code> and <code>m.error_server()</code>: <code>handleError</code> runs inside the request the middleware wrapped, so they come out in that request’s language. <code>init</code> runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.</p>
+<p><code>handleError</code> is told apart by <code>kind</code>, which SvelteKit 3 added: <code>app</code> is a deliberate <code>error(404, m.error_no_trip())</code> — its sentence a Paraglide message like every other, worked out inside the request and so already in the page’s language, which is why the hook leaves it alone — <code>framework</code> is SvelteKit’s own, <code>validation</code> is a remote function argument that failed its schema — with the <code>issues</code> handed over, so the log can say which field — and <code>unknown</code> is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, <code>m.error_bad_request()</code> and <code>m.error_server()</code>: <code>handleError</code> runs inside the request the middleware wrapped, so they come out in that request’s language. <code>init</code> runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.</p>
 
 <figure class="code">
 	<figcaption>
@@ -421,11 +422,11 @@ export const handleError: HandleClientError = ({ error, kind }) =&gt; {
 	return { message: m.error_title() };
 };</code></pre>
 </figure>
-<p>The browser has a <code>handleError</code> of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at <code>kind</code> the same way, and only <code>unknown</code> needs words, because SvelteKit’s default for it is <code>'Internal Error'</code>, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose.</p>
+<p>The browser has a <code>handleError</code> of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at <code>kind</code> the same way, and only <code>unknown</code> needs words, because SvelteKit’s default for it is <code>'Internal Error'</code>, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose. Short is not the same as untested: chapter 42 drops the globe’s chunk on its way to a German page and expects the German sentence in the boundary, which SvelteKit’s English default would fail.</p>
 
 <aside class="callout callout--why">
 	<h4>Why this matters</h4>
-	<p>Why does the shape matter? Because a <code>failed</code> snippet, and <code>+error.svelte</code> through <code>page.error</code>, are handed the *result* of <code>handleError</code>: an <code>App.Error</code>, <code>{ status, message }</code>, a plain object and not an <code>Error</code>. The first versions of four boundaries tested <code>error instanceof Error</code>, which is never true here, so they printed the fallback every time — or, in the trips list, <code>String(error)</code>, which is <code>[object Object]</code>. A boundary reads <code>error.message</code>; this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an <code>HttpError</code>, with the server’s words on <code>body.message</code>.</p>
+	<p>Why does the shape matter? Because a <code>failed</code> snippet, and <code>+error.svelte</code> through <code>page.error</code>, are handed the *result* of <code>handleError</code>: an <code>App.Error</code>, <code>{ status, message }</code>, a plain object and not an <code>Error</code>. The first versions of four boundaries tested <code>error instanceof Error</code>, which is never true here, so they printed the fallback every time — or, in the trips list, <code>String(error)</code>, which is <code>[object Object]</code>. A boundary reads its <code>message</code> — through <code>boundaryMessage</code> in <code>#lib/ui/errors.ts</code>, a guard rather than a type annotation, for a reason chapter 25 gives — and this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an <code>HttpError</code>, with the server’s words on <code>body.message</code>.</p>
 </aside>
 
 <figure class="code">
@@ -498,7 +499,7 @@ export const params = defineParams({
 	slug: v.pipe(v.string(), v.regex(SLUG))
 });</code></pre>
 </figure>
-<p>One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and <code>params.slug</code> arrives typed. Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.</p>
+<p>One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and <code>params.slug</code> arrives typed — in a page, as the <code>params</code> prop that <code>PageProps</code> describes (chapter 24). Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

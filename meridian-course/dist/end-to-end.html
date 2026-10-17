@@ -108,7 +108,7 @@
 });</code></pre>
 </figure>
 <p>Read the <code>webServer</code> block as a recipe: rebuild the database from the migrations and the seed, build the app, start the adapter’s server on port 4173. Playwright waits for the port, runs the suite, and stops the process. <code>reuseExistingServer</code> is on outside CI, so a developer who already has the built server running skips the three-minute build — and in CI it is off, so the pipeline always tests what it just built. The environment block matters more than it looks: <code>PUBLIC_ORIGIN</code> is <strong>baked into the bundle</strong> at build time (chapter 03), and the server compares it with each request’s origin; if the build said 5173 and the test hits 4173, every form submission is a 403. It took an afternoon to learn that the same value has to be present in both places, which is why the comment is there.</p>
-<p><code>workers: 1</code> and <code>fullyParallel: false</code> are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and twenty-nine tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs <code>visual.e2e.ts</code> alone: a behaviour does not change between 412px and 360px, and a layout does.</p>
+<p><code>workers: 1</code> and <code>fullyParallel: false</code> are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and forty-one tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs <code>visual.e2e.ts</code> alone: a behaviour does not change between 412px and 360px, and a layout does.</p>
 
 <figure class="code">
 	<figcaption>
@@ -287,7 +287,91 @@ export async function typeDateInto(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:91-117</span></span>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:91-126</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * THE SERVER'S OWN LINKS
+ * ======================
+ *
+ * With JavaScript off, the page is exactly the HTML the server sent. Every
+ * internal link goes through `href()` — `resolve()`, then Paraglide's
+ * `localizeHref` — and on the server, with SvelteKit's default
+ * `paths.relative`, `resolve()` answered `./explore`, which `localizeHref`
+ * turned into `http://localhost:4173/explore`: a whole URL at the build's
+ * origin, in the server's HTML and in every prerendered guide. The header
+ * compares the page's pathname with each link, so it never marked the page
+ * it was on until the browser had drawn it again.
+ */
+test.describe('without JavaScript', () =&gt; {
+	test.use({ javaScriptEnabled: false });
+
+	test('links are paths, and the header marks the page it is on', async ({ page }) =&gt; {
+		await page.goto('/de/explore');
+		const explore = page
+			// Hidden behind the menu on a phone, and still in the HTML.
+			.getByRole('navigation', { name: 'Primary', includeHidden: true })
+			.getByRole('link', { name: 'Entdecken', includeHidden: true });
+		await expect(explore).toHaveAttribute('href', '/de/explore');
+		await expect(explore).toHaveAttribute('aria-current', 'page');
+		await expect(page.locator('a[href^=&quot;/de/trips/new?place=&quot;]').first()).toBeAttached();
+		await expect(page.locator('a[href^=&quot;http://localhost&quot;]')).toHaveCount(0);
+
+		// A prerendered page was rendered by the same server, at build time.
+		await page.goto('/guides');
+		await expect(page.getByRole('link', { name: 'Lisbon in three days' })).toHaveAttribute(
+			'href',
+			'/guides/lisbon-in-three-days'
+		);
+		await expect(page.locator('a[href^=&quot;http://localhost&quot;]')).toHaveCount(0);
+	});
+});</code></pre>
+</figure>
+<p>A test with JavaScript switched off, because the bug it guards was invisible with it on. With SvelteKit’s default <code>paths.relative</code>, a server render’s <code>resolve()</code> answered <code>./explore</code>, and Paraglide’s <code>localizeHref</code> made that a whole URL at the build’s origin — in every page the server sent and every prerendered guide (chapter 23). The browser then hydrated and redrew every link as a path, so nothing looked wrong to anybody with a working script. <code>test.use({ javaScriptEnabled: false })</code> makes the page exactly the HTML the server sent, and the test asks it three things: the header’s link is the path <code>/de/explore</code>, the header marks it <code>aria-current=&quot;page&quot;</code>, and no link anywhere starts with <code>http://localhost</code>. The phone project hides the nav behind a menu, so the locators say <code>includeHidden</code> — the links are in the HTML whether or not they are on screen, and the HTML is what is being tested.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:128-159</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * A CHUNK THAT NEVER ARRIVES
+ * ==========================
+ *
+ * The globe is the one part of the app loaded on demand, so it is the one
+ * part a dropped connection can take away after the page is up. The failure
+ * happens in the browser and never reaches the server, so the words for it
+ * come from `handleError` in `src/hooks.client.ts`: the product's sentence,
+ * in the page's language. Without that hook the boundary would print
+ * SvelteKit's own, `Internal Error`, in English on a German page.
+ *
+ * The chunk's name is a hash, so it is found by what only it contains.
+ */
+test('a chunk that never arrives is explained in the page’s language', async ({ page }) =&gt; {
+	await page.route('**/_app/immutable/**/*.js', async (route) =&gt; {
+		const response = await route.fetch();
+		const body = await response.text();
+		if (body.includes('globe__status')) return route.abort();
+		return route.fulfill({ response, body });
+	});
+	const logged: string[] = [];
+	page.on('console', (message) =&gt; {
+		if (message.type() === 'error') logged.push(message.text());
+	});
+
+	await page.goto(`/de/t/${TRIPS.japan}?tab=globe`);
+	const status = page.locator('.night__status.issue');
+	await expect(status).toContainText('Etwas ist schiefgelaufen');
+	await expect(status.getByRole('button', { name: 'Neu verbinden' })).toBeVisible();
+	// The detail went where somebody debugging looks.
+	expect(logged.some((text) =&gt; text.startsWith('[meridian]'))).toBe(true);
+});</code></pre>
+</figure>
+<p>And a test for the browser’s own <code>handleError</code> (chapter 14), which nothing else reaches: a remote function’s refusal goes through the server’s hook, so a page could lose its client hook and every other test would still pass. The globe is the one chunk loaded on demand, so the test drops it — <code>page.route</code> fetches each script and aborts the one that contains the globe’s class name, because the file’s own name is a hash — and opens the globe tab on a German page. The boundary must say “Etwas ist schiefgelaufen” with its “Neu verbinden” button, and the console must carry the hook’s <code>[meridian]</code> line. Without the hook, SvelteKit’s default fills the boundary with <code>Internal Error</code>, in English, and the first assertion fails.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:161-187</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('health, the route API and the embed frame answer for machines', async ({ page, request }) =&gt; {
@@ -412,7 +496,7 @@ await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toHaveCoun
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:152-184</span></span>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:152-192</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a refusal inside the trips list is shown in the server’s words', async ({ page }) =&gt; {
@@ -435,7 +519,15 @@ await expect(page.getByRole('link', { name: 'Kyoto in the spring' })).toHaveCoun
 		.getByRole('navigation', { name: 'Primary' })
 		.getByRole('link', { name: 'Trips', exact: true })
 		.click();
-	await expect(page.getByText('That request did not make sense.')).toBeVisible();
+
+	// Caught by the boundary, not by the error page. `+error.svelte` prints
+	// the same sentence, so the sentence alone would pass with no boundary at
+	// all. Inside the trips page, under its own heading and beside the
+	// Reconnect button that runs `reset`, it can only be the `failed` snippet.
+	const list = page.locator('section.trips');
+	await expect(list.getByRole('heading', { level: 1, name: 'Your trips' })).toBeVisible();
+	await expect(list.locator('p.issue')).toHaveText('That request did not make sense.');
+	await expect(list.getByRole('button', { name: 'Reconnect' })).toBeVisible();
 });
 
 test('the diagnostics page draws a new report when it is refreshed', async ({ page }) =&gt; {
@@ -449,7 +541,7 @@ test('the diagnostics page draws a new report when it is refreshed', async ({ pa
 	await expect(newest).not.toHaveText(before);
 });</code></pre>
 </figure>
-<p>Two tests for things that used to go wrong without a sound. The first needs the server to refuse something the page asked for, and nothing on the trips list ever asks for anything wrong — so the test rewrites the request on its way out. <code>page.route</code> holds the <code>tripPreview</code> batch, swaps every argument for one the schema refuses, and lets it go on; the server’s <code>handleError</code> answers with its sentence for a failed validation, and the boundary must print it. Against the old <code>failed</code> snippet the page said <code>[object Object]</code> (chapter 33). The second presses Refresh on the diagnostics page and expects the newest row to change, which it did not while the report was a bare <code>{const}</code> (chapter 35). Neither waits longer than the default: each change happens once a single request comes back.</p>
+<p>Two tests for things that used to go wrong without a sound. The first needs the server to refuse something the page asked for, and nothing on the trips list ever asks for anything wrong — so the test rewrites the request on its way out. <code>page.route</code> holds the <code>tripPreview</code> batch, swaps every argument for one the schema refuses, and lets it go on; the server’s <code>handleError</code> answers with its sentence for a failed validation, and the boundary must print it. *Where* it is printed is half of the assertion. <code>+error.svelte</code> shows <code>page.error.message</code> too, so a test that looked for the sentence anywhere on the page would still pass with the boundary gone and the whole page swapped for the error page. So the test looks inside the trips page: under its “Your trips” heading, in the snippet’s <code>.issue</code> paragraph, beside the Reconnect button that runs <code>reset</code>, where only the <code>failed</code> snippet can have put it. Against the old <code>failed</code> snippet the page said <code>[object Object]</code> (chapter 33). The second presses Refresh on the diagnostics page and expects the newest row to change, which it did not while the report was a bare <code>{const}</code> (chapter 35). Neither waits longer than the default: each change happens once a single request comes back.</p>
 
 <figure class="code">
 	<figcaption>
@@ -662,7 +754,7 @@ test('the pins are where the map is once it has settled', async ({ page }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:62-98</span></span>
+		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:62-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a save the server refuses says what the server said', async ({ browser }) =&gt; {
@@ -695,15 +787,76 @@ test('the pins are where the map is once it has settled', async ({ page }) =&gt;
 	await expect(ana.getByText('Stop removed')).toBeVisible();
 
 	// The command rejects with the `HttpError` the browser rebuilt from the
-	// answer; the toast prints its `body.message`, the server's own words.
+	// answer; the toast prints its `body.message`, the server's own sentence.
+	// The whole title, not a part of it: `String(error)` — what the toast
+	// printed before `errorMessage` — is `{&quot;status&quot;:404,&quot;message&quot;:&quot;…&quot;}`, which
+	// *contains* the sentence, and a `hasText` match passed against it.
 	await dialog.getByRole('button', { name: 'Save stop' }).click();
-	await expect(ben.locator('[data-sonner-toast]', { hasText: 'Not found' })).toBeVisible();
+	await expect(ben.locator('[data-sonner-toast][data-type=&quot;error&quot;] [data-title]')).toHaveText(
+		'That stop is no longer on the trip.'
+	);
 
 	await anaContext.close();
 	await benContext.close();
 });</code></pre>
 </figure>
-<p>The second test uses the two people for something else: a command the server refuses for a real reason. Ben opens a stop to rename it; Ana removes it — after a reload, so nothing waits on the live query; Ben saves, and <code>updateStop</code> answers 404. What the browser’s <code>await</code> rejects with is the <code>HttpError</code> SvelteKit rebuilt from the answer, with the server’s words on <code>body.message</code>, and the toast must say them: “Not found”, not the product’s fallback. It passed against the old code too — <code>errorMessage</code> was already right (chapter 25) — and it is here so that it stays right.</p>
+<p>The second test uses the two people for something else: a command the server refuses for a real reason. Ben adds Bilbao, a stop the seed does not have, so no other test loses a row it counts on, and opens it to rename it; Ana removes it — after a reload, so nothing waits on the live query; Ben saves, and <code>updateStop</code> answers 404. What the browser’s <code>await</code> rejects with is the <code>HttpError</code> SvelteKit rebuilt from the answer, with the server’s sentence on <code>body.message</code>, and the toast must say it — “That stop is no longer on the trip.”, a Paraglide message (chapter 20) — and say nothing else. The assertion is on the toast’s whole title, <code>toHaveText</code>, and that is the point of the test. Its first version looked for the toast <code>{ hasText: 'Not found' }</code>, and <code>hasText</code> matches a part of the text: the toast the old code printed, <code>String(error)</code>, was <code>{&quot;status&quot;:404,&quot;message&quot;:&quot;Not found&quot;}</code>, which *contains* the words, so the test passed against the very bug <code>errorMessage</code> was written to fix (chapter 25). Run against <code>String(error)</code> now, it fails, with the JSON in the call log.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:105-152</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * A NOTE THAT SURVIVES THE ROOM
+ * =============================
+ *
+ * The note's editor is built by an attachment, and an attachment runs again
+ * whenever state it read changes. It used to read the live document, which
+ * is a new object with every snapshot — after this person's own save, and
+ * whenever a companion arrives — so each one destroyed the editor and
+ * built another: focus gone, the next keystrokes typed into nothing.
+ *
+ * A snapshot after a save cannot be waited for directly, but its effect
+ * can: the presence chip is drawn from the same snapshot as the document,
+ * so once Ben is on Ana's screen, Ana's page has applied a snapshot after
+ * her save. Then she carries on typing without clicking anywhere.
+ */
+test('a note keeps its editor through a save and a companion arriving', async ({ browser }) =&gt; {
+	const anaContext = await browser.newContext();
+	const benContext = await browser.newContext();
+	const ana = await anaContext.newPage();
+	const ben = await benContext.newPage();
+
+	await signIn(ana, USERS.ana, `/t/${TRIPS.iberia}?tab=notes`);
+	await expect(ana.getByText('Live')).toBeVisible();
+	const editor = ana.locator('.notes__page');
+	await editor.click();
+	await ana.keyboard.press('ControlOrMeta+End');
+	await ana.keyboard.type(' Book the night train.');
+	await expect(ana.getByRole('status')).toHaveText('Saved', { timeout: 10_000 });
+
+	await signIn(ben, USERS.ben, `/t/${TRIPS.iberia}`);
+	await expect(ana.getByRole('list', { name: 'here now' })).toContainText('Ben Okafor', {
+		timeout: 20_000
+	});
+
+	// No click: the cursor is where Ana left it, or the test fails here.
+	await expect(editor).toBeFocused();
+	await ana.keyboard.type(' And the ferry back.');
+	await expect(editor).toContainText('Book the night train. And the ferry back.');
+	await expect(ana.getByRole('status')).toHaveText('Saved', { timeout: 10_000 });
+
+	await ana.reload();
+	await expect(ana.locator('.notes__page')).toContainText(
+		'Book the night train. And the ferry back.'
+	);
+
+	await anaContext.close();
+	await benContext.close();
+});</code></pre>
+</figure>
+<p>The third is about a bug only a second person could cause. The note’s editor was built by an attachment that read the live document, so every snapshot of the live query destroyed the editor and built a new one (chapter 30). A snapshot cannot be waited for directly, but its consequence can: the presence chip is drawn from the same snapshot as the document, so once Ben is on Ana’s screen, Ana’s page has applied a snapshot after her save. Then the test types again *without clicking* — <code>toBeFocused</code> first, because an editor that was rebuilt has lost the cursor, and the keystrokes after it go nowhere — and reloads to prove both sentences reached the server. The old notes test typed once and waited for “Saved”, which the bug never touched.</p>
 
 <figure class="code">
 	<figcaption>
@@ -1021,7 +1174,7 @@ const it = test.extend&lt;Fixtures, WorkerFixtures&gt;({
 	}
 });</code></pre>
 </figure>
-<p>Signing in afresh for every signed-in screen would be over fifty sign-ins — fourteen screens, two themes, two projects. <code>test.extend</code> adds two fixtures: <code>anaState</code>, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and <code>signedIn</code>, an *option* a <code>describe</code> block sets with <code>use()</code>. The built-in <code>storageState</code> fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.</p>
+<p>Signing in afresh for every signed-in screen would be over eighty sign-ins — fourteen screens, two themes, three projects. <code>test.extend</code> adds two fixtures: <code>anaState</code>, scoped to the *worker*, signs Ana in once through the real form and saves the cookies as a storage-state file; and <code>signedIn</code>, an *option* a <code>describe</code> block sets with <code>use()</code>. The built-in <code>storageState</code> fixture is then overridden to read one from the other, so each test gets a fresh context that starts signed in or signed out, as its screen says — and still a real session, made by the real form.</p>
 
 <figure class="code">
 	<figcaption>
@@ -1283,7 +1436,7 @@ it.describe('first impressions on a phone', () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:404-438</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:418-452</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -1427,10 +1580,11 @@ BUNDLE (133 chunks, gzipped)
 </aside>
 <h3 id="found">What the suite found</h3>
 <p>A suite is worth what it catches. Before it went green this one caught six bugs that no unit test could have — one of them only in the phone project, one only in about one run in ten, and one that had been hiding behind a <code>.catch(() =&gt; {})</code>, which is the argument for a phone project and for never dismissing a flaky test in one paragraph.</p>
-<ol><li><strong>The trip page was a 500 for signed-in members.</strong> An <code>$effect</code> that sent the presence heartbeat read the heartbeat command’s own <code>pending</code> state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with <code>effect_update_depth_exceeded</code>. The fix is in chapter 24: read the trip id once, and wrap the command call in <code>untrack</code>. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.</li><li><strong>The place search never searched.</strong> Bits UI’s <code>Combobox.Input</code> is a controlled input; binding its value is not the same as listening to it, and the <code>query</code> the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. <code>pressSequentially</code> in the test — typing a character at a time, as a person does — found it.</li><li><strong>The settings page did not update after Save.</strong> The command used <code>.updates(tripBySlug(slug))</code> so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through a template <code>await</code>, which resolves once. Reading <code>query.current</code> in a <code>$derived</code> is the reactive way, and chapter 31 explains the difference.</li><li><strong>Text typed before the page had hydrated vanished.</strong> One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is <code>keepTyped()</code> in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with <code>page.route</code>, types, releases it, and waits for a <code>data-hydrated</code> attribute the root layout sets in <code>onMount</code> before asserting the text is still there.</li><li><strong>The seed’s ids were not ids.</strong> Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — <code>00000000-0000-4000-8000-0000000a001</code> — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the <code>IdSchema</code> check on the server, and the client’s <code>.catch(() =&gt; {})</code> on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: <code>seedId()</code> builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.</li><li><strong>On a phone, the Add-an-expense button could not be clicked.</strong> Playwright’s call log said <code>&lt;h3&gt; intercepts pointer events</code> — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly <code>auto</code>, and an <code>auto</code> track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. <code>grid-template-columns: minmax(0, 1fr)</code> on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.</li></ol>
+<ol><li><strong>The trip page was a 500 for signed-in members.</strong> An <code>$effect</code> that sent the presence heartbeat read the heartbeat command’s own <code>pending</code> state, which the command updates synchronously — an effect that re-triggers itself, and Svelte stopped it with <code>effect_update_depth_exceeded</code>. The fix is in chapter 24: read the trip id once, and wrap the command call in <code>untrack</code>. The desktop test found this in the first run; the pages had looked fine in a browser because the stack trace was in the server log.</li><li><strong>The place search never searched.</strong> Bits UI’s <code>Combobox.Input</code> is a controlled input; binding its value is not the same as listening to it, and the <code>query</code> the component filtered on was never updated. Nobody noticed by hand because the seeded stops were already there. <code>pressSequentially</code> in the test — typing a character at a time, as a person does — found it.</li><li><strong>The settings page did not update after Save.</strong> The command used <code>.updates(tripBySlug(slug))</code> so the server sent the refreshed trip in the same response, and the cache was set — but the page read the query through an <code>await</code> in the markup that was worked out once and kept its first answer — a bare <code>{const initial = await query}</code>, in today’s syntax. <code>{const initial = $derived(await query)}</code> follows the query, and chapter 31 shows the page reading it once, that way, with nothing beside it to keep in step.</li><li><strong>Text typed before the page had hydrated vanished.</strong> One run in ten, the sign-in helper filled the email, clicked, and nothing happened: the trace showed no request at all, and the screenshot showed an empty email field with the browser’s “Please fill out this field” bubble under it. Playwright had typed faster than the client bundle loaded, and when the remote form hydrated, its field wrote its *own* value — the empty string the server rendered — over the typed one. That is a real bug for a person on a slow connection, not a test artefact. The fix is <code>keepTyped()</code> in chapter 32: read the inputs before the template hydrates and make what is there the field’s value. The test that pins it holds the client bundle back with <code>page.route</code>, types, releases it, and waits for a <code>data-hydrated</code> attribute the root layout sets in <code>onMount</code> before asserting the text is still there.</li><li><strong>The seed’s ids were not ids.</strong> Ben clicked a seeded stop and Ana never saw him move to it, while a stop Ben had just added worked perfectly. The seed built its ids by hand — <code>00000000-0000-4000-8000-0000000a001</code> — and the last group was one character short of a UUID, so the presence heartbeat naming that stop failed the <code>IdSchema</code> check on the server, and the client’s <code>.catch(() =&gt; {})</code> on a fire-and-forget command swallowed the error. Every command that names a seeded row — remove this stop, edit that expense — was failing the same way, silently. The fix is in chapter 13: <code>seedId()</code> builds the fixed ids *through the schema*, so a malformed one throws at seed time instead of vanishing at run time. The lesson is older than the bug: the data you seed must pass the validation you run.</li><li><strong>On a phone, the Add-an-expense button could not be clicked.</strong> Playwright’s call log said <code>&lt;h3&gt; intercepts pointer events</code> — the button was where it should be, and the click landed somewhere else. The cause was two layers down: the expenses table is seven columns wide, the page’s grid column was implicitly <code>auto</code>, and an <code>auto</code> track will not be narrower than its content, so the whole page was 711 pixels wide on a 412-pixel screen. Mobile Chromium reacts to a page wider than the viewport by laying it out at a larger *layout* viewport, and Playwright’s coordinates and the browser’s stopped agreeing. <code>grid-template-columns: minmax(0, 1fr)</code> on the page grid, and the table scrolls inside its wrapper as it was meant to. The suite found a real mobile layout bug by failing to press a button.</li></ol>
 <p>The last one is the reason to be suspicious of “element is not stable” and “intercepts pointer events” in a mobile project. They usually mean the *page* is wrong, not the test, and the useful next step is to measure <code>document.documentElement.scrollWidth</code> against <code>clientWidth</code> on that page. The same probe ran across every route afterwards, in both languages, and the expenses tab was the only offender. That probe is now <code>overflowInPage</code>, and it runs on every screen in the matrix.</p>
 <p>The design suite’s first run, against screens that had already passed a review by eye, added four more: hit areas of 42px where the CSS said 44, because an <code>::after</code> is measured from the padding box; presses that could land on either of two buttons 8px apart at a fractional device pixel ratio; a primary button at 1.97:1, measured by axe half way through a fade; and the palette’s list, a scrollable region with no tab stop, which turned out to be right and became the one written exception. And the behaviour suites, re-run, found the two that started this round: Cancel on “Delete this trip?” deleted the trip, and a German form answered in English. Each is now a test, so each is found once.</p>
 <p>Then a review of the gates themselves. It changed the code under each check to the broken version and watched for red, and found checks that were looking away: the overflow walk never ran at 360px, where its own bug lived; axe and the target probe never saw the map’s markers; the embed’s stylesheet assertion was true with the bug. Pointed at the map, the new suite found three bugs the pictures could not show — a bubble press that also started a stop, a flight taken back by a heartbeat, and pins 25px from the route on a phone — and the account suite, failing once in a slow run, found the explore filter wiping what was typed before hydration. The method is the lesson: a test is only known to work once it has been seen to fail.</p>
+<p>The latest review read the code against the documentation and found three more, each of which every existing test had passed: a notes editor that a companion’s arrival destroyed mid-sentence; links in the server’s HTML that were whole URLs at the build’s origin, so the header never marked the page it was on until a script redrew it; and a toast test whose <code>hasText</code> was satisfied by the JSON dump it existed to prevent. Each new test above was then run against the old code — the attachment without <code>untrack</code>, <code>paths.relative</code> back at its default, <code>String(error)</code> in the toast, the client hook removed — and seen to fail before it was trusted.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -1439,7 +1593,7 @@ BUNDLE (133 chunks, gzipped)
 	</figcaption>
 	<pre><code>$ pnpm run test:e2e
 
-Running 229 tests using 1 worker
+Running 241 tests using 1 worker
 
   ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
   ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
@@ -1451,7 +1605,7 @@ Running 229 tests using 1 worker
   ✓  [narrow] › visual.e2e.ts › light theme › trip-new › trip-new holds together
 
   17 skipped
-  212 passed</code></pre>
+  224 passed</code></pre>
 </figure>
 <aside class="callout callout--note"><p>When a test fails, <code>test-results/&lt;test&gt;/</code> holds a screenshot, an <code>error-context.md</code> with the accessibility tree at the moment of failure, and a <code>trace.zip</code> — open it with <code>pnpm exec playwright show-trace &lt;file&gt;</code> for a timeline with every action, every network request and a DOM snapshot at each step. The trace is almost always faster than a debugger.</p></aside>
 

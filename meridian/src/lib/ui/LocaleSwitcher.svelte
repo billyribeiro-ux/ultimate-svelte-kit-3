@@ -45,7 +45,7 @@
 	const here = $derived(keepSearch ? page.url.pathname + page.url.search : page.url.pathname);
 </script>
 
-<nav class="locales" class:locales--compact={compact} aria-label={m.locale_label()}>
+<nav class={['locales', { 'locales--compact': compact }]} aria-label={m.locale_label()}>
 	<TranslateIcon size={16} aria-hidden="true" />
 	<!--
 		The one link in the app that bypasses `#lib/href.ts`: `here` is whatever

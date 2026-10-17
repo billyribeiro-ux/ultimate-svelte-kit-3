@@ -281,6 +281,30 @@ export type DistanceUnit = 'metric' | 'imperial';
 const METERS_PER_MILE = 1609.344;
 const FEET_PER_METER = 3.280839895;
 
+type DistanceUnitName = 'foot' | 'mile' | 'meter' | 'kilometer';
+
+const distanceFormats = new Map<string, Intl.NumberFormat>();
+
+/**
+ * One `Intl.NumberFormat` per locale, unit and precision, made the first time
+ * it is asked for. Building one means loading the locale's data, and a trips
+ * list formats a distance per card on every render; formatting with one that
+ * exists is cheap.
+ */
+function distanceFormat(locale: string, unit: DistanceUnitName, digits: number): Intl.NumberFormat {
+	const key = `${locale}|${unit}|${digits}`;
+	let format = distanceFormats.get(key);
+	if (!format) {
+		format = new Intl.NumberFormat(locale, {
+			style: 'unit',
+			unit,
+			maximumFractionDigits: digits
+		});
+		distanceFormats.set(key, format);
+	}
+	return format;
+}
+
 /**
  * A distance for a person to read, in their locale and their units.
  *
@@ -295,32 +319,12 @@ export function formatDistance(
 ): string {
 	if (unit === 'imperial') {
 		const miles = meters / METERS_PER_MILE;
-		if (miles < 0.1) {
-			return new Intl.NumberFormat(locale, {
-				style: 'unit',
-				unit: 'foot',
-				maximumFractionDigits: 0
-			}).format(meters * FEET_PER_METER);
-		}
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'mile',
-			maximumFractionDigits: miles < 10 ? 1 : 0
-		}).format(miles);
+		if (miles < 0.1) return distanceFormat(locale, 'foot', 0).format(meters * FEET_PER_METER);
+		return distanceFormat(locale, 'mile', miles < 10 ? 1 : 0).format(miles);
 	}
 
-	if (meters < 1000) {
-		return new Intl.NumberFormat(locale, {
-			style: 'unit',
-			unit: 'meter',
-			maximumFractionDigits: 0
-		}).format(meters);
-	}
+	if (meters < 1000) return distanceFormat(locale, 'meter', 0).format(meters);
 
 	const km = meters / 1000;
-	return new Intl.NumberFormat(locale, {
-		style: 'unit',
-		unit: 'kilometer',
-		maximumFractionDigits: km < 10 ? 1 : 0
-	}).format(km);
+	return distanceFormat(locale, 'kilometer', km < 10 ? 1 : 0).format(km);
 }

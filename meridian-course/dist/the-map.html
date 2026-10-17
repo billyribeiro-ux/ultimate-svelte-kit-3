@@ -151,7 +151,7 @@ export function worldStyle(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-125</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:15-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -244,6 +244,11 @@ export function worldStyle(
 	 * counts the hidden strip as padding, so the route is fitted into the
 	 * part that is on screen — and when the map is all on screen, it is the
 	 * plain 40px on every side.
+	 *
+	 * `bind:this`, and not an attachment, because the frame is measured from
+	 * several places — `padding()` on every fit and every flight, and the
+	 * size watch below, which needs the map as well — so the element is held
+	 * rather than handed to one function once.
 	 */
 	let frame = $state&lt;HTMLElement&gt;();
 
@@ -270,7 +275,7 @@ export function worldStyle(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:127-199</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:132-210</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -291,6 +296,9 @@ export function worldStyle(
  *
  * `framed` is a plain variable, not state: once it is true the effect
  * returns before it reads anything reactive, so it never runs again.
+ * This effect, the size watch and the flight below are effects because
+ * each one moves MapLibre's camera or canvas — a write to an object
+ * outside Svelte — and none computes a value anything renders.
  */
 let framed = false;
 
@@ -318,6 +326,9 @@ $effect(() =&gt; {
  * move ends. `resize()` at rest redraws the canvas and moves every marker
  * to match, which is all the cure needs to know about the cause. The
  * first report is the frame's starting size, not a change, and is let go.
+ * An effect rather than an attachment on the frame: it needs the map as
+ * well, which `bind:map` delivers after the frame exists, and it starts
+ * again when it does.
  */
 $effect(() =&gt; {
 	if (!map || !frame) return;
@@ -357,7 +368,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:201-324</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:212-335</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -491,7 +502,7 @@ function zoomInto(group: Group) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:326-390</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:337-401</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -565,7 +576,7 @@ const round = (value: number) =&gt; Math.round(value * 1e5) / 1e5;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:392-413</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:403-424</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function onload() {
@@ -600,7 +611,7 @@ function onclick(e: MapMouseEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:416-497</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:427-506</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;map&quot; data-ready={ready ? '' : undefined} bind:this={frame}&gt;
@@ -657,9 +668,7 @@ function onclick(e: MapMouseEvent) {
 						second button called &quot;Alfama&quot; beside the itinerary's own.
 					--&gt;
 					&lt;span
-						class=&quot;pin&quot;
-						class:pin--selected={stop.id === selected}
-						class:pin--draggable={editable}
+						class={['pin', { 'pin--selected': stop.id === selected, 'pin--draggable': editable }]}
 						data-kind={stop.kind}
 						title={stop.name}
 					&gt;
@@ -690,7 +699,7 @@ function onclick(e: MapMouseEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:640-660</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:648-668</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -800,7 +809,7 @@ export class Geolocation {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:499-540</span></span>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:508-548</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;div class=&quot;map__tools no-print&quot;&gt;
@@ -814,8 +823,7 @@ export class Geolocation {
 			&lt;FrameCornersIcon size={16} aria-hidden=&quot;true&quot; /&gt;
 		&lt;/button&gt;
 		&lt;button
-			class=&quot;btn btn--sm btn--icon&quot;
-			class:btn--primary={showMe}
+			class={['btn btn--sm btn--icon', { 'btn--primary': showMe }]}
 			type=&quot;button&quot;
 			title={m.map_locate()}
 			aria-label={m.map_locate()}

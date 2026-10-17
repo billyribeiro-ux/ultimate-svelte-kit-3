@@ -125,7 +125,7 @@ export type Auth = typeof auth;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:1-30</span></span>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:1-37</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -144,12 +144,19 @@ export type Auth = typeof auth;</code></pre>
  * A 403 for &quot;not yours&quot; would tell a stranger that the slug they guessed is
  * real. A 404 for &quot;yours, but read-only&quot; would leave a viewer wondering
  * where the trip went.
+ *
+ * The sentence in each `error()` is read by a person — a toast prints it,
+ * and so does the error page — so it is a Paraglide message like every other
+ * sentence in the product. The remote function runs inside the request's
+ * `paraglideMiddleware`, so `m.error_no_trip()` comes out in the language
+ * of the page that called it, with nothing passed in.
  */
 
 import { error, redirect } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { and, eq, sql } from 'drizzle-orm';
 import type { User } from 'better-auth';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import type { ViewerRole } from '#lib/domain/roles.ts';
 import type { Role } from '#lib/domain/schemas.ts';
@@ -163,7 +170,7 @@ const RANK: Record&lt;Role, number&gt; = { viewer: 0, editor: 1, owner: 2 };</co
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:32-67</span></span>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:39-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function currentUser(): User | undefined {
@@ -194,11 +201,9 @@ export async function requireMember(tripId: string, minimum: Role = 'viewer'): P
 		where: and(eq(schema.member.tripId, tripId), eq(schema.member.userId, user.id)),
 		with: { trip: true }
 	});
-	if (!membership) error(404, 'Not found');
+	if (!membership) error(404, m.error_no_trip());
 
-	if (RANK[membership.role] &lt; RANK[minimum]) {
-		error(403, 'You can look at this trip but not change it.');
-	}
+	if (RANK[membership.role] &lt; RANK[minimum]) error(403, m.error_read_only());
 
 	return { user, trip: membership.trip, role: membership.role };
 }</code></pre>
@@ -207,7 +212,7 @@ export async function requireMember(tripId: string, minimum: Role = 'viewer'): P
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:69-105</span></span>
+		<span class="code__file">src/lib/server/access.ts<span class="code__lines">:74-110</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export type Viewer = { readonly trip: Trip; readonly role: ViewerRole; readonly user?: User };
@@ -219,7 +224,7 @@ export async function requireMember(tripId: string, minimum: Role = 'viewer'): P
  */
 export async function readableTrip(slug: string): Promise&lt;Viewer&gt; {
 	const trip = await db.query.trip.findFirst({ where: eq(schema.trip.slug, slug) });
-	if (!trip) error(404, 'Not found');
+	if (!trip) error(404, m.error_no_trip());
 
 	const user = currentUser();
 	if (user) {
@@ -231,7 +236,7 @@ export async function readableTrip(slug: string): Promise&lt;Viewer&gt; {
 
 	if (trip.visibility === 'link') return { trip, role: 'link', user };
 
-	error(404, 'Not found');
+	error(404, m.error_no_trip());
 }
 
 /**

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:1-46</span></span>
+		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:1-47</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -62,6 +62,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { command, form, query } from '$app/server';
 import { PUBLIC_ORIGIN } from '$app/env/public';
 import { and, eq } from 'drizzle-orm';
+import { m } from '#lib/paraglide/messages.js';
 import { localizeHref } from '#lib/paraglide/runtime.js';
 import { newSlug } from '#lib/domain/ids.ts';
 import { IdSchema, InviteInputSchema } from '#lib/domain/schemas.ts';
@@ -93,7 +94,7 @@ export const createInvite = command(InviteInputSchema, async ({ tripId, role }) 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:48-68</span></span>
+		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:49-69</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** What the join page shows before the button: which trip, which role, and whether the link still works. */
@@ -104,7 +105,7 @@ export const inviteByToken = query(TokenSchema, async (token) =&gt; {
 			trip: { columns: { id: true, name: true, slug: true, startDate: true, endDate: true } }
 		}
 	});
-	if (!invite) error(404, 'Not found');
+	if (!invite) error(404, m.error_no_invite());
 
 	const user = requireUser();
 	const already = await membership(invite.tripId, user.id);
@@ -122,7 +123,7 @@ export const inviteByToken = query(TokenSchema, async (token) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:70-102</span></span>
+		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:71-104</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const acceptInvite = form(v.object({ token: TokenSchema }), async ({ token }) =&gt; {
@@ -133,9 +134,10 @@ export const inviteByToken = query(TokenSchema, async (token) =&gt; {
 			where: eq(schema.invite.token, token),
 			with: { trip: { columns: { slug: true } } }
 		});
-		if (!invite) error(404, 'Not found');
-		if (invite.usedAt !== null) error(410, 'That invite has already been used.');
-		if (invite.expiresAt.getTime() &lt; Date.now()) error(410, 'That invite has expired.');
+		if (!invite) error(404, m.error_no_invite());
+		// The join page says these two in the same words before the button is pressed.
+		if (invite.usedAt !== null) error(410, m.join_used());
+		if (invite.expiresAt.getTime() &lt; Date.now()) error(410, m.join_expired());
 
 		const existing = await tx.query.member.findFirst({
 			where: and(eq(schema.member.tripId, invite.tripId), eq(schema.member.userId, user.id))
@@ -159,18 +161,18 @@ export const inviteByToken = query(TokenSchema, async (token) =&gt; {
 	redirect(303, localizeHref(`/t/${joined.slug}`));
 });</code></pre>
 </figure>
-<p>Accepting is a <code>form</code>, because the join page is a page: a person arrives from a link in a message, possibly on a phone with a flaky connection, and a button that works without JavaScript is the one that works. The transaction is the important part. Read the invite, refuse it if used or expired, add the membership unless one exists, mark the invite used — all or nothing, so two taps on the button cannot produce two memberships or one membership and an unused link. The explicit return type on the transaction callback is there because Drizzle’s inference needs a hand when the callback throws in some branches.</p>
+<p>Accepting is a <code>form</code>, because the join page is a page: a person arrives from a link in a message, possibly on a phone with a flaky connection, and a button that works without JavaScript is the one that works. The transaction is the important part. Read the invite, refuse it if used or expired, add the membership unless one exists, mark the invite used — all or nothing, so two taps on the button cannot produce two memberships or one membership and an unused link. The two refusals are <code>m.join_used()</code> and <code>m.join_expired()</code>, the very messages the join page shows before the button is pressed, so a link that expired between reading the page and pressing the button says the same thing in the same language either way. The explicit return type on the transaction callback is there because Drizzle’s inference needs a hand when the callback throws in some branches.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:104-141</span></span>
+		<span class="code__file">src/lib/remote/invites.remote.ts<span class="code__lines">:106-143</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const changeRole = command(
 	v.object({ tripId: IdSchema, userId: v.string(), role: v.picklist(['editor', 'viewer']) }),
 	async ({ tripId, userId, role }) =&gt; {
 		const { trip } = await requireMember(tripId, 'owner');
-		if (userId === trip.ownerId) error(400, 'The owner stays the owner.');
+		if (userId === trip.ownerId) error(400, m.error_owner_stays());
 
 		await db
 			.update(schema.member)
@@ -184,7 +186,7 @@ export const removeMember = command(
 	v.object({ tripId: IdSchema, userId: v.string() }),
 	async ({ tripId, userId }) =&gt; {
 		const { trip } = await requireMember(tripId, 'owner');
-		if (userId === trip.ownerId) error(400, 'The owner cannot be removed.');
+		if (userId === trip.ownerId) error(400, m.error_owner_kept());
 
 		await db
 			.delete(schema.member)
@@ -196,7 +198,7 @@ export const removeMember = command(
 /** A member walks away from a trip that is not theirs. */
 export const leaveTrip = form(v.object({ tripId: IdSchema }), async ({ tripId }) =&gt; {
 	const { user, trip } = await requireMember(tripId);
-	if (user.id === trip.ownerId) error(400, 'An owner can delete the trip but not leave it.');
+	if (user.id === trip.ownerId) error(400, m.error_owner_leaving());
 
 	await db
 		.delete(schema.member)

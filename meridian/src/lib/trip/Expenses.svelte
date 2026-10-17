@@ -8,6 +8,7 @@
 		sortFn_basic,
 		tableFeatures
 	} from '@tanstack/svelte-table';
+	import type { Attachment } from 'svelte/attachments';
 	import { BarChart, PieChart } from 'layerchart';
 	import { toast } from 'svelte-sonner';
 	import { errorMessage } from '#lib/ui/errors.ts';
@@ -156,19 +157,22 @@
 		initialState: { sorting: [{ id: 'date', desc: false }] }
 	});
 
-	/* The wrapper fades at its right edge while there is more table than screen. */
-	let wrap = $state<HTMLElement>();
+	/*
+	 * The wrapper fades at its right edge while there is more table than
+	 * screen. Watching one element's size is an attachment's job: it is
+	 * handed the element when it is in the document and its cleanup runs
+	 * when it is not, so there is no `bind:this` to hold the element and no
+	 * effect to wait for it to arrive. It reads no state, so it runs once.
+	 */
 	let overflowing = $state(false);
 
-	$effect(() => {
-		if (!wrap) return;
-		const element = wrap;
+	const watchOverflow: Attachment<HTMLElement> = (element) => {
 		const observer = new ResizeObserver(() => {
 			overflowing = element.scrollWidth > element.clientWidth + 1;
 		});
 		observer.observe(element);
 		return () => observer.disconnect();
-	});
+	};
 
 	/* ------------------------------------------------------------------ */
 	/* Totals, charts, settle-up                                           */
@@ -273,6 +277,13 @@
 	 * its `color`, and `getComputedStyle` hands back the plain `rgb(…)` the
 	 * theme currently means. It runs again when `theme.resolved` changes,
 	 * which is the one time those answers change.
+	 *
+	 * An effect that writes state — the thing effects are usually told not
+	 * to do, and the right tool here, because the answer comes from the
+	 * DOM. It needs a document, which a server render has not got, and a
+	 * style resolution, which a `$derived` must not force in the middle of
+	 * drawing. The server draws the slices in `currentColor`; the effect
+	 * paints them once the page is in a browser.
 	 */
 	let colours = $state<Partial<Record<ExpenseCategory, string>>>({});
 
@@ -397,7 +408,7 @@
 			</figure>
 		</div>
 
-		<div class="table-wrap" bind:this={wrap} data-overflow={overflowing ? '' : undefined}>
+		<div class="table-wrap" data-overflow={overflowing ? '' : undefined} {@attach watchOverflow}>
 			<table class="table">
 				<thead>
 					{#each table.getHeaderGroups() as group (group.id)}
@@ -405,8 +416,7 @@
 							{#each group.headers as header (header.id)}
 								{const sorted = $derived(header.column.getIsSorted())}
 								<th
-									class="sortable"
-									class:num={header.column.columnDef.meta?.align === 'end'}
+									class={['sortable', { num: header.column.columnDef.meta?.align === 'end' }]}
 									aria-sort={sorted === 'asc'
 										? 'ascending'
 										: sorted === 'desc'
@@ -436,9 +446,11 @@
 						<tr>
 							{#each row.getAllCells() as cell (cell.id)}
 								<td
-									class:num={cell.column.columnDef.meta?.align === 'end'}
-									class:what={cell.column.id === 'title'}
-									class:amount={cell.column.id === 'amountMinor'}
+									class={{
+										num: cell.column.columnDef.meta?.align === 'end',
+										what: cell.column.id === 'title',
+										amount: cell.column.id === 'amountMinor'
+									}}
 								>
 									{#if cell.column.id === 'category'}
 										<span class="category" data-kind={row.original.category}>
@@ -489,7 +501,7 @@
 					{#each [...ledger] as [userId, amount] (userId)}
 						<li class="balance">
 							<span>{nameOf(userId)}{userId === viewerId ? ` (${m.companions_you()})` : ''}</span>
-							<span class="balance__amount tabular" class:owed={amount > 0} class:owes={amount < 0}>
+							<span class={['balance__amount tabular', { owed: amount > 0, owes: amount < 0 }]}>
 								{money(amount)}
 							</span>
 						</li>

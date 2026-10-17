@@ -53,7 +53,7 @@ export const part2 = [
 				type: 'p',
 				text: '`0.1 + 0.2` is not `0.3`, and a settle-up that is a cent off is a settle-up nobody trusts. So an amount is an integer of minor units and a currency code, and the only places a decimal exists are the input box and the screen. The trick worth stealing is `fractionDigits`: rather than a table saying that yen have no cents and dinars have three, it asks `Intl.NumberFormat` for the currency’s `maximumFractionDigits` and caches the answer. A currency the code has never heard of still comes out right.'
 			},
-			code(`${DOMAIN}/money.ts`, 39, 73),
+			code(`${DOMAIN}/money.ts`, 39, 71),
 			{
 				type: 'p',
 				text: '`parseAmount` is the other direction, and it is the part that usually gets a regular expression and a bug report from Germany. The separators are *discovered* by formatting a known number in the locale and reading the parts back — `formatToParts` says which character is the group separator and which the decimal — so `1.234,50` parses in German and `1,234.50` in English with no table of locales. Chapter 21 shows both directions in the interface.'
@@ -173,7 +173,7 @@ export const part2 = [
 			code(`${DOMAIN}/schemas.ts`, 1, 63),
 			{
 				type: 'p',
-				text: 'valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches `SLUG`, a date is an ISO string that `isIsoDate` accepts, a longitude is a number in range. `shortText` and `optionalText` are the two shapes of a text field, with `trim()` built in so `"  Lisbon "` is stored as `"Lisbon"` without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s `required` is satisfied by three spaces; this is not.'
+				text: 'valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the functions these schemas call — `pipe`, `object`, `string`, `trim`, `maxLength`, `picklist` and the rest of the twenty-two in this file — and not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches `SLUG`, a date is an ISO string that `isIsoDate` accepts, a longitude is a number in range. `shortText` and `optionalText` are the two shapes of a text field, with `trim()` built in so `"  Lisbon "` is stored as `"Lisbon"` without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s `required` is satisfied by three spaces; this is not.'
 			},
 			{
 				type: 'p',
